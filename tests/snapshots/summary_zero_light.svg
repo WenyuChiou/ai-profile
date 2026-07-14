@@ -1,13 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="830" height="470" viewBox="0 0 830 470" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="216" viewBox="0 0 830 216" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
 <title id="aiprofileSummaryTitle">AI Collaboration Summary — All time</title>
 <desc id="aiprofileSummaryDesc">No AI collaboration recorded yet. Generated 2026-07-14.</desc>
-<rect x="0.5" y="0.5" width="829" height="469" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
-<text x="24" y="38" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#1f2328" text-anchor="start">AI Collaboration Summary</text>
+<rect x="0.5" y="0.5" width="829" height="215" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<polygon points="32,24 34.2,29.8 40,32 34.2,34.2 32,40 29.8,34.2 24,32 29.8,29.8" fill="#0969da"/>
+<text x="48" y="38" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#1f2328" text-anchor="start">AI Collaboration Summary</text>
 <text x="806" y="38" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="end">All time</text>
-<line x1="24" y1="54" x2="806" y2="54" stroke="#d1d9e0"/>
-<text x="415.0" y="228" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#59636e" text-anchor="middle">No AI collaboration recorded yet</text>
-<text x="415.0" y="252" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="middle">Add AI-* trailers or scan a repository with AI co-authored commits.</text>
-<line x1="24" y1="412" x2="806" y2="412" stroke="#d1d9e0"/>
-<text x="24" y="434" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Generated 2026-07-14 | aiprofile</text>
-<text x="24" y="450" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">One commit may include several AI participation events.</text>
+<line x1="24" y1="56" x2="806" y2="56" stroke="#d1d9e0"/>
+<text x="415" y="118" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#59636e" text-anchor="middle">No AI collaboration recorded yet</text>
+<text x="415" y="142" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="middle">Add AI-* trailers or scan a repository with AI co-authored commits.</text>
+<line x1="24" y1="162" x2="806" y2="162" stroke="#d1d9e0"/>
+<text x="24" y="184" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
+<text x="24" y="200" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">One commit may include several AI participation events.</text>
 </svg>

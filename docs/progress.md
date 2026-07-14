@@ -86,6 +86,8 @@ Recorded in `docs/decisions/` as they are finalized. Non-delegable items (archit
 - 2026-07-14: Final gate — independent code-reviewer on the staged 48-file diff: **APPROVE, HIGH confidence, zero P0/P1** (re-ran suite + linter itself; attribution/privacy/robustness invariants independently traced; version-parity sweep clean). P2/P3 notes: NULL-source_reference uniqueness (tracked, post-v0.1), CLI unicode punctuation on rare OEM codepages (verified non-crashing on cp950/cp1252), single-pass git log at scale (fine for v0.1).
 - 2026-07-14: Implementation committed to main (`50b8ac3`, 48 files, +6568). `pip install -e ".[dev]"` + `aiprofile --version` verified.
 
+- 2026-07-14 (post-v0.1-commit, user-requested): summary-card visual polish pass (user chose "full polish"). Dynamic-but-deterministic height (no dead band: 216–514px by data shape), accent hero values + sparkle title glyph, per-provider percentages with denominator stated in the table header, evidence/privacy chips (`chip_bg` token added), footer typography. Orchestrator-direct (tight visual iteration lane per routing rules); dataviz skill consulted (single-hue bars correct for single-metric magnitude; identity via labels not color; static-img context exempts hover layer). Snapshots regenerated via the test module's entry point; suite 164 passed; both themes re-verified visually via Edge-headless (real data, 8-provider fixture, zero-state).
+
 ## Next action
 
 Post-v0.1: next smallest vertical slice = Git Notes adapter (`refs/notes/ai-collaboration`) + git-ai import mapping into the `imported` evidence tier (mvp.md §10 item 1). Also pending: repository owner's LICENSE decision (MIT recommended).

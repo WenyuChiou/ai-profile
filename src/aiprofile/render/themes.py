@@ -23,6 +23,7 @@ class Theme:
     accent: str
     bar_fill: str
     bar_track: str
+    chip_bg: str  # Primer canvas-subtle: chip/badge background
 
 
 THEMES: dict[str, Theme] = {
@@ -36,6 +37,7 @@ THEMES: dict[str, Theme] = {
         accent="#0969da",
         bar_fill="#0969da",
         bar_track="#eff2f5",
+        chip_bg="#f6f8fa",
     ),
     "github-dark": Theme(
         name="github-dark",
@@ -47,5 +49,6 @@ THEMES: dict[str, Theme] = {
         accent="#4493f8",
         bar_fill="#4493f8",
         bar_track="#21262d",
+        chip_bg="#161b22",
     ),
 }

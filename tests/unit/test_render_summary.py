@@ -344,7 +344,36 @@ def test_every_visible_provider_count_is_printed_as_text():
     # is always rendered as its own text node, not implied by bar length.
     svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
     for row in FIXTURE_POPULATED.providers[:6]:
-        assert f'>{row.attributed_commits}</text>' in svg
+        assert f'>{row.attributed_commits}</tspan>' in svg
+
+
+def test_provider_percentages_and_denominator_label():
+    # Percentages must state their denominator (proposal.md section 26
+    # rule 6): the table header names it, each visible row carries its pct.
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    denominator = FIXTURE_POPULATED.totals.ai_attributed_commits
+    assert f"% of {denominator} AI-attributed commits" in svg
+    for row in FIXTURE_POPULATED.providers[:6]:
+        pct = round(100 * row.attributed_commits / denominator)
+        assert f"· {pct}%" in svg
+
+
+def test_privacy_split_chip_only_when_both_sides_nonzero():
+    # populated: public 200 / private 320 -> split chip present
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    assert "public 200 · private 320" in svg
+    # privacy_true: public 0 -> only the inclusion chip, no split chip
+    svg_true = render_summary(FIXTURE_PRIVACY_TRUE, THEMES["github-light"])
+    assert "public 0" not in svg_true
+    # privacy_false: no private -> no split chip either
+    svg_false = render_summary(FIXTURE_PRIVACY_FALSE, THEMES["github-light"])
+    assert "· private" not in svg_false
+
+
+def test_evidence_chip_prefix_present():
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    assert "Evidence (events)" in svg
+    assert THEMES["github-light"].chip_bg in svg
 
 
 def test_bar_proportional_to_top_row():
@@ -425,7 +454,7 @@ def test_privacy_line_true_and_false():
 def test_footer_generated_on_and_footnote():
     for stats in CASES.values():
         svg = render_summary(stats, THEMES["github-light"])
-        assert f"Generated {GENERATED_ON} | aiprofile" in svg
+        assert f"Generated {GENERATED_ON} · aiprofile" in svg
         assert "One commit may include several AI participation events." in svg
 
 
@@ -457,7 +486,7 @@ def test_zero_state_keeps_title_period_and_footer():
     svg = render_summary(FIXTURE_ZERO, THEMES["github-light"])
     assert "AI Collaboration Summary" in svg
     assert FIXTURE_ZERO.period.label in svg
-    assert f"Generated {GENERATED_ON} | aiprofile" in svg
+    assert f"Generated {GENERATED_ON} · aiprofile" in svg
 
 
 # ---------------------------------------------------------------------------
@@ -475,12 +504,19 @@ def test_light_and_dark_differ_only_in_color_tokens():
     assert THEMES["github-dark"].bg not in light
 
 
-def test_card_width_830_and_fixed_height():
-    from aiprofile.render.summary_svg import HEIGHT, WIDTH
+def test_card_width_830_and_dynamic_deterministic_height():
+    from aiprofile.render.summary_svg import WIDTH, card_height
 
     assert WIDTH == 830
-    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
-    assert f'width="{WIDTH}" height="{HEIGHT}"' in svg
+    for stats in CASES.values():
+        svg = render_summary(stats, THEMES["github-light"])
+        assert f'width="{WIDTH}" height="{card_height(stats)}"' in svg
+    # Sparse profiles collapse (no dead band): zero < 3 providers < 8 providers.
+    assert (
+        card_height(FIXTURE_ZERO)
+        < card_height(FIXTURE_PRIVACY_TRUE)
+        < card_height(FIXTURE_POPULATED)
+    )
 
 
 def test_rounded_border_radius_8_and_1px_stroke():
@@ -508,3 +544,15 @@ def _write_all_snapshots() -> int:
 if __name__ == "__main__":
     written = _write_all_snapshots()
     print(f"Wrote {written} snapshot files to {SNAPSHOT_DIR}")
+
+
+def test_coordinate_hygiene_no_float_noise():
+    """Gate-review regression (P1, 2026-07-14): every numeric geometry
+    attribute must be an integer or a short decimal (the 0.5 border) —
+    never raw double-precision noise like x="120.67999999999999"."""
+    attr_re = re.compile(r'\b(?:x|y|x1|y1|x2|y2|width|height)="([^"]+)"')
+    for stats in list(CASES.values()) + [FIXTURE_LONG_NAME, FIXTURE_ESCAPE_NAME]:
+        for theme in THEMES.values():
+            svg = render_summary(stats, theme)
+            for value in attr_re.findall(svg):
+                assert re.fullmatch(r"-?\d+(\.\d{1,2})?", value), value

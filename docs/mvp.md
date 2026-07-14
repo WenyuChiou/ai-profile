@@ -106,11 +106,14 @@ images through its asset proxy; paired light/dark assets via `<picture>` is
 the reliable, GitHub-native theming mechanism.)
 
 The summary card shows: reporting period ("All time" in v0.1) · unique
-commits scanned · AI-attributed commits · AI participation events · active
-AI days · number of AI providers · provider-ranked counts (top 6 +
-"+N more", metric named, unit stated) · unknown count · evidence-quality
-line (events) · public/private inclusion line (commits) · generation date
-(UTC date only) · metric definition footnote.
+commits scanned · AI-attributed commits / AI participation events / active
+AI days as accent hero values · number of AI providers · provider-ranked
+bars (top 6 + "+N more") with count and percentage, denominator stated in
+the table header · unknown count · evidence chips (events) · privacy
+chips (inclusion statement, plus a public/private commit split chip when
+both sides are nonzero) · generation date (UTC date only) · metric
+definition footnote. Card height is dynamic-but-deterministic (collapses
+with few providers; ADR-010).
 
 ## 6. Privacy defaults
 
