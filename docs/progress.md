@@ -4,7 +4,7 @@ Maintained per the UltraCode run protocol: concise engineering decisions and obs
 
 ## Current phase
 
-Phase 1 — first vertical slice (implementation in progress). Phase 0 complete and committed (`08f7413`).
+**v0.1 vertical slice COMPLETE** — Phase 0 committed as `08f7413`; implementation committed as `50b8ac3` (161 tests green, independent gate review APPROVE, zero P0/P1). Editable install + console entry point verified (`aiprofile 0.1.0`).
 
 ## Completed
 
@@ -83,6 +83,9 @@ Recorded in `docs/decisions/` as they are finalized. Non-delegable items (archit
 
 - 2026-07-14 (orchestrator, final): full suite `python -m pytest tests/ -p no:cacheprovider` — **161 passed, 0 failed** (150 unit incl. import-isolation + gitio root-only regressions, 9 integration, 2 new path tests); `ruff check src/ tests/` clean.
 
+- 2026-07-14: Final gate — independent code-reviewer on the staged 48-file diff: **APPROVE, HIGH confidence, zero P0/P1** (re-ran suite + linter itself; attribution/privacy/robustness invariants independently traced; version-parity sweep clean). P2/P3 notes: NULL-source_reference uniqueness (tracked, post-v0.1), CLI unicode punctuation on rare OEM codepages (verified non-crashing on cp950/cp1252), single-pass git log at scale (fine for v0.1).
+- 2026-07-14: Implementation committed to main (`50b8ac3`, 48 files, +6568). `pip install -e ".[dev]"` + `aiprofile --version` verified.
+
 ## Next action
 
-Final commit gate (code-review on the full implementation diff) → gated commit to main → final run report.
+Post-v0.1: next smallest vertical slice = Git Notes adapter (`refs/notes/ai-collaboration`) + git-ai import mapping into the `imported` evidence tier (mvp.md §10 item 1). Also pending: repository owner's LICENSE decision (MIT recommended).
