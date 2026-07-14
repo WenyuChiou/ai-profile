@@ -56,7 +56,7 @@ provenance:                       # required
   evidence_level: "declared"      # required: §6 (max over sources)
   sources:                        # required, at least one entry
     - source_type: "git_trailer"  # §6.2
-      source_reference: null      # optional free-form locator
+      source_reference: null      # enum-constrained locator (see 6.2)
       evidence_level: "declared"
 
 recorded_at: "2026-07-14T12:00:00+00:00"  # optional, audit only; never part
@@ -75,6 +75,11 @@ Validation rules:
   coerced.
 - Required fields missing → rejected.
 - `commit_sha` must be 40 lowercase hex characters.
+- `activity.timestamp` and `recorded_at` must be OFFSET-AWARE ISO 8601
+  timestamps (date-only and naive forms are rejected — author-local day
+  semantics depend on the offset; gate H-05). `human_reviewed` must be
+  true/false/null. `human` records require declared evidence from an
+  explicit declaration source (never `none` — gate H-05).
 - `roles` is stored sorted and deduplicated; validation rejects unknown role
   values (the *parser* drops unknown tokens with a warning before the event
   is built — the schema layer itself never silently drops).
@@ -187,26 +192,31 @@ none                   # the no-evidence marker used by unknown events
 type (G2-07 — a prose prohibition is not a control): `git_trailer` allows
 exactly `ai-provider` / `ai-tool` / `ai-mode`; `git_trailer_coauthor`
 allows exactly `co-authored-by`; `none` requires null. Future source
-types must define their closed locator sets before shipping. Provenance
-rows are **local-only data** — they never cross the VizStats boundary.
+types must define their closed locator sets before shipping. Duplicate
+`(source_type, source_reference)` keys within one construction dedupe to
+the HIGHEST evidence level at the schema boundary (gate H-03 — otherwise
+one evidence multiset had order-dependent canonical serializations).
+Provenance rows are **local-only data** — they never cross the VizStats
+boundary.
 
 ## 7. Repository identity
 
 `repository_uid` is stable across machine paths and never published:
 
-- If the repository has an `origin` remote: `remote:v2:<canonical>` using
-  the **versioned canonicalization algorithm of ADR-016** (G2-01): host
-  lowercased, path case preserved except on documented case-insensitive
-  hosts (github.com), non-default port retained, credentials stripped,
-  query/fragment dropped, scp/IPv6 forms pinned, trailing `/` and `.git`
-  stripped (e.g. `remote:v2:github.com/owner/repo`). Distinct
-  repositories on case-sensitive hosts can no longer merge through case
-  folding. Changing any rule bumps the algorithm version; different
-  versions never compare equal.
-- Otherwise: `local:v2:<full 64-hex sha256(salt || resolved-path)>` using
-  the per-install salt created by `aiprofile init`. (Full digest, not
-  truncated: the uid is local-only, and truncation would buy nothing while
-  creating a collision-merges-two-repos failure mode.)
+- If the repository has an `origin` remote: `remote:v3:<canonical>` using
+  the **versioned, INJECTIVE canonicalization algorithm of ADR-016 v3**
+  (G2-01; Gate-3 C-01/H-01/M-04): remote identity requires a positive
+  marker; credentials strip at the last `@`; query/fragment strip in every
+  syntax; alias-convergent hosts (documented: github.com) canonicalize as
+  `host/case-folded-path`, every other host as `scheme://host:port/path`
+  with scheme retained and the port explicit — self-delimiting, so no
+  concatenation forgery can collide two identities. Changing any rule
+  bumps the algorithm version; different versions never compare equal.
+- Otherwise: `local:v3:<full 64-hex sha256(salt || resolved-path)>` over
+  the CASE-PRESERVED resolved path (Gate-3 C-02: case-insensitive
+  filesystems converge via `Path.resolve()` itself; case-distinct POSIX
+  directories correctly split), using the per-install salt created by
+  `aiprofile init`. (Full digest, not truncated.)
 
 Two clones of one remote share a uid by design; configuration may then
 hold two entries for one uid, and the **most restrictive publication
@@ -272,8 +282,13 @@ group plus a matching co-author line), and to future multi-source imports
   serialization never depends on ingestion order (G2-06).
 - `evidence_level`: max over sources.
 - `roles`: sorted union.
-- `model` / `model_raw`, `contribution_mode`, `human_reviewed`: resolved
-  by the canonical, ingestion-order-free rule of ADR-008 (G2-06): higher
+- `contribution_mode`, `human_reviewed` — and the `(provider,
+  provider_raw)` / `(model, model_raw)` / `(tool, tool_raw)` PAIRS, each
+  resolved atomically from ONE winning leaf (Gate-3 M-10: independent
+  per-scalar resolution could pair a canonical value from one source with
+  a raw value from another — a provenance statement no source made) —
+  are resolved by the canonical, ingestion-order-free rule of ADR-008
+  (G2-06): higher
   evidence precedence wins; ties break by source-type priority
   (`git_trailer > git_trailer_coauthor > manual_declaration > none`),
   then lexicographic source locator, then lexicographic value. The rule
@@ -327,7 +342,12 @@ Semantics as in the proposal §12. v0.1 specifics:
 
 ## 10. Provider / model / tool normalization
 
-**Providers and tools** normalize through the registry
+**The canonical slug sets are schema-owned vocabulary**
+(`vocab.CANONICAL_PROVIDERS` / `CANONICAL_TOOLS`): `build_event` rejects
+any canonical value outside them, and the privacy boundary independently
+collapses non-canonical provider keys into the `unrecognized` bucket
+(defense in depth, gate H-02) — an arbitrary string can never pose as
+canonical end-to-end. **Providers and tools** normalize through the registry
 (`src/aiprofile/registry.py`; ADR-013). Raw source strings are always
 preserved in `*_raw`. An unrecognized raw value yields canonical `null`.
 Nothing is ever guessed into a canonical slug.

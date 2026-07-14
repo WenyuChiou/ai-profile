@@ -41,7 +41,7 @@ class RepoAggregates:
     human_declared_commits: int = 0    # commits with human event(s) and no ai
     unknown_commits: int = 0           # commits with only unknown events
     active_ai_dates: set[str] = field(default_factory=set)  # dates with >=1 ai event
-    evidence_records: dict[str, int] = field(default_factory=dict)  # level -> events
+    evidence_records: dict[str, int] = field(default_factory=dict)  # level -> records
     providers: dict[str | None, ProviderAgg] = field(default_factory=dict)
 
 

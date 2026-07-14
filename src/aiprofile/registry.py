@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .schema.vocab import UNRECOGNIZED_PROVIDER
+from .schema.vocab import CANONICAL_PROVIDERS, CANONICAL_TOOLS, UNRECOGNIZED_PROVIDER
 
 #: raw (lowercased) AI-Provider trailer value -> canonical provider slug
 PROVIDER_ALIASES: dict[str, str] = {
@@ -142,3 +142,12 @@ def provider_display(slug: str) -> str:
 # section 10); guarded here and pinned by a unit test.
 assert UNRECOGNIZED_PROVIDER not in PROVIDER_ALIASES
 assert UNRECOGNIZED_PROVIDER not in PROVIDER_DISPLAY
+
+# The registry maps INTO the schema-owned canonical vocabulary and may never
+# emit anything outside it (gate H-02); guarded here and pinned by tests.
+assert set(PROVIDER_ALIASES.values()) <= CANONICAL_PROVIDERS
+assert set(PROVIDER_DISPLAY.keys()) <= CANONICAL_PROVIDERS
+assert {slug for slug, _ in TOOL_ALIASES.values()} <= CANONICAL_TOOLS
+assert {owner for _, owner in TOOL_ALIASES.values()} <= CANONICAL_PROVIDERS
+assert {i.provider for i in COAUTHOR_IDENTITIES.values()} <= CANONICAL_PROVIDERS
+assert {i.tool for i in COAUTHOR_IDENTITIES.values() if i.tool} <= CANONICAL_TOOLS

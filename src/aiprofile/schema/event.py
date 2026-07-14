@@ -16,6 +16,8 @@ from .. import ACE_SCHEMA_VERSION
 from ..errors import SchemaValidationError
 from .vocab import (
     ALLOWED_SOURCE_REFERENCES,
+    CANONICAL_PROVIDERS,
+    CANONICAL_TOOLS,
     EVIDENCE_PRECEDENCE,
     SOURCE_TYPE_PRIORITY,
     ActivityType,
@@ -148,9 +150,28 @@ def build_event(
 
     if not sources:
         raise SchemaValidationError("provenance.sources requires at least one entry")
-    # Canonical source order (schema.md 8.3): serialization must not depend
-    # on ingestion order (G2-06).
-    src_tuple = tuple(sorted(sources, key=_source_sort_key))
+    # Per-source enum coercion (gate H-05: raw strings must yield the
+    # schema's own error, never AttributeError/KeyError downstream), then
+    # dedup by (type, reference) keeping the HIGHEST evidence (gate H-03:
+    # a stable sort alone left duplicate keys caller-ordered, giving one
+    # evidence multiset two canonical serializations), then canonical order
+    # (G2-06: serialization must not depend on ingestion order).
+    coerced: list[ProvenanceSource] = []
+    for raw_src in sources:
+        st = _coerce(SourceType, raw_src.source_type, "provenance.sources[].source_type")
+        lv = _coerce(
+            EvidenceLevel, raw_src.evidence_level, "provenance.sources[].evidence_level"
+        )
+        coerced.append(ProvenanceSource(st, lv, raw_src.source_reference))
+    by_key: dict[tuple[str, str | None], ProvenanceSource] = {}
+    for src in coerced:
+        held = by_key.get(src.key())
+        if held is None or (
+            EVIDENCE_PRECEDENCE[src.evidence_level]
+            > EVIDENCE_PRECEDENCE[held.evidence_level]
+        ):
+            by_key[src.key()] = src
+    src_tuple = tuple(sorted(by_key.values(), key=_source_sort_key))
     for src in src_tuple:
         allowed = ALLOWED_SOURCE_REFERENCES.get(src.source_type)
         if allowed is None:
@@ -173,6 +194,24 @@ def build_event(
         key=lambda lv: EVIDENCE_PRECEDENCE[lv],
     )
 
+    if human_reviewed is not None and not isinstance(human_reviewed, bool):
+        raise SchemaValidationError(
+            f"activity.human_reviewed must be true, false, or null — got"
+            f" {human_reviewed!r} (gate H-05)"
+        )
+    if provider is not None and provider not in CANONICAL_PROVIDERS:
+        raise SchemaValidationError(
+            f"actor.provider {provider!r} is not a canonical provider slug"
+            " (schema.md 10, gate H-02) — unrecognized values belong in"
+            " provider_raw with provider=null"
+        )
+    if tool is not None and tool not in CANONICAL_TOOLS:
+        raise SchemaValidationError(
+            f"actor.tool {tool!r} is not a canonical tool slug (schema.md 10,"
+            " gate H-02) — unrecognized values belong in tool_raw with"
+            " tool=null"
+        )
+
     identity_fields = (provider, provider_raw, model, model_raw, tool, tool_raw)
     if actor is ActorType.AI:
         if not (provider or provider_raw or tool or tool_raw):
@@ -188,6 +227,15 @@ def build_event(
         if actor is ActorType.UNKNOWN and evidence is not EvidenceLevel.UNKNOWN:
             raise SchemaValidationError(
                 "actor.type=unknown requires evidence_level=unknown"
+            )
+        if actor is ActorType.HUMAN and (
+            evidence is not EvidenceLevel.DECLARED
+            or any(s.source_type is SourceType.NONE for s in src_tuple)
+        ):
+            raise SchemaValidationError(
+                "actor.type=human requires declared evidence from an explicit"
+                " declaration source — a human record never arises from"
+                " absence of evidence (schema.md 2, gate H-05)"
             )
 
     event_id = compute_event_id(
@@ -292,16 +340,44 @@ def merge_event_group(events: list[AceEvent] | tuple[AceEvent, ...]) -> AceEvent
         )
         return candidates[0][1]
 
+    def resolve_pair(canonical_field: str, raw_field: str):
+        """(canonical, raw) pairs resolve atomically from ONE winning leaf
+        (gate M-10): independent per-scalar resolution could pair a
+        canonical value from one source with a raw value from another — a
+        provenance statement no source ever made."""
+        candidates = [
+            e
+            for e in events
+            if getattr(e, canonical_field) is not None
+            or getattr(e, raw_field) is not None
+        ]
+        if not candidates:
+            return None, None
+        candidates.sort(
+            key=lambda e: (
+                -_event_rank(e)[0],
+                -_event_rank(e)[1],
+                _event_rank(e)[2],
+                str((getattr(e, canonical_field), getattr(e, raw_field))),
+            )
+        )
+        winner = candidates[0]
+        return getattr(winner, canonical_field), getattr(winner, raw_field)
+
+    provider, provider_raw = resolve_pair("provider", "provider_raw")
+    model, model_raw = resolve_pair("model", "model_raw")
+    tool, tool_raw = resolve_pair("tool", "tool_raw")
+
     recorded = sorted(e.recorded_at for e in events if e.recorded_at is not None)
     return AceEvent(
         event_id=first.event_id,
         actor_type=first.actor_type,
-        provider=resolve("provider"),
-        provider_raw=resolve("provider_raw"),
-        model=resolve("model"),
-        model_raw=resolve("model_raw"),
-        tool=resolve("tool"),
-        tool_raw=resolve("tool_raw"),
+        provider=provider,
+        provider_raw=provider_raw,
+        model=model,
+        model_raw=model_raw,
+        tool=tool,
+        tool_raw=tool_raw,
         activity_type=first.activity_type,
         roles=roles,
         contribution_mode=resolve("contribution_mode"),
@@ -316,13 +392,10 @@ def merge_event_group(events: list[AceEvent] | tuple[AceEvent, ...]) -> AceEvent
     )
 
 
-def merge_events(existing: AceEvent, new: AceEvent) -> AceEvent:
-    """Pairwise convenience over :func:`merge_event_group` — correct for
-    two LEAF productions. Callers holding three or more productions of one
-    identity MUST pass them all to merge_event_group in one call; an
-    incremental pairwise fold re-ranks values against the merged pool and
-    is NOT ingestion-order-free (gate round-2 P1)."""
-    return merge_event_group([existing, new])
+# NOTE (gate M-12): there is deliberately NO exported pairwise merge —
+# an incremental pairwise fold of three or more productions re-ranks values
+# against the merged pool and is not ingestion-order-free. All callers pass
+# every leaf production of one identity to merge_event_group in one call.
 
 
 def to_dict(event: AceEvent) -> dict:
@@ -392,8 +465,14 @@ def _coerce(enum_cls, value, field: str):
 
 def _require_iso(value: str, field: str) -> None:
     try:
-        datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(value)
     except (TypeError, ValueError):
         raise SchemaValidationError(
             f"{field}: {value!r} is not an ISO 8601 timestamp"
         ) from None
+    if parsed.tzinfo is None:
+        # Date-only and naive forms parse but carry no offset; author-local
+        # day semantics depend on the offset being present (gate H-05).
+        raise SchemaValidationError(
+            f"{field}: {value!r} must be an offset-aware ISO 8601 timestamp"
+        )

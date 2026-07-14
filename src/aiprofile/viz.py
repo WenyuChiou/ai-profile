@@ -98,6 +98,11 @@ def _validate(s: VizStats) -> None:
         s.privacy.explicitly_publishable_commits,
         s.privacy.anonymous_aggregate_commits,
         s.provider_count,
+        # provider-row numerics (gate M-01): rows are part of the validated
+        # contract too, not just the top-level totals.
+        *(p.attributed_commits for p in s.providers),
+        *(p.actor_presences for p in s.providers),
+        *(p.active_days for p in s.providers),
     ]
     if any((not isinstance(c, int)) or c < 0 for c in counts):
         raise RenderError("VizStats: all counts must be non-negative integers")

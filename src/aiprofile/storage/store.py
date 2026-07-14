@@ -33,6 +33,7 @@ def replace_repository_scan(
     local_path: str,
     scanned: list[CommitEvents],
     scanned_at: str | None,
+    purge_uids: tuple[str, ...] = (),
 ) -> None:
     """Atomically replace one repository's scan-derived rows (ADR-014).
 
@@ -53,6 +54,16 @@ def replace_repository_scan(
         ) from exc
 
     try:
+        # Purge superseded identities in the SAME transaction (gate C-03):
+        # a uid-algorithm migration must not leave orphan rows under the
+        # old uid — they would surface as phantom repositories.
+        for old_uid in purge_uids:
+            row = conn.execute(
+                "SELECT id FROM repositories WHERE repository_uid = ?", (old_uid,)
+            ).fetchone()
+            if row is not None:
+                _delete_repository_rows(conn, row["id"])
+                conn.execute("DELETE FROM repositories WHERE id = ?", (row["id"],))
         repository_id = _upsert_repository(
             conn,
             repository_uid=repository_uid,

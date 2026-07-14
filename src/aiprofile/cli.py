@@ -66,9 +66,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--full",
         action="store_true",
         help=(
-            "set this repository's publication level to 'full' (public"
-            " counting); default is aggregate_only and a repeat scan never"
-            " downgrades"
+            "set this repository's publication level to 'full' (explicitly"
+            " publishable — a policy decision, not a visibility claim);"
+            " default is aggregate_only and a repeat scan never downgrades"
         ),
     )
     p_scan.set_defaults(func=_cmd_scan)
@@ -137,7 +137,7 @@ def _cmd_scan(args: argparse.Namespace) -> int:
         f"{summary.display_name}: {summary.commits_seen} commits seen,"
         f" {summary.commits_kept} by configured identities"
         f" ({summary.commits_skipped_identity} skipped),"
-        f" {summary.events_stored} events stored"
+        f" {summary.events_stored} records stored"
     )
     _print_warnings(summary.warnings, verbose=args.verbose)
     return 0

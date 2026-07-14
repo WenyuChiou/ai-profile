@@ -2,7 +2,7 @@
 
 Covers: valid construction + role normalization, validation rejections,
 actor/evidence invariants, deterministic event_id derivation, canonical
-JSON serialization, and merge_events semantics.
+JSON serialization, and merge_event_group semantics.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from aiprofile.schema.event import (
     build_event,
     canonical_json,
     compute_event_id,
-    merge_events,
+    merge_event_group,
     to_dict,
 )
 from aiprofile.schema.vocab import (
@@ -298,14 +298,14 @@ def test_canonical_json_differs_for_different_events():
     assert canonical_json(a) != canonical_json(b)
 
 
-# --- 6. merge_events ---------------------------------------------------------
+# --- 6. merge_event_group ---------------------------------------------------------
 
 
 def test_merge_events_mismatched_identity_raises():
     a = _make_ai_event()
     b = _make_ai_event(repository_uid="remote:github.com/owner/other")
     with pytest.raises(SchemaValidationError):
-        merge_events(a, b)
+        merge_event_group([a, b])
 
 
 def test_merge_sources_set_union_deduped_by_type_and_reference():
@@ -323,7 +323,7 @@ def test_merge_sources_set_union_deduped_by_type_and_reference():
             ),
         )
     )
-    merged = merge_events(existing, new)
+    merged = merge_event_group([existing, new])
     assert len(merged.sources) == 2
     assert {s.key() for s in merged.sources} == {
         (SourceType.GIT_TRAILER.value, "ai-provider"),
@@ -346,14 +346,14 @@ def test_merge_evidence_level_is_max_over_sources():
             ),
         )
     )
-    merged = merge_events(existing, new)
+    merged = merge_event_group([existing, new])
     assert merged.evidence_level is EvidenceLevel.VERIFIED
 
 
 def test_merge_roles_are_sorted_union():
     existing = _make_ai_event(roles=[Role.IMPLEMENTATION])
     new = _make_ai_event(roles=[Role.TESTING, Role.DOCUMENTATION])
-    merged = merge_events(existing, new)
+    merged = merge_event_group([existing, new])
     assert merged.roles == (Role.DOCUMENTATION, Role.IMPLEMENTATION, Role.TESTING)
 
 
@@ -376,11 +376,13 @@ def test_merge_scalar_tie_keeps_existing_and_fills_null_from_new():
             ),
         ),
     )
-    merged = merge_events(existing, new)
-    # both DECLARED (a tie): existing non-null scalar is kept...
+    merged = merge_event_group([existing, new])
+    # Trailer (priority 3) outranks coauthor (2): the trailer leaf wins the
+    # (model, model_raw) PAIR atomically (gate M-10) — its null model_raw is
+    # NOT back-filled from the weaker leaf, because that would assert a
+    # canonical/raw pairing no single source ever made.
     assert merged.model == "claude-sonnet-existing"
-    # ...and existing's null scalar is filled from new.
-    assert merged.model_raw == "Claude-Sonnet-New"
+    assert merged.model_raw is None
 
 
 def test_merge_new_side_with_higher_evidence_wins_non_null_scalars():
@@ -406,7 +408,7 @@ def test_merge_new_side_with_higher_evidence_wins_non_null_scalars():
             ),
         ),
     )
-    merged = merge_events(existing, new)
+    merged = merge_event_group([existing, new])
     assert merged.model == "claude-sonnet-new"
     assert merged.model_raw == "Claude-Sonnet-New"
     assert merged.contribution_mode is ContributionMode.AI_REVIEWED
@@ -416,7 +418,7 @@ def test_merge_new_side_with_higher_evidence_wins_non_null_scalars():
 def test_merge_preserves_activity_type():
     existing = _make_ai_event()
     new = _make_ai_event()
-    merged = merge_events(existing, new)
+    merged = merge_event_group([existing, new])
     assert merged.activity_type is ActivityType.COMMIT
 
 
@@ -461,8 +463,8 @@ def test_merge_scalar_true_tie_breaks_by_lexicographic_value():
     src = (ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"),)
     a = _make_ai_event(model="zeta-model", model_raw="Zeta-Model", sources=src)
     b = _make_ai_event(model="alpha-model", model_raw="Alpha-Model", sources=src)
-    assert merge_events(a, b).model == "alpha-model"
-    assert merge_events(b, a).model == "alpha-model"
+    assert merge_event_group([a, b]).model == "alpha-model"
+    assert merge_event_group([b, a]).model == "alpha-model"
 
 
 def test_merge_is_permutation_invariant():
@@ -498,7 +500,7 @@ def test_merge_is_permutation_invariant():
     for perm in itertools.permutations([e1, e2, e3]):
         merged = perm[0]
         for nxt in perm[1:]:
-            merged = merge_events(merged, nxt)
+            merged = merge_event_group([merged, nxt])
         results.add(
             canonical_json(merged)
             + "|"
@@ -612,3 +614,87 @@ def test_group_merge_exhaustive_permutations_of_four_leaves():
         for perm in itertools.permutations(leaves)
     }
     assert len(results) == 1, len(results)
+
+
+# ---------------------------------------------------------------------------
+# Gate-3 regressions (docs/reviews/gate-review.md): each test below was
+# confirmed FAILING against the pre-fix code (H-02, H-03, H-05, M-10).
+# ---------------------------------------------------------------------------
+
+
+def test_h05_date_only_timestamp_rejected():
+    with pytest.raises(SchemaValidationError, match="offset-aware"):
+        _make_ai_event(timestamp="2026-07-14")
+
+
+def test_h05_naive_datetime_rejected():
+    with pytest.raises(SchemaValidationError, match="offset-aware"):
+        _make_ai_event(timestamp="2026-07-14T10:00:00")
+
+
+def test_h05_human_requires_declared_non_none_evidence():
+    with pytest.raises(SchemaValidationError, match="human"):
+        build_event(
+            actor_type="human",
+            repository_uid="u",
+            commit_sha="a" * 40,
+            timestamp="2026-01-01T00:00:00+00:00",
+            sources=[ProvenanceSource(SourceType.NONE, EvidenceLevel.UNKNOWN)],
+        )
+
+
+def test_h05_raw_string_provenance_enums_coerced_or_schema_error():
+    # Valid strings coerce (never AttributeError/KeyError)...
+    ev = _make_ai_event(
+        sources=(ProvenanceSource("git_trailer", "declared", "ai-provider"),)
+    )
+    assert ev.sources[0].source_type is SourceType.GIT_TRAILER
+    assert ev.sources[0].evidence_level is EvidenceLevel.DECLARED
+    # ...and invalid strings raise the schema's own error type.
+    with pytest.raises(SchemaValidationError):
+        _make_ai_event(
+            sources=(ProvenanceSource("git_trailerz", "declared", "ai-provider"),)
+        )
+    with pytest.raises(SchemaValidationError):
+        _make_ai_event(
+            sources=(ProvenanceSource("git_trailer", "very-sure", "ai-provider"),)
+        )
+
+
+def test_h05_human_reviewed_must_be_bool_or_none():
+    with pytest.raises(SchemaValidationError, match="human_reviewed"):
+        _make_ai_event(human_reviewed="yes")
+
+
+def test_h03_duplicate_source_keys_dedupe_to_highest_evidence_any_order():
+    lo = ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")
+    hi = ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.VERIFIED, "ai-provider")
+    a = _make_ai_event(sources=(lo, hi))
+    b = _make_ai_event(sources=(hi, lo))
+    assert canonical_json(a) == canonical_json(b)
+    assert len(a.sources) == 1
+    assert a.sources[0].evidence_level is EvidenceLevel.VERIFIED
+
+
+def test_h02_non_canonical_provider_and_tool_rejected_at_schema_boundary():
+    with pytest.raises(SchemaValidationError, match="canonical"):
+        _make_ai_event(provider="private-org-secret")
+    with pytest.raises(SchemaValidationError, match="canonical"):
+        _make_ai_event(tool="secret-internal-tool")
+    # Canonical slugs still pass; raw fields stay free-form (local-only).
+    ok = _make_ai_event(provider="anthropic", provider_raw="Anything At All")
+    assert ok.provider == "anthropic"
+
+
+def test_m10_canonical_raw_pairs_resolve_from_one_leaf():
+    from aiprofile.schema.event import merge_event_group
+
+    src = (ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"),)
+    a = _make_ai_event(model="alpha", model_raw="alpha", sources=src)
+    b = _make_ai_event(model="beta", model_raw="Beta", sources=src)
+    for order in ([a, b], [b, a]):
+        merged = merge_event_group(order)
+        assert (merged.model, merged.model_raw) in {("alpha", "alpha"), ("beta", "Beta")}, (
+            merged.model,
+            merged.model_raw,
+        )

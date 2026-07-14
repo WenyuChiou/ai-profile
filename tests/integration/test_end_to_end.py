@@ -136,7 +136,7 @@ def test_happy_path_full_pipeline(tmp_path):
       a unknown(1)   b ai(1, anthropic)   c ai(1, openai)   d ai(1, anthropic)
       e ai(2: anthropic + openai)         f unknown(1)      g human(1)
       h ai(1, provider=None -> unrecognized bucket)
-      => 9 events stored across 8 commits.
+      => 9 records stored across 8 commits.
 
     Aggregated (schema.md section 15):
       commits_scanned         = 8                    (a..h, all by the configured identity)
@@ -175,7 +175,7 @@ def test_happy_path_full_pipeline(tmp_path):
     assert scan_res.returncode == 0, scan_res.stderr
     # cross-check against the derivation above via the scanner's own summary line
     assert "8 commits seen" in scan_res.stdout
-    assert "9 events stored" in scan_res.stdout
+    assert "9 records stored" in scan_res.stdout
     # commit f's dropped AI-Model-only group is diagnosed (diagnostics hygiene:
     # code + trailer key only, never the value — architecture.md section 10)
     assert "incomplete-group" in scan_res.stdout
@@ -619,3 +619,69 @@ def test_default_scan_warnings_use_ordinals_never_shas(tmp_path):
     verbose_res = run_cli(["-v", "scan", str(repo)], home=home, cwd=repo)
     assert verbose_res.returncode == 0, verbose_res.stderr
     assert re.search(r"\[[0-9a-f]{12}\]", verbose_res.stdout), verbose_res.stdout
+
+
+# ---------------------------------------------------------------------------
+# Gate-3 M-05: privacy canaries for the repository uid and a distinctive
+# remote-organization string, and scanner-to-published-output permutation
+# invariance.
+# ---------------------------------------------------------------------------
+
+
+def test_privacy_leak_remote_org_and_uid_canaries(tmp_path):
+    home = tmp_path / "home"
+    repo = tmp_path / "org-canary-repo"
+    build_repo(
+        repo,
+        [
+            (
+                "AI commit\n\nAI-Provider: Anthropic\nAI-Tool: Claude-Code",
+                "2026-04-01T10:00:00+00:00",
+            ),
+            ("plain", "2026-04-02T10:00:00+00:00"),
+        ],
+    )
+    subprocess.run(
+        ["git", "remote", "add", "origin",
+         "https://github.com/secret-zebra-org/secret-repo-x9.git"],
+        cwd=str(repo), check=True, capture_output=True,
+    )
+    out = tmp_path / "dist"
+    assert run_cli(["init"], home=home, cwd=repo).returncode == 0
+    assert run_cli(["scan", str(repo)], home=home, cwd=repo).returncode == 0
+    assert run_cli(["render", "--out", str(out)], home=home, cwd=repo).returncode == 0
+
+    cfg = json.loads((home / "config.json").read_text(encoding="utf-8"))
+    uid = cfg["repositories"][0]["repository_uid"]
+    assert "secret-zebra-org" in uid  # the uid itself embeds the org...
+    salt = cfg["salt"]
+
+    for asset in out.iterdir():
+        blob = asset.read_text(encoding="utf-8")
+        for canary in ("secret-zebra-org", "secret-repo-x9", uid, salt):
+            assert canary not in blob, f"{asset.name} leaked {canary[:24]}..."
+
+
+def test_published_outputs_invariant_under_trailer_reordering(tmp_path):
+    """Scanner -> storage -> aggregate -> publication permutation invariance
+    (M-05): the same evidence with reordered trailer lines must publish a
+    byte-identical profile.json."""
+    profiles = []
+    orders = [
+        "Multi-AI\n\nAI-Provider: Anthropic\nAI-Tool: Claude-Code\n"
+        "AI-Provider: OpenAI\nAI-Tool: Codex-CLI\n"
+        "Co-Authored-By: Claude <noreply@anthropic.com>",
+        "Multi-AI\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n"
+        "AI-Provider: OpenAI\nAI-Tool: Codex-CLI\n"
+        "AI-Provider: Anthropic\nAI-Tool: Claude-Code",
+    ]
+    for i, message in enumerate(orders):
+        home = tmp_path / f"home{i}"
+        repo = tmp_path / f"repo{i}"
+        out = tmp_path / f"dist{i}"
+        build_repo(repo, [(message, "2026-04-03T10:00:00+00:00")])
+        assert run_cli(["init"], home=home, cwd=repo).returncode == 0
+        assert run_cli(["scan", str(repo)], home=home, cwd=repo).returncode == 0
+        assert run_cli(["render", "--out", str(out)], home=home, cwd=repo).returncode == 0
+        profiles.append((out / "profile.json").read_bytes())
+    assert profiles[0] == profiles[1]

@@ -78,10 +78,15 @@ adapters → registry, schema.vocab, errors
 schema → (stdlib only)
 storage → schema, errors
 aggregate → storage, errors          # defines RepoAggregates
-privacy → aggregate, viz, config, errors
+privacy → aggregate, viz, config, registry*, errors
 render → viz, themes, errors          # NEVER storage, gitio, schema, sqlite3
 export → viz, errors                  # NEVER storage, gitio
 ```
+
+(*) The privacy → registry edge (gate M-08) is display-name resolution
+ONLY, applied strictly AFTER the canonical-slug collapse — registry
+fallback behavior can never become publication behavior for a
+non-canonical key (gate H-02).
 
 Enforced two ways (G2-16): a runtime test imports `render` and `export`
 in a fresh interpreter and asserts `sqlite3`, `subprocess`,

@@ -13,6 +13,7 @@ from .aggregate import RepoAggregates
 from .config import Config, resolve_publication_levels
 from .registry import provider_display
 from .schema.vocab import (
+    CANONICAL_PROVIDERS,
     UNRECOGNIZED_DISPLAY,
     UNRECOGNIZED_PROVIDER,
     EvidenceLevel,
@@ -72,7 +73,12 @@ def build_viz_stats(
         for level_value, count in agg.evidence_records.items():
             evidence[level_value] = evidence.get(level_value, 0) + count
         for key, pagg in agg.providers.items():
-            slug = key if key is not None else UNRECOGNIZED_PROVIDER
+            # Defense in depth (gate H-02): the schema already rejects
+            # non-canonical provider values, but this boundary must not
+            # TRUST that — any key outside the canonical vocabulary
+            # (malformed cache rows, future adapters, library misuse)
+            # collapses into the reserved bucket before display lookup.
+            slug = key if key in CANONICAL_PROVIDERS else UNRECOGNIZED_PROVIDER
             row = merged.setdefault(
                 slug,
                 {"attributed_commits": 0, "actor_presences": 0, "dates": set()},

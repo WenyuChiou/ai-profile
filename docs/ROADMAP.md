@@ -14,7 +14,7 @@ conformance pass over the existing implementation** — not
 pre-implementation certification. Finding dispositions:
 `docs/reviews/gate2-disposition.md`.
 
-## v0.1 — vertical slice (implemented; Gate 2 conformance in progress)
+## v0.1 — vertical slice (implemented; Gate 2 + Gate-3 conformance complete)
 
 Scope: docs/mvp.md. Exit criteria:
 
@@ -37,6 +37,14 @@ Scope: docs/mvp.md. Exit criteria:
       mirrors git's own disambiguation; reviewer could not construct a
       further dangerous-direction counterexample). Every fix shipped with
       a regression test confirmed failing pre-fix.
+- [x] Gate-3 implementation review (`docs/reviews/gate-review.md`, NOT
+      READY, 23 findings) resolved: all 23 accepted
+      (`docs/reviews/gate-disposition.md`), fixed with pre-fix-failing
+      regressions — headline: **uid algorithm v3** (injective; supersedes
+      v2 above), config-last atomic scans, alias-group migration,
+      schema-owned canonical vocabulary with independent privacy-boundary
+      collapse, pair-atomic merge. Persistent-reviewer verdict: APPROVE
+      (23/23 conformant; adversarial fuzz found no survivor).
 
 ## v0.1 OSS release (after conformance)
 
@@ -75,7 +83,9 @@ the summary card's token system); period filters (author-local-date
 boundary rule, schema.md §15); dedicated `privacy-preview` with per-repo
 views; optional coarse aggregation mode (rounding/thresholds — G2-09);
 `purge` helper; policy-resolver extraction when the second consumer
-appears (G2-15).
+appears (G2-15). An `aiprofile doctor`-style diagnostic listing
+stale/unresolvable alias config entries (gate-3 reviewer suggestion —
+improves the C-03 fail-closed UX without weakening it).
 
 ## v0.4+ — GitHub integration
 

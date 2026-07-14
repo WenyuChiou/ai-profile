@@ -6,7 +6,7 @@ from .event import (
     build_event,
     canonical_json,
     compute_event_id,
-    merge_events,
+    merge_event_group,
     to_dict,
 )
 from .vocab import (
@@ -25,7 +25,7 @@ __all__ = [
     "build_event",
     "canonical_json",
     "compute_event_id",
-    "merge_events",
+    "merge_event_group",
     "to_dict",
     "ActivityType",
     "ActorType",

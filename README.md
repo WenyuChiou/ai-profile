@@ -75,8 +75,9 @@ that is explicitly yours alone: `AI-Mode: Human-Only`.
 
 - Everything stays on your machine; no network calls, no telemetry.
 - Every scanned repository defaults to `aggregate_only`: it contributes
-  counts, never its name. `scan --full` is the explicit opt-in for public
-  counting; `excluded` removes a repository entirely.
+  counts, never its name. `scan --full` is the explicit opt-in that marks
+  a repository's counts as explicitly publishable (a policy decision you
+  make — NOT a claim about GitHub visibility); `excluded` removes a repository entirely.
 - Publication policy lives in `config.json` only — edit it and the next
   `aggregate`/`render` respects it, no rescan needed.
 - Public outputs contain counts, provider names, evidence totals, and a

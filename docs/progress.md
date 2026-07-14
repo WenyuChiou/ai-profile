@@ -27,6 +27,40 @@ which is authoritative).
   with pre-fix-failing regressions. Suite: **212 passed, 0 failed**;
   ruff clean.
 
+- **Gate-3 implementation review received and resolved** (2026-07-14):
+  `docs/reviews/gate-review.md` (independent, verdict NOT READY, 23
+  findings) → all 23 adjudicated ACCEPTED in
+  `docs/reviews/gate-disposition.md` (M-09/M-11 via documented decisions).
+  Resolved in code+design, each code fix with a pre-fix-failing
+  regression:
+  - C-01/C-02/H-01/M-04 → **uid algorithm v3** (injective structured
+    encoding, scheme retained, github-only transport convergence,
+    case-preserved local hash, last-`@` credential strip, query/fragment
+    parity, `.GIT` folding) — ADR-016 rewritten;
+  - C-03/C-04 → scan is config-last atomic (failures leave config
+    byte-identical), alias-group uid migration with fail-closed halt and
+    same-transaction old-row purge;
+  - H-02 → canonical slugs are schema-owned vocabulary enforced at
+    `build_event` AND independently collapsed at the privacy boundary;
+  - H-03/H-05/M-10/M-12 → duplicate-source dedup to highest evidence;
+    offset-aware timestamps, human-evidence rule, provenance enum
+    coercion, bool review flag; pair-atomic canonical/raw merge; pairwise
+    merge API removed (N-ary only);
+  - H-04 → object-format preflight (catches empty SHA-256 repos) with
+    path-free errors, before any mutation;
+  - M-01/M-02/M-03/M-05/M-07 → provider-row validation; recursive AST
+    import contract incl. dynamic imports; key-presence Human-Only
+    contradiction; uid/org/salt canaries + published-output permutation
+    invariance tests; bundle-atomic dist/ writes;
+  - M-06/M-08/M-09/M-11/L-01/L-02 → contradiction sweep across
+    mvp/schema/README/CLI-help/ADR-008/ADR-009, privacy→registry edge
+    documented, `aggregate -v` scope corrected, ADR-012 pre-release
+    exception, terminology sweep, historical banner on the archived run
+    log.
+  Suite after the pass: **240 passed, 1 skipped** (the skip is the POSIX
+  case-sensitivity fixture, not runnable on Windows — documented); ruff
+  clean.
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

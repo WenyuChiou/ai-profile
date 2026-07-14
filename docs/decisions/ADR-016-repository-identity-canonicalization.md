@@ -1,70 +1,90 @@
 # ADR-016: Versioned repository identity canonicalization
 
-Status: accepted (2026-07-14; created resolving Gate 2 finding G2-01)
+Status: accepted (2026-07-14; **v3** — revised twice: Gate 2 conformance
+review created v2 closing G2-01's case-folding merges; the Gate-3
+implementation review then proved v2 itself unsafe (findings C-01, C-02,
+H-01, M-04) and v3 replaces it)
 
 ## Context
 
 `repository_uid` deduplicates repositories and keys publication policy.
-The v1 rule ("lowercase host and path") could merge DISTINCT repositories
-on hosts with case-sensitive paths — corrupting counts and, worse, letting
-one repository's most-restrictive policy silently govern another
-(a privacy-boundary error). Ports, IPv6, query/fragment parts, and
-credential handling were unspecified.
+Because storage replaces rows BY uid and policy resolves BY uid, a uid
+collision between distinct repositories is simultaneously silent data
+loss, count corruption, and a privacy-policy boundary failure. The v2
+design had four proven defects: `host_<port>` string concatenation was
+forgeable by literal-underscore hostnames; global scheme erasure merged
+ssh/https namespaces that arbitrary self-hosted services do not guarantee
+to be the same; local-path lowercasing merged case-distinct directories
+on case-sensitive filesystems; and credential stripping at the FIRST `@`
+retained secret fragments.
 
-## Decision
+## Decision — algorithm v3
 
-Repository identity is a **pure, versioned domain function** in
-`gitio.py`; the algorithm version is part of the uid:
+Identity is a pure, versioned function in `gitio.py`; the algorithm
+version is embedded and different versions never compare equal:
 
 ```text
-remote:v2:<canonical-host>/<canonical-path>
-local:v2:<full 64-hex sha256(salt || resolved-path-lowercased)>
+remote:v3:<canonical>      # see below
+local:v3:<full 64-hex sha256(salt || case-preserved resolved path)>
 ```
 
-Algorithm v2 canonicalization of the `origin` URL:
+### Remote canonical form (injective by construction — C-01)
 
-1. Strip scheme; normalize scp form (`user@host:path` → host + path).
-2. Strip credentials (`user[:pass]@`); credentials never enter identity.
-3. **Host lowercased** (DNS is case-insensitive). IPv6 bracket hosts kept
-   verbatim inside brackets, lowercased.
-4. **Non-default port retained** as `host_port` (`:` is not filesystem- or
-   uid-safe context; encode as `host_8443` only when a port is present and
-   not 22/80/443 for ssh/http/https respectively — pinned in code).
-5. Strip query (`?...`) and fragment (`#...`) — they never identify a repo.
-6. **Path case preserved by default**; lowercased ONLY for hosts documented
-   case-insensitive (v2 list: `github.com` — GitHub owner/repo names are
-   case-insensitively unique, so lowercasing prevents alias-splitting
-   there and is unsafe elsewhere).
-7. Trailing `/` and one trailing `.git` stripped; empty host or path →
-   unusable → fall back to the `local:` form.
-8. **Remote identity requires a POSITIVE marker; everything else is local
-   by default** (gate rounds 2–3). Markers: a non-`file` scheme, or —
-   with no scheme — a colon before the first slash (git's own scp rule,
-   excluding single-letter drive hosts). Bare relative paths
-   (`vendor/upstream`), dotted relatives (`../x`), drive-letter forms
-   (`C:\x`, `C:/x`, `C:foo`), home-relative (`~/x`), UNC (`\\srv\x`),
-   absolute POSIX (`/x`), and `file://` URLs all yield no remote identity
-   and fall through to the `local:` form, which hashes the repository's
-   own resolved path. The failure directions are asymmetric, so the guard
-   fails toward local: misclassifying a remote as local merely splits a
-   uid (two clones stop deduplicating — safe); misclassifying a local
-   path as remote collides uids across unrelated repositories, and the
-   storage layer's replace-by-uid then silently destroys one repository's
-   history with the other's scan (round-2/round-3 reviewer repros:
-   `../template`, `vendor/upstream`).
+1. **Positive remote markers only** (unchanged from v2 round-3): a
+   non-`file` scheme, or — schemeless — a colon before the first slash
+   (git's scp rule, excluding single-letter drive hosts). Everything
+   else, including bare relative paths, `file://` URLs, drive-letter,
+   home-relative, UNC, and absolute paths, is LOCAL by default (the
+   fail-safe direction: remote-as-local splits a uid; local-as-remote
+   destroys data through replace-by-uid).
+2. **Credentials are stripped at the LAST `@` before the first slash**
+   (RFC 3986 authority; H-01) in both URL and scp syntaxes — no userinfo
+   substring can enter identity.
+3. **Query and fragment are stripped for every syntax** (M-04).
+4. **Alias-convergent hosts** (documented list, v3: `github.com`, whose
+   ssh/https/git endpoints serve one namespace on standard ports):
+   canonical = `host/path` with the path case-folded BEFORE the `.git`
+   suffix strip (so `Repo.GIT` converges — M-04). Scheme and port are
+   deliberately dropped for these hosts only.
+5. **Every other host**: canonical = `scheme://host:port/path` — scheme
+   retained (ssh and https identities deliberately split; C-01), port
+   always explicit when the scheme has a known default (so
+   `https://h/x == https://h:443/x` within one scheme), path case
+   preserved. The `://`, `:`, `/` delimiters cannot be produced by host
+   or port components, so the encoding parses back unambiguously — no
+   concatenation forgery is possible.
+6. scp syntax is the `ssh` scheme (port 22); bracketed IPv6 hosts are
+   handled in both syntaxes.
 
-Changing any rule requires a version bump (v3, ...) and a documented
-reconciliation path; uids with different algorithm versions never compare
-equal. The local database is a disposable cache (ADR-014) and config
-entries update their uid at scan time, so v1→v2 migration is "rescan".
+### Local form (C-02)
 
-Collision/alias fixtures are mandatory: path case (case-sensitive host
-split vs github.com merge), port variants, scp vs https equivalence,
-credentials, trailing slash/.git, two clones of one remote.
+The salted hash covers the **case-preserved** `Path.resolve()` result:
+`resolve()` already canonicalizes spelling on case-insensitive
+filesystems (so `C:\Repo` and `c:\repo` converge on Windows), while
+case-distinct directories on POSIX correctly split. A safe split is
+always preferred over a destructive merge.
+
+### Migration (C-03)
+
+Rescanning a path whose uid changes migrates its WHOLE alias group in the
+same operation: every config entry holding the old uid is re-derived
+(halting fail-closed if a sibling cannot be re-derived), and the old
+uid's database rows are purged inside the same scan transaction. If the
+migrated group resolves `excluded`, nothing is scanned or persisted —
+policy can never weaken through a partial migration (C-04 ordering).
 
 ## Consequences
 
-- Distinct repositories can no longer merge through case folding; equal
-  repositories still converge across URL spellings.
-- The uid is longer and carries its version — acceptable, it is local-only
-  and never published (schema.md §7).
+- Distinct repositories cannot merge through case folding, port
+  encodings, scheme erasure, or credential fragments; equal repositories
+  still converge across spellings (within a transport, plus full
+  cross-transport convergence on documented hosts).
+- Self-hosted ssh+https pairs of the SAME repository split into two uids
+  (safe; totals split rather than either repo's data being destroyed) —
+  users can converge them by using one remote URL form, and future
+  documented-host additions can widen rule 4.
+- Collision/alias fixtures are mandatory and adversarial: underscore
+  hosts vs ports, cross-transport pairs, IPv6 in both syntaxes,
+  multi-`@` credentials, query/fragment parity, `.GIT` case, relative and
+  bare-relative paths, POSIX case-distinct locals, migration groups with
+  conflicting policies.

@@ -103,6 +103,46 @@ PUBLICATION_RESTRICTIVENESS: dict[PublicationLevel, int] = {
 UNRECOGNIZED_PROVIDER = "unrecognized"
 UNRECOGNIZED_DISPLAY = "Unrecognized"
 
+#: Canonical slug vocabularies (schema.md section 10; gate finding H-02).
+#: The schema OWNS these sets: `build_event` rejects any canonical
+#: provider/tool value outside them, so an arbitrary string (e.g. a private
+#: org name smuggled into a "canonical" field by malformed cache/library
+#: input) is structurally unable to pose as canonical. The registry maps
+#: aliases INTO these sets and asserts it never emits anything else. Raw
+#: (`*_raw`) fields stay free-form and local-only.
+CANONICAL_PROVIDERS = frozenset(
+    {
+        "anthropic",
+        "openai",
+        "google",
+        "github",
+        "amazon",
+        "cursor",
+        "aider",
+        "roo-code",
+        "openhands",
+        "windsurf",
+        "cognition",
+    }
+)
+CANONICAL_TOOLS = frozenset(
+    {
+        "claude-code",
+        "codex-cli",
+        "copilot",
+        "cursor",
+        "aider",
+        "roo-code",
+        "openhands",
+        "devin",
+        "jules",
+        "gemini-cli",
+        "gemini-code-assist",
+        "windsurf",
+        "amazon-q",
+    }
+)
+
 #: Modes that imply an AI actor (schema.md section 5 mapping table).
 AI_IMPLYING_MODES = frozenset(
     {

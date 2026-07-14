@@ -63,8 +63,11 @@ Semantics pinned:
   an existing entry. Other level changes (`aggregate_only`, `excluded`)
   are config edits in v0.1 (documented in README).
 - `aggregate` stdout contains only post-redaction content. `-v` adds
-  local-only detail (skipped-author counts, unrecognized raw provider
-  strings, excluded-repository count) — clearly marked local-only.
+  local-only detail (unrecognized raw provider strings,
+  excluded-repository count) — clearly marked local-only.
+  Skipped-author counts are scan-run diagnostics: `scan` reports them at
+  scan time; they are not persisted for later `aggregate` runs (gate
+  M-09 — the cache does not grow for a convenience readout).
 - All commands support `-v` and exit 0 / 1 (operational error) / 2 (usage).
 
 ## 4. Expected files
@@ -131,8 +134,9 @@ is dynamic-but-deterministic (collapses with few providers; ADR-010).
   paths, tokens, excluded-repository counts, timestamps finer than a date.
 - `excluded` repositories are skipped at scan time AND re-excluded at
   aggregation (defense in depth).
-- Diagnostics hygiene: default warnings name commit sha + trailer key
-  only; values only under `--verbose` (architecture §10).
+- Diagnostics hygiene: default warnings name a scan-local commit ordinal
+  + trailer key only — never SHAs or trailer values; both require
+  `--verbose` (architecture §10, G2-08).
 - The local DB and config stay on the machine; nothing is uploaded.
   Deleting `AIPROFILE_HOME` deletes config + database; generated `dist/`
   assets are user-placed files removed separately (a `purge` helper is a

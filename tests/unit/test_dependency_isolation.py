@@ -49,17 +49,41 @@ def test_render_and_export_never_load_storage_git_or_sqlite():
 
 
 def test_static_ast_import_contract_for_render_and_export():
-    """G2-16: static AST check catches lazy/dynamic imports the runtime
-    module-graph test could miss."""
+    """G2-16 + gate-3 M-02: static AST check over EVERY render/export module
+    (recursively discovered, not a hard-coded list), against the FULL
+    forbidden-edge set from architecture.md section 2, including dynamic
+    import calls (importlib.import_module / __import__) where the runtime
+    module-graph test could be blind."""
     import ast
 
-    banned_roots = {"sqlite3", "subprocess", "aiprofile.storage", "aiprofile.gitio"}
-    files = [
-        REPO_ROOT / "src" / "aiprofile" / "render" / "summary_svg.py",
-        REPO_ROOT / "src" / "aiprofile" / "render" / "themes.py",
-        REPO_ROOT / "src" / "aiprofile" / "render" / "__init__.py",
-        REPO_ROOT / "src" / "aiprofile" / "export.py",
+    banned_roots = {
+        "sqlite3",
+        "subprocess",
+        "aiprofile.storage",
+        "aiprofile.gitio",
+        "aiprofile.schema",
+        "aiprofile.adapters",
+        "aiprofile.config",
+        "aiprofile.privacy",
+        "aiprofile.aggregate",
+        "aiprofile.scanner",
+        "aiprofile.registry",
+        "aiprofile.cli",
+    }
+    render_dir = REPO_ROOT / "src" / "aiprofile" / "render"
+    files = sorted(render_dir.rglob("*.py")) + [
+        REPO_ROOT / "src" / "aiprofile" / "export.py"
     ]
+    assert len(files) >= 4, "render module discovery looks broken"
+
+    def resolve_relative(module_file, node):
+        # level=1 -> package dir of the file, level=2 -> its parent, etc.
+        parts = module_file.relative_to(REPO_ROOT / "src").parts[:-1]
+        base = list(parts)[: len(parts) - (node.level - 1)]
+        if node.module:
+            base.append(node.module)
+        return ".".join(base)
+
     violations = []
     for f in files:
         tree = ast.parse(f.read_text(encoding="utf-8"))
@@ -68,12 +92,20 @@ def test_static_ast_import_contract_for_render_and_export():
             if isinstance(node, ast.Import):
                 names = [a.name for a in node.names]
             elif isinstance(node, ast.ImportFrom):
-                if node.level:  # relative import: resolve against aiprofile
-                    base = "aiprofile." + (node.module or "")
-                    names = [base.rstrip(".")]
-                    names += [f"{base.rstrip('.')}.{a.name}" for a in node.names]
+                if node.level:
+                    base = resolve_relative(f, node)
+                    names = [base] + [f"{base}.{a.name}" for a in node.names]
                 else:
                     names = [node.module or ""]
+            elif isinstance(node, ast.Call):
+                func = node.func
+                is_dynamic = (isinstance(func, ast.Name) and func.id == "__import__") or (
+                    isinstance(func, ast.Attribute)
+                    and func.attr == "import_module"
+                )
+                if is_dynamic:
+                    violations.append(f"{f.name}: dynamic import call")
+                continue
             for name in names:
                 if any(name == b or name.startswith(b + ".") for b in banned_roots):
                     violations.append(f"{f.name}: {name}")

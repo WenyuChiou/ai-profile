@@ -71,5 +71,6 @@ must be structural, not best-effort.
 
 - Privacy review of outputs reduces to one dataclass, one constructor
   (`privacy.py`), and two leak tests.
-- `repository_anonymous` is accepted vocabulary but renders identically to
-  `aggregate_only` until per-repo views exist — documented in schema.md §9.
+- `repository_anonymous` is RESERVED vocabulary: v0.1 config validation
+  rejects it with a targeted error (G2-12); it returns with anonymous
+  per-repository views — documented in schema.md §9.

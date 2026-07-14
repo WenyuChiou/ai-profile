@@ -97,15 +97,15 @@ def parse_commit_trailers(
     warnings: list[ParseWarning] = []
 
     # `pending` holds, in message order, either an in-progress AI-* group
-    # (a plain dict, finalized after the full pass below) or an
-    # already-resolved co-author ParticipationSpec. Co-author lines never
-    # depend on later lines so they are resolved immediately; AI-* groups
-    # are finalized only after the loop so a group left open at end-of-input
-    # is handled identically to one closed early by a repeated key
-    # (ADR-005) — its position in `pending` (and therefore in the output)
-    # is fixed at the line where its first key appeared.
-    pending: list[dict[str, str] | ParticipationSpec] = []
-    current_group: dict[str, str] | None = None
+    # or an already-resolved co-author ParticipationSpec. Co-author lines
+    # never depend on later lines so they are resolved immediately; AI-*
+    # groups are finalized only after the loop so a group left open at
+    # end-of-input is handled identically to one closed early by a repeated
+    # key (ADR-005). A group tracks VALUES and KEY PRESENCE separately
+    # (gate M-03): an empty-valued `AI-Provider:` contributes no value but
+    # its presence still matters to the Human-Only contradiction rule.
+    pending: list[_Group | ParticipationSpec] = []
+    current_group: _Group | None = None
 
     for line in trailer_lines:
         key, value = _split_trailer_line(line)
@@ -119,18 +119,25 @@ def parse_commit_trailers(
                     pending.append(coauthor_spec)
             continue
 
-        if key not in AI_TRAILER_KEYS or not value:
-            # Non-AI, non-co-author trailers, and empty-value AI-* trailers
-            # (treated as absent) are ignored without affecting grouping.
+        if key not in AI_TRAILER_KEYS:
+            # Non-AI, non-co-author trailers are ignored without affecting
+            # grouping.
             continue
 
-        if current_group is None or key in current_group:
-            current_group = {}
+        if current_group is None:
+            current_group = _Group()
             pending.append(current_group)
-        current_group[key] = value
+        elif value and key in current_group.values:
+            # Only a NON-EMPTY repeat closes the group (ADR-005): an
+            # empty-valued repeat contributes presence without splitting.
+            current_group = _Group()
+            pending.append(current_group)
+        current_group.present.add(key)
+        if value:
+            current_group.values[key] = value
 
     for item in pending:
-        if isinstance(item, dict):
+        if isinstance(item, _Group):
             spec, group_warnings = _finalize_group(item)
             warnings.extend(group_warnings)
             if spec is not None:
@@ -139,6 +146,17 @@ def parse_commit_trailers(
             specs.append(item)
 
     return specs, warnings
+
+
+class _Group:
+    """One AI-* trailer group: parsed non-empty values plus the set of
+    recognized keys that APPEARED (even with empty values — gate M-03)."""
+
+    __slots__ = ("values", "present")
+
+    def __init__(self) -> None:
+        self.values: dict[str, str] = {}
+        self.present: set[str] = set()
 
 
 def _split_trailer_line(line: str) -> tuple[str | None, str]:
@@ -151,33 +169,34 @@ def _split_trailer_line(line: str) -> tuple[str | None, str]:
     return key_part.strip().lower(), value_part.strip()
 
 
-def _finalize_group(group: dict[str, str]) -> tuple[ParticipationSpec | None, list[ParseWarning]]:
+def _finalize_group(group: _Group) -> tuple[ParticipationSpec | None, list[ParseWarning]]:
     """Turn one collected AI-* trailer group into a spec, or drop it with a
     group-level warning (ADR-005 grouping rule + the two carved Human-Only
     exceptions; schema.md section 5)."""
-    provider_raw_value = group.get("ai-provider")
-    tool_raw_value = group.get("ai-tool")
+    values = group.values
+    provider_raw_value = values.get("ai-provider")
+    tool_raw_value = values.get("ai-tool")
     tool_resolved = resolve_tool(tool_raw_value) if tool_raw_value is not None else None
     has_anchor = provider_raw_value is not None or tool_resolved is not None
 
-    mode_raw_value = group.get("ai-mode")
+    mode_raw_value = values.get("ai-mode")
     mode_candidate = _normalize_mode(mode_raw_value) if mode_raw_value is not None else None
     is_human_only = mode_candidate is ContributionMode.HUMAN_ONLY
 
     if is_human_only:
-        # Contradiction keys on KEY PRESENCE, not registry resolution: a
-        # user who typed any AI-Provider/AI-Tool next to Human-Only made a
-        # contradictory declaration, and an unrecognized tool string must
-        # not be silently dropped into a clean human declaration (ADR-005).
-        if provider_raw_value is not None or tool_raw_value is not None:
+        # Contradiction keys on KEY PRESENCE — even an empty-valued
+        # `AI-Provider:`/`AI-Tool:` line next to Human-Only is a
+        # contradictory declaration, never a clean human record
+        # (ADR-005; gate M-03).
+        if {"ai-provider", "ai-tool"} & group.present:
             return None, [ParseWarning("contradictory-group", "ai-mode")]
-        return _build_human_spec(group)
+        return _build_human_spec(values)
 
     if not has_anchor:
-        anchor_key = next(iter(group))
+        anchor_key = next(iter(values), None) or next(iter(sorted(group.present)))
         return None, [ParseWarning("incomplete-group", anchor_key)]
 
-    return _build_ai_spec(group, provider_raw_value, tool_raw_value, tool_resolved)
+    return _build_ai_spec(values, provider_raw_value, tool_raw_value, tool_resolved)
 
 
 def _build_human_spec(group: dict[str, str]) -> tuple[ParticipationSpec, list[ParseWarning]]:

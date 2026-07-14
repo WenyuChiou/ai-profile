@@ -45,4 +45,7 @@ unknown`.
 ## Consequences
 
 - Adding the git-ai importer later (`imported`) or signed hooks
-  (`verified`) requires no schema change and no re-ranking debate.
+  (`verified`) requires no schema change; the precedence ranking itself
+  MUST be re-evaluated before that importer ships (see the provisional
+  note above — gate M-06 removed the earlier no-re-ranking wording that
+  contradicted it).

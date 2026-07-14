@@ -464,3 +464,16 @@ def test_human_only_with_unrecognized_tool_is_contradictory():
     )
     assert specs == []
     assert [w.code for w in warnings] == ["contradictory-group"]
+
+
+def test_m03_empty_valued_ai_keys_still_trigger_human_only_contradiction():
+    """Gate-3 M-03: the ADR-005 contradiction rule keys on KEY PRESENCE;
+    an empty-valued AI-Provider:/AI-Tool: line must not launder a
+    contradictory declaration into a clean human record."""
+    for lines in (
+        ["AI-Provider:", "AI-Mode: Human-Only"],
+        ["AI-Tool:   ", "AI-Mode: Human-Only"],
+    ):
+        specs, warnings = parse_commit_trailers(lines)
+        assert specs == [], lines
+        assert [w.code for w in warnings] == ["contradictory-group"], (lines, warnings)

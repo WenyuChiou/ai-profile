@@ -23,6 +23,16 @@ silently.
 - `profile.json` embeds the ACE schema version; the viz data contract
   changes only alongside a schema version bump.
 
+## Pre-release exception (gate M-11)
+
+Until the FIRST tagged release, ACE 0.1.0 and the visualization contract
+are a moving target: pre-release contract changes (e.g. the Gate 2
+field renames) do not bump the version, because no published consumer
+exists and burning versions on an unfrozen contract would be noise. At
+the first tag, schema + contract freeze and the normal bump rule above
+binds unconditionally (ROADMAP release checklist: "freeze schema/viz
+contract at tag").
+
 ## Consequences
 
 - Version checks are cheap rows/fields, and the failure mode is loud.

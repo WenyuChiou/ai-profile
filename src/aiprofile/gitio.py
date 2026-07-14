@@ -106,9 +106,11 @@ def enumerate_commits(repo_path: Path) -> list[CommitRecord]:
         sha, name, email, adate, trailer_block = fields
         sha = sha.strip().lower()
         if len(sha) == 64:
+            # Defense in depth behind object_format(); path-free by design
+            # (gate H-04: default errors must not leak repository paths).
             raise GitError(
-                f"{repo_path} uses the SHA-256 object format, which v0.1 does"
-                " not support (SHA-1 repositories only — ADR-005/G2-13); no"
+                "this repository uses the SHA-256 object format, which v0.1"
+                " does not support (SHA-1 repositories only — ADR-005); no"
                 " data was imported"
             )
         trailers = tuple(
@@ -126,6 +128,18 @@ def enumerate_commits(repo_path: Path) -> list[CommitRecord]:
     return records
 
 
+def object_format(repo_path: Path) -> str:
+    """The repository's object format ("sha1" / "sha256"). Git builds too
+    old to know the flag cannot host SHA-256 repositories, so a failed
+    probe safely reports "sha1" (gate H-04: this preflight runs BEFORE any
+    config/database mutation, and catches empty SHA-256 repositories that
+    the 64-hex commit-ID check can never see)."""
+    proc = _run_git(["rev-parse", "--show-object-format"], repo_path)
+    if proc.returncode != 0:
+        return "sha1"
+    return proc.stdout.strip() or "sha1"
+
+
 def get_origin_url(repo_path: Path) -> str | None:
     proc = _run_git(["remote", "get-url", "origin"], repo_path)
     if proc.returncode != 0:
@@ -136,14 +150,17 @@ def get_origin_url(repo_path: Path) -> str | None:
 
 #: uid algorithm version (ADR-016). Any rule change bumps this; uids with
 #: different versions never compare equal.
-UID_ALGORITHM = "v2"
+UID_ALGORITHM = "v3"
 
-#: Hosts whose repository paths are case-insensitively unique, so lowering
-#: the path MERGES aliases safely; everywhere else path case is preserved
-#: (lowering could merge DISTINCT repositories — G2-01).
-_CASE_INSENSITIVE_PATH_HOSTS = frozenset({"github.com"})
+#: Hosts whose repository namespace is BOTH path-case-insensitive AND
+#: transport-convergent (ssh/https/git address one namespace on standard
+#: ports) — documented exceptions only (gate C-01): for every other host,
+#: scheme and port are identity, because SSH and HTTPS namespaces on a
+#: self-hosted service are not guaranteed to serve the same repositories.
+_ALIAS_CONVERGENT_HOSTS = frozenset({"github.com"})
 
-#: Default ports per scheme: a matching explicit port is redundant identity.
+#: Default ports per scheme: an absent port resolves to the scheme default
+#: so `https://h/x` and `https://h:443/x` converge WITHIN one scheme.
 _DEFAULT_PORTS = {"ssh": "22", "git+ssh": "22", "http": "80", "https": "443", "git": "9418"}
 
 _SCHEME = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]*)://")
@@ -159,15 +176,26 @@ _SCP_FORM = re.compile(
 _LOCAL_PATH_SHAPE = re.compile(r"^(?:[A-Za-z]:[\\/]|\.{1,2}[\\/]|~[\\/]|\\\\|/)")
 
 
-def canonicalize_remote_v2(url: str) -> str | None:
-    """ADR-016 algorithm v2: canonical `host[_port]/path` identity for an
-    origin URL, or None when the shape is unusable or filesystem-local.
+def canonicalize_remote_v3(url: str) -> str | None:
+    """ADR-016 algorithm v3: INJECTIVE canonical identity for an origin
+    URL, or None when the shape is unusable or filesystem-local.
 
-    Host lowercased (IPv6 brackets kept); credentials stripped; query and
-    fragment dropped; non-default port retained as `host_<port>`; path case
-    preserved except on documented case-insensitive hosts; trailing '/' and
-    one '.git' stripped. Local-filesystem-shaped origins yield None (see
-    _LOCAL_PATH_SHAPE).
+    Structure (gate C-01 — v2's `host_<port>` concatenation was forgeable
+    by literal-underscore hosts, and global scheme erasure merged ssh and
+    https namespaces on arbitrary self-hosted services):
+
+    - alias-convergent hosts (documented list): `host/path` with the path
+      case-folded — transports and standard ports deliberately merge;
+    - every other host: `scheme://host:port/path` with the port always
+      explicit when the scheme has a known default. The `://`/`:`/`/`
+      delimiters cannot be produced by host or port components, so the
+      encoding parses back unambiguously.
+
+    Credentials stripped at the LAST `@` (RFC 3986 authority; gate H-01);
+    query/fragment stripped for every syntax (gate M-04); trailing `/` and
+    one `.git` suffix stripped (case-folded hosts fold BEFORE the suffix
+    strip, so `.GIT` converges — gate M-04). Local-filesystem-shaped
+    origins yield None (see _LOCAL_PATH_SHAPE).
     """
     u = url.strip()
     if not u or _LOCAL_PATH_SHAPE.match(u):
@@ -178,46 +206,64 @@ def canonicalize_remote_v2(url: str) -> str | None:
         scheme = scheme_match.group(1).lower()
         if scheme == "file":
             return None  # local transport, never a remote identity
+        if scheme in _ALIAS_CONVERGENT_HOSTS:
+            # Defense in depth (gate-3 reviewer suggestion): a fabricated
+            # scheme named after an alias-convergent host (github.com://x)
+            # cannot collide with the alias branch's output structurally,
+            # but there is no legitimate scheme by that name — reject.
+            return None
         u = u[scheme_match.end():]
-        # URL form: [user[:pass]@]host[:port]/path[?q][#f]
         u = u.split("#", 1)[0].split("?", 1)[0]
-        if "@" in u.split("/", 1)[0]:
-            u = u.split("@", 1)[1]  # strip credentials; never identity
+        first_seg, sep, remainder = u.partition("/")
+        if "@" in first_seg:
+            first_seg = first_seg.rpartition("@")[2]
+        u = first_seg + sep + remainder
         m = re.match(r"^(\[[^\]]+\]|[^:/]+)(?::(\d+))?/(.+)$", u)
         if not m:
             return None
-        host, port, path = m.group(1), m.group(2), m.group(3)
-        if port and _DEFAULT_PORTS.get(scheme) == port:
-            port = None
-        return _finish_canonical(host, port, path)
+        return _canonical_identity(scheme, m.group(1), m.group(2), m.group(3))
 
     # No scheme: the ONLY positive remote marker is a colon before the
-    # first slash (git's own scp rule). Everything else defaults to LOCAL
-    # (gate round-3): misclassifying a remote as local merely splits a uid
-    # (safe); misclassifying a local path as remote collides uids across
-    # unrelated repositories and destroys data via replace-by-uid.
-    head = u.split("/", 1)[0]
-    if ":" not in head:
+    # first slash (git's own scp rule); scp transport IS ssh. Everything
+    # else defaults to LOCAL (gate round-3): misclassifying a remote as
+    # local merely splits a uid (safe); misclassifying a local path as
+    # remote collides uids across unrelated repositories and destroys data
+    # via replace-by-uid.
+    u = u.split("#", 1)[0].split("?", 1)[0]
+    # Strip credentials at the LAST @ before the first slash (H-01): scp
+    # userinfo may itself contain ':' and '@', so this must happen BEFORE
+    # the host:path colon is located.
+    pre_slash, sep, post_slash = u.partition("/")
+    if "@" in pre_slash:
+        pre_slash = pre_slash.rpartition("@")[2]
+    u = pre_slash + sep + post_slash
+    if ":" not in pre_slash:
         return None
     m = _SCP_FORM.match(u)
     if not m:
         return None
     if re.fullmatch(r"[A-Za-z]", m.group("host")):
         return None  # drive-relative form like C:foo — local, mirroring git
-    return _finish_canonical(m.group("host"), None, m.group("path"))
+    return _canonical_identity("ssh", m.group("host"), None, m.group("path"))
 
 
-def _finish_canonical(host: str, port: str | None, path: str) -> str | None:
+def _canonical_identity(
+    scheme: str, host: str, port: str | None, path: str
+) -> str | None:
     host = host.lower()
+    if host in _ALIAS_CONVERGENT_HOSTS:
+        # Fold BEFORE suffix strip so `.GIT` converges (gate M-04).
+        path = path.lower()
     path = path.rstrip("/")
     if path.endswith(".git"):
         path = path[: -len(".git")]
     if not host or not path:
         return None
-    if host in _CASE_INSENSITIVE_PATH_HOSTS:
-        path = path.lower()
-    host_part = f"{host}_{port}" if port else host
-    return f"{host_part}/{path}"
+    if host in _ALIAS_CONVERGENT_HOSTS:
+        return f"{host}/{path}"
+    resolved_port = port or _DEFAULT_PORTS.get(scheme)
+    netloc = f"{host}:{resolved_port}" if resolved_port else host
+    return f"{scheme}://{netloc}/{path}"
 
 
 def repository_uid(repo_path: Path, salt: str) -> str:
@@ -226,10 +272,13 @@ def repository_uid(repo_path: Path, salt: str) -> str:
     resolved path."""
     origin = get_origin_url(repo_path)
     if origin:
-        normalized = canonicalize_remote_v2(origin)
+        normalized = canonicalize_remote_v3(origin)
         if normalized:
             return f"remote:{UID_ALGORITHM}:{normalized}"
-    resolved = str(repo_path.resolve()).lower()
+    # Case-PRESERVED resolved path (gate C-02): lowercasing merged distinct
+    # case-sensitive-filesystem directories; Path.resolve() already
+    # canonicalizes spelling on case-insensitive filesystems.
+    resolved = str(repo_path.resolve())
     digest = hashlib.sha256(f"{salt}\n{resolved}".encode()).hexdigest()
     return f"local:{UID_ALGORITHM}:{digest}"
 
