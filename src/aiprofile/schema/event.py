@@ -15,7 +15,9 @@ from datetime import datetime
 from .. import ACE_SCHEMA_VERSION
 from ..errors import SchemaValidationError
 from .vocab import (
+    ALLOWED_SOURCE_REFERENCES,
     EVIDENCE_PRECEDENCE,
+    SOURCE_TYPE_PRIORITY,
     ActivityType,
     ActorType,
     ContributionMode,
@@ -146,7 +148,26 @@ def build_event(
 
     if not sources:
         raise SchemaValidationError("provenance.sources requires at least one entry")
-    src_tuple = tuple(sources)
+    # Canonical source order (schema.md 8.3): serialization must not depend
+    # on ingestion order (G2-06).
+    src_tuple = tuple(sorted(sources, key=_source_sort_key))
+    for src in src_tuple:
+        allowed = ALLOWED_SOURCE_REFERENCES.get(src.source_type)
+        if allowed is None:
+            # A SourceType added without a locator set is a schema bug, not
+            # a KeyError (gate round-2 P3): fail with the schema's own error.
+            raise SchemaValidationError(
+                f"source type {src.source_type.value!r} has no allowed-locator"
+                " set defined (schema.md 6.2) — define it before shipping"
+            )
+        if src.source_reference not in allowed:
+            names = ", ".join(sorted(str(a) for a in allowed))
+            raise SchemaValidationError(
+                "provenance.sources[].source_reference"
+                f" {src.source_reference!r} is not an allowed locator for"
+                f" {src.source_type.value} (allowed: [{names}]) — locators are"
+                " enum-constrained (schema.md 6.2, G2-07)"
+            )
     evidence = max(
         (s.evidence_level for s in src_tuple),
         key=lambda lv: EVIDENCE_PRECEDENCE[lv],
@@ -194,64 +215,123 @@ def build_event(
     )
 
 
-def merge_events(existing: AceEvent, new: AceEvent) -> AceEvent:
-    """Merge two productions of the same identity (schema.md section 8.3).
+def _source_sort_key(s: ProvenanceSource) -> tuple[str, str]:
+    return (s.source_type.value, s.source_reference or "")
 
-    Sources set-union; evidence max; roles union; scalars from the
-    higher-precedence side, first-write-wins on ties.
+
+def _event_rank(event: AceEvent) -> tuple[int, int, str]:
+    """Canonical strength of an event for scalar conflict resolution
+    (ADR-008, G2-06): evidence precedence (higher wins), best source-type
+    priority (higher wins), lexicographically smallest locator (smaller
+    wins). Ingestion-order-free by construction."""
+    best_priority = max(SOURCE_TYPE_PRIORITY[s.source_type] for s in event.sources)
+    min_locator = min((s.source_reference or "") for s in event.sources)
+    return (EVIDENCE_PRECEDENCE[event.evidence_level], best_priority, min_locator)
+
+
+def merge_event_group(events: list[AceEvent] | tuple[AceEvent, ...]) -> AceEvent:
+    """Canonical N-ary reduction of ALL productions of one identity
+    (schema.md section 8.3, ADR-008; gate round-2 P1 fix).
+
+    A pure function of the multiset of LEAF events: every scalar resolves
+    against the rank of the leaf production that carries it — never against
+    a merged pool, where a weak-origin value could borrow a stronger
+    sibling's rank and make the outcome fold-order dependent. All
+    permutations of the input reduce to a byte-identical canonical event
+    (exhaustively tested).
     """
-    if existing.event_id != new.event_id:
-        raise SchemaValidationError(
-            "merge_events requires identical identity"
-            f" ({existing.event_id} != {new.event_id})"
-        )
-    seen = {s.key() for s in existing.sources}
-    merged_sources = existing.sources + tuple(
-        s for s in new.sources if s.key() not in seen
-    )
+    if not events:
+        raise SchemaValidationError("merge_event_group requires at least one event")
+    first = events[0]
+    for e in events[1:]:
+        if e.event_id != first.event_id:
+            raise SchemaValidationError(
+                "merge_event_group requires identical identity"
+                f" ({first.event_id} != {e.event_id})"
+            )
+    if len(events) == 1:
+        return first
+
+    # Union by (source_type, source_reference); on key collision the HIGHER
+    # evidence level survives — first-seen-wins would make the union (and
+    # the event's max evidence) ingestion-order dependent.
+    by_key: dict[tuple[str, str | None], ProvenanceSource] = {}
+    for e in events:
+        for s in e.sources:
+            held = by_key.get(s.key())
+            if held is None or (
+                EVIDENCE_PRECEDENCE[s.evidence_level]
+                > EVIDENCE_PRECEDENCE[held.evidence_level]
+            ):
+                by_key[s.key()] = s
+    merged_sources = tuple(sorted(by_key.values(), key=_source_sort_key))
     evidence = max(
         (s.evidence_level for s in merged_sources),
         key=lambda lv: EVIDENCE_PRECEDENCE[lv],
     )
-    roles = tuple(sorted(set(existing.roles) | set(new.roles), key=lambda r: r.value))
-
-    new_wins = (
-        EVIDENCE_PRECEDENCE[new.evidence_level]
-        > EVIDENCE_PRECEDENCE[existing.evidence_level]
+    roles = tuple(
+        sorted({r for e in events for r in e.roles}, key=lambda r: r.value)
     )
 
-    def pick(a, b):
-        # a = existing value, b = new value
-        if new_wins:
-            return b if b is not None else a
-        return a if a is not None else b
+    def resolve(field: str):
+        """Strongest-leaf value: max (evidence precedence, source-type
+        priority), then smallest locator, then smallest value — computed
+        per ORIGINAL leaf, so the result is order-free by construction."""
+        candidates = [
+            (e, getattr(e, field)) for e in events if getattr(e, field) is not None
+        ]
+        if not candidates:
+            return None
+        candidates.sort(
+            key=lambda pair: (
+                -_event_rank(pair[0])[0],
+                -_event_rank(pair[0])[1],
+                _event_rank(pair[0])[2],
+                str(pair[1]),
+            )
+        )
+        return candidates[0][1]
 
+    recorded = sorted(e.recorded_at for e in events if e.recorded_at is not None)
     return AceEvent(
-        event_id=existing.event_id,
-        actor_type=existing.actor_type,
-        provider=existing.provider or new.provider,
-        provider_raw=pick(existing.provider_raw, new.provider_raw),
-        model=pick(existing.model, new.model),
-        model_raw=pick(existing.model_raw, new.model_raw),
-        tool=existing.tool or new.tool,
-        tool_raw=pick(existing.tool_raw, new.tool_raw),
-        activity_type=existing.activity_type,
+        event_id=first.event_id,
+        actor_type=first.actor_type,
+        provider=resolve("provider"),
+        provider_raw=resolve("provider_raw"),
+        model=resolve("model"),
+        model_raw=resolve("model_raw"),
+        tool=resolve("tool"),
+        tool_raw=resolve("tool_raw"),
+        activity_type=first.activity_type,
         roles=roles,
-        contribution_mode=pick(existing.contribution_mode, new.contribution_mode),
-        human_reviewed=pick(existing.human_reviewed, new.human_reviewed),
-        timestamp=existing.timestamp,
-        repository_uid=existing.repository_uid,
-        commit_sha=existing.commit_sha,
+        contribution_mode=resolve("contribution_mode"),
+        human_reviewed=resolve("human_reviewed"),
+        timestamp=first.timestamp,
+        repository_uid=first.repository_uid,
+        commit_sha=first.commit_sha,
         evidence_level=evidence,
         sources=merged_sources,
-        recorded_at=existing.recorded_at,
-        schema_version=existing.schema_version,
+        recorded_at=recorded[0] if recorded else None,
+        schema_version=first.schema_version,
     )
+
+
+def merge_events(existing: AceEvent, new: AceEvent) -> AceEvent:
+    """Pairwise convenience over :func:`merge_event_group` — correct for
+    two LEAF productions. Callers holding three or more productions of one
+    identity MUST pass them all to merge_event_group in one call; an
+    incremental pairwise fold re-ranks values against the merged pool and
+    is NOT ingestion-order-free (gate round-2 P1)."""
+    return merge_event_group([existing, new])
 
 
 def to_dict(event: AceEvent) -> dict:
-    """Nested canonical dict per schema.md section 1 (tests/debug + future
-    raw-event export; no v0.1 CLI emits it)."""
+    """Canonical SEMANTIC PAYLOAD per schema.md section 1 (tests/debug +
+    future raw-event export; no v0.1 CLI emits it).
+
+    Deliberately excludes `recorded_at`: it is audit-envelope metadata that
+    varies per scan, and canonical serialization must stay byte-identical
+    for equal events across rescans (G2-14)."""
     return {
         "schema_version": event.schema_version,
         "event_id": event.event_id,
@@ -288,7 +368,6 @@ def to_dict(event: AceEvent) -> dict:
                 for s in event.sources
             ],
         },
-        "recorded_at": event.recorded_at,
     }
 
 

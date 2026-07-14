@@ -26,7 +26,7 @@ class ProviderAgg:
     None for unrecognized (canonical-null) participations."""
 
     attributed_commits: int = 0        # distinct commits with >=1 event of this provider
-    participation_events: int = 0      # AI participation events
+    actor_presences: int = 0           # AI actor presences (G2-02)
     active_dates: set[str] = field(default_factory=set)   # YYYY-MM-DD, author-local
     raw_values: set[str] = field(default_factory=set)     # raw provider strings;
                                                           # local-only (-v), never public
@@ -37,11 +37,11 @@ class RepoAggregates:
     repository_uid: str
     commits_scanned: int = 0           # unique commits stored for this repo
     ai_attributed_commits: int = 0     # commits with >=1 ai/mixed event
-    ai_participation_events: int = 0   # ai/mixed events
+    ai_actor_presences: int = 0        # ai/mixed records (presences)
     human_declared_commits: int = 0    # commits with human event(s) and no ai
     unknown_commits: int = 0           # commits with only unknown events
     active_ai_dates: set[str] = field(default_factory=set)  # dates with >=1 ai event
-    evidence_events: dict[str, int] = field(default_factory=dict)  # level -> events
+    evidence_records: dict[str, int] = field(default_factory=dict)  # level -> events
     providers: dict[str | None, ProviderAgg] = field(default_factory=dict)
 
 
@@ -132,17 +132,17 @@ def _aggregate_repository(
         commit_id = row["commit_id"]
 
         evidence_level = row["evidence_level"]
-        agg.evidence_events[evidence_level] = agg.evidence_events.get(evidence_level, 0) + 1
+        agg.evidence_records[evidence_level] = agg.evidence_records.get(evidence_level, 0) + 1
 
         if actor_type in ("ai", "mixed"):
             ai_commits.add(commit_id)
-            agg.ai_participation_events += 1
+            agg.ai_actor_presences += 1
             date = row["activity_timestamp"][:10]
             agg.active_ai_dates.add(date)
 
             provider_key = row["provider"]
             provider_agg = agg.providers.setdefault(provider_key, ProviderAgg())
-            provider_agg.participation_events += 1
+            provider_agg.actor_presences += 1
             provider_agg.active_dates.add(date)
             provider_commits.setdefault(provider_key, set()).add(commit_id)
 

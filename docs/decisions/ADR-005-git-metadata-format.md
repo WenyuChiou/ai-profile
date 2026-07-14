@@ -54,6 +54,17 @@ validated byte-identical to the `only=true` spelling on git 2.47.1);
 minimum supported git is pinned at 2.17. Both trailer sources are
 `evidence_level: declared` (unverified commit-message text either way).
 
+Provenance locators are **enum-constrained, not free text** (Gate 2
+finding G2-07): `source_reference` must be one of the recognized trailer
+keys for its source type (`ai-provider` / `ai-tool` / `ai-mode` for
+`git_trailer`; `co-authored-by` for `git_trailer_coauthor`; null for
+`none`) — enforced by schema validation so no future adapter can persist
+sensitive free text through this field.
+
+v0.1 supports SHA-1 repositories only; a SHA-256 (64-hex object ID)
+repository fails with a targeted error rather than silent truncation
+(Gate 2 finding G2-13).
+
 Git Notes are out of v0.1 (namespace reserved in ADR-006).
 
 ## Consequences

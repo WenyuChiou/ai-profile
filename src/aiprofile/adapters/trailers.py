@@ -25,8 +25,9 @@ COAUTHOR_KEY = "co-authored-by"
 
 @dataclass(frozen=True)
 class ParticipationSpec:
-    """One participation parsed from explicit trailer evidence. The scanner
-    turns specs into validated ACE events; the adapter never invents data."""
+    """One AI actor presence (or human declaration) parsed from explicit
+    trailer evidence. The scanner turns specs into validated ACE events;
+    the adapter never invents data."""
 
     actor_type: ActorType
     provider: str | None
@@ -57,7 +58,7 @@ def parse_commit_trailers(
     trailer_lines: Sequence[str],
 ) -> tuple[list[ParticipationSpec], list[ParseWarning]]:
     """Parse one commit's trailer block (ordered lines from
-    %(trailers:only,unfold)) into participation specs.
+    %(trailers:only,unfold)) into actor-presence specs.
 
     Contract (implemented by work package B):
     - Trailer lines split on the first ':'; keys matched case-insensitively;

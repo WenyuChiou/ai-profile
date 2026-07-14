@@ -30,10 +30,10 @@ class Period:
 class Totals:
     commits_scanned: int
     ai_attributed_commits: int
-    ai_participation_events: int
+    ai_actor_presences: int   # one provider/tool tuple per commit (G2-02)
     human_declared_commits: int
     unknown_commits: int
-    active_ai_days: int
+    active_ai_days: int       # commit author dates (G2-18)
 
 
 @dataclass(frozen=True)
@@ -41,25 +41,29 @@ class ProviderRow:
     provider: str
     display_name: str
     attributed_commits: int   # unit: commits (schema.md section 15)
-    participation_events: int  # unit: events
-    active_days: int           # unit: days
+    actor_presences: int       # unit: presences (G2-02)
+    active_days: int           # unit: days (author dates)
 
 
 @dataclass(frozen=True)
 class EvidenceTotals:
-    # unit: events (schema.md section 15)
+    # unit: records; population = ALL ACE records, every actor type
+    # (schema.md section 15, G2-05). Categories must sum to total_records.
     verified: int
     declared: int
     imported: int
     inferred: int
     unknown: int
+    total_records: int
 
 
 @dataclass(frozen=True)
 class PrivacySplit:
-    public_commits: int              # commits from `full` repositories
-    private_aggregate_commits: int   # commits from aggregate_only/repository_anonymous
-    includes_private: bool
+    # Policy-based labels, never visibility claims (G2-04): "publishable"
+    # records the user's `full` decision, not verified GitHub visibility.
+    explicitly_publishable_commits: int
+    anonymous_aggregate_commits: int
+    includes_anonymous_aggregate: bool
 
 
 @dataclass(frozen=True)
@@ -81,7 +85,7 @@ def _validate(s: VizStats) -> None:
     counts = [
         s.totals.commits_scanned,
         s.totals.ai_attributed_commits,
-        s.totals.ai_participation_events,
+        s.totals.ai_actor_presences,
         s.totals.human_declared_commits,
         s.totals.unknown_commits,
         s.totals.active_ai_days,
@@ -90,8 +94,9 @@ def _validate(s: VizStats) -> None:
         s.evidence.imported,
         s.evidence.inferred,
         s.evidence.unknown,
-        s.privacy.public_commits,
-        s.privacy.private_aggregate_commits,
+        s.evidence.total_records,
+        s.privacy.explicitly_publishable_commits,
+        s.privacy.anonymous_aggregate_commits,
         s.provider_count,
     ]
     if any((not isinstance(c, int)) or c < 0 for c in counts):
@@ -101,14 +106,47 @@ def _validate(s: VizStats) -> None:
             "VizStats.generated_on must be a date (YYYY-MM-DD), never a timestamp"
         )
     if (
-        s.privacy.public_commits + s.privacy.private_aggregate_commits
+        s.privacy.explicitly_publishable_commits
+        + s.privacy.anonymous_aggregate_commits
         != s.totals.commits_scanned
     ):
         raise RenderError(
-            "VizStats: public + private commits must equal commits_scanned"
+            "VizStats: publishable + anonymous-aggregate commits must equal"
+            " commits_scanned"
         )
-    if s.privacy.includes_private != (s.privacy.private_aggregate_commits > 0):
-        raise RenderError("VizStats: includes_private flag inconsistent with counts")
+    if s.privacy.includes_anonymous_aggregate != (
+        s.privacy.anonymous_aggregate_commits > 0
+    ):
+        raise RenderError(
+            "VizStats: includes_anonymous_aggregate flag inconsistent with counts"
+        )
+    evidence_sum = (
+        s.evidence.verified
+        + s.evidence.declared
+        + s.evidence.imported
+        + s.evidence.inferred
+        + s.evidence.unknown
+    )
+    if evidence_sum != s.evidence.total_records:
+        raise RenderError(
+            "VizStats: evidence categories must sum to total_records (G2-05)"
+        )
+    if sum(p.actor_presences for p in s.providers) != s.totals.ai_actor_presences:
+        raise RenderError(
+            "VizStats: provider actor_presences rows must sum to"
+            " totals.ai_actor_presences"
+        )
+    if s.totals.ai_attributed_commits > s.totals.commits_scanned:
+        raise RenderError(
+            "VizStats: ai_attributed_commits cannot exceed commits_scanned"
+        )
+    if any(
+        p.attributed_commits > s.totals.ai_attributed_commits for p in s.providers
+    ):
+        raise RenderError(
+            "VizStats: a provider attributed_commits value cannot exceed the"
+            " AI-attributed total"
+        )
     expected_rank = sorted(
         s.providers, key=lambda p: (-p.attributed_commits, p.provider)
     )
@@ -138,7 +176,7 @@ def to_json_dict(s: VizStats) -> dict:
         "totals": {
             "commits_scanned": s.totals.commits_scanned,
             "ai_attributed_commits": s.totals.ai_attributed_commits,
-            "ai_participation_events": s.totals.ai_participation_events,
+            "ai_actor_presences": s.totals.ai_actor_presences,
             "human_declared_commits": s.totals.human_declared_commits,
             "unknown_commits": s.totals.unknown_commits,
             "active_ai_days": s.totals.active_ai_days,
@@ -148,23 +186,24 @@ def to_json_dict(s: VizStats) -> dict:
                 "provider": p.provider,
                 "display_name": p.display_name,
                 "attributed_commits": p.attributed_commits,
-                "participation_events": p.participation_events,
+                "actor_presences": p.actor_presences,
                 "active_days": p.active_days,
             }
             for p in s.providers
         ],
         "provider_count": s.provider_count,
-        "evidence_events": {
+        "evidence_records": {
             "verified": s.evidence.verified,
             "declared": s.evidence.declared,
             "imported": s.evidence.imported,
             "inferred": s.evidence.inferred,
             "unknown": s.evidence.unknown,
+            "total_records": s.evidence.total_records,
         },
         "privacy": {
-            "public_commits": s.privacy.public_commits,
-            "private_aggregate_commits": s.privacy.private_aggregate_commits,
-            "includes_private": s.privacy.includes_private,
+            "explicitly_publishable_commits": s.privacy.explicitly_publishable_commits,
+            "anonymous_aggregate_commits": s.privacy.anonymous_aggregate_commits,
+            "includes_anonymous_aggregate": s.privacy.includes_anonymous_aggregate,
         },
     }
 

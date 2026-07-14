@@ -57,7 +57,7 @@ def build_viz_stats(
         included.append((agg, level))
 
     commits_scanned = sum(a.commits_scanned for a, _ in included)
-    public_commits = sum(
+    publishable_commits = sum(
         a.commits_scanned for a, lv in included if lv is PublicationLevel.FULL
     )
     private_commits = sum(
@@ -69,16 +69,16 @@ def build_viz_stats(
     merged: dict[str, dict] = {}
     for agg, _ in included:
         ai_days |= agg.active_ai_dates
-        for level_value, count in agg.evidence_events.items():
+        for level_value, count in agg.evidence_records.items():
             evidence[level_value] = evidence.get(level_value, 0) + count
         for key, pagg in agg.providers.items():
             slug = key if key is not None else UNRECOGNIZED_PROVIDER
             row = merged.setdefault(
                 slug,
-                {"attributed_commits": 0, "participation_events": 0, "dates": set()},
+                {"attributed_commits": 0, "actor_presences": 0, "dates": set()},
             )
             row["attributed_commits"] += pagg.attributed_commits
-            row["participation_events"] += pagg.participation_events
+            row["actor_presences"] += pagg.actor_presences
             row["dates"] |= pagg.active_dates
 
     provider_rows = tuple(
@@ -92,7 +92,7 @@ def build_viz_stats(
                         else provider_display(slug)
                     ),
                     attributed_commits=row["attributed_commits"],
-                    participation_events=row["participation_events"],
+                    actor_presences=row["actor_presences"],
                     active_days=len(row["dates"]),
                 )
                 for slug, row in merged.items()
@@ -107,8 +107,8 @@ def build_viz_stats(
         totals=Totals(
             commits_scanned=commits_scanned,
             ai_attributed_commits=sum(a.ai_attributed_commits for a, _ in included),
-            ai_participation_events=sum(
-                a.ai_participation_events for a, _ in included
+            ai_actor_presences=sum(
+                a.ai_actor_presences for a, _ in included
             ),
             human_declared_commits=sum(
                 a.human_declared_commits for a, _ in included
@@ -126,11 +126,12 @@ def build_viz_stats(
             imported=evidence[EvidenceLevel.IMPORTED.value],
             inferred=evidence[EvidenceLevel.INFERRED.value],
             unknown=evidence[EvidenceLevel.UNKNOWN.value],
+            total_records=sum(evidence.values()),
         ),
         privacy=PrivacySplit(
-            public_commits=public_commits,
-            private_aggregate_commits=private_commits,
-            includes_private=private_commits > 0,
+            explicitly_publishable_commits=publishable_commits,
+            anonymous_aggregate_commits=private_commits,
+            includes_anonymous_aggregate=private_commits > 0,
         ),
         generated_on=generated_on,
     )

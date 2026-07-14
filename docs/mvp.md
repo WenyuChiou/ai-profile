@@ -106,14 +106,16 @@ images through its asset proxy; paired light/dark assets via `<picture>` is
 the reliable, GitHub-native theming mechanism.)
 
 The summary card shows: reporting period ("All time" in v0.1) · unique
-commits scanned · AI-attributed commits / AI participation events / active
-AI days as accent hero values · number of AI providers · provider-ranked
-bars (top 6 + "+N more") with count and percentage, denominator stated in
-the table header · unknown count · evidence chips (events) · privacy
-chips (inclusion statement, plus a public/private commit split chip when
-both sides are nonzero) · generation date (UTC date only) · metric
-definition footnote. Card height is dynamic-but-deterministic (collapses
-with few providers; ADR-010).
+commits scanned · AI-attributed commits / AI actor presences / active AI
+days (author dates) as accent hero values · number of AI providers ·
+provider-ranked bars (top 6 + "+N more") with count and percentage,
+denominator stated in the table header · unknown count · evidence chips
+with their population stated ("all records: N" — G2-05) · publication
+chips (policy-based wording, never visibility claims — G2-04: "Includes
+aggregate-only activity (repository identity withheld)" plus a
+publishable/aggregate split chip when both sides are nonzero) ·
+generation date (UTC date only) · metric definition footnote. Card height
+is dynamic-but-deterministic (collapses with few providers; ADR-010).
 
 ## 6. Privacy defaults
 
@@ -152,8 +154,9 @@ with few providers; ADR-010).
    honored; unknown co-author → nothing.
 5. No-evidence commit → exactly one unknown event (never human).
 6. Duplicate scan idempotence: byte-identical aggregates after re-scan.
-7. Unique commits vs participation events (multi-AI fixture: 1 commit,
-   2 AI events, providers each credited once).
+7. Unique commits vs AI actor presences (multi-AI fixture: 1 commit,
+   2 presences, providers each credited once; same-provider double action
+   → 1 presence with role union).
 8. Unknown vs human separation in aggregates.
 9. Privacy leak test: aggregate-only fixture repo's name/path/uid/author
    email AND a distinctive unrecognized `AI-Provider` raw value absent
@@ -172,6 +175,20 @@ with few providers; ADR-010).
     no-op.
 17. JSON export stability: byte-identical `profile.json` for identical
     inputs; schema version present.
+18. Repository-identity canonicalization (ADR-016): collision/alias
+    fixtures — path case (case-sensitive host split vs github.com merge),
+    port variants, scp vs https equivalence, credentials, trailing
+    slash/.git, query/fragment; algorithm version embedded in the uid.
+19. Merge permutation: the same evidence set in any trailer/spec order
+    yields byte-identical canonical events and aggregates (ADR-008
+    tie-break).
+20. SHA-256 repository → targeted `GitError` (SHA-1-only declared;
+    skip-with-reason where `git init --object-format=sha256` is
+    unavailable). Config validation rejects `repository_anonymous` with a
+    "reserved for post-v0.1" error.
+21. SVG security + static imports: element allowlist, no
+    script/foreignObject/event-handler attributes/external URLs; AST
+    import-contract test for render/export (G2-16, G2-19).
 
 Integration fixtures (programmatically built git repos): human-only commit
 (no trailers → unknown), Claude AI-* trailer commit, Codex AI-* trailer
@@ -214,15 +231,23 @@ pass; docs (README quickstart + this docs set) are consistent.
 - Provider registry recognizes a seeded set of verified spellings;
   unrecognized spellings aggregate under the `unrecognized` bucket in
   public outputs (raw values visible only locally via `aggregate -v`).
-- Active days use the commit author's local date (documented; not
-  configurable yet). Reporting period is all-time.
+- Active days use the commit author's local date — mutable git metadata,
+  labeled "(author dates)", not verified session timing (G2-18).
+  Reporting period is all-time.
+- SHA-1 repositories only; SHA-256 repositories fail with a targeted
+  error (G2-13).
+- Aggregate-only publication is **identity redaction, not anonymity**:
+  repeated exact counts allow differencing inferences (see
+  docs/PRIVACY.md; G2-09).
 - `roles`/`contribution_mode`/`human_reviewed` are captured but not yet
   rendered (schema.md header stance; consumed by post-v0.1 cards).
 
 ## 10. Post-v0.1 (ordered candidates)
 
-1. Git Notes adapter (`refs/notes/ai-collaboration`) + git-ai import
-   (`imported` evidence tier becomes live).
+1. git-ai / existing-notes **import** (consume-first, ADR-006 + G2-17;
+   the `imported` evidence tier becomes live, gated on the ADR-008
+   precedence re-evaluation). Writing our own notes namespace stays
+   reserved-only until a field cannot be represented by existing formats.
 2. `aiprofile reconcile` (manual declarations; `mixed` producer; requires
    the manual-event-preservation change to the scan replace step —
    schema.md §14) and `Assisted-by:`/`Generated-by:` disclosure-trailer

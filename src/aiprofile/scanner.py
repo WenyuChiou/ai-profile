@@ -2,7 +2,7 @@
 
 Owns two schema invariants: the identity filter (ADR-015: author email must
 match a configured identity) and unknown handling (schema.md section 11: a
-kept commit with zero participations gets exactly one unknown event).
+kept commit with zero ACE records gets exactly one unknown record).
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from . import gitio
 from .adapters.trailers import ParseWarning, ParticipationSpec, parse_commit_trailers
 from .config import Config, effective_level, save_config, upsert_repository
 from .errors import ConfigError
-from .schema.event import AceEvent, ProvenanceSource, build_event, merge_events
+from .schema.event import AceEvent, ProvenanceSource, build_event, merge_event_group
 from .schema.vocab import ActorType, EvidenceLevel, PublicationLevel, SourceType
 from .storage.store import CommitEvents, replace_repository_scan
 
@@ -28,7 +28,10 @@ class ScanSummary:
     commits_kept: int = 0            # authored by a configured identity
     commits_skipped_identity: int = 0
     events_stored: int = 0
-    warnings: list[tuple[str, ParseWarning]] = field(default_factory=list)  # (sha, warning)
+    #: (scan-local ordinal over commits seen, sha, warning). Default output
+    #: prints the ordinal only — SHAs are stable cross-system correlators
+    #: and appear only under --verbose (architecture.md section 10, G2-08).
+    warnings: list[tuple[int, str, ParseWarning]] = field(default_factory=list)
 
 
 def scan_repository(
@@ -66,21 +69,25 @@ def scan_repository(
     identities = {i.strip().lower() for i in cfg.identities}
 
     scanned: list[CommitEvents] = []
-    for rec in records:
+    for ordinal, rec in enumerate(records, start=1):
         if rec.author_email.strip().lower() not in identities:
             summary.commits_skipped_identity += 1
             continue
 
         specs, warns = parse_commit_trailers(rec.trailer_lines)
-        summary.warnings.extend((rec.sha, w) for w in warns)
+        summary.warnings.extend((ordinal, rec.sha, w) for w in warns)
 
-        events: dict[str, AceEvent] = {}
+        # Collect ALL leaf productions per identity first, then reduce each
+        # group in one canonical batch — an incremental pairwise fold is not
+        # ingestion-order-free (schema.md 8.3, gate round-2 P1).
+        productions: dict[str, list[AceEvent]] = {}
         for spec in specs:
             ev = _event_from_spec(spec, rec, uid, recorded_at)
-            if ev.event_id in events:
-                events[ev.event_id] = merge_events(events[ev.event_id], ev)
-            else:
-                events[ev.event_id] = ev
+            productions.setdefault(ev.event_id, []).append(ev)
+        events: dict[str, AceEvent] = {
+            event_id: merge_event_group(leaves)
+            for event_id, leaves in productions.items()
+        }
 
         if not events:
             unknown = build_event(

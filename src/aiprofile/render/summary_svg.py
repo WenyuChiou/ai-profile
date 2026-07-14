@@ -72,7 +72,7 @@ CHIP_PAD_X = 10
 CHIP_GAP = 8
 CHIP_FONT_SIZE = 11
 CHIP_ROW_STEP = 30
-EVIDENCE_PREFIX = "Evidence (events)"
+EVIDENCE_PREFIX_TEMPLATE = "Evidence (all records: {n})"
 EVIDENCE_PREFIX_GAP = 10
 
 # Footer.
@@ -81,7 +81,7 @@ FOOTER1_OFFSET = 22
 FOOTER2_OFFSET = 38
 FOOTER_BOTTOM_PAD = 16
 
-FOOTNOTE = "One commit may include several AI participation events."
+FOOTNOTE = "One commit may include several AI actor presences (one per provider/tool)."
 ZERO_MESSAGE = "No AI collaboration recorded yet"
 ZERO_HINT = "Add AI-* trailers or scan a repository with AI co-authored commits."
 ZERO_MESSAGE_Y = 118
@@ -189,7 +189,7 @@ def _is_zero_state(totals: Totals) -> bool:
     return (
         totals.commits_scanned == 0
         and totals.ai_attributed_commits == 0
-        and totals.ai_participation_events == 0
+        and totals.ai_actor_presences == 0
         and totals.human_declared_commits == 0
         and totals.unknown_commits == 0
         and totals.active_ai_days == 0
@@ -226,8 +226,8 @@ def _desc_text(stats: VizStats, zero_state: bool) -> str:
     t = stats.totals
     return (
         f"{t.ai_attributed_commits} AI-attributed commits, "
-        f"{t.ai_participation_events} AI participation events across "
-        f"{t.active_ai_days} active AI days, {stats.provider_count} AI providers. "
+        f"{t.ai_actor_presences} AI actor presences across "
+        f"{t.active_ai_days} active AI days (author dates), {stats.provider_count} AI providers. "
         f"Generated {stats.generated_on}."
     )
 
@@ -310,10 +310,11 @@ def _evidence_chips_svg(stats: VizStats, theme: Theme, top: int) -> str:
         if n:
             labels.append(f"{label} {n}")
 
+    prefix = EVIDENCE_PREFIX_TEMPLATE.format(n=e.total_records)
     parts = [
-        _text(PADDING, top + 15, EVIDENCE_PREFIX, size=CHIP_FONT_SIZE, fill=theme.muted)
+        _text(PADDING, top + 15, prefix, size=CHIP_FONT_SIZE, fill=theme.muted)
     ]
-    x = PADDING + _text_width(EVIDENCE_PREFIX, CHIP_FONT_SIZE) + EVIDENCE_PREFIX_GAP
+    x = PADDING + _text_width(prefix, CHIP_FONT_SIZE) + EVIDENCE_PREFIX_GAP
     for label in labels:
         chip_svg, x = _chip(x, top, label, theme, text_fill=theme.text)
         parts.append(chip_svg)
@@ -322,15 +323,19 @@ def _evidence_chips_svg(stats: VizStats, theme: Theme, top: int) -> str:
 
 def _privacy_chips_svg(stats: VizStats, theme: Theme, top: int) -> str:
     p = stats.privacy
-    if p.includes_private:
-        primary = "Includes private activity (aggregate-only)"
+    # Policy-based wording, never visibility claims (G2-04).
+    if p.includes_anonymous_aggregate:
+        primary = "Includes aggregate-only activity (repository identity withheld)"
     else:
-        primary = "Public repositories only"
+        primary = "All activity explicitly publishable"
     parts = []
     chip_svg, x = _chip(PADDING, top, primary, theme, text_fill=theme.text)
     parts.append(chip_svg)
-    if p.includes_private and p.public_commits > 0:
-        split = f"public {p.public_commits} · private {p.private_aggregate_commits}"
+    if p.includes_anonymous_aggregate and p.explicitly_publishable_commits > 0:
+        split = (
+            f"publishable {p.explicitly_publishable_commits}"
+            f" · aggregate-only {p.anonymous_aggregate_commits}"
+        )
         chip_svg, _ = _chip(x, top, split, theme, text_fill=theme.muted)
         parts.append(chip_svg)
     return "\n".join(parts)
@@ -395,8 +400,8 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         # Primary metric row (hero values in accent — the card's focal layer).
         metrics = (
             (stats.totals.ai_attributed_commits, "AI-attributed commits"),
-            (stats.totals.ai_participation_events, "AI participation events"),
-            (stats.totals.active_ai_days, "Active AI days"),
+            (stats.totals.ai_actor_presences, "AI actor presences"),
+            (stats.totals.active_ai_days, "Active AI days (author dates)"),
         )
         for center_x, (value, label) in zip(METRIC_CENTERS, metrics, strict=True):
             parts.append(

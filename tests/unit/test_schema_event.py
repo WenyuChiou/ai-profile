@@ -42,7 +42,11 @@ def _base_kwargs(**overrides):
         repository_uid=VALID_REPO_UID,
         commit_sha=VALID_SHA,
         timestamp=VALID_TIMESTAMP,
-        sources=(ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED),),
+        sources=(
+                    ProvenanceSource(
+                        SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"
+                    ),
+                ),
         provider="anthropic",
         tool="claude-code",
     )
@@ -162,7 +166,11 @@ def test_unknown_actor_with_declared_source_rejected():
                 actor_type=ActorType.UNKNOWN,
                 provider=None,
                 tool=None,
-                sources=(ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED),),
+                sources=(
+                    ProvenanceSource(
+                        SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"
+                    ),
+                ),
             )
         )
 
@@ -173,7 +181,11 @@ def test_unknown_actor_with_unknown_evidence_accepted():
             actor_type=ActorType.UNKNOWN,
             provider=None,
             tool=None,
-            sources=(ProvenanceSource(SourceType.NONE, EvidenceLevel.UNKNOWN),),
+            sources=(
+                ProvenanceSource(
+                    SourceType.NONE, EvidenceLevel.UNKNOWN
+                ),
+            ),
         )
     )
     assert event.actor_type is ActorType.UNKNOWN
@@ -298,7 +310,7 @@ def test_merge_events_mismatched_identity_raises():
 
 def test_merge_sources_set_union_deduped_by_type_and_reference():
     shared = ProvenanceSource(
-        SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, source_reference="AI-Provider"
+        SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, source_reference="ai-provider"
     )
     existing = _make_ai_event(sources=(shared,))
     new = _make_ai_event(
@@ -307,24 +319,32 @@ def test_merge_sources_set_union_deduped_by_type_and_reference():
             ProvenanceSource(
                 SourceType.GIT_TRAILER_COAUTHOR,
                 EvidenceLevel.DECLARED,
-                source_reference="Co-authored-by",
+                source_reference="co-authored-by",
             ),
         )
     )
     merged = merge_events(existing, new)
     assert len(merged.sources) == 2
     assert {s.key() for s in merged.sources} == {
-        (SourceType.GIT_TRAILER.value, "AI-Provider"),
-        (SourceType.GIT_TRAILER_COAUTHOR.value, "Co-authored-by"),
+        (SourceType.GIT_TRAILER.value, "ai-provider"),
+        (SourceType.GIT_TRAILER_COAUTHOR.value, "co-authored-by"),
     }
 
 
 def test_merge_evidence_level_is_max_over_sources():
     existing = _make_ai_event(
-        sources=(ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED),)
+        sources=(
+            ProvenanceSource(
+                SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"
+            ),
+        )
     )
     new = _make_ai_event(
-        sources=(ProvenanceSource(SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.VERIFIED),)
+        sources=(
+            ProvenanceSource(
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.VERIFIED, "co-authored-by"
+            ),
+        )
     )
     merged = merge_events(existing, new)
     assert merged.evidence_level is EvidenceLevel.VERIFIED
@@ -341,12 +361,20 @@ def test_merge_scalar_tie_keeps_existing_and_fills_null_from_new():
     existing = _make_ai_event(
         model="claude-sonnet-existing",
         model_raw=None,
-        sources=(ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED),),
+        sources=(
+                    ProvenanceSource(
+                        SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"
+                    ),
+                ),
     )
     new = _make_ai_event(
         model="claude-sonnet-new",
         model_raw="Claude-Sonnet-New",
-        sources=(ProvenanceSource(SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.DECLARED),),
+        sources=(
+            ProvenanceSource(
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.DECLARED, "co-authored-by"
+            ),
+        ),
     )
     merged = merge_events(existing, new)
     # both DECLARED (a tie): existing non-null scalar is kept...
@@ -361,14 +389,22 @@ def test_merge_new_side_with_higher_evidence_wins_non_null_scalars():
         model_raw="Claude-Sonnet-Existing",
         contribution_mode=ContributionMode.AI_ASSISTED,
         human_reviewed=False,
-        sources=(ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED),),
+        sources=(
+                    ProvenanceSource(
+                        SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"
+                    ),
+                ),
     )
     new = _make_ai_event(
         model="claude-sonnet-new",
         model_raw="Claude-Sonnet-New",
         contribution_mode=ContributionMode.AI_REVIEWED,
         human_reviewed=True,
-        sources=(ProvenanceSource(SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.VERIFIED),),
+        sources=(
+            ProvenanceSource(
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.VERIFIED, "co-authored-by"
+            ),
+        ),
     )
     merged = merge_events(existing, new)
     assert merged.model == "claude-sonnet-new"
@@ -382,3 +418,197 @@ def test_merge_preserves_activity_type():
     new = _make_ai_event()
     merged = merge_events(existing, new)
     assert merged.activity_type is ActivityType.COMMIT
+
+
+# ---------------------------------------------------------------------------
+# Gate 2 conformance additions (G2-06, G2-07, G2-14).
+# ---------------------------------------------------------------------------
+
+
+def test_source_reference_locators_are_enum_constrained():
+    # G2-07: free text structurally cannot enter provenance.
+    for bad in ("AI-Provider", "C:/secret/path", "prompt text", None):
+        with pytest.raises(SchemaValidationError):
+            _make_ai_event(
+                sources=(
+                    ProvenanceSource(
+                        SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, bad
+                    ),
+                )
+            )
+    with pytest.raises(SchemaValidationError):
+        build_event(
+            actor_type="unknown",
+            repository_uid="u",
+            commit_sha="a" * 40,
+            timestamp="2026-01-01T00:00:00+00:00",
+            sources=[
+                ProvenanceSource(SourceType.NONE, EvidenceLevel.UNKNOWN, "none-ref")
+            ],
+        )
+
+
+def test_canonical_json_excludes_recorded_at_envelope():
+    # G2-14: recorded_at is audit envelope, not canonical payload.
+    a = _make_ai_event(recorded_at="2026-07-14T10:00:00+00:00")
+    b = _make_ai_event(recorded_at="2026-07-15T22:33:44+00:00")
+    assert canonical_json(a) == canonical_json(b)
+    assert "recorded_at" not in to_dict(a)
+
+
+def test_merge_scalar_true_tie_breaks_by_lexicographic_value():
+    # Same evidence, same source type, same locator -> canonical value wins.
+    src = (ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"),)
+    a = _make_ai_event(model="zeta-model", model_raw="Zeta-Model", sources=src)
+    b = _make_ai_event(model="alpha-model", model_raw="Alpha-Model", sources=src)
+    assert merge_events(a, b).model == "alpha-model"
+    assert merge_events(b, a).model == "alpha-model"
+
+
+def test_merge_is_permutation_invariant():
+    # G2-06: the same evidence set in ANY order yields identical canonical
+    # data. Trio: trailer-declared value, coauthor-declared value, and a
+    # second trailer-declared value creating a true tie.
+    e1 = _make_ai_event(
+        model="mid-model",
+        contribution_mode="ai_assisted",
+        sources=(
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"),
+        ),
+    )
+    e2 = _make_ai_event(
+        model=None,
+        model_raw=None,
+        human_reviewed=True,
+        sources=(
+            ProvenanceSource(
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.DECLARED, "co-authored-by"
+            ),
+        ),
+    )
+    e3 = _make_ai_event(
+        model="aaa-model",
+        sources=(
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-tool"),
+        ),
+    )
+    import itertools
+
+    results = set()
+    for perm in itertools.permutations([e1, e2, e3]):
+        merged = perm[0]
+        for nxt in perm[1:]:
+            merged = merge_events(merged, nxt)
+        results.add(
+            canonical_json(merged)
+            + "|"
+            + repr(sorted(s.key() for s in merged.sources))
+        )
+    assert len(results) == 1, results
+
+
+def _leaf_from_spec(spec, sha="f" * 40):
+    """Build a leaf AceEvent from a ParticipationSpec the way scanner does."""
+    return build_event(
+        actor_type=spec.actor_type,
+        provider=spec.provider,
+        provider_raw=spec.provider_raw,
+        model=spec.model,
+        model_raw=spec.model_raw,
+        tool=spec.tool,
+        tool_raw=spec.tool_raw,
+        roles=spec.roles,
+        contribution_mode=spec.contribution_mode,
+        human_reviewed=spec.human_reviewed,
+        timestamp="2026-01-05T10:00:00+08:00",
+        repository_uid="remote:v2:github.com/x/y",
+        commit_sha=sha,
+        sources=[spec.source],
+    )
+
+
+def test_group_merge_reviewer_trailer_counterexample():
+    """Gate round-2 P1 regression: two ordinary Co-authored-by lines naming
+    the same AI identity with different display text, plus an AI-Tool
+    trailer — swapping the co-author line order must NOT change any
+    persisted field (pre-fix: provider_raw depended on fold order)."""
+    from aiprofile.adapters.trailers import parse_commit_trailers
+    from aiprofile.schema.event import merge_event_group
+
+    order_a = [
+        "Co-authored-by: Claude <noreply@anthropic.com>",
+        "AI-Tool: claude-code",
+        "Co-authored-by: Claude Assistant <noreply@anthropic.com>",
+    ]
+    order_b = [
+        "Co-authored-by: Claude Assistant <noreply@anthropic.com>",
+        "AI-Tool: claude-code",
+        "Co-authored-by: Claude <noreply@anthropic.com>",
+    ]
+    merged = []
+    for lines in (order_a, order_b):
+        specs, warnings = parse_commit_trailers(lines)
+        assert not warnings
+        leaves = [_leaf_from_spec(s) for s in specs]
+        assert len({e.event_id for e in leaves}) == 1
+        merged.append(merge_event_group(leaves))
+    assert canonical_json(merged[0]) == canonical_json(merged[1])
+    assert merged[0].provider_raw == merged[1].provider_raw
+
+
+def test_group_merge_exhaustive_permutations_of_four_leaves():
+    """G2-06 closure test: ALL 24 orders of four adversarial leaves (mixed
+    source types, locators, values, evidence) reduce to byte-identical
+    canonical events."""
+    from aiprofile.schema.event import merge_event_group
+
+    leaves = [
+        _make_ai_event(
+            model="mid-model",
+            contribution_mode="ai_assisted",
+            sources=(
+                ProvenanceSource(
+                    SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"
+                ),
+            ),
+        ),
+        _make_ai_event(
+            model=None,
+            model_raw=None,
+            human_reviewed=True,
+            sources=(
+                ProvenanceSource(
+                    SourceType.GIT_TRAILER_COAUTHOR,
+                    EvidenceLevel.DECLARED,
+                    "co-authored-by",
+                ),
+            ),
+        ),
+        _make_ai_event(
+            model="aaa-model",
+            sources=(
+                ProvenanceSource(
+                    SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-tool"
+                ),
+            ),
+        ),
+        _make_ai_event(
+            model="zzz-model",
+            contribution_mode="ai_generated",
+            human_reviewed=False,
+            sources=(
+                ProvenanceSource(
+                    SourceType.GIT_TRAILER_COAUTHOR,
+                    EvidenceLevel.VERIFIED,
+                    "co-authored-by",
+                ),
+            ),
+        ),
+    ]
+    import itertools
+
+    results = {
+        canonical_json(merge_event_group(list(perm)))
+        for perm in itertools.permutations(leaves)
+    }
+    assert len(results) == 1, len(results)

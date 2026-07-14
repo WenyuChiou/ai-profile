@@ -85,11 +85,15 @@ Validation rules:
   additionally requires `evidence_level = unknown`; `human` in v0.1 is
   produced only by an explicit declaration (§2) and therefore carries
   `evidence_level = declared`.
-- `event_id` derivation is deterministic (§8). A minimal canonical dict/
-  JSON form (`to_dict()` + sorted-keys dump) exists for tests and future
-  raw-event export; it is deterministic byte-for-byte for equal events.
-  No v0.1 CLI command emits it (the public JSON artifact is the viz
-  contract, not raw events).
+- `provenance.sources[].source_reference` is enum-constrained per source
+  type (§6.2) — schema validation rejects anything else; sensitive free
+  text structurally cannot enter this field (G2-07).
+- `event_id` derivation is deterministic (§8). **Envelope vs payload**
+  (G2-14): the canonical dict/JSON form (`to_dict()` + sorted-keys dump)
+  covers the semantic payload only and EXCLUDES `recorded_at`, which is
+  audit-envelope metadata that varies per scan; equal events therefore
+  serialize byte-identically even across rescans. No v0.1 CLI command
+  emits raw events (the public JSON artifact is the viz contract).
 
 ## 2. Actor types
 
@@ -179,20 +183,28 @@ manual_declaration     # reserved: `aiprofile reconcile` (post-v0.1)
 none                   # the no-evidence marker used by unknown events
 ```
 
-`source_reference` is an optional free-form locator (e.g. the matched
-trailer key, a note ref). It must never contain prompts, file paths, or
-message bodies.
+`source_reference` is an enum-constrained locator, validated per source
+type (G2-07 — a prose prohibition is not a control): `git_trailer` allows
+exactly `ai-provider` / `ai-tool` / `ai-mode`; `git_trailer_coauthor`
+allows exactly `co-authored-by`; `none` requires null. Future source
+types must define their closed locator sets before shipping. Provenance
+rows are **local-only data** — they never cross the VizStats boundary.
 
 ## 7. Repository identity
 
 `repository_uid` is stable across machine paths and never published:
 
-- If the repository has an `origin` remote:
-  `remote:<normalized-url>` where normalization lowercases host and path,
-  strips protocol, credentials, trailing `/`, and `.git`
-  (e.g. `remote:github.com/owner/repo`).
-- Otherwise: `local:<full 64-hex sha256(salt || absolute-path)>` using the
-  per-install salt created by `aiprofile init`. (Full digest, not
+- If the repository has an `origin` remote: `remote:v2:<canonical>` using
+  the **versioned canonicalization algorithm of ADR-016** (G2-01): host
+  lowercased, path case preserved except on documented case-insensitive
+  hosts (github.com), non-default port retained, credentials stripped,
+  query/fragment dropped, scp/IPv6 forms pinned, trailing `/` and `.git`
+  stripped (e.g. `remote:v2:github.com/owner/repo`). Distinct
+  repositories on case-sensitive hosts can no longer merge through case
+  folding. Changing any rule bumps the algorithm version; different
+  versions never compare equal.
+- Otherwise: `local:v2:<full 64-hex sha256(salt || resolved-path)>` using
+  the per-install salt created by `aiprofile init`. (Full digest, not
   truncated: the uid is local-only, and truncation would buy nothing while
   creating a collision-merges-two-repos failure mode.)
 
@@ -237,10 +249,15 @@ identity. ACE v0.1 **excludes both**, for count integrity:
   + documented" from two sources are one participation with the role union,
   not two events.
 
-The semantics of a participation event are therefore: **one actor tuple
-(type, provider, tool) participated in one commit**. "Claude implements,
-Codex reviews" is still 2 events (different providers). One unknown event
-per no-evidence commit is still exactly one event (empty provider/tool).
+The unit this identity counts is therefore an **AI actor presence**: one
+actor tuple (type, provider, tool) was present in one commit (renamed per
+G2-02 — "participation event" overstated the unit, since two
+same-provider/tool actions in one commit collapse by design; Claude
+implementing AND Claude reviewing is ONE presence with the role union).
+"Claude implements, Codex reviews" is still 2 presences (different
+providers). One unknown record per no-evidence commit is still exactly
+one record (empty provider/tool). True per-action participation events
+return only when a source supplies a stable occurrence ID (ROADMAP).
 
 ### 8.3 Merge rules (same event_id produced more than once)
 
@@ -250,13 +267,20 @@ group plus a matching co-author line), and to future multi-source imports
 (notes, git-ai, manual declarations):
 
 - provenance sources: set-union (dedup by `(source_type,
-  source_reference)`).
+  source_reference)`; a key collision keeps the HIGHER evidence level),
+  stored in canonical order (sorted by source type, then locator) so
+  serialization never depends on ingestion order (G2-06).
 - `evidence_level`: max over sources.
 - `roles`: sorted union.
-- `model` / `model_raw`, `contribution_mode`, `human_reviewed`: the value
-  from the highest-precedence source wins; on equal precedence, an existing
-  non-null value is kept (first-write-wins — deterministic because scans
-  process commits and trailer groups in stable order).
+- `model` / `model_raw`, `contribution_mode`, `human_reviewed`: resolved
+  by the canonical, ingestion-order-free rule of ADR-008 (G2-06): higher
+  evidence precedence wins; ties break by source-type priority
+  (`git_trailer > git_trailer_coauthor > manual_declaration > none`),
+  then lexicographic source locator, then lexicographic value. The rule
+  is applied as one N-ary reduction over all leaf productions of the
+  identity (never an incremental pairwise fold — pooled ranks are
+  fold-order dependent; ADR-008), so the same evidence set in any order
+  yields identical events (exhaustively permutation-tested).
 - Across scans, idempotence comes from the scan mechanism itself
   (ADR-014): each scan atomically replaces the repository's scan-derived
   rows, so re-scanning an unchanged repository yields identical state and
@@ -287,16 +311,19 @@ Semantics as in the proposal §12. v0.1 specifics:
   at aggregation time (fail-closed).
 - If several config entries share one uid (two clones), the **most
   restrictive** level wins: `excluded > aggregate_only >
-  repository_anonymous > full`.
+  repository_anonymous > full`. (`repository_anonymous` is **reserved
+  vocabulary in v0.1** — config validation rejects it with a targeted
+  error until anonymous per-repository views exist; G2-12.)
 - `excluded` repositories are skipped entirely at scan time AND excluded
   again at aggregation (defense in depth, and it covers rows stored
   before the user flipped the level).
-- v0.1 public outputs are aggregate-level only, so `full` vs
-  `repository_anonymous` vs `aggregate_only` currently affect only the
-  public/private split (§15): `full` counts as public activity, the other
-  two count as private aggregate-only activity. Per-repository rendering
-  (where `repository_anonymous` differs from `aggregate_only`) is
-  post-v0.1.
+- v0.1 public outputs are aggregate-level only, so the level affects only
+  the publishable split (§15). **Labels are policy-based, never
+  visibility claims** (G2-04): `full` records the user's explicit
+  decision to publish, NOT verified GitHub visibility — the contract
+  therefore says `explicitly_publishable` / `anonymous_aggregate`, and
+  "public/private" wording is reserved until a collector verifies
+  visibility and records how and when it did.
 
 ## 10. Provider / model / tool normalization
 
@@ -329,8 +356,8 @@ landscape-verified claims. `cline` is deliberately absent — landscape.md
 ## 11. Unknown handling
 
 Every commit inside a scan (authored by a configured identity, ADR-015)
-that yields **zero** participation events receives exactly one synthetic
-event:
+that yields **zero** ACE records (no AI presence and no human
+declaration) receives exactly one synthetic record:
 
 ```yaml
 actor: { type: unknown }
@@ -395,8 +422,10 @@ a spec bug.
   identities in non-excluded repositories.
 - **AI-attributed commit** (unit: commits) — a unique commit with ≥1 event
   of `actor.type ∈ {ai, mixed}`.
-- **AI participation event** (unit: events) — one ACE event with
-  `actor.type ∈ {ai, mixed}`. Several may share one commit.
+- **AI actor presence** (unit: presences) — one ACE record with
+  `actor.type ∈ {ai, mixed}`: this provider/tool tuple was present in
+  this commit (§8.2). Several may share one commit; two same-tuple
+  actions in one commit are ONE presence by design (G2-02).
 - **Human-declared commit** (unit: commits) — no AI events and ≥1 `human`
   event.
 - **Unknown commit** (unit: commits) — only `unknown` events.
@@ -405,20 +434,25 @@ a spec bug.
   to more than the AI-attributed total and must never be presented as
   unique commits. Canonical-`null` events group under the reserved
   `unrecognized` slug in public outputs (§10).
-- **Provider participation events / active days** (units: events / days,
-  per provider) — same grouping.
-- **Active AI day** (unit: days) — a calendar date (taken from the commit
-  author date's own UTC offset, i.e. the author's local day) with ≥1 AI
-  participation event.
-- **Evidence totals** (unit: **events**) — count of events per evidence
-  level; rendered labels must say "events".
-- **Public commits** (unit: commits) — commits scanned in repositories
-  whose resolved publication level is `full`. **Private aggregate-only
-  commits** (unit: commits) — commits scanned in `aggregate_only` or
-  `repository_anonymous` repositories. The two sum to commits scanned
-  (excluded repositories are absent from every metric).
+- **Provider actor presences / active days** (units: presences / days,
+  per provider) — same grouping; provider presence rows sum to total AI
+  actor presences (including the `unrecognized` bucket).
+- **Active AI day (author dates)** (unit: days) — a calendar date taken
+  from the commit **author date's own UTC offset** (the author's local
+  day; mutable git metadata, not verified session timing — G2-18; labels
+  must say "author dates") with ≥1 AI actor presence.
+- **Evidence totals** (unit: records) — counts per evidence level over
+  the population of **all ACE records, every actor type** (G2-05). The
+  serialized contract carries `total_records`; categories MUST sum to it,
+  and rendered labels MUST name the population.
+- **Explicitly publishable commits** (unit: commits) — commits scanned in
+  repositories whose resolved publication level is `full` (a user policy
+  decision, not verified visibility — G2-04). **Anonymous aggregate
+  commits** (unit: commits) — commits scanned in `aggregate_only`
+  repositories. The two sum to commits scanned (excluded repositories are
+  absent from every metric).
 - **AI providers count** (unit: providers) — number of distinct canonical
-  provider slugs with ≥1 AI participation event, **excluding** the
+  provider slugs with ≥1 AI actor presence, **excluding** the
   reserved `unrecognized` bucket.
 - The v0.1 reporting period is all-time; `VizStats.period` carries null
   bounds and the label `"All time"` (range filtering is post-v0.1; when it

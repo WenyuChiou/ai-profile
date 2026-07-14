@@ -56,7 +56,7 @@ def _ai_event(
         tool=tool,
         tool_raw=tool_raw,
         sources=[
-            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "AI-Provider")
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")
         ],
     )
 
@@ -70,7 +70,7 @@ def _human_event(
         commit_sha=commit_sha,
         timestamp=timestamp,
         sources=[
-            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "AI-Mode")
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-mode")
         ],
     )
 
@@ -111,7 +111,7 @@ def _one(results, repository_uid: str):
 
 def test_multi_ai_commit_never_double_counts(conn):
     """One commit, two providers -> ai_attributed_commits stays 1, but
-    ai_participation_events and each provider's attributed_commits count
+    ai_actor_presences and each provider's attributed_commits count
     the participation, not the commit, twice."""
     uid = "repo-multi"
     sha = _sha(1)
@@ -136,11 +136,11 @@ def test_multi_ai_commit_never_double_counts(conn):
 
     assert agg.commits_scanned == 1
     assert agg.ai_attributed_commits == 1
-    assert agg.ai_participation_events == 2
+    assert agg.ai_actor_presences == 2
     assert agg.providers["anthropic"].attributed_commits == 1
-    assert agg.providers["anthropic"].participation_events == 1
+    assert agg.providers["anthropic"].actor_presences == 1
     assert agg.providers["openai"].attributed_commits == 1
-    assert agg.providers["openai"].participation_events == 1
+    assert agg.providers["openai"].actor_presences == 1
 
 
 def test_unknown_vs_human_separation(conn):
@@ -166,11 +166,11 @@ def test_unknown_vs_human_separation(conn):
     assert agg.unknown_commits == 1
     assert agg.human_declared_commits == 1
     assert agg.ai_attributed_commits == 0
-    assert agg.ai_participation_events == 0
+    assert agg.ai_actor_presences == 0
 
 
-def test_evidence_events_counts_across_all_actor_types(conn):
-    """evidence_events sums events (not commits) across every actor type."""
+def test_evidence_records_counts_across_all_actor_types(conn):
+    """evidence_records sums events (not commits) across every actor type."""
     uid = "repo-evidence"
     sha_ai = _sha(4)
     sha_human = _sha(5)
@@ -194,8 +194,8 @@ def test_evidence_events_counts_across_all_actor_types(conn):
 
     # ai event + human event both carry evidence_level=declared (schema.md
     # section 2: human is only ever produced by explicit declaration).
-    assert agg.evidence_events["declared"] == 2
-    assert agg.evidence_events["unknown"] == 1
+    assert agg.evidence_records["declared"] == 2
+    assert agg.evidence_records["unknown"] == 1
 
 
 def test_active_dates_use_author_local_iso_prefix(conn):
@@ -238,7 +238,7 @@ def test_unrecognized_provider_collects_raw_values_under_none(conn):
     assert None in agg.providers
     none_agg = agg.providers[None]
     assert none_agg.attributed_commits == 1
-    assert none_agg.participation_events == 1
+    assert none_agg.actor_presences == 1
     assert "WeirdAI-99" in none_agg.raw_values
 
 
@@ -309,9 +309,9 @@ def test_repository_with_zero_commits_yields_zero_filled_row(conn):
     agg = _one(results, uid)
     assert agg.commits_scanned == 0
     assert agg.ai_attributed_commits == 0
-    assert agg.ai_participation_events == 0
+    assert agg.ai_actor_presences == 0
     assert agg.human_declared_commits == 0
     assert agg.unknown_commits == 0
     assert agg.active_ai_dates == set()
-    assert agg.evidence_events == {}
+    assert agg.evidence_records == {}
     assert agg.providers == {}

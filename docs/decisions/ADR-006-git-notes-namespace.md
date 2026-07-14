@@ -16,6 +16,13 @@ Richer structured metadata than trailers will live in Git Notes (proposal
 - v0.1 neither reads nor writes notes; the reservation exists so nothing
   else squats on the ref and so the git-ai importer (which uses its own
   notes refs) maps *into* this project's schema rather than shares a ref.
+- **Consume-first posture (Gate 2 finding G2-17):** this project reads
+  existing notes formats (git-ai's versioned standard first) before ever
+  writing its own. Nothing is written to `refs/notes/ai-collaboration`
+  until a concrete field cannot be represented by existing formats or
+  trailers AND real interoperability tests justify a new format — creating
+  yet another attribution notes convention is exactly the duplication this
+  project exists to avoid.
 
 ## Consequences
 

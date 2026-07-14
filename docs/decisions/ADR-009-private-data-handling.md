@@ -33,9 +33,20 @@ must be structural, not best-effort.
   timestamps. Unrecognized provider values collapse into the reserved
   `unrecognized` bucket before this boundary (schema.md §10) — raw
   commit-message text never crosses it.
+- **Publication labels are policy-based, never visibility claims**
+  (Gate 2 finding G2-04): the contract says `explicitly_publishable` /
+  `anonymous_aggregate`, because `full` records a user decision, not
+  verified GitHub visibility. "Public/private" wording is reserved until
+  a collector verifies visibility and records how.
 - Diagnostics hygiene is pinned in architecture §10 (default warnings:
-  sha + trailer key only; values only under `--verbose`; nothing from the
-  warning/error path can reach `dist/`).
+  scan-local commit ordinal + trailer key only — **never a commit SHA at
+  default verbosity** (Gate 2 finding G2-08, SHAs are stable
+  cross-system correlators); values and SHAs only under `--verbose`;
+  nothing from the warning/error path can reach `dist/`).
+- The honest guarantee is **identity redaction, not anonymity**: exact
+  aggregate counts published repeatedly allow differencing inferences
+  about when private activity changed. `docs/PRIVACY.md` is the threat
+  model of record (Gate 2 finding G2-09).
 - The local DB may hold repo names/paths/author emails (identity
   filtering, future reconcile) — private, local, and disposable.
   **Deletion scope, stated honestly:** removing `AIPROFILE_HOME` deletes

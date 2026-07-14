@@ -19,7 +19,9 @@ aggregate → summary card). Design docs live in [`docs/`](docs/):
 
 ## Install
 
-Requires Python ≥ 3.11 and git ≥ 2.17. Zero runtime dependencies.
+Compatibility: Python 3.11–3.14 · git ≥ 2.17 · SHA-1 repositories
+(SHA-256 object format fails with a clear error in v0.1) · Windows,
+macOS, Linux. Zero runtime dependencies.
 
 ```bash
 pip install -e ".[dev]"   # from a clone; dev extras = pytest + ruff
@@ -63,9 +65,11 @@ AI-Reviewed-By: Human
 Tools that add their own co-author trailer (e.g. Claude Code's
 `Co-Authored-By: Claude <noreply@anthropic.com>`) are recognized
 automatically via a verified identity registry. One commit can carry
-several AI participations ("Claude implements, Codex reviews" = 1 unique
-commit, 2 participation events — the two metrics are never conflated).
-A commit that is explicitly yours alone: `AI-Mode: Human-Only`.
+several **AI actor presences** ("Claude implements, Codex reviews" =
+1 unique commit, 2 presences — the two metrics are never conflated; a
+presence means "this provider/tool appeared in this commit", so Claude
+implementing AND reviewing one commit counts once, honestly). A commit
+that is explicitly yours alone: `AI-Mode: Human-Only`.
 
 ## Privacy model (defaults are safe)
 
@@ -82,20 +86,28 @@ A commit that is explicitly yours alone: `AI-Mode: Human-Only`.
   in public assets (see the raw values locally with `aggregate -v`).
 - `aiprofile aggregate` prints exactly what would be published — it *is*
   the privacy preview.
+- Honest limit: aggregate-only publication is **identity redaction, not
+  anonymity**. Repository names never appear, but repeatedly published
+  exact counts let an observer infer *when* your aggregate-only activity
+  changed and which provider appeared. Full threat model:
+  [`docs/PRIVACY.md`](docs/PRIVACY.md). Output labels are policy-based
+  ("explicitly publishable" / "aggregate-only"), never claims about
+  GitHub visibility.
 - Do not sync `~/.aiprofile` into published dotfiles (it holds a salt and
   private repository paths). Deleting that directory deletes all local
   data; generated `dist/` files are yours to remove separately.
 
 ## Metrics, honestly labeled
 
-- **AI-attributed commits** — unique commits with ≥1 explicit AI
-  participation. Per-provider counts may sum to more than this (multi-AI
+- **AI-attributed commits** — unique commits with ≥1 explicit AI actor
+  presence. Per-provider counts may sum to more than this (multi-AI
   commits) and are labeled as provider-attributed commits, never as
-  unique totals.
+  unique totals. Evidence chips state their population; percentages state
+  their denominator; active days are commit author dates.
 - **Evidence quality** is first-class: `verified > declared > imported >
   inferred > unknown`. v0.1 produces `declared` (trailers) and `unknown`.
 
 ## License
 
-Not yet chosen by the repository owner (MIT recommended); until a LICENSE
-file lands, all rights reserved.
+MIT — see [LICENSE](LICENSE). Contributions welcome under
+[CONTRIBUTING.md](CONTRIBUTING.md).

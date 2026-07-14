@@ -44,7 +44,9 @@ src/aiprofile/
   errors.py            exception hierarchy
   config.py            config model + load/save (AIPROFILE_HOME);
                        publication-policy resolution (schema.md §9)
-  gitio.py             git subprocess abstraction (collection)
+  gitio.py             git subprocess abstraction (collection) +
+                       versioned repository-identity canonicalizer
+                       (pure function; ADR-016)
   registry.py          provider/tool + AI co-author registry
   schema/
     vocab.py           enums / controlled vocabularies
@@ -81,10 +83,13 @@ render → viz, themes, errors          # NEVER storage, gitio, schema, sqlite3
 export → viz, errors                  # NEVER storage, gitio
 ```
 
-Enforced by a unit test that imports `render` and `export` modules and
-asserts `sqlite3`, `subprocess`, `aiprofile.storage`, `aiprofile.gitio` are
-absent from their module graphs. Renderers consume validated `VizStats`
-only; they cannot recalculate attribution because they never see events.
+Enforced two ways (G2-16): a runtime test imports `render` and `export`
+in a fresh interpreter and asserts `sqlite3`, `subprocess`,
+`aiprofile.storage`, `aiprofile.gitio` are absent from the module graph,
+AND a static AST test walks their import statements (catches lazy/dynamic
+imports the runtime check could miss). Renderers consume validated
+`VizStats` only; they cannot recalculate attribution because they never
+see events.
 
 No hidden global state: configuration and database handles are constructed
 in `cli.py` and passed explicitly.
@@ -109,10 +114,10 @@ is the single constructor, and applies exactly these rules:
    defense in depth). No excluded-repository count appears in `VizStats`
    or any public artifact (existence metadata is what exclusion hides);
    it is reported only in local terminal output.
-3. **Public/private split** (unit: commits, schema.md §15): `full` →
-   public commits; `aggregate_only`/`repository_anonymous` → private
-   aggregate-only commits; `includes_private` flag set when the latter
-   is nonzero.
+3. **Publishable split** (unit: commits, schema.md §15; policy-based
+   labels, never visibility claims — G2-04): `full` → explicitly
+   publishable commits; `aggregate_only` → anonymous aggregate commits;
+   `includes_anonymous_aggregate` flag set when the latter is nonzero.
 4. **Unrecognized collapse** (schema.md §10): all canonical-`null`
    provider groups merge into the single reserved `unrecognized` bucket;
    raw strings never cross this boundary. (`aggregate -v` prints raw
@@ -209,7 +214,7 @@ Notes:
 
 `aggregate.py` computes `RepoAggregates` — an internal dataclass defined
 in this module, one row per repository uid, holding the schema.md §15
-counts (commits scanned, AI-attributed commits, participation events,
+counts (commits scanned, AI-attributed commits, actor presences,
 human/unknown commits, per-provider commit/event/day counts keyed by
 canonical slug or `None`, evidence totals in events, active-day date
 sets). It is internal to the pipeline: only `privacy.py` may consume it,
@@ -225,17 +230,26 @@ Period filtering is post-v0.1 (all-time only; schema.md §15).
 VizStats
   schema_version: str
   period: {from_date: None, to_date: None, label: "All time"}   # v0.1
-  totals: {commits_scanned, ai_attributed_commits, ai_participation_events,
+  totals: {commits_scanned, ai_attributed_commits, ai_actor_presences,
            human_declared_commits, unknown_commits, active_ai_days}
   providers: [ {provider, display_name, attributed_commits,
-                participation_events, active_days} ]
+                actor_presences, active_days} ]
       # ranked by attributed_commits desc, then slug asc (deterministic);
       # may include the reserved `unrecognized` bucket, ranked like any row
   provider_count: int        # distinct providers excluding `unrecognized`
-  evidence: {verified, declared, imported, inferred, unknown}   # unit: events
-  privacy: {public_commits, private_aggregate_commits, includes_private: bool}
+  evidence: {verified, declared, imported, inferred, unknown,
+             total_records}  # population: ALL ACE records (G2-05)
+  privacy: {explicitly_publishable_commits, anonymous_aggregate_commits,
+            includes_anonymous_aggregate: bool}   # policy labels (G2-04)
   generated_on: str          # UTC date, YYYY-MM-DD, injected by the caller
 ```
+
+Construction-time invariants (validated, G2-05/§9 of the Gate 2 review):
+evidence categories sum to `total_records`; publishable + anonymous
+aggregate commits equal `commits_scanned`; provider `actor_presences`
+rows sum to `totals.ai_actor_presences`; each provider's
+`attributed_commits` ≤ `totals.ai_attributed_commits`;
+`ai_attributed_commits` ≤ `commits_scanned`.
 
 This is the contract consumed by `render/` and `export.py` and serialized
 (sorted keys, deterministic) into `profile.json`. It changes only with a
@@ -270,10 +284,11 @@ consumes it until the GitHub Action lands).
   (collected per scan, summarized at the end). A malformed trailer never
   aborts a scan and never invents data.
 - **Pinned diagnostics rule (privacy):** default-verbosity warnings may
-  reference the commit sha and the trailer *key* only — never trailer
-  values, commit-message text, repository names, or paths. Trailer values
-  appear only under `--verbose`, which the future CI/Action mode must not
-  enable (ADR-011). `GitError` messages may include the failing command
+  reference a **scan-local commit ordinal** ("commit #17") and the
+  trailer *key* only — never commit SHAs (stable cross-system
+  correlators; G2-08), trailer values, commit-message text, repository
+  names, or paths. SHAs and trailer values appear only under
+  `--verbose`, which the future CI/Action mode must not enable (ADR-011). `GitError` messages may include the failing command
   and paths — they go to the terminal only; nothing from the error/warning
   path can reach `dist/`, whose writers accept `VizStats` alone (§3).
 - Structured logging via stdlib `logging` (`aiprofile.*` loggers); `-v`

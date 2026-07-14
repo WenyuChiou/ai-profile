@@ -66,7 +66,7 @@ def _ai_event(
         contribution_mode=ContributionMode.AI_ASSISTED,
         human_reviewed=human_reviewed,
         sources=[
-            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "AI-Provider")
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")
         ],
     )
 
@@ -403,9 +403,9 @@ def test_replace_repository_scan_roundtrips_all_event_fields(conn):
         contribution_mode=ContributionMode.AI_ASSISTED,
         human_reviewed=True,
         sources=[
-            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "AI-Provider"),
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"),
             ProvenanceSource(
-                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.VERIFIED, "Co-authored-by"
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.VERIFIED, "co-authored-by"
             ),
         ],
         recorded_at="2026-07-01T09:35:00+00:00",
@@ -451,12 +451,12 @@ def test_replace_repository_scan_roundtrips_all_event_fields(conn):
     assert [dict(s) for s in sources] == [
         {
             "source_type": "git_trailer",
-            "source_reference": "AI-Provider",
+            "source_reference": "ai-provider",
             "evidence_level": "declared",
         },
         {
             "source_type": "git_trailer_coauthor",
-            "source_reference": "Co-authored-by",
+            "source_reference": "co-authored-by",
             "evidence_level": "verified",
         },
     ]

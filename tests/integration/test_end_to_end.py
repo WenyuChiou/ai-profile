@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -99,7 +100,7 @@ def _standard_commits() -> list[tuple[str, str]]:
 _ZERO_TOTALS = {
     "commits_scanned": 0,
     "ai_attributed_commits": 0,
-    "ai_participation_events": 0,
+    "ai_actor_presences": 0,
     "human_declared_commits": 0,
     "unknown_commits": 0,
     "active_ai_days": 0,
@@ -140,14 +141,14 @@ def test_happy_path_full_pipeline(tmp_path):
     Aggregated (schema.md section 15):
       commits_scanned         = 8                    (a..h, all by the configured identity)
       ai_attributed_commits   = 5                    (b,c,d,e,h: >=1 ai/mixed event)
-      ai_participation_events = 6                    (b1+c1+d1+e2+h1)
+      ai_actor_presences = 6                    (b1+c1+d1+e2+h1)
       human_declared_commits  = 1                    (g: human event, no ai event)
       unknown_commits         = 2                    (a,f: only unknown events)
       active_ai_days          = 5                    (Jan 2,3,4,5,8 each have >=1 ai event)
 
-      provider anthropic: attributed_commits=3 (b,d,e) participation_events=3 active_days=3
-      provider openai:    attributed_commits=2 (c,e)   participation_events=2 active_days=2
-      provider unrecognized: attributed_commits=1 (h)  participation_events=1 active_days=1
+      provider anthropic: attributed_commits=3 (b,d,e) actor_presences=3 active_days=3
+      provider openai:    attributed_commits=2 (c,e)   actor_presences=2 active_days=2
+      provider unrecognized: attributed_commits=1 (h)  actor_presences=1 active_days=1
       provider_count = 2 (anthropic, openai — unrecognized excluded per schema.md section 15)
 
       evidence declared = 7  (all 6 ai events + the 1 human event: every one of
@@ -158,8 +159,8 @@ def test_happy_path_full_pipeline(tmp_path):
       evidence verified/imported/inferred = 0 (no v0.1 producer emits these)
 
       privacy: repository scanned without --full -> publication_level defaults
-        to aggregate_only (mvp.md section 3) -> public_commits=0,
-        private_aggregate_commits=8, includes_private=True.
+        to aggregate_only (mvp.md section 3) -> explicitly_publishable_commits=0,
+        anonymous_aggregate_commits=8, includes_anonymous_aggregate=True.
     """
     home = tmp_path / "home"
     repo_path = tmp_path / "repo"
@@ -191,7 +192,7 @@ def test_happy_path_full_pipeline(tmp_path):
     assert profile["totals"] == {
         "commits_scanned": 8,
         "ai_attributed_commits": 5,
-        "ai_participation_events": 6,
+        "ai_actor_presences": 6,
         "human_declared_commits": 1,
         "unknown_commits": 2,
         "active_ai_days": 5,
@@ -201,36 +202,37 @@ def test_happy_path_full_pipeline(tmp_path):
             "provider": "anthropic",
             "display_name": "Claude",
             "attributed_commits": 3,
-            "participation_events": 3,
+            "actor_presences": 3,
             "active_days": 3,
         },
         {
             "provider": "openai",
             "display_name": "OpenAI",
             "attributed_commits": 2,
-            "participation_events": 2,
+            "actor_presences": 2,
             "active_days": 2,
         },
         {
             "provider": "unrecognized",
             "display_name": "Unrecognized",
             "attributed_commits": 1,
-            "participation_events": 1,
+            "actor_presences": 1,
             "active_days": 1,
         },
     ]
     assert profile["provider_count"] == 2
-    assert profile["evidence_events"] == {
+    assert profile["evidence_records"] == {
         "verified": 0,
         "declared": 7,
         "imported": 0,
         "inferred": 0,
         "unknown": 2,
+        "total_records": 9,
     }
     assert profile["privacy"] == {
-        "public_commits": 0,
-        "private_aggregate_commits": 8,
-        "includes_private": True,
+        "explicitly_publishable_commits": 0,
+        "anonymous_aggregate_commits": 8,
+        "includes_anonymous_aggregate": True,
     }
 
 
@@ -320,7 +322,7 @@ def test_rewritten_history_amend_rescan(tmp_path):
     assert profile_after["totals"] == profile_before["totals"]
     assert profile_after["totals"]["commits_scanned"] == 8
     assert profile_after["providers"] == profile_before["providers"]
-    assert profile_after["evidence_events"] == profile_before["evidence_events"]
+    assert profile_after["evidence_records"] == profile_before["evidence_records"]
 
 
 # ---------------------------------------------------------------------------
@@ -372,7 +374,7 @@ def test_privacy_leak(tmp_path):
     unrecognized = next(p for p in profile["providers"] if p["provider"] == "unrecognized")
     assert unrecognized["display_name"] == "Unrecognized"
     assert unrecognized["attributed_commits"] == 1
-    assert unrecognized["participation_events"] == 1
+    assert unrecognized["actor_presences"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -427,9 +429,9 @@ def test_publication_policy_resolution(tmp_path):
     assert profile_i["totals"] == _ZERO_TOTALS
     assert profile_i["providers"] == []
     assert profile_i["privacy"] == {
-        "public_commits": 0,
-        "private_aggregate_commits": 0,
-        "includes_private": False,
+        "explicitly_publishable_commits": 0,
+        "anonymous_aggregate_commits": 0,
+        "includes_anonymous_aggregate": False,
     }
 
     # (ii) full -> all activity counts as public
@@ -440,9 +442,9 @@ def test_publication_policy_resolution(tmp_path):
     profile_ii = render_and_load("ii")
     assert profile_ii["totals"]["commits_scanned"] == 2
     assert profile_ii["privacy"] == {
-        "public_commits": 2,
-        "private_aggregate_commits": 0,
-        "includes_private": False,
+        "explicitly_publishable_commits": 2,
+        "anonymous_aggregate_commits": 0,
+        "includes_anonymous_aggregate": False,
     }
 
     # (iii) repository entry removed entirely -> fail-closed, everything zero
@@ -451,9 +453,9 @@ def test_publication_policy_resolution(tmp_path):
     profile_iii = render_and_load("iii")
     assert profile_iii["totals"] == _ZERO_TOTALS
     assert profile_iii["privacy"] == {
-        "public_commits": 0,
-        "private_aggregate_commits": 0,
-        "includes_private": False,
+        "explicitly_publishable_commits": 0,
+        "anonymous_aggregate_commits": 0,
+        "includes_anonymous_aggregate": False,
     }
 
     # (iv) duplicate uid: one "full" + one "aggregate_only" entry -> the most
@@ -472,9 +474,9 @@ def test_publication_policy_resolution(tmp_path):
     profile_iv = render_and_load("iv")
     assert profile_iv["totals"]["commits_scanned"] == 2
     assert profile_iv["privacy"] == {
-        "public_commits": 0,
-        "private_aggregate_commits": 2,
-        "includes_private": True,
+        "explicitly_publishable_commits": 0,
+        "anonymous_aggregate_commits": 2,
+        "includes_anonymous_aggregate": True,
     }
 
 
@@ -528,17 +530,18 @@ def test_zero_state_render(tmp_path):
     assert profile["totals"] == _ZERO_TOTALS
     assert profile["providers"] == []
     assert profile["provider_count"] == 0
-    assert profile["evidence_events"] == {
+    assert profile["evidence_records"] == {
         "verified": 0,
         "declared": 0,
         "imported": 0,
         "inferred": 0,
         "unknown": 0,
+        "total_records": 0,
     }
     assert profile["privacy"] == {
-        "public_commits": 0,
-        "private_aggregate_commits": 0,
-        "includes_private": False,
+        "explicitly_publishable_commits": 0,
+        "anonymous_aggregate_commits": 0,
+        "includes_anonymous_aggregate": False,
     }
 
     svg_text = (out / "summary-light.svg").read_text(encoding="utf-8")
@@ -585,3 +588,34 @@ def test_usage_error_no_args(tmp_path):
     home = tmp_path / "home"
     result = run_cli([], home=home, cwd=tmp_path)
     assert result.returncode == 2
+
+
+# ---------------------------------------------------------------------------
+# Diagnostics hygiene (gate round-2 P2; G2-08): default scan output carries
+# scan-local ordinals, never commit SHAs; --verbose opts into the sha prefix.
+# ---------------------------------------------------------------------------
+
+
+def test_default_scan_warnings_use_ordinals_never_shas(tmp_path):
+    home = tmp_path / "home"
+    repo = tmp_path / "warnrepo"
+    build_repo(
+        repo,
+        [
+            ("plain first commit", "2026-02-01T10:00:00+08:00"),
+            ("has a broken group\n\nAI-Model: Mystery-9", "2026-02-02T10:00:00+08:00"),
+        ],
+    )
+    assert run_cli(["init"], home=home, cwd=repo).returncode == 0
+
+    default_res = run_cli(["scan", str(repo)], home=home, cwd=repo)
+    assert default_res.returncode == 0, default_res.stderr
+    assert "incomplete-group" in default_res.stdout
+    assert "commit #" in default_res.stdout
+    combined = default_res.stdout + default_res.stderr
+    assert not re.search(r"\b[0-9a-f]{40}\b", combined), combined
+    assert not re.search(r"\[[0-9a-f]{12}\]", combined), combined
+
+    verbose_res = run_cli(["-v", "scan", str(repo)], home=home, cwd=repo)
+    assert verbose_res.returncode == 0, verbose_res.stderr
+    assert re.search(r"\[[0-9a-f]{12}\]", verbose_res.stdout), verbose_res.stdout

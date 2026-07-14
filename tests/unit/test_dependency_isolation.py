@@ -46,3 +46,35 @@ def test_render_and_export_never_load_storage_git_or_sqlite():
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "ISOLATED" in proc.stdout
+
+
+def test_static_ast_import_contract_for_render_and_export():
+    """G2-16: static AST check catches lazy/dynamic imports the runtime
+    module-graph test could miss."""
+    import ast
+
+    banned_roots = {"sqlite3", "subprocess", "aiprofile.storage", "aiprofile.gitio"}
+    files = [
+        REPO_ROOT / "src" / "aiprofile" / "render" / "summary_svg.py",
+        REPO_ROOT / "src" / "aiprofile" / "render" / "themes.py",
+        REPO_ROOT / "src" / "aiprofile" / "render" / "__init__.py",
+        REPO_ROOT / "src" / "aiprofile" / "export.py",
+    ]
+    violations = []
+    for f in files:
+        tree = ast.parse(f.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            names = []
+            if isinstance(node, ast.Import):
+                names = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                if node.level:  # relative import: resolve against aiprofile
+                    base = "aiprofile." + (node.module or "")
+                    names = [base.rstrip(".")]
+                    names += [f"{base.rstrip('.')}.{a.name}" for a in node.names]
+                else:
+                    names = [node.module or ""]
+            for name in names:
+                if any(name == b or name.startswith(b + ".") for b in banned_roots):
+                    violations.append(f"{f.name}: {name}")
+    assert not violations, violations

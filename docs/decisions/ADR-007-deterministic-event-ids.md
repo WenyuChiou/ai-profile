@@ -26,8 +26,12 @@ participation counts (violating test invariant 5). Merge rules: role
 union, evidence-precedence for scalar attributes, provenance sources
 retained (schema.md §8.3).
 
-A participation event therefore means: **this actor tuple (type, provider,
-tool) participated in this commit**.
+The unit this identity counts is therefore an **AI actor presence**: this
+actor tuple (type, provider, tool) was present in this commit (Gate 2
+finding G2-02 — the earlier "participation event" name overstated what is
+counted, since two same-provider/tool actions in one commit collapse by
+design). True per-action participation events return only when a source
+supplies a stable occurrence ID (see docs/ROADMAP.md).
 
 ## Consequences
 

@@ -47,21 +47,21 @@ def _period(label: str = "All time") -> Period:
 
 _POPULATED_PROVIDERS = (
     ProviderRow(provider="anthropic", display_name="Claude", attributed_commits=120,
-                participation_events=150, active_days=40),
+                actor_presences=150, active_days=40),
     ProviderRow(provider="openai", display_name="OpenAI", attributed_commits=95,
-                participation_events=118, active_days=35),
+                actor_presences=118, active_days=35),
     ProviderRow(provider="google", display_name="Gemini", attributed_commits=60,
-                participation_events=75, active_days=22),
+                actor_presences=75, active_days=22),
     ProviderRow(provider="github", display_name="Copilot", attributed_commits=40,
-                participation_events=50, active_days=18),
+                actor_presences=50, active_days=18),
     ProviderRow(provider="cursor", display_name="Cursor", attributed_commits=25,
-                participation_events=30, active_days=12),
+                actor_presences=30, active_days=12),
     ProviderRow(provider=UNRECOGNIZED_PROVIDER, display_name=UNRECOGNIZED_DISPLAY,
-                attributed_commits=20, participation_events=22, active_days=9),
+                attributed_commits=20, actor_presences=22, active_days=9),
     ProviderRow(provider="amazon", display_name="Amazon Q", attributed_commits=10,
-                participation_events=12, active_days=5),
+                actor_presences=12, active_days=5),
     ProviderRow(provider="aider", display_name="Aider", attributed_commits=5,
-                participation_events=6, active_days=3),
+                actor_presences=6, active_days=3),
 )
 
 FIXTURE_POPULATED = VizStats(
@@ -70,15 +70,26 @@ FIXTURE_POPULATED = VizStats(
     totals=Totals(
         commits_scanned=520,
         ai_attributed_commits=375,
-        ai_participation_events=463,
+        ai_actor_presences=463,
         human_declared_commits=5,
         unknown_commits=100,
         active_ai_days=58,
     ),
     providers=_POPULATED_PROVIDERS,
     provider_count=7,  # excludes the unrecognized bucket
-    evidence=EvidenceTotals(verified=12, declared=400, imported=0, inferred=5, unknown=46),
-    privacy=PrivacySplit(public_commits=200, private_aggregate_commits=320, includes_private=True),
+    evidence=EvidenceTotals(
+        verified=12,
+        declared=400,
+        imported=0,
+        inferred=5,
+        unknown=46,
+        total_records=463,
+    ),
+    privacy=PrivacySplit(
+        explicitly_publishable_commits=200,
+        anonymous_aggregate_commits=320,
+        includes_anonymous_aggregate=True,
+    ),
     generated_on=GENERATED_ON,
 )
 
@@ -92,44 +103,62 @@ FIXTURE_ZERO = VizStats(
     totals=Totals(
         commits_scanned=0,
         ai_attributed_commits=0,
-        ai_participation_events=0,
+        ai_actor_presences=0,
         human_declared_commits=0,
         unknown_commits=0,
         active_ai_days=0,
     ),
     providers=(),
     provider_count=0,
-    evidence=EvidenceTotals(verified=0, declared=0, imported=0, inferred=0, unknown=0),
-    privacy=PrivacySplit(public_commits=0, private_aggregate_commits=0, includes_private=False),
+    evidence=EvidenceTotals(
+        verified=0,
+        declared=0,
+        imported=0,
+        inferred=0,
+        unknown=0,
+        total_records=0,
+    ),
+    privacy=PrivacySplit(
+        explicitly_publishable_commits=0,
+        anonymous_aggregate_commits=0,
+        includes_anonymous_aggregate=False,
+    ),
     generated_on=GENERATED_ON,
 )
 
 # ---------------------------------------------------------------------------
 # Fixtures 3 & 4: identical providers/totals, differing only in the privacy
-# split — isolates the "Includes private activity" / "Public repositories
+# split — isolates the "Includes aggregate-only activity" / "Public repositories
 # only" line. Evidence here only carries declared/unknown (both always
 # shown), exercising the branch where every optional evidence field is 0.
 # ---------------------------------------------------------------------------
 
 _PRIVACY_PROVIDERS = (
     ProviderRow(provider="anthropic", display_name="Claude", attributed_commits=30,
-                participation_events=34, active_days=10),
+                actor_presences=34, active_days=10),
     ProviderRow(provider="openai", display_name="OpenAI", attributed_commits=18,
-                participation_events=20, active_days=7),
+                actor_presences=20, active_days=7),
     ProviderRow(provider="google", display_name="Gemini", attributed_commits=6,
-                participation_events=7, active_days=3),
+                actor_presences=7, active_days=3),
 )
 
 _PRIVACY_TOTALS = Totals(
     commits_scanned=60,
     ai_attributed_commits=54,
-    ai_participation_events=61,
+    ai_actor_presences=61,
     human_declared_commits=1,
     unknown_commits=5,
     active_ai_days=14,
 )
 
-_PRIVACY_EVIDENCE = EvidenceTotals(verified=0, declared=58, imported=0, inferred=0, unknown=3)
+_PRIVACY_EVIDENCE = EvidenceTotals(
+    verified=0,
+    declared=58,
+    imported=0,
+    inferred=0,
+    unknown=3,
+    total_records=61,
+)
 
 FIXTURE_PRIVACY_TRUE = VizStats(
     schema_version="0.1.0",
@@ -138,7 +167,11 @@ FIXTURE_PRIVACY_TRUE = VizStats(
     providers=_PRIVACY_PROVIDERS,
     provider_count=3,
     evidence=_PRIVACY_EVIDENCE,
-    privacy=PrivacySplit(public_commits=0, private_aggregate_commits=60, includes_private=True),
+    privacy=PrivacySplit(
+        explicitly_publishable_commits=0,
+        anonymous_aggregate_commits=60,
+        includes_anonymous_aggregate=True,
+    ),
     generated_on=GENERATED_ON,
 )
 
@@ -149,7 +182,11 @@ FIXTURE_PRIVACY_FALSE = VizStats(
     providers=_PRIVACY_PROVIDERS,
     provider_count=3,
     evidence=_PRIVACY_EVIDENCE,
-    privacy=PrivacySplit(public_commits=60, private_aggregate_commits=0, includes_private=False),
+    privacy=PrivacySplit(
+        explicitly_publishable_commits=60,
+        anonymous_aggregate_commits=0,
+        includes_anonymous_aggregate=False,
+    ),
     generated_on=GENERATED_ON,
 )
 
@@ -183,18 +220,29 @@ FIXTURE_LONG_NAME = VizStats(
     totals=Totals(
         commits_scanned=10,
         ai_attributed_commits=8,
-        ai_participation_events=9,
+        ai_actor_presences=9,
         human_declared_commits=0,
         unknown_commits=2,
         active_ai_days=4,
     ),
     providers=(
         ProviderRow(provider="anthropic", display_name=_LONG_NAME, attributed_commits=8,
-                    participation_events=9, active_days=4),
+                    actor_presences=9, active_days=4),
     ),
     provider_count=1,
-    evidence=EvidenceTotals(verified=0, declared=9, imported=0, inferred=0, unknown=0),
-    privacy=PrivacySplit(public_commits=10, private_aggregate_commits=0, includes_private=False),
+    evidence=EvidenceTotals(
+        verified=0,
+        declared=9,
+        imported=0,
+        inferred=0,
+        unknown=0,
+        total_records=9,
+    ),
+    privacy=PrivacySplit(
+        explicitly_publishable_commits=10,
+        anonymous_aggregate_commits=0,
+        includes_anonymous_aggregate=False,
+    ),
     generated_on=GENERATED_ON,
 )
 
@@ -206,18 +254,29 @@ FIXTURE_ESCAPE_NAME = VizStats(
     totals=Totals(
         commits_scanned=7,
         ai_attributed_commits=5,
-        ai_participation_events=6,
+        ai_actor_presences=6,
         human_declared_commits=0,
         unknown_commits=2,
         active_ai_days=2,
     ),
     providers=(
         ProviderRow(provider="anthropic", display_name=_ESCAPE_NAME, attributed_commits=5,
-                    participation_events=6, active_days=2),
+                    actor_presences=6, active_days=2),
     ),
     provider_count=1,
-    evidence=EvidenceTotals(verified=0, declared=6, imported=0, inferred=0, unknown=0),
-    privacy=PrivacySplit(public_commits=7, private_aggregate_commits=0, includes_private=False),
+    evidence=EvidenceTotals(
+        verified=0,
+        declared=6,
+        imported=0,
+        inferred=0,
+        unknown=0,
+        total_records=6,
+    ),
+    privacy=PrivacySplit(
+        explicitly_publishable_commits=7,
+        anonymous_aggregate_commits=0,
+        includes_anonymous_aggregate=False,
+    ),
     generated_on=GENERATED_ON,
 )
 
@@ -296,7 +355,7 @@ def test_desc_summarizes_headline_numbers():
     root = ET.fromstring(svg)
     desc_text = root.find(f"{SVG_NS}desc").text
     assert "375" in desc_text  # ai_attributed_commits
-    assert "463" in desc_text  # ai_participation_events
+    assert "463" in desc_text  # ai_actor_presences
     assert "58" in desc_text  # active_ai_days
     assert "7" in desc_text  # provider_count
 
@@ -361,18 +420,18 @@ def test_provider_percentages_and_denominator_label():
 def test_privacy_split_chip_only_when_both_sides_nonzero():
     # populated: public 200 / private 320 -> split chip present
     svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
-    assert "public 200 · private 320" in svg
+    assert "publishable 200 · aggregate-only 320" in svg
     # privacy_true: public 0 -> only the inclusion chip, no split chip
     svg_true = render_summary(FIXTURE_PRIVACY_TRUE, THEMES["github-light"])
-    assert "public 0" not in svg_true
+    assert "publishable 0" not in svg_true
     # privacy_false: no private -> no split chip either
     svg_false = render_summary(FIXTURE_PRIVACY_FALSE, THEMES["github-light"])
-    assert "· private" not in svg_false
+    assert "· aggregate-only" not in svg_false
 
 
 def test_evidence_chip_prefix_present():
     svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
-    assert "Evidence (events)" in svg
+    assert "Evidence (all records:" in svg
     assert THEMES["github-light"].chip_bg in svg
 
 
@@ -445,17 +504,17 @@ def test_evidence_line_appends_only_nonzero_optional_fields():
 def test_privacy_line_true_and_false():
     true_svg = render_summary(FIXTURE_PRIVACY_TRUE, THEMES["github-light"])
     false_svg = render_summary(FIXTURE_PRIVACY_FALSE, THEMES["github-light"])
-    assert "Includes private activity (aggregate-only)" in true_svg
-    assert "Public repositories only" not in true_svg
-    assert "Public repositories only" in false_svg
-    assert "Includes private activity" not in false_svg
+    assert "Includes aggregate-only activity (repository identity withheld)" in true_svg
+    assert "All activity explicitly publishable" not in true_svg
+    assert "All activity explicitly publishable" in false_svg
+    assert "Includes aggregate-only activity" not in false_svg
 
 
 def test_footer_generated_on_and_footnote():
     for stats in CASES.values():
         svg = render_summary(stats, THEMES["github-light"])
         assert f"Generated {GENERATED_ON} · aiprofile" in svg
-        assert "One commit may include several AI participation events." in svg
+        assert "One commit may include several AI actor presences (one per provider/tool)." in svg
 
 
 # ---------------------------------------------------------------------------
@@ -478,8 +537,8 @@ def test_zero_state_omits_metrics_and_table():
     assert "Attributed commits by provider" not in svg
     assert ">AI-attributed commits</text>" not in svg
     # The metric *label* text node, not the footer footnote sentence that
-    # also mentions "AI participation events" in prose.
-    assert ">AI participation events</text>" not in svg
+    # also mentions "AI actor presences" in prose.
+    assert ">AI actor presences</text>" not in svg
 
 
 def test_zero_state_keeps_title_period_and_footer():
@@ -556,3 +615,31 @@ def test_coordinate_hygiene_no_float_noise():
             svg = render_summary(stats, theme)
             for value in attr_re.findall(svg):
                 assert re.fullmatch(r"-?\d+(\.\d{1,2})?", value), value
+
+
+# ---------------------------------------------------------------------------
+# SVG security contract (G2-19): allowlisted elements, no active content,
+# no external references.
+# ---------------------------------------------------------------------------
+
+_ALLOWED_SVG_TAGS = {
+    f"{SVG_NS}{t}"
+    for t in ("svg", "title", "desc", "rect", "line", "text", "tspan", "polygon")
+}
+
+
+def test_svg_uses_only_allowlisted_elements_and_no_active_content():
+    for stats in list(CASES.values()) + [FIXTURE_LONG_NAME, FIXTURE_ESCAPE_NAME]:
+        for theme in THEMES.values():
+            svg = render_summary(stats, theme)
+            root = ET.fromstring(svg)
+            for el in root.iter():
+                assert el.tag in _ALLOWED_SVG_TAGS, el.tag
+                for attr in el.attrib:
+                    assert not attr.lower().startswith("on"), attr
+                    assert "href" not in attr.lower(), attr
+            lowered = svg.lower()
+            assert "<script" not in lowered
+            assert "foreignobject" not in lowered
+            assert "http://" not in lowered.replace("http://www.w3.org/2000/svg", "")
+            assert "https://" not in lowered

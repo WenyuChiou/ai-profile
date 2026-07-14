@@ -92,11 +92,22 @@ def load_config(home: Path) -> Config:
         try:
             level = PublicationLevel(raw.get("publication_level"))
         except ValueError:
-            allowed = ", ".join(lv.value for lv in PublicationLevel)
+            allowed = ", ".join(
+                lv.value
+                for lv in PublicationLevel
+                if lv is not PublicationLevel.REPOSITORY_ANONYMOUS
+            )
             raise ConfigError(
                 f"{path}: repositories[{i}].publication_level"
                 f" {raw.get('publication_level')!r} is not one of [{allowed}]"
             ) from None
+        if level is PublicationLevel.REPOSITORY_ANONYMOUS:
+            raise ConfigError(
+                f"{path}: repositories[{i}].publication_level"
+                " 'repository_anonymous' is reserved for post-v0.1 (anonymous"
+                " per-repository views do not exist yet — G2-12); use"
+                " 'aggregate_only'"
+            )
         p, uid = raw.get("path"), raw.get("repository_uid")
         if not isinstance(p, str) or not p or not isinstance(uid, str) or not uid:
             raise ConfigError(

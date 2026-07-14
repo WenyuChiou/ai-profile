@@ -183,20 +183,20 @@ def _print_stats(s: VizStats) -> None:
     print(f"AI Collaboration Summary ({s.period.label})")
     print(f"generated: {s.generated_on} (UTC) | schema {s.schema_version}")
     print()
-    print(f"commits scanned:          {t.commits_scanned}")
-    print(f"AI-attributed commits:    {t.ai_attributed_commits}")
-    print(f"AI participation events:  {t.ai_participation_events}")
-    print(f"human-declared commits:   {t.human_declared_commits}")
-    print(f"unknown commits:          {t.unknown_commits}")
-    print(f"active AI days:           {t.active_ai_days}")
-    print(f"AI providers:             {s.provider_count}")
+    print(f"commits scanned:            {t.commits_scanned}")
+    print(f"AI-attributed commits:      {t.ai_attributed_commits}")
+    print(f"AI actor presences:         {t.ai_actor_presences}")
+    print(f"human-declared commits:     {t.human_declared_commits}")
+    print(f"unknown commits:            {t.unknown_commits}")
+    print(f"active AI days (author dates): {t.active_ai_days}")
+    print(f"AI providers:               {s.provider_count}")
     if s.providers:
         print()
-        print("providers (attributed commits | participation events | active days):")
+        print("providers (attributed commits | actor presences | active days):")
         for p in s.providers:
             print(
                 f"  {p.display_name:<14} {p.attributed_commits}"
-                f" | {p.participation_events} | {p.active_days}"
+                f" | {p.actor_presences} | {p.active_days}"
             )
     e = s.evidence
     parts = [f"declared {e.declared}", f"unknown {e.unknown}"]
@@ -204,21 +204,26 @@ def _print_stats(s: VizStats) -> None:
         if n:
             parts.append(f"{label} {n}")
     print()
-    print(f"evidence (events): {' | '.join(parts)}")
+    print(f"evidence (all records: {e.total_records}): {' | '.join(parts)}")
     print(
-        f"privacy: public commits {s.privacy.public_commits}"
-        f" | private aggregate-only commits {s.privacy.private_aggregate_commits}"
-        f" | includes private: {'yes' if s.privacy.includes_private else 'no'}"
+        "publication: explicitly publishable commits"
+        f" {s.privacy.explicitly_publishable_commits}"
+        f" | aggregate-only commits {s.privacy.anonymous_aggregate_commits}"
+        f" | includes aggregate-only:"
+        f" {'yes' if s.privacy.includes_anonymous_aggregate else 'no'}"
     )
 
 
 def _print_warnings(warnings, *, verbose: bool, limit: int = 20) -> None:
-    """Diagnostics hygiene (architecture.md section 10): default output names
-    only the warning code, trailer key, and commit sha — never values."""
-    for sha, warning in warnings[:limit]:
-        line = f"warning: {warning.code} ({warning.trailer_key}) in commit {sha[:12]}"
-        if verbose and warning.local_detail:
-            line += f" — {warning.local_detail}"
+    """Diagnostics hygiene (architecture.md section 10, G2-08): default output
+    names only the warning code, trailer key, and a scan-local commit
+    ordinal — never SHAs or trailer values (those require --verbose)."""
+    for ordinal, sha, warning in warnings[:limit]:
+        line = f"warning: {warning.code} ({warning.trailer_key}) in commit #{ordinal}"
+        if verbose:
+            line += f" [{sha[:12]}]"
+            if warning.local_detail:
+                line += f" — {warning.local_detail}"
         print(line)
     if len(warnings) > limit:
         print(f"...and {len(warnings) - limit} more warnings")

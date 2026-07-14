@@ -63,6 +63,26 @@ class SourceType(StrEnum):
     NONE = "none"  # the no-evidence marker used by unknown events
 
 
+#: Merge tie-break priority (ADR-008 canonical rule, G2-06): higher wins
+#: after evidence precedence; then lexicographic locator, then value.
+SOURCE_TYPE_PRIORITY: dict[SourceType, int] = {
+    SourceType.GIT_TRAILER: 3,
+    SourceType.GIT_TRAILER_COAUTHOR: 2,
+    SourceType.MANUAL_DECLARATION: 1,
+    SourceType.NONE: 0,
+}
+
+#: Allowed source_reference locators per source type (schema.md section 6.2,
+#: G2-07): enum-constrained so sensitive free text structurally cannot enter
+#: provenance. Future source types must define their sets before shipping.
+ALLOWED_SOURCE_REFERENCES: dict[SourceType, frozenset[str | None]] = {
+    SourceType.GIT_TRAILER: frozenset({"ai-provider", "ai-tool", "ai-mode"}),
+    SourceType.GIT_TRAILER_COAUTHOR: frozenset({"co-authored-by"}),
+    SourceType.MANUAL_DECLARATION: frozenset({None}),  # reserved
+    SourceType.NONE: frozenset({None}),
+}
+
+
 class PublicationLevel(StrEnum):
     FULL = "full"
     REPOSITORY_ANONYMOUS = "repository_anonymous"
@@ -79,7 +99,7 @@ PUBLICATION_RESTRICTIVENESS: dict[PublicationLevel, int] = {
 }
 
 #: Reserved provider slug for the public-output bucket of canonical-null
-#: participations (schema.md section 10). May not be used as a registry alias.
+#: presences (schema.md section 10). May not be used as a registry alias.
 UNRECOGNIZED_PROVIDER = "unrecognized"
 UNRECOGNIZED_DISPLAY = "Unrecognized"
 
