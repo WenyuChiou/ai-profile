@@ -1,0 +1,510 @@
+"""Unit tests for the summary-card SVG renderer (ADR-010; docs/mvp.md
+section 5; docs/architecture.md sections 8-9; work package E).
+
+All `VizStats` fixtures are built inline from the dataclasses in
+`aiprofile.viz` (never round-tripped through storage/aggregate) — the
+privacy split must sum to `commits_scanned` and `providers` must be
+pre-ranked by `(-attributed_commits, provider)`, both enforced by
+`VizStats.__post_init__`.
+
+REGENERATING SNAPSHOTS: the golden files under `tests/snapshots/` are
+byte-exact UTF-8 renders of the fixtures below (`render_summary(stats,
+theme).encode("utf-8")`, no newline translation). If an intentional
+layout/content change requires new golden files, delete the stale ones and
+run this module directly:
+
+    python tests/unit/test_render_summary.py
+
+which re-renders every `(case, theme)` pair in `CASES` x `THEMES` and
+overwrites `tests/snapshots/summary_<case>_<light|dark>.svg`. Inspect the
+diff before committing regenerated snapshots.
+"""
+
+from __future__ import annotations
+
+import re
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+from aiprofile.render.summary_svg import render_summary
+from aiprofile.render.themes import THEMES
+from aiprofile.schema.vocab import UNRECOGNIZED_DISPLAY, UNRECOGNIZED_PROVIDER
+from aiprofile.viz import EvidenceTotals, Period, PrivacySplit, ProviderRow, Totals, VizStats
+
+SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / "snapshots"
+SVG_NS = "{http://www.w3.org/2000/svg}"
+GENERATED_ON = "2026-07-14"
+
+
+def _period(label: str = "All time") -> Period:
+    return Period(from_date=None, to_date=None, label=label)
+
+
+# ---------------------------------------------------------------------------
+# Fixture 1: "populated" — 8 providers (6 visible + 2 in "+2 more"),
+# including the reserved `unrecognized` bucket inside the visible 6.
+# ---------------------------------------------------------------------------
+
+_POPULATED_PROVIDERS = (
+    ProviderRow(provider="anthropic", display_name="Claude", attributed_commits=120,
+                participation_events=150, active_days=40),
+    ProviderRow(provider="openai", display_name="OpenAI", attributed_commits=95,
+                participation_events=118, active_days=35),
+    ProviderRow(provider="google", display_name="Gemini", attributed_commits=60,
+                participation_events=75, active_days=22),
+    ProviderRow(provider="github", display_name="Copilot", attributed_commits=40,
+                participation_events=50, active_days=18),
+    ProviderRow(provider="cursor", display_name="Cursor", attributed_commits=25,
+                participation_events=30, active_days=12),
+    ProviderRow(provider=UNRECOGNIZED_PROVIDER, display_name=UNRECOGNIZED_DISPLAY,
+                attributed_commits=20, participation_events=22, active_days=9),
+    ProviderRow(provider="amazon", display_name="Amazon Q", attributed_commits=10,
+                participation_events=12, active_days=5),
+    ProviderRow(provider="aider", display_name="Aider", attributed_commits=5,
+                participation_events=6, active_days=3),
+)
+
+FIXTURE_POPULATED = VizStats(
+    schema_version="0.1.0",
+    period=_period(),
+    totals=Totals(
+        commits_scanned=520,
+        ai_attributed_commits=375,
+        ai_participation_events=463,
+        human_declared_commits=5,
+        unknown_commits=100,
+        active_ai_days=58,
+    ),
+    providers=_POPULATED_PROVIDERS,
+    provider_count=7,  # excludes the unrecognized bucket
+    evidence=EvidenceTotals(verified=12, declared=400, imported=0, inferred=5, unknown=46),
+    privacy=PrivacySplit(public_commits=200, private_aggregate_commits=320, includes_private=True),
+    generated_on=GENERATED_ON,
+)
+
+# ---------------------------------------------------------------------------
+# Fixture 2: zero-state — brand-new user, nothing scanned yet.
+# ---------------------------------------------------------------------------
+
+FIXTURE_ZERO = VizStats(
+    schema_version="0.1.0",
+    period=_period(),
+    totals=Totals(
+        commits_scanned=0,
+        ai_attributed_commits=0,
+        ai_participation_events=0,
+        human_declared_commits=0,
+        unknown_commits=0,
+        active_ai_days=0,
+    ),
+    providers=(),
+    provider_count=0,
+    evidence=EvidenceTotals(verified=0, declared=0, imported=0, inferred=0, unknown=0),
+    privacy=PrivacySplit(public_commits=0, private_aggregate_commits=0, includes_private=False),
+    generated_on=GENERATED_ON,
+)
+
+# ---------------------------------------------------------------------------
+# Fixtures 3 & 4: identical providers/totals, differing only in the privacy
+# split — isolates the "Includes private activity" / "Public repositories
+# only" line. Evidence here only carries declared/unknown (both always
+# shown), exercising the branch where every optional evidence field is 0.
+# ---------------------------------------------------------------------------
+
+_PRIVACY_PROVIDERS = (
+    ProviderRow(provider="anthropic", display_name="Claude", attributed_commits=30,
+                participation_events=34, active_days=10),
+    ProviderRow(provider="openai", display_name="OpenAI", attributed_commits=18,
+                participation_events=20, active_days=7),
+    ProviderRow(provider="google", display_name="Gemini", attributed_commits=6,
+                participation_events=7, active_days=3),
+)
+
+_PRIVACY_TOTALS = Totals(
+    commits_scanned=60,
+    ai_attributed_commits=54,
+    ai_participation_events=61,
+    human_declared_commits=1,
+    unknown_commits=5,
+    active_ai_days=14,
+)
+
+_PRIVACY_EVIDENCE = EvidenceTotals(verified=0, declared=58, imported=0, inferred=0, unknown=3)
+
+FIXTURE_PRIVACY_TRUE = VizStats(
+    schema_version="0.1.0",
+    period=_period(),
+    totals=_PRIVACY_TOTALS,
+    providers=_PRIVACY_PROVIDERS,
+    provider_count=3,
+    evidence=_PRIVACY_EVIDENCE,
+    privacy=PrivacySplit(public_commits=0, private_aggregate_commits=60, includes_private=True),
+    generated_on=GENERATED_ON,
+)
+
+FIXTURE_PRIVACY_FALSE = VizStats(
+    schema_version="0.1.0",
+    period=_period(),
+    totals=_PRIVACY_TOTALS,
+    providers=_PRIVACY_PROVIDERS,
+    provider_count=3,
+    evidence=_PRIVACY_EVIDENCE,
+    privacy=PrivacySplit(public_commits=60, private_aggregate_commits=0, includes_private=False),
+    generated_on=GENERATED_ON,
+)
+
+#: The 4 snapshot cases x both themes (mvp.md section 7 tests 11-13).
+CASES: dict[str, VizStats] = {
+    "populated": FIXTURE_POPULATED,
+    "zero": FIXTURE_ZERO,
+    "privacy_true": FIXTURE_PRIVACY_TRUE,
+    "privacy_false": FIXTURE_PRIVACY_FALSE,
+}
+
+_THEME_SUFFIX = {"github-light": "light", "github-dark": "dark"}
+
+
+def _snapshot_path(case_name: str, theme_name: str) -> Path:
+    return SNAPSHOT_DIR / f"summary_{case_name}_{_THEME_SUFFIX[theme_name]}.svg"
+
+
+# ---------------------------------------------------------------------------
+# Additional fixtures for targeted (non-snapshot) assertions.
+# ---------------------------------------------------------------------------
+
+_LONG_NAME = (
+    "This Is An Absurdly Long AI Tool Display Name That Should Overflow The"
+    " Column Width Easily"
+)
+
+FIXTURE_LONG_NAME = VizStats(
+    schema_version="0.1.0",
+    period=_period(),
+    totals=Totals(
+        commits_scanned=10,
+        ai_attributed_commits=8,
+        ai_participation_events=9,
+        human_declared_commits=0,
+        unknown_commits=2,
+        active_ai_days=4,
+    ),
+    providers=(
+        ProviderRow(provider="anthropic", display_name=_LONG_NAME, attributed_commits=8,
+                    participation_events=9, active_days=4),
+    ),
+    provider_count=1,
+    evidence=EvidenceTotals(verified=0, declared=9, imported=0, inferred=0, unknown=0),
+    privacy=PrivacySplit(public_commits=10, private_aggregate_commits=0, includes_private=False),
+    generated_on=GENERATED_ON,
+)
+
+_ESCAPE_NAME = 'R&D <Beta> "Y"'
+
+FIXTURE_ESCAPE_NAME = VizStats(
+    schema_version="0.1.0",
+    period=_period(),
+    totals=Totals(
+        commits_scanned=7,
+        ai_attributed_commits=5,
+        ai_participation_events=6,
+        human_declared_commits=0,
+        unknown_commits=2,
+        active_ai_days=2,
+    ),
+    providers=(
+        ProviderRow(provider="anthropic", display_name=_ESCAPE_NAME, attributed_commits=5,
+                    participation_events=6, active_days=2),
+    ),
+    provider_count=1,
+    evidence=EvidenceTotals(verified=0, declared=6, imported=0, inferred=0, unknown=0),
+    privacy=PrivacySplit(public_commits=7, private_aggregate_commits=0, includes_private=False),
+    generated_on=GENERATED_ON,
+)
+
+
+# ---------------------------------------------------------------------------
+# Determinism (mvp.md section 7 test 11).
+# ---------------------------------------------------------------------------
+
+
+def test_determinism_byte_identical_double_render():
+    for stats in CASES.values():
+        for theme in THEMES.values():
+            first = render_summary(stats, theme)
+            second = render_summary(stats, theme)
+            assert first == second
+            assert first.encode("utf-8") == second.encode("utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Exact snapshot comparison (mvp.md section 7 test 11).
+# ---------------------------------------------------------------------------
+
+
+def test_snapshots_byte_exact():
+    for case_name, stats in CASES.items():
+        for theme_name, theme in THEMES.items():
+            path = _snapshot_path(case_name, theme_name)
+            assert path.exists(), f"missing golden file: {path}"
+            rendered = render_summary(stats, theme).encode("utf-8")
+            golden = path.read_bytes()
+            assert rendered == golden, f"snapshot mismatch: {path}"
+
+
+# ---------------------------------------------------------------------------
+# Well-formed XML (mvp.md section 7 test 12).
+# ---------------------------------------------------------------------------
+
+
+def test_well_formed_xml_all_cases():
+    for stats in list(CASES.values()) + [FIXTURE_LONG_NAME, FIXTURE_ESCAPE_NAME]:
+        for theme in THEMES.values():
+            svg = render_summary(stats, theme)
+            root = ET.fromstring(svg)  # raises ParseError if malformed
+            assert root.tag == f"{SVG_NS}svg"
+
+
+# ---------------------------------------------------------------------------
+# Accessibility: <title>, <desc>, role="img", font sizes >= 11px
+# (proposal.md section 23, ADR-010; mvp.md section 7 test 12).
+# ---------------------------------------------------------------------------
+
+
+def test_title_and_desc_present():
+    for stats in CASES.values():
+        for theme in THEMES.values():
+            svg = render_summary(stats, theme)
+            root = ET.fromstring(svg)
+            title_el = root.find(f"{SVG_NS}title")
+            desc_el = root.find(f"{SVG_NS}desc")
+            assert title_el is not None and (title_el.text or "").strip()
+            assert desc_el is not None and (desc_el.text or "").strip()
+
+
+def test_title_includes_card_title_and_period_label():
+    theme = THEMES["github-light"]
+    svg = render_summary(FIXTURE_POPULATED, theme)
+    root = ET.fromstring(svg)
+    title_text = root.find(f"{SVG_NS}title").text
+    assert "AI Collaboration Summary" in title_text
+    assert FIXTURE_POPULATED.period.label in title_text
+
+
+def test_desc_summarizes_headline_numbers():
+    theme = THEMES["github-dark"]
+    svg = render_summary(FIXTURE_POPULATED, theme)
+    root = ET.fromstring(svg)
+    desc_text = root.find(f"{SVG_NS}desc").text
+    assert "375" in desc_text  # ai_attributed_commits
+    assert "463" in desc_text  # ai_participation_events
+    assert "58" in desc_text  # active_ai_days
+    assert "7" in desc_text  # provider_count
+
+
+def test_role_img_on_root_svg():
+    for theme in THEMES.values():
+        svg = render_summary(FIXTURE_POPULATED, theme)
+        root = ET.fromstring(svg)
+        assert root.get("role") == "img"
+
+
+def test_all_font_sizes_at_least_11px():
+    for stats in CASES.values():
+        for theme in THEMES.values():
+            svg = render_summary(stats, theme)
+            sizes = [int(n) for n in re.findall(r'font-size="(\d+)"', svg)]
+            assert sizes, "expected at least one font-size attribute"
+            assert all(size >= 11 for size in sizes), sizes
+
+
+# ---------------------------------------------------------------------------
+# Provider table content (mvp.md section 5; architecture.md section 9).
+# ---------------------------------------------------------------------------
+
+
+def test_plus_n_more_for_eight_provider_fixture():
+    for theme in THEMES.values():
+        svg = render_summary(FIXTURE_POPULATED, theme)
+        assert "+2 more" in svg
+
+
+def test_no_more_line_when_six_or_fewer_providers():
+    for theme in THEMES.values():
+        svg = render_summary(FIXTURE_PRIVACY_TRUE, theme)
+        assert "more" not in svg.lower()
+
+
+def test_provider_table_label_present():
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    assert "Attributed commits by provider" in svg
+
+
+def test_every_visible_provider_count_is_printed_as_text():
+    # No color-only distinctions (proposal.md section 23): each bar's count
+    # is always rendered as its own text node, not implied by bar length.
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    for row in FIXTURE_POPULATED.providers[:6]:
+        assert f'>{row.attributed_commits}</text>' in svg
+
+
+def test_bar_proportional_to_top_row():
+    # max = top row (stats.providers[0]); the top row's bar equals the full
+    # bar-track width, every other visible row's bar is strictly smaller and
+    # proportional to its own attributed_commits.
+    from aiprofile.render.summary_svg import BAR_MAX_WIDTH
+
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    max_attributed = FIXTURE_POPULATED.providers[0].attributed_commits  # anthropic, 120
+    assert f'width="{BAR_MAX_WIDTH}"' in svg  # top row's fill bar spans the full track
+
+    smallest_visible = FIXTURE_POPULATED.providers[5]  # unrecognized bucket, 20 commits
+    expected_w = round(BAR_MAX_WIDTH * smallest_visible.attributed_commits / max_attributed)
+    assert 0 < expected_w < BAR_MAX_WIDTH
+    assert f'width="{expected_w}"' in svg
+
+
+def test_long_display_name_truncated_with_ellipsis():
+    svg = render_summary(FIXTURE_LONG_NAME, THEMES["github-light"])
+    assert "…" in svg
+    assert _LONG_NAME not in svg
+
+
+def test_display_name_text_is_escaped():
+    svg = render_summary(FIXTURE_ESCAPE_NAME, THEMES["github-light"])
+    root = ET.fromstring(svg)  # would raise if unescaped '<'/'&' broke the XML
+    assert "&amp;" in svg
+    assert "&lt;Beta&gt;" in svg
+    assert "<Beta>" not in svg
+    del root  # parsed only to assert well-formedness
+
+
+# ---------------------------------------------------------------------------
+# Secondary / evidence / privacy / footer lines (mvp.md section 5).
+# ---------------------------------------------------------------------------
+
+
+def test_secondary_line_metrics_present():
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    assert "520" in svg  # commits_scanned
+    assert "100" in svg  # unknown_commits
+    assert ">7<" in svg or "AI providers 7" in svg  # provider_count
+
+
+def test_evidence_line_always_has_declared_and_unknown():
+    for stats in (FIXTURE_POPULATED, FIXTURE_PRIVACY_TRUE, FIXTURE_ZERO):
+        svg = render_summary(stats, THEMES["github-light"])
+        if stats is FIXTURE_ZERO:
+            continue  # zero-state replaces the evidence line entirely
+        assert "declared" in svg
+        assert "unknown" in svg
+
+
+def test_evidence_line_appends_only_nonzero_optional_fields():
+    populated_svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    assert "verified 12" in populated_svg
+    assert "inferred 5" in populated_svg
+    assert "imported" not in populated_svg  # imported == 0 for this fixture
+
+    privacy_svg = render_summary(FIXTURE_PRIVACY_TRUE, THEMES["github-light"])
+    assert "verified" not in privacy_svg
+    assert "imported" not in privacy_svg
+    assert "inferred" not in privacy_svg
+    assert "declared 58" in privacy_svg
+    assert "unknown 3" in privacy_svg
+
+
+def test_privacy_line_true_and_false():
+    true_svg = render_summary(FIXTURE_PRIVACY_TRUE, THEMES["github-light"])
+    false_svg = render_summary(FIXTURE_PRIVACY_FALSE, THEMES["github-light"])
+    assert "Includes private activity (aggregate-only)" in true_svg
+    assert "Public repositories only" not in true_svg
+    assert "Public repositories only" in false_svg
+    assert "Includes private activity" not in false_svg
+
+
+def test_footer_generated_on_and_footnote():
+    for stats in CASES.values():
+        svg = render_summary(stats, THEMES["github-light"])
+        assert f"Generated {GENERATED_ON} | aiprofile" in svg
+        assert "One commit may include several AI participation events." in svg
+
+
+# ---------------------------------------------------------------------------
+# Zero-state rendering (mvp.md section 7 test 13).
+# ---------------------------------------------------------------------------
+
+
+def test_zero_state_shows_placeholder_message_and_hint():
+    for theme in THEMES.values():
+        svg = render_summary(FIXTURE_ZERO, theme)
+        assert "No AI collaboration recorded yet" in svg
+        assert (
+            "Add AI-* trailers or scan a repository with AI co-authored commits."
+            in svg
+        )
+
+
+def test_zero_state_omits_metrics_and_table():
+    svg = render_summary(FIXTURE_ZERO, THEMES["github-light"])
+    assert "Attributed commits by provider" not in svg
+    assert ">AI-attributed commits</text>" not in svg
+    # The metric *label* text node, not the footer footnote sentence that
+    # also mentions "AI participation events" in prose.
+    assert ">AI participation events</text>" not in svg
+
+
+def test_zero_state_keeps_title_period_and_footer():
+    svg = render_summary(FIXTURE_ZERO, THEMES["github-light"])
+    assert "AI Collaboration Summary" in svg
+    assert FIXTURE_ZERO.period.label in svg
+    assert f"Generated {GENERATED_ON} | aiprofile" in svg
+
+
+# ---------------------------------------------------------------------------
+# Theming (ADR-010): same content, different tokens; card geometry pinned.
+# ---------------------------------------------------------------------------
+
+
+def test_light_and_dark_differ_only_in_color_tokens():
+    light = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    dark = render_summary(FIXTURE_POPULATED, THEMES["github-dark"])
+    assert light != dark
+    assert THEMES["github-light"].bg in light
+    assert THEMES["github-dark"].bg in dark
+    assert THEMES["github-light"].bg not in dark
+    assert THEMES["github-dark"].bg not in light
+
+
+def test_card_width_830_and_fixed_height():
+    from aiprofile.render.summary_svg import HEIGHT, WIDTH
+
+    assert WIDTH == 830
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    assert f'width="{WIDTH}" height="{HEIGHT}"' in svg
+
+
+def test_rounded_border_radius_8_and_1px_stroke():
+    svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
+    assert 'rx="8"' in svg
+    assert 'stroke-width="1"' in svg
+
+
+# ---------------------------------------------------------------------------
+# Regeneration entry point (see module docstring).
+# ---------------------------------------------------------------------------
+
+
+def _write_all_snapshots() -> int:
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    count = 0
+    for case_name, stats in CASES.items():
+        for theme_name, theme in THEMES.items():
+            svg = render_summary(stats, theme)
+            _snapshot_path(case_name, theme_name).write_bytes(svg.encode("utf-8"))
+            count += 1
+    return count
+
+
+if __name__ == "__main__":
+    written = _write_all_snapshots()
+    print(f"Wrote {written} snapshot files to {SNAPSHOT_DIR}")

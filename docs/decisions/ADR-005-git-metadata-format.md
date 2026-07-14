@@ -33,8 +33,9 @@ carved exceptions (Phase 0 review):
 - a group declaring `AI-Mode: Human-Only` with **no** AI provider/tool
   yields a **human** participation (null provider/tool, evidence
   `declared`) — the v0.1 producer of the `human` category (schema.md §2);
-- a group declaring `AI-Mode: Human-Only` **and** an AI provider/tool is
-  contradictory and is discarded with a warning.
+- a group declaring `AI-Mode: Human-Only` **and** any `AI-Provider` or
+  `AI-Tool` key (registry-recognized or not) is contradictory and is
+  discarded with a warning.
 
 Any other group lacking a resolvable provider is discarded with a warning
 (no invention).

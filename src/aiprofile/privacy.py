@@ -1,0 +1,163 @@
+"""Privacy layer: RepoAggregates + config policy → VizStats.
+
+THE redaction boundary (architecture.md section 3). This module is the only
+constructor of VizStats; every rule that keeps private data out of public
+artifacts is applied here, and the two leak tests (mvp.md section 7 tests
+9-10) pin its behavior.
+"""
+
+from __future__ import annotations
+
+from . import ACE_SCHEMA_VERSION
+from .aggregate import RepoAggregates
+from .config import Config, resolve_publication_levels
+from .registry import provider_display
+from .schema.vocab import (
+    UNRECOGNIZED_DISPLAY,
+    UNRECOGNIZED_PROVIDER,
+    EvidenceLevel,
+    PublicationLevel,
+)
+from .viz import (
+    EvidenceTotals,
+    Period,
+    PrivacySplit,
+    ProviderRow,
+    Totals,
+    VizStats,
+)
+
+_PRIVATE_LEVELS = (
+    PublicationLevel.AGGREGATE_ONLY,
+    PublicationLevel.REPOSITORY_ANONYMOUS,
+)
+
+
+def build_viz_stats(
+    repo_aggs: list[RepoAggregates],
+    cfg: Config,
+    generated_on: str,
+) -> VizStats:
+    """Apply publication policy and strip identity (architecture.md section 3):
+
+    1. levels resolved from current config only; unconfigured uid → excluded
+       (fail-closed); most-restrictive wins for duplicate uids;
+    2. excluded rows dropped, and no excluded count is emitted;
+    3. public/private split in commits;
+    4. canonical-null providers collapse into the reserved bucket;
+    5. nothing uid-keyed survives.
+    """
+    levels = resolve_publication_levels(cfg)
+
+    included: list[tuple[RepoAggregates, PublicationLevel]] = []
+    for agg in repo_aggs:
+        level = levels.get(agg.repository_uid, PublicationLevel.EXCLUDED)
+        if level is PublicationLevel.EXCLUDED:
+            continue
+        included.append((agg, level))
+
+    commits_scanned = sum(a.commits_scanned for a, _ in included)
+    public_commits = sum(
+        a.commits_scanned for a, lv in included if lv is PublicationLevel.FULL
+    )
+    private_commits = sum(
+        a.commits_scanned for a, lv in included if lv in _PRIVATE_LEVELS
+    )
+
+    ai_days: set[str] = set()
+    evidence = dict.fromkeys((lv.value for lv in EvidenceLevel), 0)
+    merged: dict[str, dict] = {}
+    for agg, _ in included:
+        ai_days |= agg.active_ai_dates
+        for level_value, count in agg.evidence_events.items():
+            evidence[level_value] = evidence.get(level_value, 0) + count
+        for key, pagg in agg.providers.items():
+            slug = key if key is not None else UNRECOGNIZED_PROVIDER
+            row = merged.setdefault(
+                slug,
+                {"attributed_commits": 0, "participation_events": 0, "dates": set()},
+            )
+            row["attributed_commits"] += pagg.attributed_commits
+            row["participation_events"] += pagg.participation_events
+            row["dates"] |= pagg.active_dates
+
+    provider_rows = tuple(
+        sorted(
+            (
+                ProviderRow(
+                    provider=slug,
+                    display_name=(
+                        UNRECOGNIZED_DISPLAY
+                        if slug == UNRECOGNIZED_PROVIDER
+                        else provider_display(slug)
+                    ),
+                    attributed_commits=row["attributed_commits"],
+                    participation_events=row["participation_events"],
+                    active_days=len(row["dates"]),
+                )
+                for slug, row in merged.items()
+            ),
+            key=lambda p: (-p.attributed_commits, p.provider),
+        )
+    )
+
+    return VizStats(
+        schema_version=ACE_SCHEMA_VERSION,
+        period=Period(from_date=None, to_date=None, label="All time"),
+        totals=Totals(
+            commits_scanned=commits_scanned,
+            ai_attributed_commits=sum(a.ai_attributed_commits for a, _ in included),
+            ai_participation_events=sum(
+                a.ai_participation_events for a, _ in included
+            ),
+            human_declared_commits=sum(
+                a.human_declared_commits for a, _ in included
+            ),
+            unknown_commits=sum(a.unknown_commits for a, _ in included),
+            active_ai_days=len(ai_days),
+        ),
+        providers=provider_rows,
+        provider_count=sum(
+            1 for p in provider_rows if p.provider != UNRECOGNIZED_PROVIDER
+        ),
+        evidence=EvidenceTotals(
+            verified=evidence[EvidenceLevel.VERIFIED.value],
+            declared=evidence[EvidenceLevel.DECLARED.value],
+            imported=evidence[EvidenceLevel.IMPORTED.value],
+            inferred=evidence[EvidenceLevel.INFERRED.value],
+            unknown=evidence[EvidenceLevel.UNKNOWN.value],
+        ),
+        privacy=PrivacySplit(
+            public_commits=public_commits,
+            private_aggregate_commits=private_commits,
+            includes_private=private_commits > 0,
+        ),
+        generated_on=generated_on,
+    )
+
+
+def local_only_details(repo_aggs: list[RepoAggregates], cfg: Config) -> dict:
+    """Local terminal detail for `aggregate -v` (mvp.md section 3). May
+    contain raw trailer values and excluded counts — MUST NOT be written
+    into dist/ or any published artifact."""
+    levels = resolve_publication_levels(cfg)
+    excluded = sum(
+        1
+        for agg in repo_aggs
+        if levels.get(agg.repository_uid, PublicationLevel.EXCLUDED)
+        is PublicationLevel.EXCLUDED
+    )
+    unrecognized_raws: set[str] = set()
+    for agg in repo_aggs:
+        if (
+            levels.get(agg.repository_uid, PublicationLevel.EXCLUDED)
+            is PublicationLevel.EXCLUDED
+        ):
+            continue
+        none_agg = agg.providers.get(None)
+        if none_agg:
+            unrecognized_raws |= none_agg.raw_values
+    return {
+        "excluded_repositories": excluded,
+        "unrecognized_provider_values": sorted(unrecognized_raws),
+    }

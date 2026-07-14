@@ -4,7 +4,7 @@ Maintained per the UltraCode run protocol: concise engineering decisions and obs
 
 ## Current phase
 
-Phase 0 — repository and landscape assessment (in progress).
+Phase 1 — first vertical slice (implementation in progress). Phase 0 complete and committed (`08f7413`).
 
 ## Completed
 
@@ -30,9 +30,17 @@ Recorded in `docs/decisions/` as they are finalized. Non-delegable items (archit
 |---|---|---|---|---|
 | wf landscape L1–L4 | web research for landscape.md | sonnet | done | accepted after adversarial verification |
 | wf landscape verify | adversarial verification of registry attribution strings | fable (inherited) | done | accepted — refuted 8 research claims incl. registry-critical string errors (Devin email prefix, Copilot fixed bot IDs, five wrong "no attribution exists" verdicts: Roo Code/OpenHands/Jules/Windsurf/Amazon Q); only verifier-confirmed strings seed registry.py |
-| review lens 1 | Phase 0 consistency/contradiction review | fable (inherited) | running | — |
-| review lens 2 | Phase 0 privacy/leak-path review | fable (inherited) | running | — |
-| review lens 3 | Phase 0 complexity/prematurity/slice-fit review | fable (inherited) | running | — |
+| review lens 1 | Phase 0 consistency/contradiction review | fable (inherited) | done | accepted — 12 findings, all fixed (1 CRITICAL: unreachable human-only path) |
+| review lens 2 | Phase 0 privacy/leak-path review | fable (inherited) | done | accepted — 8 findings, all fixed (1 CRITICAL: raw-trailer-value leak) |
+| review lens 3 | Phase 0 complexity/prematurity/slice-fit review | fable (inherited) | done | accepted — 9 findings; 7 fixed, 1 skipped w/ reason, 1 partial |
+| verify round | Phase 0 fix-pass verification | fable (inherited) | done | APPROVE 22/22; 3 residual MINORs fixed |
+| commit gate | code-reviewer fresh generalist pass on 21-file staged diff | fable (inherited) | done | APPROVE; 2 suggestions applied/tracked |
+| wf stage1 WP-A | unit tests: ACE schema + vocab + registry | sonnet (reason: code-from-pinned-spec above haiku floor; review stays strong-tier) | done (65 tests) | accepted after orchestrator review; lane's merge-semantics flag adjudicated as intended behavior |
+| wf stage1 WP-B | trailer parser implementation + tests (pinned interface) | sonnet (same reason) | done (37 tests) | accepted WITH one orchestrator override: Human-Only + any AI-Provider/AI-Tool key is now contradictory regardless of registry resolution (regression test added, confirmed failing pre-fix, green post-fix; ADR-005 wording aligned) |
+| wf stage1 WP-C | SQLite migrations/connection/atomic replace + tests | sonnet (same reason) | done | accepted after orchestrator review (autocommit + explicit BEGIN correct; DDL matches architecture §6; rollback tests assert full prior-state dumps). Non-blocking note: provenance UNIQUE is vacuous for NULL source_reference — only matters for post-v0.1 incremental upserts |
+| wf stage1 WP-E | SVG themes + summary renderer + snapshot tests | sonnet (same reason) | done (26 tests, after API-error retry via workflow resume) | accepted after orchestrator review: pure/deterministic, escaped, aria-labelledby, top-6+overflow, zero-state; visual check both themes via Edge-headless rasterization passed (cosmetic note: fixed-height layout leaves dead space with <6 providers — deterministic-layout tradeoff, ADR-010) |
+| WP-F | fixture repos + end-to-end integration gate | sonnet (same reason) | done (9 tests) | accepted after orchestrator review — hand-derivation table independently checked. Its environment finding (home dir is a git worktree) exposed a real product bug: scanning a path INSIDE a repo silently scanned the CONTAINING repo. Orchestrator fix: `scan` now requires the repository root (`rev-parse --show-toplevel` samefile check), regression tests added (confirmed failing pre-fix) |
+| WP-D | aggregation implementation + tests (pinned RepoAggregates contract) | sonnet (same reason) | done (10 tests) | accepted after orchestrator review: set-difference human/unknown semantics, mixed→ai, whole-DB version guard first, author-local date prefix, COALESCE-exact raw collection; orchestrator re-ran suite: 123 passed |
 
 ## Phase 0 readiness report (2026-07-14)
 
@@ -60,7 +68,9 @@ Recorded in `docs/decisions/` as they are finalized. Non-delegable items (archit
 
 ## Tests run
 
-None yet (Phase 0 is documentation; test gate specified in mvp.md §7).
+- 2026-07-14 (orchestrator, after stage-1 review + parser override): full suite — 113 passed, 0 failed; ruff clean.
+- 2026-07-14 (orchestrator, WP-D + WP-E landed + orchestrator-authored import-isolation test): full suite — 150 passed, 0 failed; ruff clean.
+- 2026-07-14 (orchestrator, manual end-to-end): `init/scan/aggregate/render` via `python -m aiprofile` on the trailer-probe fixture — every number matched hand-derived expectations (3 scanned / 2 AI-attributed / 3 participation events — co-author correctly MERGED with same-identity trailer group / 1 unknown / 2 active days / anthropic 2·2·2, openai 1·1·1 / declared 3 + unknown 1 / all private-aggregate). Bad-path: non-repo scan exits 1 with clean GitError. Fix applied during smoke: CLI stdout separators switched to ASCII (U+00B7 mojibaked on cp950 consoles). Visual verification of both theme cards via Edge-headless render: passed.
 
 ## Unresolved issues
 
@@ -68,6 +78,11 @@ None yet (Phase 0 is documentation; test gate specified in mvp.md §7).
 
 - 2026-07-14: `docs/landscape.md` synthesized (non-duplication matrix; verified registry seed table; unverified-claims ledger). mvp.md updated with two research-driven items: bot-authored-commit blind spot (known limitation) and Assisted-by/Generated-by parsing (post-v0.1).
 
+- 2026-07-14: Phase 0 committed to main (`08f7413`, 21 files) after the full gate (3 lenses → fixes → verification APPROVE → code-reviewer APPROVE).
+- 2026-07-14: Package skeleton + all orchestrator-owned modules written directly (non-delegable core): pyproject (hatchling, zero runtime deps, pythonpath=src), errors, vocab (StrEnum), event.py (identity/validation/merge — sanity-probed: model/roles excluded from identity, merge precedence correct), registry.py (verifier-confirmed seeds only), config.py (policy home, most-restrictive, fail-closed), gitio.py (pinned %(trailers:only,unfold) invocation), viz.py (redaction-boundary type with invariant validation), privacy.py (sole VizStats constructor), scanner.py (identity filter + unknown invariant), cli.py, export.py, README. Pinned-interface stubs for delegate lanes: adapters/trailers.py (contract docstring), aggregate.py (RepoAggregates + contract). ruff clean; core semantics probe green.
+
+- 2026-07-14 (orchestrator, final): full suite `python -m pytest tests/ -p no:cacheprovider` — **161 passed, 0 failed** (150 unit incl. import-isolation + gitio root-only regressions, 9 integration, 2 new path tests); `ruff check src/ tests/` clean.
+
 ## Next action
 
-Phase 0 review gate (3 orthogonal adversarial lenses, running) → adjudicate findings on disk → fix → readiness report → gated commit of Phase 0 docs to main.
+Final commit gate (code-review on the full implementation diff) → gated commit to main → final run report.

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="470" viewBox="0 0 830 470" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
+<title id="aiprofileSummaryTitle">AI Collaboration Summary — All time</title>
+<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI participation events across 58 active AI days, 7 AI providers. Generated 2026-07-14.</desc>
+<rect x="0.5" y="0.5" width="829" height="469" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<text x="24" y="38" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#1f2328" text-anchor="start">AI Collaboration Summary</text>
+<text x="806" y="38" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="end">All time</text>
+<line x1="24" y1="54" x2="806" y2="54" stroke="#d1d9e0"/>
+<text x="172" y="96" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#1f2328" text-anchor="middle">375</text>
+<text x="172" y="118" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="middle">AI-attributed commits</text>
+<text x="415" y="96" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#1f2328" text-anchor="middle">463</text>
+<text x="415" y="118" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="middle">AI participation events</text>
+<text x="658" y="96" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="26" font-weight="700" fill="#1f2328" text-anchor="middle">58</text>
+<text x="658" y="118" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="middle">Active AI days</text>
+<text x="24" y="146" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">Unique commits scanned 520 | AI providers 7 | Unknown commits 100</text>
+<text x="24" y="178" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#59636e" text-anchor="start">Attributed commits by provider</text>
+<text x="24" y="210" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Claude</text>
+<rect x="206" y="199" width="532" height="14" rx="3" fill="#eff2f5"/>
+<rect x="206" y="199" width="532" height="14" rx="3" fill="#0969da"/>
+<text x="806" y="210" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="end">120</text>
+<text x="24" y="234" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">OpenAI</text>
+<rect x="206" y="223" width="532" height="14" rx="3" fill="#eff2f5"/>
+<rect x="206" y="223" width="421" height="14" rx="3" fill="#0969da"/>
+<text x="806" y="234" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="end">95</text>
+<text x="24" y="258" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Gemini</text>
+<rect x="206" y="247" width="532" height="14" rx="3" fill="#eff2f5"/>
+<rect x="206" y="247" width="266" height="14" rx="3" fill="#0969da"/>
+<text x="806" y="258" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="end">60</text>
+<text x="24" y="282" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Copilot</text>
+<rect x="206" y="271" width="532" height="14" rx="3" fill="#eff2f5"/>
+<rect x="206" y="271" width="177" height="14" rx="3" fill="#0969da"/>
+<text x="806" y="282" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="end">40</text>
+<text x="24" y="306" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Cursor</text>
+<rect x="206" y="295" width="532" height="14" rx="3" fill="#eff2f5"/>
+<rect x="206" y="295" width="111" height="14" rx="3" fill="#0969da"/>
+<text x="806" y="306" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="end">25</text>
+<text x="24" y="330" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Unrecognized</text>
+<rect x="206" y="319" width="532" height="14" rx="3" fill="#eff2f5"/>
+<rect x="206" y="319" width="89" height="14" rx="3" fill="#0969da"/>
+<text x="806" y="330" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="end">20</text>
+<text x="24" y="354" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">+2 more</text>
+<text x="24" y="378" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#1f2328" text-anchor="start">Evidence (events): declared 400 | unknown 46 | verified 12 | inferred 5</text>
+<text x="24" y="398" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#1f2328" text-anchor="start">Includes private activity (aggregate-only)</text>
+<line x1="24" y1="412" x2="806" y2="412" stroke="#d1d9e0"/>
+<text x="24" y="434" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Generated 2026-07-14 | aiprofile</text>
+<text x="24" y="450" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">One commit may include several AI participation events.</text>
+</svg>
