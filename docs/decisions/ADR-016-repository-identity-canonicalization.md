@@ -41,11 +41,18 @@ local:v3:<full 64-hex sha256(salt || case-preserved resolved path)>
    (RFC 3986 authority; H-01) in both URL and scp syntaxes — no userinfo
    substring can enter identity.
 3. **Query and fragment are stripped for every syntax** (M-04).
-4. **Alias-convergent hosts** (documented list, v3: `github.com`, whose
-   ssh/https/git endpoints serve one namespace on standard ports):
-   canonical = `host/path` with the path case-folded BEFORE the `.git`
-   suffix strip (so `Repo.GIT` converges — M-04). Scheme and port are
-   deliberately dropped for these hosts only.
+4. **Alias-convergent hosts** (documented list, v3: `github.com`):
+   convergence applies ONLY to the documented `(scheme, effective-port)`
+   endpoints — `ssh:22`, `https:443`, `git:9418` — where canonical =
+   `host/path` with the path case-folded BEFORE the `.git` suffix strip
+   (so `Repo.GIT` converges — M-04). Any OTHER scheme or port on an alias
+   host (`ftp://github.com`, `https://github.com:444`, ...) retains
+   structured scheme/port identity per rule 5 (verification-review
+   finding, 2026-07-14: switching on host alone collapsed all 42
+   scheme x port combinations into one uid — the collision class v3
+   exists to eliminate). Path case-folding still applies on alias hosts
+   in the structured branch (it is a property of the host's namespace,
+   not of the transport).
 5. **Every other host**: canonical = `scheme://host:port/path` — scheme
    retained (ssh and https identities deliberately split; C-01), port
    always explicit when the scheme has a known default (so

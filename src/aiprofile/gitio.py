@@ -153,11 +153,21 @@ def get_origin_url(repo_path: Path) -> str | None:
 UID_ALGORITHM = "v3"
 
 #: Hosts whose repository namespace is BOTH path-case-insensitive AND
-#: transport-convergent (ssh/https/git address one namespace on standard
-#: ports) — documented exceptions only (gate C-01): for every other host,
-#: scheme and port are identity, because SSH and HTTPS namespaces on a
-#: self-hosted service are not guaranteed to serve the same repositories.
+#: transport-convergent — documented exceptions only (gate C-01): for every
+#: other host, scheme and port are identity, because SSH and HTTPS
+#: namespaces on a self-hosted service are not guaranteed to serve the
+#: same repositories.
 _ALIAS_CONVERGENT_HOSTS = frozenset({"github.com"})
+
+#: The DOCUMENTED endpoints of the alias-convergent hosts (verification
+#: review, 2026-07-14): convergence applies ONLY to these (scheme,
+#: effective-port) pairs — GitHub's published git transports on their
+#: standard ports. `ftp://github.com`, `https://github.com:444`, etc. are
+#: NOT the documented namespace and retain structured scheme/port identity
+#: (safe split), otherwise the host check alone would collapse every
+#: scheme x port combination into one uid — the exact distinct-repository
+#: collision class uid v3 exists to eliminate.
+_ALIAS_ALLOWED_ENDPOINTS = frozenset({("ssh", "22"), ("https", "443"), ("git", "9418")})
 
 #: Default ports per scheme: an absent port resolves to the scheme default
 #: so `https://h/x` and `https://h:443/x` converge WITHIN one scheme.
@@ -252,16 +262,24 @@ def _canonical_identity(
 ) -> str | None:
     host = host.lower()
     if host in _ALIAS_CONVERGENT_HOSTS:
-        # Fold BEFORE suffix strip so `.GIT` converges (gate M-04).
+        # Path-case insensitivity is a property of the HOST's namespace,
+        # so fold regardless of transport — and BEFORE the suffix strip so
+        # `.GIT` converges (gate M-04).
         path = path.lower()
     path = path.rstrip("/")
     if path.endswith(".git"):
         path = path[: -len(".git")]
     if not host or not path:
         return None
-    if host in _ALIAS_CONVERGENT_HOSTS:
-        return f"{host}/{path}"
     resolved_port = port or _DEFAULT_PORTS.get(scheme)
+    if (
+        host in _ALIAS_CONVERGENT_HOSTS
+        and (scheme, resolved_port) in _ALIAS_ALLOWED_ENDPOINTS
+    ):
+        # Documented endpoint on its standard port: transports converge.
+        return f"{host}/{path}"
+    # Everything else — including undocumented schemes or non-standard
+    # ports on an alias host — keeps structured scheme/port identity.
     netloc = f"{host}:{resolved_port}" if resolved_port else host
     return f"{scheme}://{netloc}/{path}"
 

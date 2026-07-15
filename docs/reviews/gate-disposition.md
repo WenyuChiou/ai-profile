@@ -49,3 +49,20 @@ with a regression test confirmed failing pre-fix, in the same commit.
 |---|---|---|
 | L-01 | **Accepted** | Terminology sweep: CLI "events stored" → "records stored"; aggregate docstring "level -> events" → records; first-write-era comments updated; forbidden-fold demonstrations removed with M-12. |
 | L-02 | **Accepted (wording only)** | Open OSS items remain correctly listed in ROADMAP; progress.md wording re-checked to avoid release-ready implications until the checklist is independently verified. |
+
+
+---
+
+## Verification-review round (gate-review.md, 2026-07-14 19:54; NOT READY)
+
+An independent verification review of `5d57016..de4a78a` confirmed 20/23
+dispositions and produced three reproducible counterexamples. All
+adjudicated **accepted**; each fix shipped with a regression test
+confirmed failing pre-fix.
+
+| Finding | Disposition | Technical justification + resolution |
+|---|---|---|
+| Critical — github alias collapses all schemes/ports (contradicts C-01 closure) | **Accepted** | Correct: the alias branch switched on host alone, so `ftp://github.com:444/...` and 41 other combinations collapsed into the documented namespace — ADR-016's own "standard ports" restriction was unenforced. Fix: convergence now requires `(scheme, effective_port)` in the documented endpoint set (`ssh:22`, `https:443`, `git:9418`); everything else on an alias host keeps structured identity (safe split). ADR-016 rule 4 amended; collision grid regression added. |
+| Medium — replacement stage not bundle-atomic (contradicts M-07 closure) | **Accepted** | Correct: three sequential `os.replace` calls had no rollback, and the shipped test only injected failure BEFORE replacement. Fix: olds are moved aside to `.bak` before replacement; a replacement-stage failure restores every already-replaced target before re-raising (best-effort rollback — a simultaneous restore failure remains the documented residual). Replacement-stage failure-injection regression added. |
+| Medium — exported N-ary merge unsafe under composition | **Accepted** | Correct: `merge_event_group` could not distinguish leaves from merged results, so nested composition re-ranked values against pooled provenance. Fix: the leaf-only boundary is ENFORCED — every input to a multi-event reduction must carry exactly one provenance source (the definition of a leaf production); nested/merged inputs raise `SchemaValidationError`. Regression: nested three-leaf composition rejected; flat reduction unchanged. |
+| L-01 partial — a shipped test still demonstrated incremental accumulation | **Accepted** | The old permutation test folded a merged result back into the API. Rewritten to a flat N-ary reduction per permutation; the union-mechanics test likewise rewritten to leaf-only inputs. |

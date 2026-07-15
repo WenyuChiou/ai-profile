@@ -61,6 +61,27 @@ which is authoritative).
   case-sensitivity fixture, not runnable on Windows — documented); ruff
   clean.
 
+- **Verification review received and resolved** (2026-07-14 evening):
+  `docs/reviews/gate-review.md` (overwritten with the verification round;
+  prior content preserved in git history at `de4a78a`) verified 20/23
+  dispositions and produced three reproducible counterexamples — all
+  accepted (`docs/reviews/gate-disposition.md`, appended section) and
+  fixed with pre-fix-failing regressions:
+  - **Critical**: github alias convergence now requires the documented
+    `(scheme, effective-port)` endpoints (`ssh:22`/`https:443`/`git:9418`);
+    the 42-combination scheme×port grid no longer collapses (replicated:
+    6 documented combos converge, all others split) — ADR-016 rule 4
+    amended;
+  - **Medium**: dist/ replacement stage gained best-effort rollback
+    (olds moved aside, restored on failure) with a replacement-stage
+    failure-injection test;
+  - **Medium**: `merge_event_group` now ENFORCES its leaf-only boundary
+    (exactly one provenance source per input on multi-event reductions);
+    nested composition raises — replicated the reviewer's nested probe;
+  - L-01 completion: the two legacy tests demonstrating non-leaf usage
+    rewritten.
+  Suite: **244 passed, 1 skipped**; ruff clean; e2e green.
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

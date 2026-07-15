@@ -312,10 +312,10 @@ def test_merge_sources_set_union_deduped_by_type_and_reference():
     shared = ProvenanceSource(
         SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, source_reference="ai-provider"
     )
-    existing = _make_ai_event(sources=(shared,))
-    new = _make_ai_event(
+    a = _make_ai_event(sources=(shared,))
+    b = _make_ai_event(sources=(shared,))  # duplicate key across leaves
+    c = _make_ai_event(
         sources=(
-            shared,  # duplicate of an existing (source_type, source_reference)
             ProvenanceSource(
                 SourceType.GIT_TRAILER_COAUTHOR,
                 EvidenceLevel.DECLARED,
@@ -323,7 +323,7 @@ def test_merge_sources_set_union_deduped_by_type_and_reference():
             ),
         )
     )
-    merged = merge_event_group([existing, new])
+    merged = merge_event_group([a, b, c])
     assert len(merged.sources) == 2
     assert {s.key() for s in merged.sources} == {
         (SourceType.GIT_TRAILER.value, "ai-provider"),
@@ -469,8 +469,9 @@ def test_merge_scalar_true_tie_breaks_by_lexicographic_value():
 
 def test_merge_is_permutation_invariant():
     # G2-06: the same evidence set in ANY order yields identical canonical
-    # data. Trio: trailer-declared value, coauthor-declared value, and a
-    # second trailer-declared value creating a true tie.
+    # data — via ONE flat N-ary reduction per permutation (the leaf-only
+    # boundary rejects incremental composition; see
+    # test_merge_event_group_rejects_non_leaf_inputs).
     e1 = _make_ai_event(
         model="mid-model",
         contribution_mode="ai_assisted",
@@ -496,17 +497,11 @@ def test_merge_is_permutation_invariant():
     )
     import itertools
 
-    results = set()
-    for perm in itertools.permutations([e1, e2, e3]):
-        merged = perm[0]
-        for nxt in perm[1:]:
-            merged = merge_event_group([merged, nxt])
-        results.add(
-            canonical_json(merged)
-            + "|"
-            + repr(sorted(s.key() for s in merged.sources))
-        )
-    assert len(results) == 1, results
+    results = {
+        canonical_json(merge_event_group(list(perm)))
+        for perm in itertools.permutations([e1, e2, e3])
+    }
+    assert len(results) == 1
 
 
 def _leaf_from_spec(spec, sha="f" * 40):
@@ -698,3 +693,42 @@ def test_m10_canonical_raw_pairs_resolve_from_one_leaf():
             merged.model,
             merged.model_raw,
         )
+
+
+def test_merge_event_group_rejects_non_leaf_inputs():
+    """Verification-review round: the exported merge API enforces its
+    documented leaf-only boundary — a previously merged event (multiple
+    provenance sources) is rejected, because nested composition re-ranks
+    values against pooled provenance and can differ from the flat N-ary
+    reduction. Confirmed failing pre-fix (nested call silently succeeded
+    with divergent canonical output)."""
+    from aiprofile.schema.event import merge_event_group
+
+    a = _make_ai_event(
+        model="mid-model",
+        sources=(
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"),
+        ),
+    )
+    b = _make_ai_event(
+        model=None,
+        model_raw=None,
+        sources=(
+            ProvenanceSource(
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.DECLARED, "co-authored-by"
+            ),
+        ),
+    )
+    c = _make_ai_event(
+        model="aaa-model",
+        sources=(
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-tool"),
+        ),
+    )
+    merged_ab = merge_event_group([a, b])
+    assert len(merged_ab.sources) == 2
+    with pytest.raises(SchemaValidationError, match="leaf"):
+        merge_event_group([merged_ab, c])
+    # The flat reduction over all leaves remains the supported path.
+    flat = merge_event_group([a, b, c])
+    assert flat.model == "mid-model"

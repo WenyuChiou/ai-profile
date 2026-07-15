@@ -327,3 +327,37 @@ def test_fabricated_alias_host_scheme_rejected():
     an alias-convergent host is not a legitimate transport and is rejected
     outright (structural non-collision was proven, this is belt+braces)."""
     assert canonicalize_remote_v3("github.com://owner/repo") is None
+
+
+# ---------------------------------------------------------------------------
+# Verification-review round (gate-review.md 2026-07-14 v2): the alias
+# convergence must be limited to GitHub's documented (scheme, port)
+# endpoints — host alone collapsed all 42 scheme x port combinations.
+# Confirmed failing pre-fix.
+# ---------------------------------------------------------------------------
+
+
+def test_github_alias_requires_documented_scheme_and_standard_port():
+    canonical = canonicalize_remote_v3("https://github.com/o/r")
+    assert canonical == "github.com/o/r"
+    # Documented endpoints on standard ports still converge:
+    for url in (
+        "ssh://git@github.com/o/r",
+        "ssh://git@github.com:22/o/r",
+        "git@github.com:o/r.git",
+        "git://github.com:9418/o/r",
+        "https://github.com:443/o/r",
+    ):
+        assert canonicalize_remote_v3(url) == canonical, url
+    # Non-standard ports and undocumented schemes must NOT collapse into
+    # the alias identity (they retain structured scheme/port identity):
+    for url in (
+        "https://github.com:444/o/r",
+        "ssh://github.com:2222/o/r",
+        "ftp://github.com/o/r",
+        "x-custom://github.com/o/r",
+        "http://github.com/o/r",
+    ):
+        got = canonicalize_remote_v3(url)
+        assert got != canonical, url
+        assert got is not None and "://" in got, url

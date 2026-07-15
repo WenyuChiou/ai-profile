@@ -298,7 +298,25 @@ def merge_event_group(events: list[AceEvent] | tuple[AceEvent, ...]) -> AceEvent
                 f" ({first.event_id} != {e.event_id})"
             )
     if len(events) == 1:
+        # Deliberately exempt from the leaf-only check below: with a single
+        # input there is no second candidate to re-rank against, so no
+        # order-dependence can arise regardless of leaf/merged status — the
+        # input is returned unchanged (independently verified in review).
         return first
+    # LEAF-ONLY boundary, enforced (verification review, 2026-07-14): a
+    # leaf production carries exactly one provenance source. A previously
+    # merged event smuggled back in would have its values re-ranked against
+    # POOLED provenance, so nested composition could differ from the flat
+    # N-ary reduction over the same leaves — the exact order-dependence
+    # this API exists to prevent. Callers must pass ALL leaves in one call.
+    for e in events:
+        if len(e.sources) != 1:
+            raise SchemaValidationError(
+                "merge_event_group accepts leaf productions only (exactly"
+                " one provenance source per event) — pass every leaf of the"
+                " identity in a single call; nested/incremental composition"
+                " is not ingestion-order-free"
+            )
 
     # Union by (source_type, source_reference); on key collision the HIGHER
     # evidence level survives — first-seen-wins would make the union (and
