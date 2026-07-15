@@ -88,7 +88,8 @@ Exit criteria:
 
 - [x] LICENSE (MIT, owner decision 2026-07-14) + CONTRIBUTING.md.
 - [x] Threat model (`docs/PRIVACY.md`).
-- [ ] Sample profile output (committed example) + clean-install smoke test.
+- [x] Sample profile output (committed example, docs/assets/).
+- [ ] clean-install/packaged smoke test.
 - [ ] Pre-release hardening tests from Gate 2 §14 not landed in the
       conformance pass: property-based unit-invariant fuzzing; canary
       sweeps over stdout/stderr/logs (not only dist/); cherry-pick

@@ -7,6 +7,15 @@ Code, Codex, Cursor, Copilot, Aider, …) — normalizes it into a common event
 schema (ACE), stores it in a local SQLite database, and renders privacy-safe
 SVG cards + a JSON summary you can embed in a GitHub Profile README.
 
+## What it looks like
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/summary-sample-dark.svg">
+  <img alt="Sample AI collaboration summary card rendered from synthetic data" src="docs/assets/summary-sample-light.svg">
+</picture>
+
+Sample rendered from a synthetic showcase fixture; no real repository data.
+
 It is **not** an AI code detector: nothing is ever inferred from code style.
 Commits without explicit evidence are honestly reported as `unknown` —
 never silently counted as human, never guessed into a provider.

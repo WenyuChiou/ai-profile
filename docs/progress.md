@@ -210,6 +210,16 @@ which is authoritative).
   coordinate, removing the implicit BAR_HEIGHT/ramp-color coupling.
   Suite: **309 passed, 1 skipped**; ruff clean.
 
+- **README sample preview committed (2026-07-15, Codex delegate)**: the
+  ROADMAP "Sample profile output" half-item landed — two sample SVGs
+  under `docs/assets/` (byte-exact `render_summary` output from the
+  SYNTHETIC showcase fixture, re-render-verified; privacy-swept), a
+  "What it looks like" `<picture>` preview atop the README with a
+  synthetic-data caption, and a drift-guard regression
+  (`test_docs_sample_assets_match_current_renderer`, reviewer
+  recommendation) so future card changes must regenerate the assets or
+  fail loudly. Suite: **310 passed, 1 skipped**; ruff clean.
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

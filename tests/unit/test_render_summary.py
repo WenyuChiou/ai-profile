@@ -715,3 +715,18 @@ def test_evidence_segments_never_negative_and_sum_exactly():
         # contiguity: each segment starts 2px after the previous ends
         for (x1, w1), (x2, _) in zip(segs, segs[1:], strict=False):
             assert x2 == x1 + w1 + 2
+
+
+def test_docs_sample_assets_match_current_renderer():
+    """The committed README preview assets (docs/assets/) are exact
+    renderer output from the synthetic showcase fixture — the same
+    byte-exact guard test_snapshots_byte_exact gives the test snapshots,
+    extended to the docs assets so a future card change that forgets to
+    regenerate them fails loudly instead of drifting silently (reviewer
+    recommendation, README-sample round)."""
+    assets = Path(__file__).resolve().parent.parent.parent / "docs" / "assets"
+    for theme_name, suffix in _THEME_SUFFIX.items():
+        path = assets / f"summary-sample-{suffix}.svg"
+        assert path.exists(), f"missing committed sample: {path}"
+        rendered = render_summary(FIXTURE_POPULATED, THEMES[theme_name]).encode("utf-8")
+        assert path.read_bytes() == rendered, f"stale sample asset: {path}"
