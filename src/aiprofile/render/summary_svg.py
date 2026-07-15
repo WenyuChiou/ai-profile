@@ -34,68 +34,69 @@ TITLE_TEXT = "AI Collaboration Summary"
 MAX_PROVIDER_ROWS = 6
 
 # Header: accent commit-node glyph + title + right-aligned period label.
-HEADER_TEXT_Y = 38
+HEADER_TEXT_Y = 36
 GLYPH_CX = 32
 GLYPH_CY = 32
 TITLE_X = 48
 DIVIDER1_Y = 56
 
 # Hero metric + secondary ledger.
-HERO_VALUE_Y = 106
-HERO_LABEL_Y = 130
-HERO_RELATION_Y = 154
-HERO_VALUE_SIZE = 34
+HERO_VALUE_Y = 112
+HERO_LABEL_Y = 140
+HERO_RELATION_Y = 160
+HERO_VALUE_SIZE = 38
 SHARE_BAR_X = PADDING
-SHARE_BAR_Y = 164
+SHARE_BAR_Y = 172
 SHARE_BAR_WIDTH = 360
 SHARE_BAR_HEIGHT = 7
-LEDGER_LABEL_X = 510
+LEDGER_LABEL_X = 512
 LEDGER_VALUE_X = WIDTH - PADDING
 LEDGER_FIRST_Y = 88
-LEDGER_ROW_STEP = 22
+LEDGER_ROW_STEP = 24
 
 # Provider table.
-TABLE_LABEL_Y = 206
-ROWS_TOP = 220
-ROW_HEIGHT = 26
+TABLE_LABEL_Y = 208
+ROWS_TOP = 224
+ROW_HEIGHT = 28
 NAME_X = PADDING
 NAME_WIDTH = 150
-BAR_X = 186
+BAR_X = 184
 COUNT_X = WIDTH - PADDING  # right anchor for "count · pct%"
-BAR_MAX_WIDTH = 498  # COUNT_X - reserved count column (110) - gap (12) - BAR_X
+BAR_MAX_WIDTH = 500  # COUNT_X - reserved count column (110) - gap (12) - BAR_X
 BAR_HEIGHT = 7
 NAME_FONT_SIZE = 13
 COUNT_FONT_SIZE = 13
 
-MORE_LINE_EXTRA = 20  # vertical room for the "+N more" line when present
+MORE_LINE_EXTRA = 24  # vertical room for the "+N more" line when present
 
 # Evidence/privacy provenance panel.
-PANEL_GAP_ABOVE = 16
-PANEL_PAD_X = 14
-PANEL_PAD_Y = 12
-PANEL_HEIGHT = 94
+PANEL_GAP_ABOVE = 20
+PANEL_PAD_X = 16
+PANEL_PAD_Y = 16
+PANEL_HEIGHT = 104
 PANEL_RADIUS = 6
 EVIDENCE_FONT_SIZE = 11
+EVIDENCE_LABEL_SIZE = 12
 EVIDENCE_PREFIX_TEMPLATE = "Evidence (all records: {n})"
-EVIDENCE_BAR_Y_OFFSET = 28
+EVIDENCE_BAR_Y_OFFSET = 36
 EVIDENCE_BAR_HEIGHT = 8
-EVIDENCE_LEGEND_Y_OFFSET = 56
+EVIDENCE_LEGEND_Y_OFFSET = 64
 EVIDENCE_SWATCH = 8
 EVIDENCE_LEGEND_GAP = 16
-PRIVACY_Y_OFFSET = 78
+PRIVACY_Y_OFFSET = 88
 
 # Footer.
 FOOTER_GAP_ABOVE = 16
-FOOTER1_OFFSET = 22
-FOOTER2_OFFSET = 38
+FOOTER1_OFFSET = 24
+FOOTER2_OFFSET = 40
 FOOTER_BOTTOM_PAD = 16
 
 FOOTNOTE = "One commit may include several AI actor presences (one per provider/tool)."
 ZERO_MESSAGE = "No AI collaboration recorded yet"
 ZERO_HINT = "Add AI-* trailers or scan a repository with AI co-authored commits."
-ZERO_MESSAGE_Y = 118
-ZERO_HINT_Y = 142
-ZERO_BODY_BOTTOM = 162
+ZERO_MESSAGE_Y = 120
+ZERO_HINT_Y = 144
+ZERO_BODY_BOTTOM = 164
 
 # ---------------------------------------------------------------------------
 # Conservative character-width table (ADR-010: no font dependency at render
@@ -155,11 +156,13 @@ def _text(
     weight: int = 400,
     anchor: str = "start",
     escaped: bool = False,
+    letter_spacing: float | None = None,
 ) -> str:
     body = content if escaped else escape(content)
+    spacing_attr = f' letter-spacing="{letter_spacing}"' if letter_spacing is not None else ""
     return (
         f'<text x="{x}" y="{y}" font-family="{FONT_STACK}" font-size="{size}" '
-        f'font-weight="{weight}" fill="{fill}" text-anchor="{anchor}">{body}</text>'
+        f'font-weight="{weight}" fill="{fill}" text-anchor="{anchor}"{spacing_attr}>{body}</text>'
     )
 
 
@@ -309,8 +312,8 @@ def _provider_row_svg(
 ) -> str:
     row = stats.providers[index]
     row_top = ROWS_TOP + index * ROW_HEIGHT
-    bar_y = row_top + 6
-    text_y = row_top + 17
+    bar_y = row_top + 8
+    text_y = row_top + 20
 
     name = _truncate(row.display_name, NAME_WIDTH, NAME_FONT_SIZE)
     elements = [
@@ -355,10 +358,12 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
         _rect(panel_x, top, panel_w, PANEL_HEIGHT, fill=theme.chip_bg, rx=PANEL_RADIUS),
         _text(
             inner_x,
-            top + PANEL_PAD_Y + 3,
+            top + PANEL_PAD_Y,
             EVIDENCE_PREFIX_TEMPLATE.format(n=e.total_records),
-            size=EVIDENCE_FONT_SIZE,
+            size=EVIDENCE_LABEL_SIZE,
+            weight=600,
             fill=theme.muted,
+            letter_spacing=0.2,
         ),
     ]
 
@@ -456,7 +461,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
     # Header: commit-node glyph + title + period label.
     parts.append(_commit_mark(GLYPH_CX, GLYPH_CY, theme))
     parts.append(
-        _text(TITLE_X, HEADER_TEXT_Y, TITLE_TEXT, size=18, weight=600, fill=theme.title)
+        _text(TITLE_X, HEADER_TEXT_Y, TITLE_TEXT, size=16, weight=600, fill=theme.title)
     )
     parts.append(
         _text(
@@ -476,7 +481,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
                 WIDTH // 2,
                 ZERO_MESSAGE_Y,
                 ZERO_MESSAGE,
-                size=14,
+                size=13,
                 weight=600,
                 fill=theme.muted,
                 anchor="middle",
@@ -501,6 +506,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
                 size=12,
                 weight=600,
                 fill=theme.muted,
+                letter_spacing=0.2,
             )
         )
         if stats.totals.ai_attributed_commits > 0:
@@ -521,7 +527,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
 
         panel_top = _panel_top(stats)
         if _has_more_line(stats):
-            more_y = ROWS_TOP + MAX_PROVIDER_ROWS * ROW_HEIGHT + 14
+            more_y = ROWS_TOP + MAX_PROVIDER_ROWS * ROW_HEIGHT + 16
             remaining = len(stats.providers) - MAX_PROVIDER_ROWS
             parts.append(
                 _text(PADDING, more_y, f"+{remaining} more", size=12, fill=theme.muted)

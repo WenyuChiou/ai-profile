@@ -196,6 +196,20 @@ which is authoritative).
     updated.
   Suite after the round: **309 passed, 1 skipped**; ruff clean.
 
+- **Aesthetic polish round (2026-07-15, Codex delegate)**: owner-directed
+  craft pass over the approved composition — 4px spacing scale swept
+  through every section (hero rhythm, 24px ledger step, 28px table rows,
+  panel 16/16 padding at height 104, footer/zero-state), type scale
+  locked to 11/12/13/16/38 (hero up to 38px, title down to 16px, panel
+  evidence label promoted to a 12px weight-600 section label), 0.2
+  letter-spacing on the two section labels; zero color changes
+  (validator-locked ramps untouched). Reviewer APPROVE after independent
+  probes (panel fit, deliberate y=160 baseline alignment with >=225px
+  x-margin, letter-spacing XML-safety); its one suggestion applied: the
+  evidence-segment regression selector now anchors on the bar's own y
+  coordinate, removing the implicit BAR_HEIGHT/ramp-color coupling.
+  Suite: **309 passed, 1 skipped**; ruff clean.
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

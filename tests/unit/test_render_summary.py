@@ -650,7 +650,12 @@ def test_evidence_segments_never_negative_and_sum_exactly():
     rounding let the remainder-sized LAST segment go negative with 3+
     lopsided nonzero categories (reproduced: width="-1"). Cumulative
     rounding must keep every width >= 0 and the widths + 2px gaps summing
-    exactly to the inner bar width. Confirmed failing pre-fix."""
+    exactly to the inner bar width. Confirmed failing pre-fix.
+
+    The segment selector anchors on the evidence bar's own y coordinate
+    (reviewer hardening, aesthetic round): color+height alone coupled
+    this test to BAR_HEIGHT never reaching 8 while bar_fill coincides
+    with a ramp step (true in github-light)."""
     stats = VizStats(
         schema_version="0.1.0",
         period=_period(),
@@ -683,6 +688,15 @@ def test_evidence_segments_never_negative_and_sum_exactly():
         ),
         generated_on=GENERATED_ON,
     )
+    from aiprofile.render.summary_svg import (
+        EVIDENCE_BAR_Y_OFFSET,
+        PADDING,
+        PANEL_PAD_X,
+        WIDTH,
+        _panel_top,
+    )
+
+    bar_y = _panel_top(stats) + EVIDENCE_BAR_Y_OFFSET
     for theme in THEMES.values():
         svg = render_summary(stats, theme)
         assert 'width="-' not in svg
@@ -690,13 +704,12 @@ def test_evidence_segments_never_negative_and_sum_exactly():
                 theme.evidence_imported, theme.evidence_inferred,
                 theme.evidence_unknown}
         seg_re = re.compile(
-            r'<rect x="(\d+)" y="\d+" width="(\d+)" height="8" rx="2" fill="([^"]+)"/>'
+            rf'<rect x="(\d+)" y="{bar_y}" width="(\d+)" height="8" rx="2" fill="([^"]+)"/>'
         )
         segs = [(int(x), int(w)) for x, w, fill in seg_re.findall(svg) if fill in ramp]
         assert len(segs) == 5
         total_w = sum(w for _, w in segs)
         gaps = 2 * (len(segs) - 1)
-        from aiprofile.render.summary_svg import PADDING, PANEL_PAD_X, WIDTH
         inner_w = (WIDTH - 2 * PADDING) - 2 * PANEL_PAD_X
         assert total_w + gaps == inner_w, (total_w, gaps, inner_w)
         # contiguity: each segment starts 2px after the previous ends

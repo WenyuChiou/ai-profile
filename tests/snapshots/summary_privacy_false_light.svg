@@ -1,50 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="830" height="478" viewBox="0 0 830 478" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="504" viewBox="0 0 830 504" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
 <title id="aiprofileSummaryTitle">AI Collaboration Summary — All time</title>
 <desc id="aiprofileSummaryDesc">54 AI-attributed commits, 61 AI actor presences across 14 active AI days (author dates), 3 AI providers. Generated 2026-07-14.</desc>
-<rect x="0.5" y="0.5" width="829" height="477" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
+<rect x="0.5" y="0.5" width="829" height="503" rx="8" fill="#ffffff" stroke="#d1d9e0" stroke-width="1"/>
 <rect x="24" y="24" width="16" height="16" rx="3" fill="#ffffff" stroke="#0969da" stroke-width="1"/>
 <rect x="29" y="29" width="6" height="6" rx="1" fill="#0969da"/>
-<text x="48" y="38" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#1f2328" text-anchor="start">AI Collaboration Summary</text>
-<text x="806" y="38" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="end">All time</text>
+<text x="48" y="36" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1f2328" text-anchor="start">AI Collaboration Summary</text>
+<text x="806" y="36" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="end">All time</text>
 <line x1="24" y1="56" x2="806" y2="56" stroke="#d1d9e0"/>
-<text x="24" y="106" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#0969da" text-anchor="start">54</text>
-<text x="24" y="130" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">AI-attributed commits</text>
-<text x="24" y="154" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1f2328" text-anchor="start">90% of 60 unique commits scanned</text>
-<rect x="24" y="164" width="360" height="7" rx="2" fill="#eff2f5"/>
-<rect x="24" y="164" width="324" height="7" rx="2" fill="#0969da"/>
-<text x="510" y="88" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">AI actor presences</text>
+<text x="24" y="112" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="38" font-weight="700" fill="#0969da" text-anchor="start">54</text>
+<text x="24" y="140" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">AI-attributed commits</text>
+<text x="24" y="160" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#1f2328" text-anchor="start">90% of 60 unique commits scanned</text>
+<rect x="24" y="172" width="360" height="7" rx="2" fill="#eff2f5"/>
+<rect x="24" y="172" width="324" height="7" rx="2" fill="#0969da"/>
+<text x="512" y="88" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">AI actor presences</text>
 <text x="806" y="88" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#1f2328" text-anchor="end">61</text>
-<text x="510" y="110" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">Active AI days (author dates)</text>
-<text x="806" y="110" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#1f2328" text-anchor="end">14</text>
-<text x="510" y="132" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">AI providers</text>
-<text x="806" y="132" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#1f2328" text-anchor="end">3</text>
-<text x="510" y="154" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">Unknown commits</text>
-<text x="806" y="154" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#1f2328" text-anchor="end">5</text>
-<text x="24" y="206" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#59636e" text-anchor="start">Attributed commits by provider</text>
-<text x="806" y="206" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="end">% of 54 AI-attributed commits</text>
-<text x="24" y="237" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Claude</text>
-<rect x="186" y="226" width="498" height="7" rx="2" fill="#eff2f5"/>
-<rect x="186" y="226" width="498" height="7" rx="2" fill="#0969da"/>
-<text x="806" y="237" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" text-anchor="end"><tspan fill="#1f2328" font-weight="600">30</tspan><tspan fill="#59636e" font-weight="400"> · 56%</tspan></text>
-<text x="24" y="263" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">OpenAI</text>
-<rect x="186" y="252" width="498" height="7" rx="2" fill="#eff2f5"/>
-<rect x="186" y="252" width="299" height="7" rx="2" fill="#0969da"/>
-<text x="806" y="263" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" text-anchor="end"><tspan fill="#1f2328" font-weight="600">18</tspan><tspan fill="#59636e" font-weight="400"> · 33%</tspan></text>
-<text x="24" y="289" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Gemini</text>
-<rect x="186" y="278" width="498" height="7" rx="2" fill="#eff2f5"/>
-<rect x="186" y="278" width="100" height="7" rx="2" fill="#0969da"/>
-<text x="806" y="289" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" text-anchor="end"><tspan fill="#1f2328" font-weight="600">6</tspan><tspan fill="#59636e" font-weight="400"> · 11%</tspan></text>
-<rect x="24" y="314" width="782" height="94" rx="6" fill="#f6f8fa"/>
-<text x="38" y="329" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Evidence (all records: 61)</text>
-<rect x="38" y="342" width="715" height="8" rx="2" fill="#0550ae"/>
-<rect x="755" y="342" width="37" height="8" rx="2" fill="#8c959f"/>
-<rect x="38" y="363" width="8" height="8" rx="1" fill="#0550ae"/>
-<text x="50" y="370" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">declared 58</text>
-<rect x="125" y="363" width="8" height="8" rx="1" fill="#8c959f"/>
-<text x="137" y="370" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">unknown 3</text>
-<rect x="38" y="385" width="8" height="8" rx="1" fill="#59636e"/>
-<text x="50" y="392" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">All activity explicitly publishable</text>
-<line x1="24" y1="424" x2="806" y2="424" stroke="#d1d9e0"/>
-<text x="24" y="446" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
-<text x="24" y="462" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">One commit may include several AI actor presences (one per provider/tool).</text>
+<text x="512" y="112" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">Active AI days (author dates)</text>
+<text x="806" y="112" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#1f2328" text-anchor="end">14</text>
+<text x="512" y="136" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">AI providers</text>
+<text x="806" y="136" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#1f2328" text-anchor="end">3</text>
+<text x="512" y="160" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#59636e" text-anchor="start">Unknown commits</text>
+<text x="806" y="160" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#1f2328" text-anchor="end">5</text>
+<text x="24" y="208" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#59636e" text-anchor="start" letter-spacing="0.2">Attributed commits by provider</text>
+<text x="806" y="208" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="end">% of 54 AI-attributed commits</text>
+<text x="24" y="244" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Claude</text>
+<rect x="184" y="232" width="500" height="7" rx="2" fill="#eff2f5"/>
+<rect x="184" y="232" width="500" height="7" rx="2" fill="#0969da"/>
+<text x="806" y="244" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" text-anchor="end"><tspan fill="#1f2328" font-weight="600">30</tspan><tspan fill="#59636e" font-weight="400"> · 56%</tspan></text>
+<text x="24" y="272" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">OpenAI</text>
+<rect x="184" y="260" width="500" height="7" rx="2" fill="#eff2f5"/>
+<rect x="184" y="260" width="300" height="7" rx="2" fill="#0969da"/>
+<text x="806" y="272" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" text-anchor="end"><tspan fill="#1f2328" font-weight="600">18</tspan><tspan fill="#59636e" font-weight="400"> · 33%</tspan></text>
+<text x="24" y="300" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#1f2328" text-anchor="start">Gemini</text>
+<rect x="184" y="288" width="500" height="7" rx="2" fill="#eff2f5"/>
+<rect x="184" y="288" width="100" height="7" rx="2" fill="#0969da"/>
+<text x="806" y="300" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" text-anchor="end"><tspan fill="#1f2328" font-weight="600">6</tspan><tspan fill="#59636e" font-weight="400"> · 11%</tspan></text>
+<rect x="24" y="328" width="782" height="104" rx="6" fill="#f6f8fa"/>
+<text x="40" y="344" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#59636e" text-anchor="start" letter-spacing="0.2">Evidence (all records: 61)</text>
+<rect x="40" y="364" width="711" height="8" rx="2" fill="#0550ae"/>
+<rect x="753" y="364" width="37" height="8" rx="2" fill="#8c959f"/>
+<rect x="40" y="385" width="8" height="8" rx="1" fill="#0550ae"/>
+<text x="52" y="392" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">declared 58</text>
+<rect x="127" y="385" width="8" height="8" rx="1" fill="#8c959f"/>
+<text x="139" y="392" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">unknown 3</text>
+<rect x="40" y="409" width="8" height="8" rx="1" fill="#59636e"/>
+<text x="52" y="416" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">All activity explicitly publishable</text>
+<line x1="24" y1="448" x2="806" y2="448" stroke="#d1d9e0"/>
+<text x="24" y="472" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
+<text x="24" y="488" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">One commit may include several AI actor presences (one per provider/tool).</text>
 </svg>
