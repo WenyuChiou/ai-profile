@@ -9,6 +9,7 @@ from __future__ import annotations
 import itertools
 import logging
 import os
+import threading
 from pathlib import Path
 
 from .errors import RenderError
@@ -18,10 +19,33 @@ logger = logging.getLogger(__name__)
 
 #: Per-invocation transaction ids (gate-5 M-02): a pid alone identifies a
 #: PROCESS, not a call — same-process concurrent/re-entrant renders would
-#: share transaction filenames, and pid reuse could collide with crash
-#: debris. pid + a process-lifetime counter makes artifact names
-#: attempt-owned (itertools.count is atomic under CPython).
+#: share transaction filenames. The counter is lock-protected (gate-6: no
+#: reliance on CPython bytecode atomicity) — but it restarts with the
+#: process, so pid reuse could replay a dead process's names:
+#: _transaction_suffix additionally probes the output directory and skips
+#: any suffix with surviving artifacts (gate-6 M-01).
 _ATTEMPT_IDS = itertools.count(1)
+_ATTEMPT_LOCK = threading.Lock()
+
+
+def _transaction_suffix(out_dir: Path, names: list[str]) -> str:
+    """A transaction suffix owned by THIS invocation: unique among live
+    processes (pid), unique within this process (counter), and — because
+    a reused pid restarts the counter — verified against the output
+    directory so a dead process's retained recovery artifacts are never
+    adopted (gate-6 M-01)."""
+    pid = os.getpid()
+    while True:
+        with _ATTEMPT_LOCK:
+            n = next(_ATTEMPT_IDS)
+        suffix = f".{pid}-{n}"
+        stale = any(
+            (out_dir / f"{name}{suffix}{ext}").exists()
+            for name in names
+            for ext in (".tmp", ".bak")
+        )
+        if not stale:
+            return suffix
 
 
 def write_outputs(
@@ -44,7 +68,11 @@ def write_outputs(
     attempt-owned — `<target>.<pid>-<n>.tmp` / `<target>.<pid>-<n>.bak`
     with a per-invocation transaction id — so a render never touches a
     user's own `<target>.bak`, and overlapping calls (across processes OR
-    within one) never consume each other's transaction files. The three
+    within one) never consume each other's transaction files. The suffix
+    is additionally probed against the output directory and created
+    exclusively, so even a REUSED pid whose counter replays a dead
+    process's numbers skips that process's surviving recovery artifacts
+    (gate-6 M-01). The three
     PUBLISHED targets carry no such protection: they are replaced
     independently with no directory lock, so concurrent publication into
     one output directory is NOT SUPPORTED — overlapping writers can
@@ -55,7 +83,6 @@ def write_outputs(
     requires manual cleanup.
 
     Returns the written paths."""
-    suffix = f".{os.getpid()}-{next(_ATTEMPT_IDS)}"
     tmp_paths: list[Path] = []
     backups: list[tuple[Path, Path]] = []  # (target, backup) of moved-aside olds
     completed: list[Path] = []  # targets already replaced with new content
@@ -66,9 +93,13 @@ def write_outputs(
             (out_dir / "summary-dark.svg", svg_dark),
             (out_dir / "profile.json", dumps_stats(stats)),
         ]
+        suffix = _transaction_suffix(out_dir, [p.name for p, _ in targets])
         for path, content in targets:
             tmp = path.with_name(path.name + suffix + ".tmp")
-            tmp.write_text(content, encoding="utf-8", newline="\n")
+            # exclusive creation ("x"): if the name exists after all, the
+            # attempt aborts rather than adopting foreign artifacts.
+            with open(tmp, "x", encoding="utf-8", newline="\n") as fh:
+                fh.write(content)
             tmp_paths.append(tmp)
         # Replacement stage with rollback (verification review, 2026-07-14):
         # sequential replaces alone left a mixed generation when replace #2

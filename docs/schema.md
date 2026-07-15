@@ -98,11 +98,16 @@ Validation rules:
   sorted-keys dump) covers the semantic payload only and EXCLUDES the
   two envelope fields — `recorded_at` (audit metadata that varies per
   scan) and `merged` (derivation state, below); equal events therefore
-  serialize byte-identically even across rescans. Envelope fields are
-  excluded from **value equality and hashing** too: two events whose
-  canonical payloads are identical compare equal regardless of envelope
-  state. No v0.1 CLI command emits raw events (the public JSON artifact
-  is the viz contract).
+  serialize byte-identically even across rescans. **Equality is
+  OPERATIONAL** (gate-6 L-01): `recorded_at` — pure audit metadata — is
+  excluded from equality and hashing, but `merged` PARTICIPATES in both,
+  because it decides merge admissibility (§8.3): a leaf and a reduced
+  event with identical canonical payloads are deliberately NOT
+  interchangeable in sets/caches — dedup must never flip whether a
+  subsequent `merge_event_group` call succeeds. Canonical-payload
+  equality, when needed, is `canonical_json` comparison. No v0.1 CLI
+  command emits raw events (the public JSON artifact is the viz
+  contract).
 - **Derivation state** (`merged`, gate-4 High / gate-5 M-01): defaults
   to false; set to true ONLY by `merge_event_group` on a multi-input
   reduction, and checked on every input so nested/incremental
@@ -220,21 +225,23 @@ boundary.
 
 `repository_uid` is stable across machine paths and never published:
 
-- If the repository has an `origin` remote: `remote:v4:<canonical>` using
-  the **versioned, INJECTIVE canonicalization algorithm of ADR-016 v4**
-  (G2-01; Gate-3 C-01/H-01/M-04; gate-4 M-4/M-5): remote identity requires
-  a positive marker; credentials strip at the last `@`; query/fragment
-  strip in every syntax; ports normalize to canonical decimal (`:0443` ≡
-  `:443`) and absent ports resolve to the scheme default. Alias-convergent
+- If the repository has an `origin` remote: `remote:v5:<canonical>` using
+  the **versioned, INJECTIVE canonicalization algorithm of ADR-016 v5**
+  (G2-01; Gate-3 C-01/H-01/M-04; gate-4 M-4/M-5; gate-6 M-02/M-03):
+  remote identity requires a positive marker; credentials strip at the
+  last `@`; query/fragment strip in every syntax; port tokens are ASCII
+  decimal only, normalize to canonical decimal (`:0443` ≡ `:443`), are
+  bounded to 0..65535 (violations → not a usable remote → local
+  fallback), and absent ports resolve to the scheme default. Alias-convergent
   hosts (documented: github.com) canonicalize as `host/case-folded-path`
   **only on their documented `(scheme, effective-port)` endpoints**
   (`ssh:22` / `https:443` / `git:9418`); every other endpoint — and every
   other host — canonicalizes as `scheme://host:port/path` with scheme
   retained and the effective port explicit — self-delimiting, so no
   concatenation forgery can collide two identities. Changing any rule
-  bumps the algorithm version (v3 → v4 was exactly such a change);
-  different versions never compare equal.
-- Otherwise: `local:v4:<full 64-hex sha256(salt || resolved-path)>` over
+  bumps the algorithm version (v3 → v4 and v4 → v5 were exactly such
+  changes); different versions never compare equal.
+- Otherwise: `local:v5:<full 64-hex sha256(salt || resolved-path)>` over
   the CASE-PRESERVED resolved path (Gate-3 C-02: case-insensitive
   filesystems converge via `Path.resolve()` itself; case-distinct POSIX
   directories correctly split), using the per-install salt created by

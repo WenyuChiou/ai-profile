@@ -127,11 +127,13 @@ which is authoritative).
     v0.1; out-of-contract construction acknowledged), §8.3 states the
     guard's scope; pinned by a canonical-payload + SQLite-schema
     regression;
-  - **M-02**: export transaction ids are truly per-invocation
-    (`<target>.<pid>-<n>.tmp/.bak`); the concurrency contract honestly
-    REJECTS concurrent publication (can mix generations) instead of
-    claiming whole-generation isolation; recovery-`.bak` survival
-    regression;
+  - **M-02**: export transaction ids became `<pid>-<n>` (the gate-6
+    review showed this is still process-owned across pid reuse — closed
+    in round 6 with directory-probed suffixes); the concurrency
+    contract DECLARES concurrent publication unsupported (can mix
+    generations — wording corrected in round 6: nothing is actively
+    rejected at runtime) instead of claiming whole-generation
+    isolation; recovery-`.bak` survival regression;
   - **M-03**: port tokens are bounded before int conversion (>65535 or
     >5 digits → unusable origin → local fallback, the fail-safe
     direction) — a 5000-digit port no longer escapes as ValueError;
@@ -143,6 +145,30 @@ which is authoritative).
   - **L-02/L-04**: the 42-cell grid is now genuinely per-cell
     parametrized (42 reported cases); export-test fixture deduplicated.
   Suite after the pass: **302 passed, 1 skipped**; ruff clean.
+
+- **Gate-6 review received and resolved** (2026-07-15 morning):
+  `docs/reviews/gate-review.md` reviewed `78e2e05..b899d11`, verdict
+  READY AFTER MINOR FIXES (0 Critical/High, 3 Medium, 3 Low) — all 6
+  accepted (`docs/reviews/gate-disposition.md`, gate-6 section), each
+  behavioral fix with a pre-fix-failing regression:
+  - **M-01**: export transaction suffixes are directory-probed and
+    exclusively created — a reused pid replaying a dead process's
+    counter can no longer clobber retained recovery artifacts; counter
+    lock-protected;
+  - **M-02 + M-03**: **uid algorithm v5** — port domain honestly
+    versioned (ASCII decimal only, canonical decimal, 0..65535;
+    violations → local fallback): gate-5's bound had changed v4 output
+    without a bump, and Unicode decimal ports (`:４４３`) minted split
+    non-ASCII identities; ADR-016 + schema §7 rewritten;
+  - **L-01**: equality is OPERATIONAL — `recorded_at` excluded,
+    `merged` participates (it decides merge admissibility; set dedup
+    can never flip merge behavior) — schema §1 specifies operational
+    vs canonical-payload equality;
+  - **L-02**: concurrency wording aligned ("unsupported", nothing
+    actively rejected); precondition surfaced in `render --help` and
+    README;
+  - **L-03**: the persisted-schema pin moved to the storage test suite.
+  Suite after the pass: **309 passed, 1 skipped**; ruff clean.
 
 ## Open items
 

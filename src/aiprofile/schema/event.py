@@ -82,11 +82,15 @@ class AceEvent:
     #: rebuilding a merged result with merged=False (dataclasses.replace
     #: or a raw AceEvent(...) call) forges derivation and is
     #: out-of-contract — build_event and merge_event_group are the only
-    #: sanctioned constructors. Envelope semantics as for recorded_at:
-    #: excluded from equality/hash (gate-5 L-03); never serialized or
-    #: persisted, so derivation state guards the in-memory scan path
-    #: only (gate-5 M-01) — rehydrated events are not re-mergeable.
-    merged: bool = field(default=False, compare=False)
+    #: sanctioned constructors. Never serialized or persisted, so
+    #: derivation state guards the in-memory scan path only (gate-5
+    #: M-01) — rehydrated events are not re-mergeable. UNLIKE
+    #: recorded_at, merged PARTICIPATES in equality/hash (gate-6 L-01:
+    #: it decides merge admissibility, so a leaf and a reduced event
+    #: must stay distinct in sets/caches or dedup order silently flips
+    #: merge behavior) — this is OPERATIONAL equality: canonical payload
+    #: plus derivation state, audit metadata excluded.
+    merged: bool = False
 
 
 def _identity_key(value: str | None, raw: str | None) -> str:

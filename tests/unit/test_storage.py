@@ -544,3 +544,22 @@ def test_repository_upsert_updates_display_name_local_path_and_last_scanned(conn
     assert row["display_name"] == "new-name"
     assert row["local_path"] == "/tmp/new-path"
     assert row["last_scanned_at"] == "2026-07-02T12:00:00+00:00"
+
+
+def test_gate6_events_table_has_no_derivation_state_column():
+    """Gate-6 L-03 (moved from the schema-event suite) + gate-5 M-01
+    pin: derivation state (`merged`) is envelope-only and intentionally
+    NOT persisted — rehydrated events are not re-mergeable (schema.md
+    section 1)."""
+    import sqlite3
+
+    from aiprofile.storage.db import migrate
+
+    conn = sqlite3.connect(":memory:")
+    try:
+        migrate(conn)
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(events)")}
+        assert cols, "events table missing"
+        assert "merged" not in cols
+    finally:
+        conn.close()

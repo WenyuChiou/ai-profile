@@ -79,7 +79,16 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_agg.set_defaults(func=_cmd_aggregate)
 
-    p_render = sub.add_parser("render", help="write dist/ assets (SVG light/dark + JSON)")
+    p_render = sub.add_parser(
+        "render",
+        help="write dist/ assets (SVG light/dark + JSON)",
+        description=(
+            "Write summary-light.svg, summary-dark.svg and profile.json as one"
+            " bundle. Run ONE render at a time per output directory:"
+            " concurrent renders into the same directory are unsupported and"
+            " can publish a mixed generation."
+        ),
+    )
     p_render.add_argument(
         "--out", default="dist", help="output directory (default: ./dist)"
     )

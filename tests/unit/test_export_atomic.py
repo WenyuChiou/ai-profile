@@ -273,3 +273,31 @@ def test_l01_failed_first_install_retraction_named_in_error(tmp_path, monkeypatc
     assert "summary-light.svg" in str(err.value)
     # the partial asset really is still published:
     assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"
+
+
+def test_gate6_stale_debris_from_pid_reuse_never_clobbered(tmp_path, monkeypatch):
+    """Gate-6 M-01: `<pid>-<counter>` repeats after process restart plus
+    PID reuse — a new process's first render must not overwrite a dead
+    process's retained recovery artifact that happens to carry the same
+    name. Simulated by resetting the counter while the PID stays
+    constant. Confirmed failing pre-fix (recovery .bak overwritten, then
+    deleted)."""
+    import itertools
+    import os as os_mod
+
+    out = tmp_path / "dist"
+    out.mkdir()
+    (out / "summary-light.svg").write_text("CURRENT", encoding="utf-8")
+
+    # A dead process with THIS pid left its first attempt's artifacts:
+    stale_bak = out / f"summary-light.svg.{os_mod.getpid()}-1.bak"
+    stale_bak.write_text("RECOVERY-ONLY-COPY", encoding="utf-8")
+
+    # New process, same pid: counter restarts at 1.
+    monkeypatch.setattr(export_mod, "_ATTEMPT_IDS", itertools.count(1))
+
+    export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+
+    assert stale_bak.exists(), "pid-reuse render consumed the recovery artifact"
+    assert stale_bak.read_text(encoding="utf-8") == "RECOVERY-ONLY-COPY"
+    assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"

@@ -72,6 +72,15 @@ Scope: docs/mvp.md. Exit criteria:
       probe), retraction failures in the raised error, envelope fields
       excluded from equality, true per-cell 42-grid parametrization
       (`docs/reviews/gate-disposition.md`, gate-5 section).
+- [x] Gate-6 review round (2026-07-15; READY AFTER MINOR FIXES, 0
+      Critical/High, 3 Medium, 3 Low) resolved: all 6 accepted and
+      fixed — directory-probed exclusive export transaction suffixes
+      (pid-reuse debris safe), **uid algorithm v5** (ASCII-decimal
+      bounded port domain, honestly versioned after gate-5's bound
+      changed v4 output unversioned), operational equality (`merged`
+      participates; audit metadata excluded), concurrency wording
+      aligned + user-facing precondition, storage pin relocated
+      (`docs/reviews/gate-disposition.md`, gate-6 section).
 
 ## v0.1 OSS release (after conformance)
 

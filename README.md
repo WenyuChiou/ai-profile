@@ -36,6 +36,10 @@ aiprofile aggregate       # print the published stats = privacy preview
 aiprofile render          # write dist/summary-{light,dark}.svg + profile.json
 ```
 
+Run **one `render` at a time per output directory** — concurrent renders
+into the same directory are unsupported and can publish assets from
+different scans.
+
 Only commits authored by your configured identities count (seeded from
 `git config user.email` at init; add more emails in
 `~/.aiprofile/config.json`).

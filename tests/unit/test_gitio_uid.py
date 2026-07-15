@@ -369,13 +369,6 @@ def test_github_alias_requires_documented_scheme_and_standard_port():
 # ---------------------------------------------------------------------------
 
 
-def test_m4_uid_algorithm_version_bumped_for_endpoint_rule_change():
-    # The endpoint-qualified alias rule changed canonical output for
-    # existing origins; per schema.md the algorithm version MUST bump so
-    # remote:vN prefixes never name two different algorithms.
-    assert UID_ALGORITHM == "v4"
-
-
 @pytest.mark.parametrize(
     "padded,plain",
     [
@@ -433,3 +426,35 @@ def test_m03_out_of_range_ports_are_unusable_not_crashes():
         canonicalize_remote(f"https://github.com:{'0' * 10}443/o/r")
         == "github.com/o/r"
     )
+
+
+# ---------------------------------------------------------------------------
+# Gate-6 (M-02, M-03): uid v5 — ASCII-decimal-only port domain, honestly
+# versioned.
+# ---------------------------------------------------------------------------
+
+
+def test_gate6_uid_algorithm_bumped_to_v5():
+    # Gate-5's port-domain bound changed canonical output for existing
+    # origins (`:65536` was structured remote-v4 at 78e2e05, local
+    # fallback at b899d11) under an unchanged version label — the same
+    # ADR-016 violation class as gate-4 M-4. The domain rules live in v5.
+    assert UID_ALGORITHM == "v5"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://github.com:４４３/o/r",  # full-width 443
+        "https://github.com:٠٤٤٣/o/r",  # arabic-indic 0443
+        "ssh://git@github.com:２２/o/r",  # full-width 22
+        "https://git.example.com:２２２２/o/r",  # non-alias host
+    ],
+)
+def test_gate6_unicode_decimal_ports_are_not_remote_identities(url):
+    r"""Gate-6 M-03: RFC 3986 ports are ASCII decimal only. Unicode
+    decimals pass `\d` and int() but must not mint structured
+    identities that split from the ASCII endpoint — unusable shape →
+    local fallback. Confirmed failing pre-fix (full-width port survived
+    into a structured non-ASCII identity)."""
+    assert canonicalize_remote(url) is None

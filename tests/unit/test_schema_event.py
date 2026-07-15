@@ -797,12 +797,15 @@ def test_valid_multi_source_leaf_productions_are_mergeable():
     assert len(merged.sources) == 3
 
 
-def test_l03_envelope_metadata_excluded_from_equality():
-    """Gate-5 L-03: `recorded_at` and `merged` are envelope metadata —
-    excluded from the canonical payload, so dataclass equality/hash must
-    exclude them too, or sets/caches disagree with canonical event
-    equality. Confirmed failing pre-fix (identical payloads compared
-    unequal)."""
+def test_operational_equality_audit_excluded_derivation_included():
+    """Gate-5 L-03 + gate-6 L-01 (operational equality): `recorded_at`
+    is pure audit metadata — excluded from equality/hash, so rescan
+    stamps never split value-identical events. `merged` however decides
+    merge ADMISSIBILITY: a leaf and a reduced event are NOT
+    substitutable in the API, so equality must keep them distinct or
+    set/cache dedup makes merge behavior depend on insertion order
+    (gate-6 reviewer probe). Confirmed failing pre-fix (leaf and
+    reduced event compared equal)."""
     src = ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")
     kwargs = dict(
         actor_type=ActorType.AI,
@@ -814,17 +817,27 @@ def test_l03_envelope_metadata_excluded_from_equality():
     )
     l1 = build_event(**kwargs)
     l2 = build_event(**kwargs)
-    merged = merge_event_group([l1, l2])
+    reduced = merge_event_group([l1, l2])
 
-    assert merged.merged and not l1.merged
-    assert canonical_json(merged) == canonical_json(l1)
-    assert merged == l1
-    assert hash(merged) == hash(l1)
-
+    # audit metadata: excluded (canonical payload agreement)
     stamped = build_event(**kwargs, recorded_at="2026-07-15T00:00:00+00:00")
     assert canonical_json(stamped) == canonical_json(l1)
     assert stamped == l1
     assert hash(stamped) == hash(l1)
+
+    # derivation state: INCLUDED (operational distinction)
+    assert reduced.merged and not l1.merged
+    assert canonical_json(reduced) == canonical_json(l1)
+    assert reduced != l1
+    assert len({l1, reduced}) == 2
+
+    # substitutability: dedup through a set can never flip merge
+    # admissibility — both orders keep the leaf AND the reduced event
+    # distinct, so behavior cannot depend on insertion order.
+    for pair in ({l1, reduced}, {reduced, l1}):
+        leaves = [e for e in pair if not e.merged]
+        assert len(leaves) == 1
+        assert merge_event_group([leaves[0], build_event(**kwargs)]).merged
 
 
 def test_m01_derivation_state_is_envelope_only_never_persisted():
@@ -833,8 +846,6 @@ def test_m01_derivation_state_is_envelope_only_never_persisted():
     enters the canonical payload nor the SQLite representation, so
     rehydrated events are NOT re-mergeable and schema.md documents that
     contract."""
-    import sqlite3
-
     src = ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")
     event = build_event(
         actor_type=ActorType.AI,
@@ -847,14 +858,5 @@ def test_m01_derivation_state_is_envelope_only_never_persisted():
     payload = to_dict(event)
     assert "merged" not in json.dumps(payload)
     assert "recorded_at" not in json.dumps(payload)
-
-    from aiprofile.storage.db import migrate
-
-    conn = sqlite3.connect(":memory:")
-    try:
-        migrate(conn)
-        cols = {row[1] for row in conn.execute("PRAGMA table_info(events)")}
-        assert cols, "events table missing"
-        assert "merged" not in cols
-    finally:
-        conn.close()
+    # The persisted-schema half of this contract (no `merged` column)
+    # lives with the storage/migration tests (gate-6 L-03).

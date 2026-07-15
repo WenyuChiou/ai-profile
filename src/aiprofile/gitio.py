@@ -150,7 +150,7 @@ def get_origin_url(repo_path: Path) -> str | None:
 
 #: uid algorithm version (ADR-016). Any rule change bumps this; uids with
 #: different versions never compare equal.
-UID_ALGORITHM = "v4"
+UID_ALGORITHM = "v5"
 
 #: Hosts whose repository namespace is BOTH path-case-insensitive AND
 #: transport-convergent — documented exceptions only (gate C-01): for every
@@ -262,13 +262,18 @@ def _canonical_identity(
 ) -> str | None:
     host = host.lower()
     if port:
-        # Numeric normalization (gate-4 M-5): ':0443' and ':443' are the
-        # same endpoint; compare and serialize in canonical decimal form.
-        # Bounded FIRST (gate-5 M-03): the regex admits unbounded digits,
-        # and int() on a multi-thousand-digit token raises ValueError —
-        # outside the TCP range the origin is not a usable remote
-        # endpoint and falls back to local identity (fail-safe: a bad
-        # split, never a collision or an uncaught crash).
+        # v5 port domain (gate-6 M-02/M-03, folding in gate-5's bound
+        # under an honest version): a port token is ASCII decimal only
+        # (RFC 3986 — Unicode decimals pass the regex's \d and int()
+        # but are not a documented endpoint spelling and previously
+        # minted split non-ASCII identities), normalized to canonical
+        # decimal (':0443' == ':443'), domain 0..65535. Any violation
+        # means the origin is not a usable remote endpoint and falls
+        # back to local identity (fail-safe: a bad split, never a
+        # collision — and never an uncaught ValueError; the length
+        # bound precedes int() so oversized tokens are never converted).
+        if not (port.isascii() and port.isdigit()):
+            return None
         port = port.lstrip("0") or "0"
         if len(port) > 5 or int(port) > 65535:
             return None
