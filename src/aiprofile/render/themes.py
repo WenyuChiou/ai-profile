@@ -24,6 +24,11 @@ class Theme:
     bar_fill: str
     bar_track: str
     chip_bg: str  # Primer canvas-subtle: chip/badge background
+    evidence_verified: str
+    evidence_declared: str
+    evidence_imported: str
+    evidence_inferred: str
+    evidence_unknown: str
 
 
 THEMES: dict[str, Theme] = {
@@ -38,6 +43,14 @@ THEMES: dict[str, Theme] = {
         bar_fill="#0969da",
         bar_track="#eff2f5",
         chip_bg="#f6f8fa",
+        # Ordinal evidence ramp, validator-passed (dataviz skill,
+        # --ordinal vs the #f6f8fa panel): monotone L, gaps >= 0.06,
+        # light end 3.18:1 (the previous #80ccff end sat at 1.64:1).
+        evidence_verified="#033d8b",
+        evidence_declared="#0550ae",
+        evidence_imported="#0969da",
+        evidence_inferred="#218bff",
+        evidence_unknown="#8c959f",
     ),
     "github-dark": Theme(
         name="github-dark",
@@ -50,5 +63,12 @@ THEMES: dict[str, Theme] = {
         bar_fill="#4493f8",
         bar_track="#21262d",
         chip_bg="#161b22",
+        # Validator-passed vs the #161b22 panel: light end 3.73:1
+        # (the previous #0d419d end sat at 1.86:1).
+        evidence_verified="#a5d6ff",
+        evidence_declared="#58a6ff",
+        evidence_imported="#388bfd",
+        evidence_inferred="#1f6feb",
+        evidence_unknown="#6e7681",
     ),
 }

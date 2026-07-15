@@ -109,14 +109,16 @@ images through its asset proxy; paired light/dark assets via `<picture>` is
 the reliable, GitHub-native theming mechanism.)
 
 The summary card shows: reporting period ("All time" in v0.1) · unique
-commits scanned · AI-attributed commits / AI actor presences / active AI
-days (author dates) as accent hero values · number of AI providers ·
-provider-ranked bars (top 6 + "+N more") with count and percentage,
-denominator stated in the table header · unknown count · evidence chips
-with their population stated ("all records: N" — G2-05) · publication
-chips (policy-based wording, never visibility claims — G2-04: "Includes
-aggregate-only activity (repository identity withheld)" plus a
-publishable/aggregate split chip when both sides are nonzero) ·
+commits scanned · one accent hero value for AI-attributed commits with
+its share of unique commits scanned shown in a thin bar · AI actor
+presences / active AI days (author dates) / number of AI providers /
+unknown count in a subordinate ledger · provider-ranked thin bars (top 6
++ "+N more") with count and percentage, denominator stated in the table
+header · evidence provenance panel with its population stated ("all
+records: N" — G2-05), a stacked evidence bar, and square-swatch counts ·
+publication statement (policy-based wording, never visibility claims —
+G2-04: "Includes aggregate-only activity (repository identity withheld)"
+plus a publishable/aggregate split when both sides are nonzero) ·
 generation date (UTC date only) · metric definition footnote. Card height
 is dynamic-but-deterministic (collapses with few providers; ADR-010).
 

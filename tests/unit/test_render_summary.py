@@ -643,3 +643,62 @@ def test_svg_uses_only_allowlisted_elements_and_no_active_content():
             assert "foreignobject" not in lowered
             assert "http://" not in lowered.replace("http://www.w3.org/2000/svg", "")
             assert "https://" not in lowered
+
+
+def test_evidence_segments_never_negative_and_sum_exactly():
+    """Gate-6 visual round (reviewer finding): independent per-segment
+    rounding let the remainder-sized LAST segment go negative with 3+
+    lopsided nonzero categories (reproduced: width="-1"). Cumulative
+    rounding must keep every width >= 0 and the widths + 2px gaps summing
+    exactly to the inner bar width. Confirmed failing pre-fix."""
+    stats = VizStats(
+        schema_version="0.1.0",
+        period=_period(),
+        totals=Totals(
+            commits_scanned=4000000,
+            ai_attributed_commits=3328728,
+            ai_actor_presences=3328728,
+            human_declared_commits=0,
+            unknown_commits=100,
+            active_ai_days=300,
+        ),
+        providers=(
+            ProviderRow(provider="anthropic", display_name="Claude",
+                        attributed_commits=3328728, actor_presences=3328728,
+                        active_days=300),
+        ),
+        provider_count=1,
+        evidence=EvidenceTotals(
+            verified=91627,
+            declared=1060607,
+            imported=747695,
+            inferred=1427466,
+            unknown=1333,
+            total_records=3328728,
+        ),
+        privacy=PrivacySplit(
+            explicitly_publishable_commits=4000000,
+            anonymous_aggregate_commits=0,
+            includes_anonymous_aggregate=False,
+        ),
+        generated_on=GENERATED_ON,
+    )
+    for theme in THEMES.values():
+        svg = render_summary(stats, theme)
+        assert 'width="-' not in svg
+        ramp = {theme.evidence_verified, theme.evidence_declared,
+                theme.evidence_imported, theme.evidence_inferred,
+                theme.evidence_unknown}
+        seg_re = re.compile(
+            r'<rect x="(\d+)" y="\d+" width="(\d+)" height="8" rx="2" fill="([^"]+)"/>'
+        )
+        segs = [(int(x), int(w)) for x, w, fill in seg_re.findall(svg) if fill in ramp]
+        assert len(segs) == 5
+        total_w = sum(w for _, w in segs)
+        gaps = 2 * (len(segs) - 1)
+        from aiprofile.render.summary_svg import PADDING, PANEL_PAD_X, WIDTH
+        inner_w = (WIDTH - 2 * PADDING) - 2 * PANEL_PAD_X
+        assert total_w + gaps == inner_w, (total_w, gaps, inner_w)
+        # contiguity: each segment starts 2px after the previous ends
+        for (x1, w1), (x2, _) in zip(segs, segs[1:], strict=False):
+            assert x2 == x1 + w1 + 2

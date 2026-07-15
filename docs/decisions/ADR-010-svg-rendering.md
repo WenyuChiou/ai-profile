@@ -19,12 +19,15 @@ at GitHub README width, zero runtime deps. Candidates: a template engine
   populated fixture.
 - Layout is **dynamic-but-deterministic** (2026-07-14 polish revision):
   card height is a pure function of the data shape (`card_height`) so
-  sparse profiles show no dead band; visual hierarchy uses the accent
-  token for the title glyph and the three hero values; provider rows
-  carry count + percentage with the denominator stated in the table
-  header (proposal §26 rule 6); evidence and privacy render as bordered
-  chips (`chip_bg` theme token). Icons are pure inline geometry (a
-  sparkle polygon) — never provider logos or emoji (proposal §22;
+  sparse profiles show no dead band; visual hierarchy uses one accent
+  hero value for AI-attributed commits, an explicit share bar against
+  unique commits scanned, and a subordinate right-aligned ledger for the
+  remaining headline counts; provider rows carry count + percentage with
+  the denominator stated in the table header (proposal §26 rule 6);
+  evidence and privacy render inside a subtle provenance panel using the
+  `chip_bg` theme token, a stacked evidence bar, square swatches, and one
+  quiet privacy statement. Icons are pure inline geometry (a square
+  commit-node mark) — never provider logos or emoji (proposal §22;
   emoji glyphs are font-dependent and would break determinism across
   renderers).
 - Themes are token dicts (`render/themes.py`): `github-light`,

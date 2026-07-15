@@ -170,6 +170,32 @@ which is authoritative).
   - **L-03**: the persisted-schema pin moved to the storage test suite.
   Suite after the pass: **309 passed, 1 skipped**; ruff clean.
 
+- **Visual refinement round (gate-6 Phase 3, 2026-07-15)**: summary card
+  redesigned to the owner's "Governed Intelligence Editorial" direction —
+  executed by a Codex delegate under a constrained brief, review-gated by
+  Claude, then audited against the dataviz design skill:
+  - one hero metric (AI-attributed commits) with its share of unique
+    commits stated and drawn (thin share bar); presences / active days /
+    providers / unknown as a subordinate right-aligned ledger;
+  - evidence + privacy pills replaced by a provenance panel: stacked
+    evidence-composition bar in precedence order with a swatch legend
+    (counts always text), one quiet privacy statement line;
+  - evidence ramps are VALIDATOR-PASSED ordinal Primer-blue scales per
+    theme (the delegate's first ramps failed the 2:1 light-end contrast
+    floor at 1.64:1/1.86:1 — computed, not eyeballed); segment gaps show
+    the panel surface; sparkle glyph replaced by a commit-node mark;
+  - reviewer round found a real defect (remainder-sized last segment
+    could go NEGATIVE for 3+ lopsided evidence categories) — fixed with
+    cumulative rounding (widths >= 0 and exact-sum structurally), red
+    regression from the reviewer's own reproduction; reviewer re-ran a
+    3,008-case randomized adversarial search, zero violations → APPROVE;
+  - all 8 snapshots regenerated via the sanctioned script and visually
+    verified in a real browser (both themes; populated / aggregate-only /
+    all-publishable / zero states); privacy sweep clean (only the w3.org
+    xmlns matches); mvp.md section 5 + ADR-010 composition wording
+    updated.
+  Suite after the round: **309 passed, 1 skipped**; ruff clean.
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

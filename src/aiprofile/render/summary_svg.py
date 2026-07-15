@@ -33,47 +33,56 @@ FONT_STACK = "-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif"
 TITLE_TEXT = "AI Collaboration Summary"
 MAX_PROVIDER_ROWS = 6
 
-# Header: accent sparkle glyph + title + right-aligned period label.
+# Header: accent commit-node glyph + title + right-aligned period label.
 HEADER_TEXT_Y = 38
 GLYPH_CX = 32
 GLYPH_CY = 32
 TITLE_X = 48
 DIVIDER1_Y = 56
 
-# Primary metric row (three hero tiles, accent values).
-METRIC_CENTERS = (172, 415, 658)
-METRIC_VALUE_Y = 102
-METRIC_LABEL_Y = 124
-METRIC_VALUE_SIZE = 28
-
-# Secondary line (muted labels, text-colored numbers via tspans).
-SECONDARY_Y = 154
+# Hero metric + secondary ledger.
+HERO_VALUE_Y = 106
+HERO_LABEL_Y = 130
+HERO_RELATION_Y = 154
+HERO_VALUE_SIZE = 34
+SHARE_BAR_X = PADDING
+SHARE_BAR_Y = 164
+SHARE_BAR_WIDTH = 360
+SHARE_BAR_HEIGHT = 7
+LEDGER_LABEL_X = 510
+LEDGER_VALUE_X = WIDTH - PADDING
+LEDGER_FIRST_Y = 88
+LEDGER_ROW_STEP = 22
 
 # Provider table.
-TABLE_LABEL_Y = 186
-ROWS_TOP = 200
+TABLE_LABEL_Y = 206
+ROWS_TOP = 220
 ROW_HEIGHT = 26
 NAME_X = PADDING
 NAME_WIDTH = 150
 BAR_X = 186
 COUNT_X = WIDTH - PADDING  # right anchor for "count · pct%"
 BAR_MAX_WIDTH = 498  # COUNT_X - reserved count column (110) - gap (12) - BAR_X
-BAR_HEIGHT = 12
+BAR_HEIGHT = 7
 NAME_FONT_SIZE = 13
 COUNT_FONT_SIZE = 13
 
 MORE_LINE_EXTRA = 20  # vertical room for the "+N more" line when present
 
-# Chips.
-CHIP_GAP_ABOVE = 16
-CHIP_HEIGHT = 22
-CHIP_RADIUS = 11
-CHIP_PAD_X = 10
-CHIP_GAP = 8
-CHIP_FONT_SIZE = 11
-CHIP_ROW_STEP = 30
+# Evidence/privacy provenance panel.
+PANEL_GAP_ABOVE = 16
+PANEL_PAD_X = 14
+PANEL_PAD_Y = 12
+PANEL_HEIGHT = 94
+PANEL_RADIUS = 6
+EVIDENCE_FONT_SIZE = 11
 EVIDENCE_PREFIX_TEMPLATE = "Evidence (all records: {n})"
-EVIDENCE_PREFIX_GAP = 10
+EVIDENCE_BAR_Y_OFFSET = 28
+EVIDENCE_BAR_HEIGHT = 8
+EVIDENCE_LEGEND_Y_OFFSET = 56
+EVIDENCE_SWATCH = 8
+EVIDENCE_LEGEND_GAP = 16
+PRIVACY_Y_OFFSET = 78
 
 # Footer.
 FOOTER_GAP_ABOVE = 16
@@ -169,15 +178,14 @@ def _line(x1: float, y1: float, x2: float, y2: float, *, stroke: str) -> str:
     return f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{stroke}"/>'
 
 
-def _sparkle(cx: float, cy: float, fill: str) -> str:
-    """Four-point sparkle glyph (pure geometry — no external icon assets,
-    proposal section 22: no provider logos)."""
-    r, k = 8, 2.2
-    points = (
-        f"{cx},{cy - r} {cx + k},{cy - k} {cx + r},{cy} {cx + k},{cy + k} "
-        f"{cx},{cy + r} {cx - k},{cy + k} {cx - r},{cy} {cx - k},{cy - k}"
+def _commit_mark(cx: int, cy: int, theme: Theme) -> str:
+    """Small commit-node mark: square ring plus centered square dot."""
+    return "\n".join(
+        (
+            _rect(cx - 8, cy - 8, 16, 16, fill=theme.bg, rx=3, stroke=theme.accent),
+            _rect(cx - 3, cy - 3, 6, 6, fill=theme.accent, rx=1),
+        )
     )
-    return f'<polygon points="{points}" fill="{fill}"/>'
 
 
 # ---------------------------------------------------------------------------
@@ -204,11 +212,11 @@ def _has_more_line(stats: VizStats) -> bool:
     return len(stats.providers) > MAX_PROVIDER_ROWS
 
 
-def _chips_top(stats: VizStats) -> int:
+def _panel_top(stats: VizStats) -> int:
     bottom = ROWS_TOP + _visible_rows(stats) * ROW_HEIGHT
     if _has_more_line(stats):
         bottom += MORE_LINE_EXTRA
-    return bottom + CHIP_GAP_ABOVE
+    return bottom + PANEL_GAP_ABOVE
 
 
 def card_height(stats: VizStats) -> int:
@@ -216,7 +224,7 @@ def card_height(stats: VizStats) -> int:
     if _is_zero_state(stats.totals):
         divider2_y = ZERO_BODY_BOTTOM
     else:
-        divider2_y = _chips_top(stats) + CHIP_ROW_STEP + CHIP_HEIGHT + FOOTER_GAP_ABOVE
+        divider2_y = _panel_top(stats) + PANEL_HEIGHT + FOOTER_GAP_ABOVE
     return divider2_y + FOOTER2_OFFSET + FOOTER_BOTTOM_PAD
 
 
@@ -237,19 +245,63 @@ def _desc_text(stats: VizStats, zero_state: bool) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _secondary_line_svg(stats: VizStats, theme: Theme) -> str:
-    spans = (
-        _tspan("Unique commits scanned ", fill=theme.muted)
-        + _tspan(str(stats.totals.commits_scanned), fill=theme.text, weight=600)
-        + _tspan("   ·   AI providers ", fill=theme.muted)
-        + _tspan(str(stats.provider_count), fill=theme.text, weight=600)
-        + _tspan("   ·   Unknown commits ", fill=theme.muted)
-        + _tspan(str(stats.totals.unknown_commits), fill=theme.text, weight=600)
+def _ledger_svg(stats: VizStats, theme: Theme) -> str:
+    rows = (
+        ("AI actor presences", stats.totals.ai_actor_presences),
+        ("Active AI days (author dates)", stats.totals.active_ai_days),
+        ("AI providers", stats.provider_count),
+        ("Unknown commits", stats.totals.unknown_commits),
     )
-    return (
-        f'<text x="{PADDING}" y="{SECONDARY_Y}" font-family="{FONT_STACK}"'
-        f' font-size="12" text-anchor="start">{spans}</text>'
+    parts = []
+    for index, (label, value) in enumerate(rows):
+        y = LEDGER_FIRST_Y + index * LEDGER_ROW_STEP
+        parts.append(_text(LEDGER_LABEL_X, y, label, size=12, fill=theme.muted))
+        parts.append(
+            _text(LEDGER_VALUE_X, y, str(value), size=13, fill=theme.text, weight=600, anchor="end")
+        )
+    return "\n".join(parts)
+
+
+def _hero_svg(stats: VizStats, theme: Theme) -> str:
+    t = stats.totals
+    share = round(100 * t.ai_attributed_commits / t.commits_scanned) if t.commits_scanned else 0
+    share_w = (
+        round(SHARE_BAR_WIDTH * t.ai_attributed_commits / t.commits_scanned)
+        if t.commits_scanned
+        else 0
     )
+    parts = [
+        _text(
+            PADDING,
+            HERO_VALUE_Y,
+            str(t.ai_attributed_commits),
+            size=HERO_VALUE_SIZE,
+            weight=700,
+            fill=theme.accent,
+        ),
+        _text(PADDING, HERO_LABEL_Y, "AI-attributed commits", size=12, fill=theme.muted),
+        _text(
+            PADDING,
+            HERO_RELATION_Y,
+            f"{share}% of {t.commits_scanned} unique commits scanned",
+            size=12,
+            fill=theme.text,
+            weight=600,
+        ),
+        _rect(
+            SHARE_BAR_X,
+            SHARE_BAR_Y,
+            SHARE_BAR_WIDTH,
+            SHARE_BAR_HEIGHT,
+            fill=theme.bar_track,
+            rx=2,
+        ),
+    ]
+    if share_w > 0:
+        parts.append(
+            _rect(SHARE_BAR_X, SHARE_BAR_Y, share_w, SHARE_BAR_HEIGHT, fill=theme.accent, rx=2)
+        )
+    return "\n".join(parts)
 
 
 def _provider_row_svg(
@@ -263,12 +315,11 @@ def _provider_row_svg(
     name = _truncate(row.display_name, NAME_WIDTH, NAME_FONT_SIZE)
     elements = [
         _text(NAME_X, text_y, name, size=NAME_FONT_SIZE, fill=theme.text),
-        _rect(BAR_X, bar_y, BAR_MAX_WIDTH, BAR_HEIGHT, fill=theme.bar_track, rx=6),
+        _rect(BAR_X, bar_y, BAR_MAX_WIDTH, BAR_HEIGHT, fill=theme.bar_track, rx=2),
     ]
     if max_attributed > 0 and row.attributed_commits > 0:
         bar_w = round(BAR_MAX_WIDTH * row.attributed_commits / max_attributed)
-        bar_w = max(bar_w, BAR_HEIGHT)  # keep the pill shape readable
-        elements.append(_rect(BAR_X, bar_y, bar_w, BAR_HEIGHT, fill=theme.bar_fill, rx=6))
+        elements.append(_rect(BAR_X, bar_y, bar_w, BAR_HEIGHT, fill=theme.bar_fill, rx=2))
 
     count_spans = _tspan(str(row.attributed_commits), fill=theme.text, weight=600)
     if denominator > 0:
@@ -281,63 +332,102 @@ def _provider_row_svg(
     return "\n".join(elements)
 
 
-def _chip(x: float, y: float, content: str, theme: Theme, *, text_fill: str) -> tuple[str, int]:
-    """One rounded chip at (x, y); returns (svg, next_x).
-
-    Coordinates are rounded to integers on entry so shipped SVG never
-    carries double-precision noise (gate-review P1, 2026-07-14; pinned by
-    test_coordinate_hygiene_no_float_noise)."""
-    x = round(x)
-    text_w = _text_width(content, CHIP_FONT_SIZE)
-    chip_w = round(text_w + 2 * CHIP_PAD_X)
-    svg = (
-        _rect(x, y, chip_w, CHIP_HEIGHT, fill=theme.chip_bg, rx=CHIP_RADIUS, stroke=theme.border)
-        + _text(
-            x + CHIP_PAD_X,
-            y + 15,
-            content,
-            size=CHIP_FONT_SIZE,
-            fill=text_fill,
-        )
-    )
-    return svg, x + chip_w + CHIP_GAP
-
-
-def _evidence_chips_svg(stats: VizStats, theme: Theme, top: int) -> str:
+def _evidence_items(stats: VizStats, theme: Theme) -> tuple[tuple[str, int, str, bool], ...]:
     e = stats.evidence
-    labels = [f"declared {e.declared}", f"unknown {e.unknown}"]
-    for label, n in (("verified", e.verified), ("imported", e.imported), ("inferred", e.inferred)):
-        if n:
-            labels.append(f"{label} {n}")
+    return (
+        ("verified", e.verified, theme.evidence_verified, e.verified > 0),
+        ("declared", e.declared, theme.evidence_declared, True),
+        ("imported", e.imported, theme.evidence_imported, e.imported > 0),
+        ("inferred", e.inferred, theme.evidence_inferred, e.inferred > 0),
+        ("unknown", e.unknown, theme.evidence_unknown, True),
+    )
 
-    prefix = EVIDENCE_PREFIX_TEMPLATE.format(n=e.total_records)
+
+def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    e = stats.evidence
+    panel_x = PADDING
+    panel_w = WIDTH - 2 * PADDING
+    inner_x = panel_x + PANEL_PAD_X
+    inner_w = panel_w - 2 * PANEL_PAD_X
+    bar_y = top + EVIDENCE_BAR_Y_OFFSET
+    legend_y = top + EVIDENCE_LEGEND_Y_OFFSET
     parts = [
-        _text(PADDING, top + 15, prefix, size=CHIP_FONT_SIZE, fill=theme.muted)
+        _rect(panel_x, top, panel_w, PANEL_HEIGHT, fill=theme.chip_bg, rx=PANEL_RADIUS),
+        _text(
+            inner_x,
+            top + PANEL_PAD_Y + 3,
+            EVIDENCE_PREFIX_TEMPLATE.format(n=e.total_records),
+            size=EVIDENCE_FONT_SIZE,
+            fill=theme.muted,
+        ),
     ]
-    x = PADDING + _text_width(prefix, CHIP_FONT_SIZE) + EVIDENCE_PREFIX_GAP
-    for label in labels:
-        chip_svg, x = _chip(x, top, label, theme, text_fill=theme.text)
-        parts.append(chip_svg)
-    return "\n".join(parts)
 
+    segments = [(label, count, color) for label, count, color, _ in _evidence_items(stats, theme)]
+    nonzero_segments = [(label, count, color) for label, count, color in segments if count > 0]
+    if not (e.total_records > 0 and nonzero_segments):
+        # Empty composition: the track stands in for the bar. When segments
+        # exist they span the full width and the 2px gaps between them show
+        # the PANEL surface (dataviz mark spec: surface gaps, not a track
+        # peeking through).
+        parts.append(
+            _rect(inner_x, bar_y, inner_w, EVIDENCE_BAR_HEIGHT, fill=theme.bar_track, rx=2)
+        )
+    if e.total_records > 0 and nonzero_segments:
+        gap_total = 2 * (len(nonzero_segments) - 1)
+        available_w = inner_w - gap_total
+        # Cumulative rounding (gate-6 visual round, reviewer finding):
+        # independently rounded widths drift, and remainder-sizing the
+        # last segment went NEGATIVE for 3+ lopsided categories
+        # (width="-1" reproduced). Rounding the cumulative prefix keeps
+        # every width >= 0 by monotonicity and the total exactly equal
+        # to available_w by construction.
+        x = inner_x
+        prefix = 0
+        prev_end = 0
+        for _, count, color in nonzero_segments:
+            prefix += count
+            end = round(available_w * prefix / e.total_records)
+            w = end - prev_end
+            prev_end = end
+            parts.append(_rect(x, bar_y, w, EVIDENCE_BAR_HEIGHT, fill=color, rx=2))
+            x += w + 2
 
-def _privacy_chips_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    legend_x = inner_x
+    for label, count, color, visible in _evidence_items(stats, theme):
+        if not visible:
+            continue
+        text = f"{label} {count}"
+        parts.append(
+            _rect(
+                legend_x,
+                legend_y - EVIDENCE_SWATCH + 1,
+                EVIDENCE_SWATCH,
+                EVIDENCE_SWATCH,
+                fill=color,
+                rx=1,
+            )
+        )
+        parts.append(_text(legend_x + 12, legend_y, text, size=EVIDENCE_FONT_SIZE, fill=theme.text))
+        legend_x += round(12 + _text_width(text, EVIDENCE_FONT_SIZE) + EVIDENCE_LEGEND_GAP)
+
     p = stats.privacy
-    # Policy-based wording, never visibility claims (G2-04).
     if p.includes_anonymous_aggregate:
         primary = "Includes aggregate-only activity (repository identity withheld)"
     else:
         primary = "All activity explicitly publishable"
-    parts = []
-    chip_svg, x = _chip(PADDING, top, primary, theme, text_fill=theme.text)
-    parts.append(chip_svg)
+    privacy_text = primary
     if p.includes_anonymous_aggregate and p.explicitly_publishable_commits > 0:
-        split = (
-            f"publishable {p.explicitly_publishable_commits}"
+        privacy_text += (
+            f" — publishable {p.explicitly_publishable_commits}"
             f" · aggregate-only {p.anonymous_aggregate_commits}"
         )
-        chip_svg, _ = _chip(x, top, split, theme, text_fill=theme.muted)
-        parts.append(chip_svg)
+    marker_y = top + PRIVACY_Y_OFFSET - EVIDENCE_SWATCH + 1
+    parts.append(
+        _rect(inner_x, marker_y, EVIDENCE_SWATCH, EVIDENCE_SWATCH, fill=theme.muted, rx=1)
+    )
+    parts.append(
+        _text(inner_x + 12, top + PRIVACY_Y_OFFSET, privacy_text, size=11, fill=theme.muted)
+    )
     return "\n".join(parts)
 
 
@@ -363,8 +453,8 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         f'fill="{theme.bg}" stroke="{theme.border}" stroke-width="1"/>',
     ]
 
-    # Header: sparkle glyph + title + period label.
-    parts.append(_sparkle(GLYPH_CX, GLYPH_CY, theme.accent))
+    # Header: commit-node glyph + title + period label.
+    parts.append(_commit_mark(GLYPH_CX, GLYPH_CY, theme))
     parts.append(
         _text(TITLE_X, HEADER_TEXT_Y, TITLE_TEXT, size=18, weight=600, fill=theme.title)
     )
@@ -397,29 +487,9 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         )
         divider2_y = ZERO_BODY_BOTTOM
     else:
-        # Primary metric row (hero values in accent — the card's focal layer).
-        metrics = (
-            (stats.totals.ai_attributed_commits, "AI-attributed commits"),
-            (stats.totals.ai_actor_presences, "AI actor presences"),
-            (stats.totals.active_ai_days, "Active AI days (author dates)"),
-        )
-        for center_x, (value, label) in zip(METRIC_CENTERS, metrics, strict=True):
-            parts.append(
-                _text(
-                    center_x,
-                    METRIC_VALUE_Y,
-                    str(value),
-                    size=METRIC_VALUE_SIZE,
-                    weight=700,
-                    fill=theme.accent,
-                    anchor="middle",
-                )
-            )
-            parts.append(
-                _text(center_x, METRIC_LABEL_Y, label, size=12, fill=theme.muted, anchor="middle")
-            )
-
-        parts.append(_secondary_line_svg(stats, theme))
+        # Primary metric row (hero metric in accent — the card's focal layer).
+        parts.append(_hero_svg(stats, theme))
+        parts.append(_ledger_svg(stats, theme))
 
         # Provider table with an explicit percentage denominator
         # (proposal section 26 rule 6: percentages state their denominator).
@@ -449,7 +519,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         for i in range(_visible_rows(stats)):
             parts.append(_provider_row_svg(i, stats, max_attributed, denominator, theme))
 
-        chips_top = _chips_top(stats)
+        panel_top = _panel_top(stats)
         if _has_more_line(stats):
             more_y = ROWS_TOP + MAX_PROVIDER_ROWS * ROW_HEIGHT + 14
             remaining = len(stats.providers) - MAX_PROVIDER_ROWS
@@ -457,9 +527,8 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
                 _text(PADDING, more_y, f"+{remaining} more", size=12, fill=theme.muted)
             )
 
-        parts.append(_evidence_chips_svg(stats, theme, chips_top))
-        parts.append(_privacy_chips_svg(stats, theme, chips_top + CHIP_ROW_STEP))
-        divider2_y = chips_top + CHIP_ROW_STEP + CHIP_HEIGHT + FOOTER_GAP_ABOVE
+        parts.append(_evidence_panel_svg(stats, theme, panel_top))
+        divider2_y = panel_top + PANEL_HEIGHT + FOOTER_GAP_ABOVE
 
     # Footer.
     parts.append(_line(PADDING, divider2_y, WIDTH - PADDING, divider2_y, stroke=theme.border))
