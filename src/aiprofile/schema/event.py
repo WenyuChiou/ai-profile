@@ -68,6 +68,18 @@ class AceEvent:
     sources: tuple[ProvenanceSource, ...]
     recorded_at: str | None = None
     schema_version: str = ACE_SCHEMA_VERSION
+    #: Derivation marker (gate-4 High): True iff this event is the product
+    #: of a multi-input merge_event_group reduction. Envelope metadata like
+    #: recorded_at — excluded from the canonical payload and from identity.
+    #: The source-count heuristic it replaces was bypassable: leaves
+    #: sharing one provenance key merged into a single-source result, and
+    #: it wrongly rejected schema-valid multi-source leaf productions.
+    #: Like every raw-constructor field it is honored, not re-derived:
+    #: rebuilding a merged result with merged=False (dataclasses.replace
+    #: or a raw AceEvent(...) call) forges derivation and is
+    #: out-of-contract — build_event and merge_event_group are the only
+    #: sanctioned constructors.
+    merged: bool = False
 
 
 def _identity_key(value: str | None, raw: str | None) -> str:
@@ -303,19 +315,21 @@ def merge_event_group(events: list[AceEvent] | tuple[AceEvent, ...]) -> AceEvent
         # order-dependence can arise regardless of leaf/merged status — the
         # input is returned unchanged (independently verified in review).
         return first
-    # LEAF-ONLY boundary, enforced (verification review, 2026-07-14): a
-    # leaf production carries exactly one provenance source. A previously
-    # merged event smuggled back in would have its values re-ranked against
-    # POOLED provenance, so nested composition could differ from the flat
-    # N-ary reduction over the same leaves — the exact order-dependence
-    # this API exists to prevent. Callers must pass ALL leaves in one call.
+    # LEAF-ONLY boundary, enforced via the explicit derivation marker
+    # (gate-4 High replaced the bypassable source-count heuristic): a
+    # previously merged event smuggled back in would have its values
+    # re-ranked against POOLED provenance, so nested composition could
+    # differ from the flat N-ary reduction over the same leaves — the
+    # exact order-dependence this API exists to prevent. Schema-valid
+    # multi-source LEAF productions (future notes/git-ai/manual imports)
+    # remain accepted. Callers must pass ALL leaves in one call.
     for e in events:
-        if len(e.sources) != 1:
+        if e.merged:
             raise SchemaValidationError(
-                "merge_event_group accepts leaf productions only (exactly"
-                " one provenance source per event) — pass every leaf of the"
-                " identity in a single call; nested/incremental composition"
-                " is not ingestion-order-free"
+                "merge_event_group accepts leaf productions only — this"
+                " input is itself a merged result, and nested/incremental"
+                " composition is not ingestion-order-free; pass every leaf"
+                " of the identity in a single call"
             )
 
     # Union by (source_type, source_reference); on key collision the HIGHER
@@ -407,6 +421,7 @@ def merge_event_group(events: list[AceEvent] | tuple[AceEvent, ...]) -> AceEvent
         sources=merged_sources,
         recorded_at=recorded[0] if recorded else None,
         schema_version=first.schema_version,
+        merged=True,
     )
 
 

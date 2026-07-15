@@ -203,16 +203,21 @@ boundary.
 
 `repository_uid` is stable across machine paths and never published:
 
-- If the repository has an `origin` remote: `remote:v3:<canonical>` using
-  the **versioned, INJECTIVE canonicalization algorithm of ADR-016 v3**
-  (G2-01; Gate-3 C-01/H-01/M-04): remote identity requires a positive
-  marker; credentials strip at the last `@`; query/fragment strip in every
-  syntax; alias-convergent hosts (documented: github.com) canonicalize as
-  `host/case-folded-path`, every other host as `scheme://host:port/path`
-  with scheme retained and the port explicit — self-delimiting, so no
+- If the repository has an `origin` remote: `remote:v4:<canonical>` using
+  the **versioned, INJECTIVE canonicalization algorithm of ADR-016 v4**
+  (G2-01; Gate-3 C-01/H-01/M-04; gate-4 M-4/M-5): remote identity requires
+  a positive marker; credentials strip at the last `@`; query/fragment
+  strip in every syntax; ports normalize to canonical decimal (`:0443` ≡
+  `:443`) and absent ports resolve to the scheme default. Alias-convergent
+  hosts (documented: github.com) canonicalize as `host/case-folded-path`
+  **only on their documented `(scheme, effective-port)` endpoints**
+  (`ssh:22` / `https:443` / `git:9418`); every other endpoint — and every
+  other host — canonicalizes as `scheme://host:port/path` with scheme
+  retained and the effective port explicit — self-delimiting, so no
   concatenation forgery can collide two identities. Changing any rule
-  bumps the algorithm version; different versions never compare equal.
-- Otherwise: `local:v3:<full 64-hex sha256(salt || resolved-path)>` over
+  bumps the algorithm version (v3 → v4 was exactly such a change);
+  different versions never compare equal.
+- Otherwise: `local:v4:<full 64-hex sha256(salt || resolved-path)>` over
   the CASE-PRESERVED resolved path (Gate-3 C-02: case-insensitive
   filesystems converge via `Path.resolve()` itself; case-distinct POSIX
   directories correctly split), using the per-install salt created by

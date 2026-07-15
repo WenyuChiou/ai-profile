@@ -732,3 +732,66 @@ def test_merge_event_group_rejects_non_leaf_inputs():
     # The flat reduction over all leaves remains the supported path.
     flat = merge_event_group([a, b, c])
     assert flat.model == "mid-model"
+
+
+def test_leaf_guard_not_bypassable_via_source_dedup():
+    """Gate-4 High regression: two leaves sharing one provenance key merge
+    into a result whose deduplicated source set has cardinality 1 — the
+    old source-count heuristic accepted it for nested composition. The
+    merged marker must reject it regardless. Confirmed failing pre-fix
+    (nested selected a different model than the flat reduction)."""
+    from aiprofile.schema.event import merge_event_group
+
+    l1 = _make_ai_event(
+        model=None,
+        model_raw=None,
+        sources=(
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"),
+        ),
+    )
+    l2 = _make_ai_event(
+        model="zeta",
+        model_raw="Zeta",
+        sources=(
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.IMPORTED, "ai-provider"),
+        ),
+    )
+    merged = merge_event_group([l1, l2])
+    assert len(merged.sources) == 1  # dedup collapsed the shared key
+    coauthor = _make_ai_event(
+        model="alpha",
+        model_raw="Alpha",
+        sources=(
+            ProvenanceSource(
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.DECLARED, "co-authored-by"
+            ),
+        ),
+    )
+    with pytest.raises(SchemaValidationError, match="merged"):
+        merge_event_group([merged, coauthor])
+    flat = merge_event_group([l1, l2, coauthor])
+    assert flat.model == "alpha"  # declared coauthor outranks imported-only zeta
+
+
+def test_valid_multi_source_leaf_productions_are_mergeable():
+    """Gate-4 M-2 regression: the schema permits one-or-more sources per
+    production (future notes/git-ai/manual imports); a schema-valid
+    multi-source LEAF must be accepted by multi-event reductions.
+    Confirmed failing pre-fix (SchemaValidationError on valid input)."""
+    from aiprofile.schema.event import merge_event_group
+
+    multi_source_leaf = _make_ai_event(
+        sources=(
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider"),
+            ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-tool"),
+        ),
+    )
+    other = _make_ai_event(
+        sources=(
+            ProvenanceSource(
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.DECLARED, "co-authored-by"
+            ),
+        ),
+    )
+    merged = merge_event_group([multi_source_leaf, other])
+    assert len(merged.sources) == 3

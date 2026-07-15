@@ -122,3 +122,105 @@ def test_first_ever_render_failure_publishes_nothing(tmp_path, monkeypatch):
 
     leftovers = sorted(p.name for p in out.iterdir()) if out.exists() else []
     assert leftovers == [], leftovers
+
+
+def _zero_stats():
+    from aiprofile.viz import (
+        EvidenceTotals,
+        Period,
+        PrivacySplit,
+        Totals,
+        VizStats,
+    )
+    return VizStats(
+        schema_version="0.1.0",
+        period=Period(None, None, "All time"),
+        totals=Totals(0, 0, 0, 0, 0, 0),
+        providers=(),
+        provider_count=0,
+        evidence=EvidenceTotals(0, 0, 0, 0, 0, 0),
+        privacy=PrivacySplit(0, 0, False),
+        generated_on="2026-07-14",
+    )
+
+
+def test_m6_preexisting_user_backup_sentinel_survives(tmp_path):
+    """Gate-4 M-6: publication staging must own its artifacts — a
+    successful render must never clobber a user's own `<target>.bak`
+    file. Confirmed failing pre-fix (sentinel destroyed)."""
+    out = tmp_path / "dist"
+    out.mkdir()
+    (out / "summary-light.svg").write_text("OLD", encoding="utf-8")
+    sentinel = out / "summary-light.svg.bak"
+    sentinel.write_text("USER-SENTINEL", encoding="utf-8")
+
+    export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+
+    assert sentinel.read_text(encoding="utf-8") == "USER-SENTINEL"
+    assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"
+
+
+def test_m3_restore_failure_still_restores_remaining_assets(tmp_path, monkeypatch):
+    """Gate-4 M-3: a failure DURING rollback must not abandon the other
+    restorations — remaining assets are restored and the failed asset's
+    backup is retained as recovery data. Confirmed failing pre-fix
+    (restore loop stopped at the first OSError)."""
+    import os as os_mod
+
+    out = tmp_path / "dist"
+    out.mkdir()
+    for name, content in (
+        ("summary-light.svg", "OLD-LIGHT"),
+        ("summary-dark.svg", "OLD-DARK"),
+        ("profile.json", "OLD-JSON"),
+    ):
+        (out / name).write_text(content, encoding="utf-8")
+
+    real_replace = os_mod.replace
+
+    def flaky_replace(src, dst):
+        s, d = str(src), str(dst)
+        # fail installing the LAST target's new content...
+        if d.endswith("profile.json") and ".tmp" in s:
+            raise OSError("install failure")
+        # ...and fail restoring the FIRST target during rollback
+        if d.endswith("summary-light.svg") and ".bak" in s:
+            raise OSError("restore failure")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(export_mod.os, "replace", flaky_replace)
+    with pytest.raises(RenderError):
+        export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+
+    # dark restored despite light's restore failing:
+    assert (out / "summary-dark.svg").read_text(encoding="utf-8") == "OLD-DARK"
+    # json never replaced:
+    assert (out / "profile.json").read_text(encoding="utf-8") == "OLD-JSON"
+    # light's recovery data retained:
+    baks = list(out.glob("summary-light.svg.*.bak"))
+    assert baks and baks[0].read_text(encoding="utf-8") == "OLD-LIGHT"
+
+
+def test_l1_cleanup_failure_does_not_report_publication_failure(tmp_path, monkeypatch):
+    """Gate-4 L-1: once every new target is installed, publication has
+    succeeded — a backup-cleanup unlink failure must not raise.
+    Confirmed failing pre-fix (RenderError after full publication)."""
+    out = tmp_path / "dist"
+    out.mkdir()
+    (out / "summary-light.svg").write_text("OLD", encoding="utf-8")
+
+    from pathlib import Path as _P
+
+    real_unlink = _P.unlink
+
+    def flaky_unlink(self, missing_ok=False):
+        if str(self).endswith(".bak"):
+            raise OSError("cleanup failure")
+        return real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(_P, "unlink", flaky_unlink)
+    paths = export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+    assert [p.name for p in paths] == [
+        "summary-light.svg", "summary-dark.svg", "profile.json"
+    ]
+    assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"

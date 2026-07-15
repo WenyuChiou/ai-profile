@@ -43,8 +43,25 @@ Scope: docs/mvp.md. Exit criteria:
       regressions — headline: **uid algorithm v3** (injective; supersedes
       v2 above), config-last atomic scans, alias-group migration,
       schema-owned canonical vocabulary with independent privacy-boundary
-      collapse, pair-atomic merge. Persistent-reviewer verdict: APPROVE
-      (23/23 conformant; adversarial fuzz found no survivor).
+      collapse, pair-atomic merge. Persistent-reviewer verdict at the
+      time: APPROVE — **superseded by the two later rounds below**, which
+      each found real survivors in this round's fixes.
+- [x] Verification review round (2026-07-14 evening; NOT READY, 3
+      reproducible counterexamples against the Gate-3 fixes — headline:
+      uid v3's github-alias branch collapsed all 42 scheme×port
+      combinations) resolved: all accepted and fixed with pre-fix-failing
+      regressions (`docs/reviews/gate-disposition.md`, appended section).
+- [x] Gate-4 review round (2026-07-14 late evening; NOT READY, 8
+      findings — headline: the leaf-only merge guard was bypassable via
+      source dedup, and the endpoint-qualified uid change had shipped
+      without its mandatory version bump) resolved: all 8 accepted and
+      fixed — explicit `merged` derivation marker, **uid algorithm v4**
+      (honest bump + decimal port normalization), attempt-owned export
+      transaction files with best-effort-stated rollback, the real
+      42-case grid test committed (`docs/reviews/gate-disposition.md`,
+      gate-4 section). Lesson recorded: the uid algorithm has NOT been
+      adversarially validated "with no survivor" — three consecutive
+      external rounds each falsified the previous round's closure claim.
 
 ## v0.1 OSS release (after conformance)
 

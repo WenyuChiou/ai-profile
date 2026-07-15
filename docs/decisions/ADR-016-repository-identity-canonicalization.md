@@ -1,9 +1,15 @@
 # ADR-016: Versioned repository identity canonicalization
 
-Status: accepted (2026-07-14; **v3** — revised twice: Gate 2 conformance
-review created v2 closing G2-01's case-folding merges; the Gate-3
-implementation review then proved v2 itself unsafe (findings C-01, C-02,
-H-01, M-04) and v3 replaces it)
+Status: accepted (2026-07-14; **v4** — revised three times: Gate 2
+conformance review created v2 closing G2-01's case-folding merges; the
+Gate-3 implementation review proved v2 unsafe (findings C-01, C-02,
+H-01, M-04) and v3 replaced it; the gate-4 review (M-4, M-5) bumped v3
+to v4 because the endpoint-qualified alias rule below CHANGED canonical
+output for existing github origins while the version string stayed
+"v3" — violating this ADR's own versioning rule — and because
+leading-zero ports (`:0443`) split from their decimal equivalents. v4 =
+the endpoint-qualified rule + canonical-decimal port normalization,
+under the honest version string.)
 
 ## Context
 
@@ -18,14 +24,14 @@ to be the same; local-path lowercasing merged case-distinct directories
 on case-sensitive filesystems; and credential stripping at the FIRST `@`
 retained secret fragments.
 
-## Decision — algorithm v3
+## Decision — algorithm v4
 
 Identity is a pure, versioned function in `gitio.py`; the algorithm
 version is embedded and different versions never compare equal:
 
 ```text
-remote:v3:<canonical>      # see below
-local:v3:<full 64-hex sha256(salt || case-preserved resolved path)>
+remote:v4:<canonical>      # see below
+local:v4:<full 64-hex sha256(salt || case-preserved resolved path)>
 ```
 
 ### Remote canonical form (injective by construction — C-01)
@@ -40,8 +46,11 @@ local:v3:<full 64-hex sha256(salt || case-preserved resolved path)>
 2. **Credentials are stripped at the LAST `@` before the first slash**
    (RFC 3986 authority; H-01) in both URL and scp syntaxes — no userinfo
    substring can enter identity.
-3. **Query and fragment are stripped for every syntax** (M-04).
-4. **Alias-convergent hosts** (documented list, v3: `github.com`):
+3. **Query and fragment are stripped for every syntax** (M-04). Ports
+   normalize to canonical decimal before any comparison or serialization
+   (gate-4 M-5): `:0443`, `:00022`, `:09418` are the same endpoints as
+   `:443`, `:22`, `:9418`.
+4. **Alias-convergent hosts** (documented list, v4: `github.com`):
    convergence applies ONLY to the documented `(scheme, effective-port)`
    endpoints — `ssh:22`, `https:443`, `git:9418` — where canonical =
    `host/path` with the path case-folded BEFORE the `.git` suffix strip
@@ -49,8 +58,8 @@ local:v3:<full 64-hex sha256(salt || case-preserved resolved path)>
    host (`ftp://github.com`, `https://github.com:444`, ...) retains
    structured scheme/port identity per rule 5 (verification-review
    finding, 2026-07-14: switching on host alone collapsed all 42
-   scheme x port combinations into one uid — the collision class v3
-   exists to eliminate). Path case-folding still applies on alias hosts
+   scheme x port combinations into one uid — the collision class this
+   algorithm exists to eliminate). Path case-folding still applies on alias hosts
    in the structured branch (it is a property of the host's namespace,
    not of the transport).
 5. **Every other host**: canonical = `scheme://host:port/path` — scheme

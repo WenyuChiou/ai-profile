@@ -150,7 +150,7 @@ def get_origin_url(repo_path: Path) -> str | None:
 
 #: uid algorithm version (ADR-016). Any rule change bumps this; uids with
 #: different versions never compare equal.
-UID_ALGORITHM = "v3"
+UID_ALGORITHM = "v4"
 
 #: Hosts whose repository namespace is BOTH path-case-insensitive AND
 #: transport-convergent — documented exceptions only (gate C-01): for every
@@ -166,7 +166,7 @@ _ALIAS_CONVERGENT_HOSTS = frozenset({"github.com"})
 #: NOT the documented namespace and retain structured scheme/port identity
 #: (safe split), otherwise the host check alone would collapse every
 #: scheme x port combination into one uid — the exact distinct-repository
-#: collision class uid v3 exists to eliminate.
+#: collision class the uid algorithm exists to eliminate.
 _ALIAS_ALLOWED_ENDPOINTS = frozenset({("ssh", "22"), ("https", "443"), ("git", "9418")})
 
 #: Default ports per scheme: an absent port resolves to the scheme default
@@ -186,8 +186,8 @@ _SCP_FORM = re.compile(
 _LOCAL_PATH_SHAPE = re.compile(r"^(?:[A-Za-z]:[\\/]|\.{1,2}[\\/]|~[\\/]|\\\\|/)")
 
 
-def canonicalize_remote_v3(url: str) -> str | None:
-    """ADR-016 algorithm v3: INJECTIVE canonical identity for an origin
+def canonicalize_remote(url: str) -> str | None:
+    """ADR-016 algorithm (version UID_ALGORITHM): INJECTIVE canonical identity for an origin
     URL, or None when the shape is unusable or filesystem-local.
 
     Structure (gate C-01 — v2's `host_<port>` concatenation was forgeable
@@ -261,6 +261,10 @@ def _canonical_identity(
     scheme: str, host: str, port: str | None, path: str
 ) -> str | None:
     host = host.lower()
+    if port:
+        # Numeric normalization (gate-4 M-5): ':0443' and ':443' are the
+        # same endpoint; compare and serialize in canonical decimal form.
+        port = str(int(port))
     if host in _ALIAS_CONVERGENT_HOSTS:
         # Path-case insensitivity is a property of the HOST's namespace,
         # so fold regardless of transport — and BEFORE the suffix strip so
@@ -290,7 +294,7 @@ def repository_uid(repo_path: Path, salt: str) -> str:
     resolved path."""
     origin = get_origin_url(repo_path)
     if origin:
-        normalized = canonicalize_remote_v3(origin)
+        normalized = canonicalize_remote(origin)
         if normalized:
             return f"remote:{UID_ALGORITHM}:{normalized}"
     # Case-PRESERVED resolved path (gate C-02): lowercasing merged distinct
