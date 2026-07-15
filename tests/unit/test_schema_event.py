@@ -795,3 +795,66 @@ def test_valid_multi_source_leaf_productions_are_mergeable():
     )
     merged = merge_event_group([multi_source_leaf, other])
     assert len(merged.sources) == 3
+
+
+def test_l03_envelope_metadata_excluded_from_equality():
+    """Gate-5 L-03: `recorded_at` and `merged` are envelope metadata —
+    excluded from the canonical payload, so dataclass equality/hash must
+    exclude them too, or sets/caches disagree with canonical event
+    equality. Confirmed failing pre-fix (identical payloads compared
+    unequal)."""
+    src = ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")
+    kwargs = dict(
+        actor_type=ActorType.AI,
+        repository_uid="remote:v4:github.com/o/r",
+        commit_sha="a" * 40,
+        timestamp="2026-07-14T12:00:00+00:00",
+        sources=[src],
+        provider="anthropic",
+    )
+    l1 = build_event(**kwargs)
+    l2 = build_event(**kwargs)
+    merged = merge_event_group([l1, l2])
+
+    assert merged.merged and not l1.merged
+    assert canonical_json(merged) == canonical_json(l1)
+    assert merged == l1
+    assert hash(merged) == hash(l1)
+
+    stamped = build_event(**kwargs, recorded_at="2026-07-15T00:00:00+00:00")
+    assert canonical_json(stamped) == canonical_json(l1)
+    assert stamped == l1
+    assert hash(stamped) == hash(l1)
+
+
+def test_m01_derivation_state_is_envelope_only_never_persisted():
+    """Gate-5 M-01 (pin, not a fix): the approved boundary is that
+    derivation state lives on the in-memory scan path only — it never
+    enters the canonical payload nor the SQLite representation, so
+    rehydrated events are NOT re-mergeable and schema.md documents that
+    contract."""
+    import sqlite3
+
+    src = ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")
+    event = build_event(
+        actor_type=ActorType.AI,
+        repository_uid="remote:v4:github.com/o/r",
+        commit_sha="a" * 40,
+        timestamp="2026-07-14T12:00:00+00:00",
+        sources=[src],
+        provider="anthropic",
+    )
+    payload = to_dict(event)
+    assert "merged" not in json.dumps(payload)
+    assert "recorded_at" not in json.dumps(payload)
+
+    from aiprofile.storage.db import migrate
+
+    conn = sqlite3.connect(":memory:")
+    try:
+        migrate(conn)
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(events)")}
+        assert cols, "events table missing"
+        assert "merged" not in cols
+    finally:
+        conn.close()

@@ -104,16 +104,45 @@ which is authoritative).
     single version authority;
   - **M-3 + M-6 + L-1**: export rollback attempts EVERY restore
     (failures collected; unrestorable assets keep their backup, named
-    in the error), transaction artifacts are attempt-owned
-    (`<target>.<pid>.tmp/.bak` — user `.bak` files survive, concurrent
-    renders can't consume each other's files), and post-publication
-    cleanup failure is a warning, not a false `RenderError`; the
-    docstring now states the honest best-effort guarantee;
-  - **L-2**: the claimed 42-case scheme×port grid is now a real
-    committed parameterized test computing expected equivalence classes
-    from the rule.
+    in the error), transaction artifacts gained pid-scoped names (at
+    the time claimed attempt-owned — the gate-5 review showed pid =
+    process-owned, fixed with per-invocation ids in round 5), and
+    post-publication cleanup failure is a warning, not a false
+    `RenderError`; the docstring states a best-effort guarantee;
+  - **L-2**: the claimed 42-case scheme×port grid landed as a committed
+    exhaustive test (at the time a looped grid — converted to true
+    per-cell parametrize in round 5, finding L-02).
   Suite after the pass: **256 passed, 1 skipped**; ruff clean;
   integration/e2e green.
+
+- **Gate-5 review received and resolved** (2026-07-15):
+  `docs/reviews/gate-review.md` reviewed `4fdd490..78e2e05`, verdict
+  READY AFTER MINOR FIXES (0 Critical/High, 3 Medium, 4 Low) — all 7
+  accepted (`docs/reviews/gate-disposition.md`, gate-5 section), each
+  behavioral fix with a pre-fix-failing regression:
+  - **M-01**: the merge-purity closure claim is NARROWED to the
+    sanctioned in-memory scan path and made normative — schema.md §1
+    now defines derivation state (`merged`: envelope-only, never
+    serialized/persisted; rehydrated events are not re-mergeable in
+    v0.1; out-of-contract construction acknowledged), §8.3 states the
+    guard's scope; pinned by a canonical-payload + SQLite-schema
+    regression;
+  - **M-02**: export transaction ids are truly per-invocation
+    (`<target>.<pid>-<n>.tmp/.bak`); the concurrency contract honestly
+    REJECTS concurrent publication (can mix generations) instead of
+    claiming whole-generation isolation; recovery-`.bak` survival
+    regression;
+  - **M-03**: port tokens are bounded before int conversion (>65535 or
+    >5 digits → unusable origin → local fallback, the fail-safe
+    direction) — a 5000-digit port no longer escapes as ValueError;
+  - **L-01**: failed first-install retractions are named in the raised
+    RenderError (no longer log-only);
+  - **L-03**: envelope fields (`recorded_at`, `merged`) excluded from
+    dataclass equality/hash — value equality now agrees with canonical
+    event equality; semantics documented in schema.md §1;
+  - **L-02/L-04**: the 42-cell grid is now genuinely per-cell
+    parametrized (42 reported cases); export-test fixture deduplicated.
+  Suite after the pass: **302 passed, 1 skipped**; ruff clean.
 
 ## Open items
 

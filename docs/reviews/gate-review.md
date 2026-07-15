@@ -1,146 +1,121 @@
 # Current Gate implementation review
 
-Date: 2026-07-14
-
-Reviewer role: independent Principal Software Engineer
-
-Reviewed range: `de4a78a..4fdd490`
-
-Gate intent: close the three counterexamples from the preceding verification review: UID v3 endpoint collisions, mixed-generation output publication, and unsafe nested merge composition.
+Date: 2026-07-15
+Review range: `4fdd49016431200b7390c144f9023cc8e700521b..78e2e05519bc0de784790121a421f5fb0b4144d1`
+Reviewer posture: independent implementation verification; no design or implementation changes made.
 
 ## Executive summary
 
-This Gate is directionally correct but does not close the merge counterexample. It defines a leaf as an event with exactly one deduplicated provenance source. A merged result can still have one source when its inputs share a provenance key, so nested composition remains accepted and can produce different canonical data from a flat reduction. The same heuristic rejects legitimate unmerged events containing multiple sources, despite the approved schema permitting them.
+The Gate makes several correct, tested improvements: UID v4 is honestly versioned, documented GitHub endpoints are separated from nonstandard scheme/port combinations, leading-zero ports normalize, valid multi-source leaves are accepted, nested reductions produced through the sanctioned API are rejected, rollback continues after a restore failure, user-owned `.bak` files survive, and cleanup failure no longer reports a successful publication as failed.
 
-The GitHub endpoint change follows amended ADR-016 by restricting transport convergence to the documented scheme/effective-port set while retaining the ADR's alias-host path-folding rule. This review does not challenge that approved equivalence rule. Two conformance gaps remain: the algorithm changed without the required version bump, and numerically equivalent ports with leading zeroes split identities.
+The Gate nevertheless cannot close as submitted. Its principal correctness fix depends on a caller-controlled `merged` boolean that is absent from both the normative schema and persisted/canonical event representations. An adversarial probe outside the sanctioned constructor path reset that public dataclass field and reproduced the previously known nested-versus-flat divergence (`zeta` versus `alpha`), demonstrating that the claimed boundary is conventional rather than representational. The export disposition also overstates isolation: PID-derived filenames are process-owned rather than attempt-owned, and the unlocked three-target publication sequence cannot guarantee a whole generation under concurrent writers. Additional reproduced failures exist for oversized numeric ports and first-render rollback when retraction itself fails.
 
-The export rollback handles the originally demonstrated replacement failure when every rollback operation succeeds. It does not provide the absolute no-mixed-generation guarantee still claimed by its docstring and progress documents: a failure during rollback stops restoration and can leave new, missing, and backup assets together. Fixed backup names introduce an additional clobber/concurrency risk.
+No evidence was found that this Gate introduces Git AI/Git Notes/GitHub API/profile-statistics duplication, changes aggregation units, weakens the `unknown` versus `human` distinction, permits renderers to read Git or SQLite, or leaks repository identity through validated `VizStats`. Those areas remain consistent with the approved MVP.
 
-The broader architecture remains aligned with the approved MVP. No dependency-direction regression, aggregation-unit mixing, public-field leakage through `VizStats`, unnecessary external duplication, or performance regression was found. The implementation remains a narrow local-first trailer-to-SQLite-to-aggregate-to-static-assets vertical slice.
+## Review basis and verification performed
 
-## Verification evidence
+- Read the repository guidance and current design set, including the architecture, ACE schema, MVP, privacy threat model, roadmap/progress, landscape/non-duplication analysis, all ADRs, prior Gate reports/dispositions, README, contributing guide, packaging configuration, implementation, and tests.
+- Inspected the complete pinned diff and traced each Gate-4 disposition to code, documentation, and regression coverage.
+- Ran `pytest -o addopts= -q`: `256 passed, 1 skipped in 22.52s`.
+- Ran `ruff check .`: `All checks passed!`.
+- Re-ran focused adversarial probes for merge purity, oversized ports, and export rollback failure. The merge probe reproduced grouping-dependent output after `dataclasses.replace(result, merged=False)`; the port probe raised an uncaught `ValueError`; the rollback probe left `summary-light.svg` installed while the raised error reported only the later install failure.
+- Reviewed renderer/import boundaries, aggregation units, privacy canaries, deterministic SVG/JSON coverage, rewritten-history coverage, malformed trailers, unknown commits, and fixture repositories.
 
-The review read the current architecture, schema, MVP, privacy model, roadmap, progress ledger, disposition record, ADR-016, contribution guidance, the complete pinned diff, and the affected production/tests. Static review used independent architecture, security, performance, code-quality, requirements, and bug lenses. Findings below were retained only after direct code inspection or runtime reproduction.
+## Findings
 
-Fresh repository verification:
+### M-01 — Medium — The merge-purity boundary is conventional, non-durable, and absent from the normative schema
 
-```text
-python -m pytest tests -p no:cacheprovider
-245 passed, 1 skipped in 22.99s
+**Description:** `AceEvent.merged` is the sole guard that distinguishes a leaf from a prior N-ary reduction (`src/aiprofile/schema/event.py:68-82, 327, 424`). It is a caller-controlled field on the publicly exported dataclass, is omitted by `to_dict()`/`canonical_json()`, and is not stored by the SQLite event insert or schema (`src/aiprofile/storage/store.py:143-168`; `src/aiprofile/storage/migrations.py:38-57`). `docs/schema.md`, despite declaring itself the source of truth, does not define this merge-controlling envelope state, its default, its equality semantics, or its lifecycle. The code comment explicitly declares raw reconstruction and `dataclasses.replace` out of contract, and no supported v0.1 CLI path rehydrates a stored event and merges it again. However, a direct adversarial probe outside that sanctioned path reset the field and reproduced the prior counterexample: nested selected `zeta`, while the flat reduction selected `alpha`.
 
-python -m ruff check src tests
-All checks passed!
-```
+**Impact:** The current scanner's sanctioned in-memory path is protected, but the Gate's unconditional closure claim is stronger than its event contract. A contributor implementing a schema round-trip, persistence reader, or future adapter has no normative way to preserve the marker and can reopen grouping-dependent attribution.
 
-The skip is the documented POSIX case-sensitive filesystem fixture, unavailable on Windows. The test process also emitted environment warnings about the locally installed Requests dependency combination and Pydantic v1 compatibility on Python 3.14; neither warning came from this project or failed the suite.
+**Recommendation:** Narrow the closure claim to the sanctioned in-memory scanner path or make derivation state part of an enforceable, documented representation before future round-trip/import boundaries use this API. Add a regression for whichever public boundary is approved.
 
-Independent counterexamples:
+### M-02 — Medium — Export artifacts are not attempt-owned and concurrent whole-generation publication is not guaranteed
 
-- Merging a declared `git_trailer/ai-provider` leaf with no model and an imported leaf on the same key carrying model `zeta` deduplicates the result to one source. That result passes the new leaf guard; nested reduction against a declared co-author leaf carrying `alpha` selected `zeta`, while the flat three-leaf reduction selected `alpha`.
-- A schema-valid event constructed with two provenance sources is rejected when passed to a multi-event merge.
-- Injecting failure during replacement and again during the first restore left the light SVG new, the dark SVG missing, the JSON old, and two `.bak` files.
-- A successful render destroyed a pre-existing `summary-light.svg.bak` sentinel.
-- Injecting backup-cleanup failure raised `RenderError` after all three new outputs were already live.
+**Description:** `write_outputs()` documents `<target>.<pid>.tmp/.bak` as attempt-owned and states that each concurrent render publishes a whole generation (`src/aiprofile/export.py:35-47`). A PID identifies a process, not a call: same-process concurrent/re-entrant calls share paths, and PID reuse can collide with crash debris. More fundamentally, three public targets are moved/replaced independently with no output-directory serialization or generation-level atomic switch (`src/aiprofile/export.py:58-104`). A writer's rollback can restore over another writer's newly published target, yielding SVG and JSON from different generations.
 
-## Findings summary
+**Impact:** The M-6 disposition and progress record overclaim closure. Concurrent library calls can clobber transaction files, and concurrent CLI processes can publish a mixed generation or undo another successful writer.
+
+**Recommendation:** Use a true per-invocation transaction identity and either serialize publication per output directory or narrow the contract to explicitly reject concurrent writers. Add deterministic interleaving tests before claiming isolation or whole-generation publication.
+
+### L-01 — Low — Failed first-render retraction is absent from the raised error
+
+**Description:** During rollback, failure to unlink a first-ever installed target is logged (`src/aiprofile/export.py:74-86`) but is not added to `unrestored`, so the raised `RenderError` reports only the original install failure. The direct probe started with no outputs, failed installation of `summary-dark.svg`, and then failed retraction of the already installed `summary-light.svg`; the asset remained. The default warning did name `summary-light.svg`, but a programmatic caller inspecting only the exception cannot discover the partial publication.
+
+**Impact:** This requires two filesystem failures and is visible in normal logs, so operational likelihood is low. The exception contract is still incomplete, and suppressed/redirected logging can hide the surviving partial asset.
+
+**Recommendation:** Track and report failed retractions separately from failed restores, state the resulting partial-publication condition precisely, and add a regression that injects failure into first-install rollback.
+
+### M-03 — Medium — Oversized numeric ports escape the UID canonicalization error contract
+
+**Description:** The URL parser accepts an unbounded `\d+` port and `_canonical_identity()` normalizes it with `str(int(port))` (`src/aiprofile/gitio.py:231, 263-267`). A direct probe using a 5,000-digit port raised Python's integer-string conversion `ValueError` rather than returning a canonical identity/`None` or a project error.
+
+**Impact:** A repository with a malformed or adversarial origin can abort scanning outside the normal `AiProfileError` handling path. The full 42-cell scheme/port test and leading-zero tests do not cover invalid-size ports.
+
+**Recommendation:** Bound and validate the decimal port token before conversion, translate rejection into the established failure contract, and add oversized-port coverage.
+
+### L-02 — Low — The claimed parameterized 42-case UID grid is one looped test
+
+**Description:** The disposition and progress record call the scheme-by-port grid parameterized (`docs/reviews/gate-disposition.md:90`; `docs/progress.md:73, 112-113`), but `tests/unit/test_gitio_uid.py:392-412` is one test with nested loops. It evaluates all 42 cells, but the first failure aborts the rest and pytest cannot report cell-specific cases.
+
+**Impact:** Functional coverage exists, so correctness risk is low; however, the evidence record is inaccurate and failures are less diagnosable than claimed.
+
+**Recommendation:** Either use actual parameter cases with meaningful IDs or correct the documentation to call it a looped exhaustive grid.
+
+### L-03 — Low — Internal derivation metadata changes dataclass equality while canonical payloads remain identical
+
+**Description:** `merged` is excluded from canonical serialization but remains a normal dataclass comparison/hash field. A leaf and `merge_event_group([leaf, leaf])` can have byte-identical canonical JSON while comparing unequal and producing different hashes solely because the latter has `merged=True`.
+
+**Impact:** Sets, caches, tests, and future deduplication code can disagree with canonical event equality, increasing maintenance risk around an already subtle boundary.
+
+**Recommendation:** Specify equality semantics for envelope metadata and align dataclass comparison/hash behavior with the normative event-value contract.
+
+### L-04 — Low — Export tests duplicate the same `VizStats` fixture construction
+
+**Description:** `tests/unit/test_export_atomic.py` adds `_zero_stats()` but two earlier tests still construct the same full zero-valued `VizStats` inline (`lines 14-46, 67-100, 127-146`).
+
+**Impact:** Future visualization-contract changes require synchronized edits at three sites and make failure-injection tests noisier than necessary.
+
+**Recommendation:** Reuse the existing helper throughout the module when the Gate findings are corrected.
+
+## Verified areas without findings
+
+### Architecture and MVP consistency
+
+- Collection, schema, storage, aggregation, privacy, visualization, rendering, and export boundaries remain recognizable and dependency direction is inward toward validated contracts.
+- Renderers consume `VizStats` and pre-rendered strings only; static import coverage prevents Git/SQLite/config access from rendering/export layers.
+- The diff does not add GitHub networking, Git Notes ingestion/writing, Git AI line attribution, hosted services, extra cards, period filtering, or other post-v0.1 scope.
+
+### Aggregation correctness
+
+- Unique commits, AI-attributed commits, actor presences, provider-attributed commits, active author-local days, and evidence records remain separately named and computed.
+- One multi-AI commit can contribute one unique commit and multiple actor presences without conflating the measures; provider commit rows use per-provider distinct-commit sets.
+- Evidence counts remain record-based and validated against their own population.
+- Rewritten-history replacement and duplicate-scan idempotence tests pass.
+
+### Privacy and security
+
+- `unknown` remains distinct from explicitly declared `human`; there is no source-style inference.
+- `VizStats` cannot represent repository UID/name/path, organization, prompt, commit SHA/message, email, raw provider/trailer value, or sub-date timestamp.
+- Excluded repositories fail closed, aggregate-only outputs retain counts without identity, and unrecognized raw provider values collapse before the public boundary.
+- SVG security allowlists, deterministic snapshots, and byte-level leak canaries pass. v0.1 still contains no GitHub authentication or network code.
+
+### Non-duplication and OSS readiness
+
+- The implementation consumes Git trailers and deliberately defers Git AI/Git Notes interoperability; it does not reproduce line-level attribution, GitHub API clients, generic profile statistics, contribution graphs, or third-party README-stat generators.
+- README, contributing guidance, privacy threat model, ADRs, and roadmap provide a coherent contributor entry point.
+- The roadmap honestly leaves packaged-install smoke testing, sample output, permissions/symlink hardening, broader diagnostic canaries, and release packaging open; those are release-readiness items rather than unacknowledged Gate completions.
+
+## Severity summary
 
 | Severity | Count |
 |---|---:|
 | Critical | 0 |
-| High | 1 |
-| Medium | 5 |
-| Low | 2 |
-
-## Findings
-
-### High — The leaf-only merge guard is bypassable
-
-**Description:** `src/aiprofile/schema/event.py:305-332` infers leaf status from `len(event.sources) == 1`. Source union deduplicates by `(source_type, source_reference)`, so two leaves sharing one provenance key can merge into a non-leaf event that still has exactly one source. That result is accepted by a later merge. A reproduced three-leaf case produced different canonical models for nested and flat reductions.
-
-**Impact:** Library callers and future adapters can still obtain grouping-dependent model, mode, or review values. The current scanner uses a flat reduction and is not directly affected, but the exported schema API does not enforce the completion claim made by this Gate.
-
-**Recommendation:** Enforce leaf status independently of the cardinality of the deduplicated semantic provenance set. Add a regression using same-key, different-evidence leaves that proves nested input is rejected.
-
-### Medium — Valid multi-source productions are rejected
-
-**Description:** The same source-count guard rejects an independently constructed event containing two valid provenance sources. `build_event` accepts and validates one-or-more sources, and `docs/schema.md` retains source union for future notes, Git AI, and manual imports; the approved contract does not define a leaf as exactly one source.
-
-**Impact:** The implementation narrows the schema/API without an approved contract change. Future import and reconciliation work can fail on valid data, and current library callers receive `SchemaValidationError` for schema-conformant inputs.
-
-**Recommendation:** Preserve the approved multi-source event contract and make merge-state validation independent of source count. Add a valid multi-source production regression.
-
-### Medium — Rollback failure still leaves mixed or missing public assets
-
-**Description:** `src/aiprofile/export.py:51-67` restores backups sequentially and stops on the first rollback `OSError`. The public docstring still says a mid-bundle failure leaves the previous generation fully intact, while the implementation comment acknowledges that a mix can remain. The added tests make the initial replacement fail but allow every rollback operation to succeed.
-
-**Impact:** A persistent lock, permission error, antivirus race, or filesystem fault can leave a new SVG, a missing SVG, an old JSON file, and backup files together. Static hosting or a README can then expose an inconsistent generation despite the command reporting failure.
-
-**Recommendation:** Align the public contract with the behavior actually guaranteed and add failure injection within rollback itself. The Gate must not claim no mixed generations unless restoration failure is handled and verified.
-
-### Medium — UID behavior changed without changing its algorithm version
-
-**Description:** The Gate changes canonical UID output for existing GitHub origin strings while leaving `UID_ALGORITHM = "v3"`. Both the code comment and `docs/schema.md:213-214` state that any canonicalization rule change bumps the algorithm version. The normative schema also still describes every alias-host origin as `host/case-folded-path`, omitting the new endpoint-qualified structured fallback.
-
-**Impact:** The same `remote:v3:` prefix now names different algorithms in `de4a78a` and `4fdd490`. Persisted configuration can migrate only opportunistically on rescan, and future maintainers have contradictory authoritative rules.
-
-**Recommendation:** Apply the repository's versioning rule or record an explicit pre-release exception for UID algorithms, and update the normative schema to match the endpoint-qualified ADR.
-
-### Medium — Numerically equivalent standard ports split identities
-
-**Description:** Effective ports are compared as strings. `:0443`, `:00022`, and `:09418` are not normalized to decimal before endpoint lookup, so they split from the equivalent documented endpoints `443`, `22`, and `9418`.
-
-**Impact:** Equivalent clones can receive different UIDs, weakening deduplication and most-restrictive policy resolution and permitting duplicate aggregate counts. This is a safe split rather than a destructive collision, but it violates stable canonical identity.
-
-**Recommendation:** Canonicalize numeric ports before endpoint comparison and structured serialization. Add leading-zero fixtures for each supported transport.
-
-### Medium — Fixed backup names can overwrite recovery data
-
-**Description:** `write_outputs` uses deterministic `<target>.bak` names with `os.replace`, which overwrites any existing backup. A reproduced successful render destroyed a pre-existing backup sentinel. Concurrent render processes also share the same `.tmp` and `.bak` names and can consume or delete each other's transaction files.
-
-**Impact:** A retry after a failed rollback can destroy the remaining recoverable generation. Concurrent CLI invocations can restore the wrong generation or lose local files in the output directory.
-
-**Recommendation:** Ensure each publication attempt owns and cleans only its own staging/backup artifacts, and define serialization behavior for concurrent publication to one output directory.
-
-### Low — Cleanup failure reports a false publication failure
-
-**Description:** Backup deletion occurs after all new targets are installed but remains inside the operation-level `OSError` handler. If a `.bak` unlink fails, the function raises `RenderError` even though the new generation is already fully published.
-
-**Impact:** Callers receive an inaccurate failure result and may retry a successful publication. Backup debris can also remain without a distinct cleanup diagnostic.
-
-**Recommendation:** Separate post-publication cleanup status from publication failure and add cleanup-failure coverage.
-
-### Low — The claimed 42-case UID regression is not present
-
-**Description:** `tests/unit/test_gitio_uid.py` checks a small set of documented and unsupported endpoints, not the stated six-scheme-by-seven-port grid. It only proves selected unsupported values differ from the canonical alias; it does not assert uniqueness among unsupported structured identities or vary their path case.
-
-**Impact:** The test and progress ledger overstate coverage. The suite remained green despite the reproduced leading-zero equivalent-port split, and the documented 42-case cross-grid is not committed.
-
-**Recommendation:** Replace the claim or implement the full parameterized grid with explicit equivalence classes, pairwise uniqueness expectations, normalized-port cases, and path-case variants that verify the ADR-approved convergence rule.
-
-## Architecture and MVP assessment
-
-- Architecture boundaries remain consistent: scanner owns orchestration, schema owns event validation/merge rules, storage remains below scanner, privacy remains the redaction boundary, and render/export consume `VizStats` rather than Git or SQLite.
-- Aggregation units remain separated: unique commits, actor presences, provider-attributed commits, active days, and evidence records are not conflated. Unknown remains distinct from human.
-- No new public privacy field, raw-value leak, or implementation divergence from ADR-016's approved path-folding rule was found.
-- No GitHub API, Git Notes importer, generic profile-statistics generator, hosted service, or source-style inference was introduced. The Gate does not duplicate Git AI or generic README SVG/statistics projects.
-- Runtime cost remains bounded and appropriate for v0.1. The new endpoint lookup is constant time; rollback handles three fixed assets; merge validation adds one linear pass.
-- OSS release work remains incomplete as documented: sample output, clean-install/package smoke testing, additional hardening, packaged release, and upgrade policy are still open.
-
-## Strengths
-
-- The allowed endpoint set closes the previously demonstrated cross-scheme/port collapse for the sampled cases.
-- The original replacement-stage failure now restores the prior generation when rollback succeeds.
-- Legacy tests no longer demonstrate the prohibited incremental fold.
-- Full tests and lint are green, with the platform-specific skip disclosed.
-- No unnecessary abstraction or dependency was introduced.
-
-## Required changes before advancing
-
-1. Replace the source-count leaf heuristic with a boundary consistent with schema-valid multi-source events.
-2. Reconcile export guarantees with rollback failure behavior and protect backup ownership.
-3. Resolve UID version/schema drift and normalize numeric ports.
-4. Add the missing adversarial identity coverage and re-run the full suite plus the direct UID, merge, rollback, cleanup, and backup-clobber probes.
+| High | 0 |
+| Medium | 3 |
+| Low | 4 |
 
 ## Final recommendation
 
-**NOT READY**
+READY AFTER MINOR FIXES

@@ -11,6 +11,26 @@ import aiprofile.export as export_mod
 from aiprofile.errors import RenderError
 
 
+def _zero_stats():
+    from aiprofile.viz import (
+        EvidenceTotals,
+        Period,
+        PrivacySplit,
+        Totals,
+        VizStats,
+    )
+    return VizStats(
+        schema_version="0.1.0",
+        period=Period(None, None, "All time"),
+        totals=Totals(0, 0, 0, 0, 0, 0),
+        providers=(),
+        provider_count=0,
+        evidence=EvidenceTotals(0, 0, 0, 0, 0, 0),
+        privacy=PrivacySplit(0, 0, False),
+        generated_on="2026-07-14",
+    )
+
+
 def test_partial_failure_leaves_previous_generation_intact(tmp_path, monkeypatch):
     out = tmp_path / "dist"
     out.mkdir()
@@ -36,24 +56,7 @@ def test_replacement_stage_failure_rolls_back_previous_generation(tmp_path, monk
     Confirmed failing pre-fix (summary-light.svg stayed new)."""
     import os as os_mod
 
-    from aiprofile.viz import (
-        EvidenceTotals,
-        Period,
-        PrivacySplit,
-        Totals,
-        VizStats,
-    )
-
-    stats = VizStats(
-        schema_version="0.1.0",
-        period=Period(None, None, "All time"),
-        totals=Totals(0, 0, 0, 0, 0, 0),
-        providers=(),
-        provider_count=0,
-        evidence=EvidenceTotals(0, 0, 0, 0, 0, 0),
-        privacy=PrivacySplit(0, 0, False),
-        generated_on="2026-07-14",
-    )
+    stats = _zero_stats()
     out = tmp_path / "dist"
     out.mkdir()
     (out / "summary-light.svg").write_text("OLD-LIGHT", encoding="utf-8")
@@ -89,24 +92,7 @@ def test_first_ever_render_failure_publishes_nothing(tmp_path, monkeypatch):
     Confirmed failing pre-fix (summary-light.svg stayed NEW)."""
     import os as os_mod
 
-    from aiprofile.viz import (
-        EvidenceTotals,
-        Period,
-        PrivacySplit,
-        Totals,
-        VizStats,
-    )
-
-    stats = VizStats(
-        schema_version="0.1.0",
-        period=Period(None, None, "All time"),
-        totals=Totals(0, 0, 0, 0, 0, 0),
-        providers=(),
-        provider_count=0,
-        evidence=EvidenceTotals(0, 0, 0, 0, 0, 0),
-        privacy=PrivacySplit(0, 0, False),
-        generated_on="2026-07-14",
-    )
+    stats = _zero_stats()
     out = tmp_path / "dist"  # does not exist yet: first-ever render
 
     real_replace = os_mod.replace
@@ -122,26 +108,6 @@ def test_first_ever_render_failure_publishes_nothing(tmp_path, monkeypatch):
 
     leftovers = sorted(p.name for p in out.iterdir()) if out.exists() else []
     assert leftovers == [], leftovers
-
-
-def _zero_stats():
-    from aiprofile.viz import (
-        EvidenceTotals,
-        Period,
-        PrivacySplit,
-        Totals,
-        VizStats,
-    )
-    return VizStats(
-        schema_version="0.1.0",
-        period=Period(None, None, "All time"),
-        totals=Totals(0, 0, 0, 0, 0, 0),
-        providers=(),
-        provider_count=0,
-        evidence=EvidenceTotals(0, 0, 0, 0, 0, 0),
-        privacy=PrivacySplit(0, 0, False),
-        generated_on="2026-07-14",
-    )
 
 
 def test_m6_preexisting_user_backup_sentinel_survives(tmp_path):
@@ -223,4 +189,87 @@ def test_l1_cleanup_failure_does_not_report_publication_failure(tmp_path, monkey
     assert [p.name for p in paths] == [
         "summary-light.svg", "summary-dark.svg", "profile.json"
     ]
+    assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"
+
+
+def test_m02_attempt_scoped_names_protect_recovery_data_within_process(
+    tmp_path, monkeypatch
+):
+    """Gate-5 M-02: transaction artifacts must be ATTEMPT-owned, not
+    process-owned — after a failed render retains a recovery `.bak`, a
+    later successful render in the SAME process must not consume or
+    destroy it. Confirmed failing pre-fix (pid-only names collide: the
+    second render overwrote, then deleted, the recovery data)."""
+    import os as os_mod
+
+    out = tmp_path / "dist"
+    out.mkdir()
+    for name, content in (
+        ("summary-light.svg", "OLD-LIGHT"),
+        ("summary-dark.svg", "OLD-DARK"),
+        ("profile.json", "OLD-JSON"),
+    ):
+        (out / name).write_text(content, encoding="utf-8")
+
+    real_replace = os_mod.replace
+    inject = {"on": True}
+
+    def flaky_replace(src, dst):
+        s, d = str(src), str(dst)
+        if inject["on"]:
+            if d.endswith("profile.json") and ".tmp" in s:
+                raise OSError("install failure")
+            if d.endswith("summary-light.svg") and ".bak" in s:
+                raise OSError("restore failure")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(export_mod.os, "replace", flaky_replace)
+    with pytest.raises(RenderError):
+        export_mod.write_outputs(_zero_stats(), "NEW-L1", "NEW-D1", out)
+
+    recovery = list(out.glob("summary-light.svg.*.bak"))
+    assert len(recovery) == 1
+    assert recovery[0].read_text(encoding="utf-8") == "OLD-LIGHT"
+
+    inject["on"] = False
+    export_mod.write_outputs(_zero_stats(), "NEW-L2", "NEW-D2", out)
+
+    # The second render owned its own artifacts: the first attempt's
+    # recovery backup survives byte-identical.
+    assert recovery[0].exists(), "recovery .bak was consumed by a later render"
+    assert recovery[0].read_text(encoding="utf-8") == "OLD-LIGHT"
+    assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L2"
+
+
+def test_l01_failed_first_install_retraction_named_in_error(tmp_path, monkeypatch):
+    """Gate-5 L-01: when rollback cannot RETRACT a first-ever installed
+    target, the raised error must name the asset that remains published —
+    a programmatic caller sees only the exception. Confirmed failing
+    pre-fix (retraction failure was log-only)."""
+    import os as os_mod
+    from pathlib import Path as _P
+
+    out = tmp_path / "dist"  # first-ever render: no previous generation
+
+    real_replace = os_mod.replace
+
+    def flaky_replace(src, dst):
+        if str(dst).endswith("summary-dark.svg") and ".tmp" in str(src):
+            raise OSError("install failure")
+        return real_replace(src, dst)
+
+    real_unlink = _P.unlink
+
+    def flaky_unlink(self, missing_ok=False):
+        if str(self).endswith("summary-light.svg"):
+            raise OSError("retraction failure")
+        return real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(export_mod.os, "replace", flaky_replace)
+    monkeypatch.setattr(_P, "unlink", flaky_unlink)
+    with pytest.raises(RenderError) as err:
+        export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+
+    assert "summary-light.svg" in str(err.value)
+    # the partial asset really is still published:
     assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"

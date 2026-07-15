@@ -56,12 +56,22 @@ Scope: docs/mvp.md. Exit criteria:
       source dedup, and the endpoint-qualified uid change had shipped
       without its mandatory version bump) resolved: all 8 accepted and
       fixed — explicit `merged` derivation marker, **uid algorithm v4**
-      (honest bump + decimal port normalization), attempt-owned export
-      transaction files with best-effort-stated rollback, the real
+      (honest bump + decimal port normalization), pid-scoped export
+      transaction files (later found process-owned, not attempt-owned;
+      corrected in gate-5) with best-effort-stated rollback, the real
       42-case grid test committed (`docs/reviews/gate-disposition.md`,
       gate-4 section). Lesson recorded: the uid algorithm has NOT been
       adversarially validated "with no survivor" — three consecutive
       external rounds each falsified the previous round's closure claim.
+- [x] Gate-5 review round (2026-07-15; READY AFTER MINOR FIXES, 0
+      Critical/High, 3 Medium, 4 Low — first round with no High+
+      finding) resolved: all 7 accepted and fixed — merge-purity claim
+      narrowed to the sanctioned in-memory path and made normative in
+      schema.md, per-invocation export transaction ids with an honest
+      no-concurrency contract, bounded port validation (5000-digit
+      probe), retraction failures in the raised error, envelope fields
+      excluded from equality, true per-cell 42-grid parametrization
+      (`docs/reviews/gate-disposition.md`, gate-5 section).
 
 ## v0.1 OSS release (after conformance)
 

@@ -264,7 +264,14 @@ def _canonical_identity(
     if port:
         # Numeric normalization (gate-4 M-5): ':0443' and ':443' are the
         # same endpoint; compare and serialize in canonical decimal form.
-        port = str(int(port))
+        # Bounded FIRST (gate-5 M-03): the regex admits unbounded digits,
+        # and int() on a multi-thousand-digit token raises ValueError —
+        # outside the TCP range the origin is not a usable remote
+        # endpoint and falls back to local identity (fail-safe: a bad
+        # split, never a collision or an uncaught crash).
+        port = port.lstrip("0") or "0"
+        if len(port) > 5 or int(port) > 65535:
+            return None
     if host in _ALIAS_CONVERGENT_HOSTS:
         # Path-case insensitivity is a property of the HOST's namespace,
         # so fold regardless of transport — and BEFORE the suffix strip so

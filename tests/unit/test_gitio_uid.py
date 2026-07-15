@@ -389,26 +389,47 @@ def test_m5_leading_zero_ports_normalize(padded, plain):
     assert canonicalize_remote(padded) == canonicalize_remote(plain)
 
 
-def test_l2_full_scheme_port_grid_partitions_into_expected_classes():
-    """The committed 42-case grid (6 schemes x 7 ports): documented
-    endpoints converge to the alias identity; every other case carries
-    structured scheme://host:port identity, equal exactly when (scheme,
-    normalized effective port) match; alias-host path folding applies in
-    both branches."""
-    schemes = ["https", "http", "ssh", "git", "ftp", "x-custom"]
-    ports = [None, "22", "80", "443", "9418", "444", "2222"]
+@pytest.mark.parametrize("port", [None, "22", "80", "443", "9418", "444", "2222"],
+                         ids=lambda p: f"port-{p or 'absent'}")
+@pytest.mark.parametrize("scheme", ["https", "http", "ssh", "git", "ftp", "x-custom"])
+def test_l2_full_scheme_port_grid_partitions_into_expected_classes(scheme, port):
+    """The committed 42-case grid (6 schemes x 7 ports), one REPORTED
+    case per cell (gate-5 L-02 — a looped grid aborted at the first
+    failure and hid the remaining cells): documented endpoints converge
+    to the alias identity; every other case carries structured
+    scheme://host:port identity, equal exactly when (scheme, normalized
+    effective port) match; alias-host path folding applies in both
+    branches. Expected classes derive from the ADR-016 rule tables, NOT
+    from gitio's own constants."""
     defaults = {"https": "443", "http": "80", "ssh": "22", "git": "9418"}
     documented = {("ssh", "22"), ("https", "443"), ("git", "9418")}
 
-    for scheme in schemes:
-        for port in ports:
-            url = f"{scheme}://github.com" + (f":{port}" if port else "") + "/Owner/Repo.git"
-            got = canonicalize_remote(url)
-            effective = port or defaults.get(scheme)
-            if effective is not None and (scheme, effective) in documented:
-                expected = "github.com/owner/repo"
-            elif effective is None:
-                expected = f"{scheme}://github.com/owner/repo"
-            else:
-                expected = f"{scheme}://github.com:{effective}/owner/repo"
-            assert got == expected, (url, got, expected)
+    url = f"{scheme}://github.com" + (f":{port}" if port else "") + "/Owner/Repo.git"
+    got = canonicalize_remote(url)
+    effective = port or defaults.get(scheme)
+    if effective is not None and (scheme, effective) in documented:
+        expected = "github.com/owner/repo"
+    elif effective is None:
+        expected = f"{scheme}://github.com/owner/repo"
+    else:
+        expected = f"{scheme}://github.com:{effective}/owner/repo"
+    assert got == expected, (url, got, expected)
+
+
+def test_m03_out_of_range_ports_are_unusable_not_crashes():
+    """Gate-5 M-03: port tokens outside the TCP range must resolve to
+    None (local fallback — a safe split), never escape as an uncaught
+    ValueError from unbounded int() conversion. Confirmed failing
+    pre-fix (5000-digit port raised ValueError)."""
+    assert canonicalize_remote(f"https://github.com:{'9' * 5000}/o/r") is None
+    assert canonicalize_remote("https://github.com:65536/o/r") is None
+    assert canonicalize_remote("https://git.example.com:99999999/o/r") is None
+    # boundary + zero-padding beyond five digits stay usable:
+    assert (
+        canonicalize_remote("https://git.example.com:65535/o/r")
+        == "https://git.example.com:65535/o/r"
+    )
+    assert (
+        canonicalize_remote(f"https://github.com:{'0' * 10}443/o/r")
+        == "github.com/o/r"
+    )

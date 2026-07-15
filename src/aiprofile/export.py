@@ -6,6 +6,7 @@ git, or config (architecture.md section 2).
 
 from __future__ import annotations
 
+import itertools
 import logging
 import os
 from pathlib import Path
@@ -14,6 +15,13 @@ from .errors import RenderError
 from .viz import VizStats, dumps_stats
 
 logger = logging.getLogger(__name__)
+
+#: Per-invocation transaction ids (gate-5 M-02): a pid alone identifies a
+#: PROCESS, not a call — same-process concurrent/re-entrant renders would
+#: share transaction filenames, and pid reuse could collide with crash
+#: debris. pid + a process-lifetime counter makes artifact names
+#: attempt-owned (itertools.count is atomic under CPython).
+_ATTEMPT_IDS = itertools.count(1)
 
 
 def write_outputs(
@@ -25,26 +33,29 @@ def write_outputs(
 
     Failure guarantee (gate-4 M-3 — best-effort, stated exactly): a
     replacement-stage failure rolls back by restoring every moved-aside
-    previous asset and retracting first-ever installs. Every restore is
-    ATTEMPTED even when one fails; an asset whose restore itself fails
-    keeps its previous content on disk in its `.bak` file (named in the
-    raised error) — so a mix limited to the unrestorable assets can
-    remain in the worst case. This is weaker than "previous generation
-    fully intact" and is the honest contract.
+    previous asset and retracting first-ever installs. Every restore and
+    every retraction is ATTEMPTED even when one fails; the raised error
+    names each asset the rollback could NOT undo — an unrestorable asset
+    keeps its previous content in its `.bak` file, and an unretractable
+    first-install remains published (gate-5 L-01). This is weaker than
+    "previous generation fully intact" and is the honest contract.
 
-    Ownership (gate-4 M-6): staging/backup artifacts are attempt-owned —
-    `<target>.<pid>.tmp` / `<target>.<pid>.bak` — so a render never
-    touches a user's own `<target>.bak` and two processes never consume
-    each other's transaction files. Concurrent renders into one output
-    directory remain unserialized: each publishes a whole generation, but
-    which generation wins is undefined — run one render at a time per
-    directory. A hard-killed process can leave its own stale
-    `.<pid>.tmp`/`.<pid>.bak` files behind; later renders never touch
-    other attempts' artifacts, so such debris is harmless but requires
-    manual cleanup.
+    Ownership (gate-4 M-6, gate-5 M-02): staging/backup artifacts are
+    attempt-owned — `<target>.<pid>-<n>.tmp` / `<target>.<pid>-<n>.bak`
+    with a per-invocation transaction id — so a render never touches a
+    user's own `<target>.bak`, and overlapping calls (across processes OR
+    within one) never consume each other's transaction files. The three
+    PUBLISHED targets carry no such protection: they are replaced
+    independently with no directory lock, so concurrent publication into
+    one output directory is NOT SUPPORTED — overlapping writers can
+    interleave installs and rollbacks and leave a MIXED generation. Run
+    one render at a time per directory. A hard-killed process can leave
+    its own stale `.<pid>-<n>.tmp`/`.bak` files behind; later renders
+    never touch other attempts' artifacts, so such debris is harmless but
+    requires manual cleanup.
 
     Returns the written paths."""
-    suffix = f".{os.getpid()}"
+    suffix = f".{os.getpid()}-{next(_ATTEMPT_IDS)}"
     tmp_paths: list[Path] = []
     backups: list[tuple[Path, Path]] = []  # (target, backup) of moved-aside olds
     completed: list[Path] = []  # targets already replaced with new content
@@ -75,14 +86,18 @@ def write_outputs(
             # Retract first-ever installs (no prior generation to restore):
             # nothing published or everything published (reviewer
             # suggestion, verification round). Each retraction is
-            # independent — a failed unlink must not abandon the rest.
+            # independent — a failed unlink must not abandon the rest, and
+            # the surviving partial asset is reported in the raised error
+            # (gate-5 L-01), not only in logs.
             backed = {p for p, _ in backups}
+            unretracted: list[str] = []
             for path in completed:
                 if path in backed:
                     continue
                 try:
                     path.unlink(missing_ok=True)
                 except OSError:
+                    unretracted.append(path.name)
                     logger.warning("rollback could not retract %s", path.name)
             # Restore moved-aside olds, overwriting any installed news.
             # Gate-4 M-3: a restore failure no longer stops the loop —
@@ -96,12 +111,22 @@ def write_outputs(
                     os.replace(bak, path)
                 except OSError:
                     unrestored.append(path.name)
-            if unrestored:
+            if unrestored or unretracted:
+                problems = []
+                if unrestored:
+                    problems.append(
+                        f"could not restore {', '.join(sorted(unrestored))}"
+                        f" (previous content retained in the matching"
+                        f" *{suffix}.bak file(s))"
+                    )
+                if unretracted:
+                    problems.append(
+                        f"could not retract {', '.join(sorted(unretracted))}"
+                        " (the partial new content remains published)"
+                    )
                 raise RenderError(
                     f"cannot write assets to {out_dir}: {exc} — rollback"
-                    f" could not restore {', '.join(sorted(unrestored))};"
-                    f" previous content retained in the matching"
-                    f" *{suffix}.bak file(s)"
+                    f" incomplete: {'; '.join(problems)}"
                 ) from exc
             raise
         # Publication is complete once every new target is installed.

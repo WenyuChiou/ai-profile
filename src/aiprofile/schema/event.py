@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 from .. import ACE_SCHEMA_VERSION
@@ -66,7 +66,11 @@ class AceEvent:
     commit_sha: str
     evidence_level: EvidenceLevel
     sources: tuple[ProvenanceSource, ...]
-    recorded_at: str | None = None
+    #: Envelope metadata (schema.md section 1): excluded from the
+    #: canonical payload AND from dataclass equality/hash (gate-5 L-03 —
+    #: equality must agree with canonical event equality, or sets/caches
+    #: split on audit metadata).
+    recorded_at: str | None = field(default=None, compare=False)
     schema_version: str = ACE_SCHEMA_VERSION
     #: Derivation marker (gate-4 High): True iff this event is the product
     #: of a multi-input merge_event_group reduction. Envelope metadata like
@@ -78,8 +82,11 @@ class AceEvent:
     #: rebuilding a merged result with merged=False (dataclasses.replace
     #: or a raw AceEvent(...) call) forges derivation and is
     #: out-of-contract — build_event and merge_event_group are the only
-    #: sanctioned constructors.
-    merged: bool = False
+    #: sanctioned constructors. Envelope semantics as for recorded_at:
+    #: excluded from equality/hash (gate-5 L-03); never serialized or
+    #: persisted, so derivation state guards the in-memory scan path
+    #: only (gate-5 M-01) — rehydrated events are not re-mergeable.
+    merged: bool = field(default=False, compare=False)
 
 
 def _identity_key(value: str | None, raw: str | None) -> str:

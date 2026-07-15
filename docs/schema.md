@@ -94,11 +94,28 @@ Validation rules:
   type (§6.2) — schema validation rejects anything else; sensitive free
   text structurally cannot enter this field (G2-07).
 - `event_id` derivation is deterministic (§8). **Envelope vs payload**
-  (G2-14): the canonical dict/JSON form (`to_dict()` + sorted-keys dump)
-  covers the semantic payload only and EXCLUDES `recorded_at`, which is
-  audit-envelope metadata that varies per scan; equal events therefore
-  serialize byte-identically even across rescans. No v0.1 CLI command
-  emits raw events (the public JSON artifact is the viz contract).
+  (G2-14; gate-5 M-01/L-03): the canonical dict/JSON form (`to_dict()` +
+  sorted-keys dump) covers the semantic payload only and EXCLUDES the
+  two envelope fields — `recorded_at` (audit metadata that varies per
+  scan) and `merged` (derivation state, below); equal events therefore
+  serialize byte-identically even across rescans. Envelope fields are
+  excluded from **value equality and hashing** too: two events whose
+  canonical payloads are identical compare equal regardless of envelope
+  state. No v0.1 CLI command emits raw events (the public JSON artifact
+  is the viz contract).
+- **Derivation state** (`merged`, gate-4 High / gate-5 M-01): defaults
+  to false; set to true ONLY by `merge_event_group` on a multi-input
+  reduction, and checked on every input so nested/incremental
+  composition is rejected (§8.3). It is envelope-only: never serialized,
+  never persisted (the SQLite `events` table has no such column — pinned
+  by regression). The boundary it enforces therefore protects the
+  **sanctioned in-memory path only** — the scanner's single-pass flat
+  reduction over freshly built leaves. Stored events drop derivation
+  state by design, so rehydrating persisted events back into
+  `merge_event_group` is OUT OF CONTRACT in v0.1 (no CLI path does
+  this); the same applies to raw construction or `dataclasses.replace`
+  resetting the marker. A future round-trip/import boundary must first
+  give derivation state an enforceable persisted representation.
 
 ## 2. Actor types
 
@@ -301,6 +318,13 @@ group plus a matching co-author line), and to future multi-source imports
   identity (never an incremental pairwise fold — pooled ranks are
   fold-order dependent; ADR-008), so the same evidence set in any order
   yields identical events (exhaustively permutation-tested).
+- **Leaf-only inputs** (gate-4 High): a multi-input reduction accepts
+  leaf productions only, enforced via the `merged` derivation marker
+  (§1) — a previously merged result would have its values re-ranked
+  against pooled provenance, making nested composition grouping-
+  dependent. All leaves of one identity go in ONE call. This guard
+  covers the sanctioned in-memory scan path; persisted events drop
+  derivation state and are not re-mergeable (§1, gate-5 M-01).
 - Across scans, idempotence comes from the scan mechanism itself
   (ADR-014): each scan atomically replaces the repository's scan-derived
   rows, so re-scanning an unchanged repository yields identical state and
