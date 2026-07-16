@@ -50,7 +50,9 @@ THEMES: dict[str, Theme] = {
         evidence_declared="#0550ae",
         evidence_imported="#0969da",
         evidence_inferred="#218bff",
-        evidence_unknown="#8c959f",
+        # Primer fg-muted gray: 4.27:1 on the #f6f8fa panel (gate-7 L-01 —
+        # #8c959f sat at 2.85:1, under the 3:1 graphical threshold).
+        evidence_unknown="#6e7781",
     ),
     "github-dark": Theme(
         name="github-dark",

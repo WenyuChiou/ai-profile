@@ -1,114 +1,160 @@
-# Current Gate implementation review
+# Current Gate remediation report
 
 Date: 2026-07-15
-Review range: `78e2e05519bc0de784790121a421f5fb0b4144d1..b899d1188fac306f25ab2d0c0e796dcc6f645769`
-Reviewer posture: independent Principal Software Engineer; verification only, with no implementation or design changes.
+Remediation range: working tree on top of `9933308` (uncommitted by task
+constraint — commit authorization not granted; 18 modified files + 1 new
+test file, verified by `git status --short`).
+Reviewer posture: remediating implementer, with two mandatory independent
+gates applied — the repository code-review skill (verdict APPROVE) and the
+persistent independent code-reviewer agent (verdict APPROVE after
+independent reproduction of every fix).
 
 ## Executive summary
 
-Gate 5 correctly closes most findings from the preceding review. The ACE schema now states the deliberately narrow lifetime of merge derivation state; sanctioned scanner reductions remain flat and deterministic; failed first-install retractions are reported; envelope equality behavior is explicit; the 42-cell UID grid is genuinely parameterized; and export fixtures are less duplicated. Architecture, aggregation, privacy, renderer isolation, MVP scope, and non-duplication remain consistent with the approved design.
+All five findings of the prior review (`b899d11..9933308`, NOT READY:
+1 High, 2 Medium, 2 Low) were independently reproduced BEFORE acceptance,
+accepted 5/5, and fixed with regressions that each failed against the
+pre-fix code. The High finding is closed structurally: a validated
+`VizStats` can no longer carry arbitrary text into SVG or JSON — every
+string field is pinned to a closed public vocabulary at construction.
+Both Medium correctness defects (order-dependent merge timestamps, false
+endpoint percentages) are closed with narrow contract fixes, and both Low
+hardening items (unknown-mark contrast, sample regeneration path) are
+resolved rather than deferred.
 
-Three correctness gaps prevent unconditional advancement. First, `<pid>-<process-counter>` transaction names repeat after process restart and PID reuse, so a later render can overwrite the recovery artifact that this Gate claims is attempt-owned. Second, rejecting ports above 65535 changes versioned repository identity behavior while retaining the `v4` algorithm label and leaving ADR-016 stale. Third, Unicode decimal ports pass `\d` and `int()` but are not rewritten to ASCII decimal, splitting endpoints equivalent to `:443`. Direct adversarial probes reproduced the artifact loss and Unicode UID split.
+Final suite: **323 passed, 1 skipped** (baseline 310+1; +13 net new
+regressions); Ruff clean; `git diff --check` clean; the full adversarial
+probe battery re-ran green. Both independent reviews returned APPROVE
+with only non-blocking suggestions, all of which were applied.
 
-The remaining findings are bounded and do not compromise the validated aggregation or public-data boundary. They require targeted corrections and regressions rather than an architectural redesign.
+## Commands and exact outputs
 
-## Review basis and verification evidence
+- Baseline (pre-edit): `python -m pytest tests -p no:cacheprovider` →
+  `310 passed, 1 skipped in 24.68s`; `python -m ruff check src tests` →
+  `All checks passed!`; tree clean except the review file itself.
+- Final: `python -m pytest tests -p no:cacheprovider` →
+  `323 passed, 1 skipped in 16.36s` (exit 0); `python -m ruff check src
+  tests` → `All checks passed!`; `git diff --check` → clean.
+- Palette validator (both ordinal ramps, unchanged blues, re-run for the
+  record): `ALL CHECKS PASS` light (`#033d8b,#0550ae,#0969da,#218bff` on
+  `#f6f8fa`) and dark (`#a5d6ff,#58a6ff,#388bfd,#1f6feb` on `#161b22`).
+- Contrast (changed token): light `#6e7781` vs `#f6f8fa` = **4.27:1**
+  (was `#8c959f` = 2.85:1); dark `#6e7681` vs `#161b22` = 3.77:1.
+- Adversarial probes re-run green: canary-rejection ×5 (period label,
+  schema version, provider slug, display name, period bounds — each a
+  reproduced pre-fix leak, each now fails at construction),
+  reversed-timestamp merge equality, boundary percentages
+  (1/201 → `<1%`, 200/201 → `>99%`, 0/10 → `0%`, 10/10 → `100%`),
+  deterministic double render ×8 state/theme pairs, byte-level privacy
+  sweep over all 8 snapshots + both `docs/assets` samples (only the
+  required w3.org xmlns), README sample drift guard green.
 
-- Read the repository guidance and current project design, including architecture, schema, MVP, privacy model, roadmap/progress, landscape, relevant ADRs, prior Gate reviews/dispositions, README, contribution guidance, implementation, and tests.
-- Inspected the complete pinned 909-line diff through two independent static passes for each of architecture, security, performance, code quality, requirements compliance, and bugs.
-- Ran `pytest -o addopts= -q`: `302 passed, 1 skipped in 24.60s`.
-- Ran `ruff check .`: `All checks passed!`.
-- Reproduced PID-reuse recovery loss by resetting the process counter while holding the PID constant: `summary-light.svg.4242-1.bak` contained `OLD-L` after the failed attempt and was absent after the simulated replacement process rendered.
-- Reproduced Unicode-port splitting: ASCII `443` canonicalized to `github.com/o/r`, while full-width `４４３` and Arabic-Indic `٠٤٤٣` remained non-ASCII structured identities.
-- Reproduced equality non-substitutability: a leaf and reduced event compared and hashed equal, but set insertion order selected an accepted leaf or a merge-rejected reduced event.
+## Disposition of every prior finding
 
-## Findings
+### H-01 — ACCEPTED, fixed (structural)
 
-### M-01 — Medium — Export transaction identifiers still collide after PID reuse
+Reproduced first: a fully validated `VizStats` carried
+`SecretPeriod-Repo`, `SecretOrg-PrivateRepo`, a fake provider slug, and a
+fake schema version verbatim into both `render_summary` and
+`dumps_stats`. Fix (`src/aiprofile/viz.py`): `_validate` pins every
+string field — `schema_version == ACE_SCHEMA_VERSION`; period must be the
+fixed v0.1 all-time contract (`None` bounds, `V01_PERIOD_LABEL`);
+provider slugs must come from `CANONICAL_PROVIDERS ∪ {unrecognized}`;
+display names must equal the schema-owned display for the slug.
+`PROVIDER_DISPLAY` moved into `src/aiprofile/schema/vocab.py` (the schema
+owns the public vocabulary — the established H-02 precedent);
+`registry.py` consumes it unchanged; `privacy.py` now imports
+`V01_PERIOD_LABEL` (single source). Dependency direction unchanged:
+`viz → schema.vocab` pre-existed; the render/export AST fence is
+untouched; no renderer sanitization was added. `docs/architecture.md` §3
+now states the enforcement. Regressions: `tests/unit/test_viz_contract.py`
+(6 rejection + 2 construction cases, all rejections red pre-fix).
+Consequence honestly recorded: two old render fixtures that DEPENDED on
+arbitrary display names (long-name truncation, XML-escape) are no longer
+constructable — by design; those renderer properties are now pinned at
+the `_truncate`/`_text` helper layer, and the independent reviewer
+verified this preserves (and in one respect extends) the original
+coverage.
 
-**Description:** `src/aiprofile/export.py:19-24, 43-58` defines an attempt identifier as `<pid>-<process-lifetime counter>`. The counter prevents collisions between calls in one live CPython process, but it restarts at `1` in every new process. If a hard-killed process leaves `summary-light.svg.<pid>-1.bak` and the OS later assigns the same PID to another process, its first render generates the same name. The direct probe simulated this lifecycle and showed the retained recovery backup was overwritten and deleted. The added regression covers sequential calls only within one process. The comment also relies on CPython counter atomicity even though `pyproject.toml` supports Python 3.11+ without restricting the interpreter.
+### M-01 — ACCEPTED, fixed
 
-**Impact:** A rare but explicitly in-scope crash-recovery sequence can destroy the only copy of previous public content. The disposition and docstring claim that later attempts never touch one another's artifacts, so the implementation does not meet the Gate's ownership contract.
+Reproduced first: same-identity leaves with different timestamps merged
+to different canonical events under reversed input
+(`canonical_equal False`). Fix (`src/aiprofile/schema/event.py`):
+`timestamp=resolve("timestamp")` — the same strongest-leaf canonical rule
+(ADR-008) used by the other scalars; permutation purity restored.
+`docs/schema.md` §8.3 states the rule, including the reviewer's note that
+the final tie-break is a deterministic string comparison, not a
+chronological one (cross-offset sources should normalize before merge —
+unreachable in v0.1). Regression: reversed-order byte-identity plus
+strongest-leaf winner assertion, red pre-fix.
 
-**Recommendation:** Use a process-lifetime-independent per-invocation identifier with exclusive creation semantics, and add a regression that pre-seeds stale transaction artifacts independently of the current process counter.
+### M-02 — ACCEPTED, fixed
 
-### M-02 — Medium — Bounded-port rejection changes UID v4 without a version bump or ADR update
+Reproduced first: `1/201 → "0% of 201"`, `200/201 → "100% of 201"`. Fix
+(`src/aiprofile/render/summary_svg.py`): `_pct_label` — exact `0%`/`100%`
+only for exactly-zero/exactly-total shares; a rounding that would
+fabricate an endpoint renders `<1%` / `>99%` (deterministic, compact);
+applied to the hero share and the provider rows. Aggregation values
+untouched; fixture snapshots unaffected (no fixture share hits an
+endpoint); label and share bar communicate compatible states (verified:
+2px sliver + `<1%`, 358px + `>99%`). Regressions: both surfaces,
+boundaries and exact endpoints, red pre-fix.
 
-**Description:** `src/aiprofile/gitio.py:264-276` now returns `None` for ports above 65535. In the parent revision, `https://host:65536/o/r` produced a structured remote-v4 identity; this Gate makes `repository_uid()` fall back to a salted local-v4 identity. `UID_ALGORITHM` remains `v4`, while `docs/decisions/ADR-016-repository-identity-canonicalization.md` still defines v4 as endpoint qualification plus decimal normalization and states that rule changes require a version bump. The ADR does not define the new valid-port domain or fallback behavior.
+### L-01 — ACCEPTED, fixed
 
-**Impact:** The same `v4` label denotes different canonicalization algorithms across commits. Existing configuration can migrate opportunistically to a different UID without a version signal, undermining the version-directed reconciliation discipline used to protect deduplication and publication policy. The change is a safe split rather than a destructive collision, but it is still contract and migration drift.
+Reproduced first: light-theme `evidence_unknown` `#8c959f` at 2.85:1
+against the `#f6f8fa` panel. Fix (`src/aiprofile/render/themes.py`):
+Primer fg-muted `#6e7781` (4.27:1), still neutral and visually
+subordinate; dark theme already passed. Both ordinal ramps re-validated
+ALL CHECKS PASS; a contrast pin regression (≥3:1 both themes) was red
+pre-fix for light. Exactly 3 light snapshots + the light sample asset
+changed (2 rects each), regenerated via the sanctioned script.
 
-**Recommendation:** Reconcile the change with ADR-016's versioning rule: either bump the UID algorithm and cover migration, or formally define and justify an input-domain exception before claiming v4 is unchanged. Update the normative schema and tests consistently.
+### L-02 — ACCEPTED, fixed
 
-### M-03 — Medium — Unicode decimal ports are not canonicalized to ASCII
+Confirmed first: the sanctioned script wrote only `tests/snapshots`;
+CONTRIBUTING documented snapshots only. Fix: `python
+tests/unit/test_render_summary.py` now also regenerates both
+`docs/assets` samples from the same authoritative fixture
+(`_write_sample_assets`); `CONTRIBUTING.md` documents the single command
+and forbids hand-editing; the byte-exact drift guard is unchanged.
 
-**Description:** The URL regex at `src/aiprofile/gitio.py:231` uses Unicode-aware `\d+`. Python's `int()` accepts full-width and Arabic-Indic decimal digits, but `_canonical_identity()` strips only ASCII `0` and no longer assigns `str(int(port))` back to `port` (`lines 264-273`). Consequently, `https://github.com:４４３/o/r` remains `https://github.com:４４３/o/r` rather than converging with the documented ASCII endpoint `https://github.com:443/o/r`. The new tests cover ASCII ports only.
+## Newly discovered findings
 
-**Impact:** Equivalent remote endpoints can receive distinct repository UIDs, splitting counts and most-restrictive publication-policy resolution across clones. This is the same safe-split class that versioned canonicalization is intended to make deterministic.
-
-**Recommendation:** Restrict accepted port syntax to ASCII digits or convert the bounded numeric value back to canonical ASCII decimal, then add cross-script digit-equivalence or rejection regressions.
-
-### L-01 — Low — Equal AceEvent values can behave differently in the merge API
-
-**Description:** `recorded_at` and `merged` now use `field(compare=False)` in `src/aiprofile/schema/event.py:66-89`. Excluding audit time aligns value equality with canonical JSON, but excluding `merged` makes a leaf and a reduced event compare and hash equal even though `merge_event_group()` accepts the former and rejects the latter. The direct set probe showed insertion order determines which equal representative survives and therefore whether the subsequent merge succeeds.
-
-**Impact:** The current scanner does not put events through this pattern, so v0.1 runtime risk is low. Public library callers, caches, or future adapter code can nevertheless observe non-substitutable equal objects, making the sets/caches rationale misleading and increasing maintenance risk around the merge boundary.
-
-**Recommendation:** Specify operational versus canonical-payload equality explicitly and avoid making control-flow-distinct leaf/reduced values interchangeable in Python collections. Add a substitutability regression for the approved semantics.
-
-### L-02 — Low — Concurrent-render rejection is described but not exposed or enforced
-
-**Description:** `docs/progress.md` and `docs/reviews/gate-disposition.md` say the concurrency contract rejects concurrent publication. Production code does not detect or reject overlap; the internal `write_outputs()` docstring only states that it is unsupported and can mix generations. The public `aiprofile render` help and README do not expose the one-writer-per-output-directory precondition.
-
-**Impact:** The implementation's honest internal warning is an improvement, but CLI users can still invoke overlapping renders without seeing the known mixed-generation risk. The Gate evidence overstates runtime enforcement.
-
-**Recommendation:** Use consistent “unsupported” wording unless an actual guard is implemented, and surface the precondition in user-facing render documentation/help.
-
-### L-03 — Low — Schema tests reach into the storage migration layer
-
-**Description:** `tests/unit/test_schema_event.py:829-862` combines canonical-payload assertions with `sqlite3`, `storage.db.migrate`, and `PRAGMA table_info(events)`. This places a persistence-schema contract in the event-model unit suite rather than the existing storage/migration tests.
-
-**Impact:** Future persistence changes can fail in a surprising module and increase coupling between otherwise clear schema and storage test boundaries. There is no production defect.
-
-**Recommendation:** Keep payload assertions in the schema-event suite and place the no-`merged`-column contract with storage/migration tests.
+None retained. Two non-blocking review suggestions were applied in-round
+(period-label single-sourcing; the §8.3 tie-break note). One pre-existing
+observation from the independent reviewer, explicitly not introduced by
+this round and not blocking: `viz.py` itself is not in the AST
+dependency-scan file list (runtime isolation already covers the chain
+transitively) — a candidate for a future hardening pass.
 
 ## Verified areas without findings
 
-### Architecture and MVP consistency
+- Renderer/exporter isolation: fresh-interpreter probe re-run — no
+  banned modules load; `aiprofile/__init__.py` holds constants only, so
+  the new `viz → package-root` import creates no cycle.
+- Aggregation semantics: unique commits / presences / provider commits /
+  active author-local days / evidence records remain distinct; unknown
+  remains distinct from human; no inference.
+- Privacy on the supported path: `privacy.build_viz_stats` unchanged in
+  behavior; byte-level sweeps clean across dist-shaped outputs,
+  snapshots, and committed samples.
+- Determinism, XML well-formedness, element allowlist, coordinate
+  hygiene, minimum font size, WIDTH 830, dynamic height ordering — all
+  pinned tests green with the new states included in the loops.
+- MVP scope: no new features, dependencies, network code, or duplication
+  entered the diff.
 
-- The scanner remains the only orchestration path; schema owns event construction and merge behavior; storage remains below the scanner; privacy owns `VizStats`; render/export do not scan Git or access SQLite.
-- Narrowing merge-state protection to the sanctioned in-memory scanner path is explicit in the normative schema and does not silently promise unsupported rehydration behavior.
-- No new GitHub networking, Git Notes reader/writer, Git AI line attribution, hosted service, extra card, period filter, or other post-v0.1 feature was introduced.
-
-### Aggregation correctness
-
-- Unique commits, AI-attributed commits, actor presences, provider-attributed commits, active author-local days, and evidence records remain separately named and computed.
-- Multi-AI commits continue to count once as a unique commit and once per distinct actor presence; provider rows use distinct commits per provider.
-- Unknown records remain distinct from explicit human declarations, and no source-code-style inference exists.
-- Duplicate-scan idempotence and rewritten-history fixtures pass.
-
-### Privacy and security
-
-- Validated `VizStats` remains structurally unable to represent repository names/uids/paths, organization names, prompts, commit messages/SHAs, emails, raw trailer values, or sub-date timestamps.
-- Excluded repositories fail closed; aggregate-only mode publishes counts without repository identity; unrecognized provider values collapse before the public boundary.
-- Deterministic SVG/JSON, SVG allowlist, privacy canary, malformed-trailer, unknown-commit, and fixture-repository tests pass.
-- v0.1 continues to contain no GitHub authentication, token handling, telemetry, or network client.
-
-### Non-duplication and OSS readiness
-
-- The Gate does not reproduce Git AI, Git Notes, GitHub API clients, generic profile-statistics generators, README SVG frameworks, or contribution-graph tools.
-- README, contributing guidance, privacy threat model, design docs, and ADRs remain sufficient for contributor orientation.
-- Sample output, packaged-install smoke testing, permissions/symlink hardening, broader diagnostic canaries, and release packaging remain honestly open in the roadmap rather than being claimed complete.
-
-## Severity summary
+## Severity summary (after remediation)
 
 | Severity | Count |
 |---|---:|
 | Critical | 0 |
 | High | 0 |
-| Medium | 3 |
-| Low | 3 |
+| Medium | 0 |
+| Low | 0 |
 
 ## Final recommendation
 
-READY AFTER MINOR FIXES
+READY FOR NEXT GATE

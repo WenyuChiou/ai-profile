@@ -32,7 +32,11 @@ no network is used anywhere in the suite, ever.
   that weakens `VizStats`' structural redaction needs its own ADR and a
   very good reason. Read `docs/PRIVACY.md` first.
 - Deterministic rendering: snapshot updates must be intentional; regenerate
-  via `python tests/unit/test_render_summary.py` and inspect the diff.
+  via `python tests/unit/test_render_summary.py` and inspect the diff. That
+  one command regenerates BOTH the test snapshots and the committed README
+  sample assets (`docs/assets/summary-sample-{light,dark}.svg`) from their
+  authoritative synthetic fixture — never hand-edit or copy either set; a
+  byte-exact drift guard fails the suite if they fall out of sync.
 
 ## Reporting privacy/security issues
 

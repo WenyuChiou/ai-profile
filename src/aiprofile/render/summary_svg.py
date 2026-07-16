@@ -196,6 +196,24 @@ def _commit_mark(cx: int, cy: int, theme: Theme) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _pct_label(numerator: int, denominator: int) -> str:
+    """Deterministic whole-number share label that never lies at the
+    boundaries (gate-7 M-02): a nonzero share is never "0%" and a
+    non-total share is never "100%" — rounding that would produce a
+    false endpoint renders as the compact "<1%" / ">99%" instead.
+    Exact endpoints stay exact."""
+    if denominator <= 0 or numerator == 0:
+        return "0%"
+    if numerator == denominator:
+        return "100%"
+    pct = round(100 * numerator / denominator)
+    if pct == 0:
+        return "<1%"
+    if pct == 100:
+        return ">99%"
+    return f"{pct}%"
+
+
 def _is_zero_state(totals: Totals) -> bool:
     return (
         totals.commits_scanned == 0
@@ -267,7 +285,7 @@ def _ledger_svg(stats: VizStats, theme: Theme) -> str:
 
 def _hero_svg(stats: VizStats, theme: Theme) -> str:
     t = stats.totals
-    share = round(100 * t.ai_attributed_commits / t.commits_scanned) if t.commits_scanned else 0
+    share = _pct_label(t.ai_attributed_commits, t.commits_scanned)
     share_w = (
         round(SHARE_BAR_WIDTH * t.ai_attributed_commits / t.commits_scanned)
         if t.commits_scanned
@@ -286,7 +304,7 @@ def _hero_svg(stats: VizStats, theme: Theme) -> str:
         _text(
             PADDING,
             HERO_RELATION_Y,
-            f"{share}% of {t.commits_scanned} unique commits scanned",
+            f"{share} of {t.commits_scanned} unique commits scanned",
             size=12,
             fill=theme.text,
             weight=600,
@@ -326,8 +344,8 @@ def _provider_row_svg(
 
     count_spans = _tspan(str(row.attributed_commits), fill=theme.text, weight=600)
     if denominator > 0:
-        pct = round(100 * row.attributed_commits / denominator)
-        count_spans += _tspan(f" · {pct}%", fill=theme.muted)
+        pct = _pct_label(row.attributed_commits, denominator)
+        count_spans += _tspan(f" · {pct}", fill=theme.muted)
     elements.append(
         f'<text x="{COUNT_X}" y="{text_y}" font-family="{FONT_STACK}"'
         f' font-size="{COUNT_FONT_SIZE}" text-anchor="end">{count_spans}</text>'

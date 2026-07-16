@@ -209,78 +209,6 @@ def _snapshot_path(case_name: str, theme_name: str) -> Path:
 # Additional fixtures for targeted (non-snapshot) assertions.
 # ---------------------------------------------------------------------------
 
-_LONG_NAME = (
-    "This Is An Absurdly Long AI Tool Display Name That Should Overflow The"
-    " Column Width Easily"
-)
-
-FIXTURE_LONG_NAME = VizStats(
-    schema_version="0.1.0",
-    period=_period(),
-    totals=Totals(
-        commits_scanned=10,
-        ai_attributed_commits=8,
-        ai_actor_presences=9,
-        human_declared_commits=0,
-        unknown_commits=2,
-        active_ai_days=4,
-    ),
-    providers=(
-        ProviderRow(provider="anthropic", display_name=_LONG_NAME, attributed_commits=8,
-                    actor_presences=9, active_days=4),
-    ),
-    provider_count=1,
-    evidence=EvidenceTotals(
-        verified=0,
-        declared=9,
-        imported=0,
-        inferred=0,
-        unknown=0,
-        total_records=9,
-    ),
-    privacy=PrivacySplit(
-        explicitly_publishable_commits=10,
-        anonymous_aggregate_commits=0,
-        includes_anonymous_aggregate=False,
-    ),
-    generated_on=GENERATED_ON,
-)
-
-_ESCAPE_NAME = 'R&D <Beta> "Y"'
-
-FIXTURE_ESCAPE_NAME = VizStats(
-    schema_version="0.1.0",
-    period=_period(),
-    totals=Totals(
-        commits_scanned=7,
-        ai_attributed_commits=5,
-        ai_actor_presences=6,
-        human_declared_commits=0,
-        unknown_commits=2,
-        active_ai_days=2,
-    ),
-    providers=(
-        ProviderRow(provider="anthropic", display_name=_ESCAPE_NAME, attributed_commits=5,
-                    actor_presences=6, active_days=2),
-    ),
-    provider_count=1,
-    evidence=EvidenceTotals(
-        verified=0,
-        declared=6,
-        imported=0,
-        inferred=0,
-        unknown=0,
-        total_records=6,
-    ),
-    privacy=PrivacySplit(
-        explicitly_publishable_commits=7,
-        anonymous_aggregate_commits=0,
-        includes_anonymous_aggregate=False,
-    ),
-    generated_on=GENERATED_ON,
-)
-
-
 # ---------------------------------------------------------------------------
 # Determinism (mvp.md section 7 test 11).
 # ---------------------------------------------------------------------------
@@ -316,7 +244,7 @@ def test_snapshots_byte_exact():
 
 
 def test_well_formed_xml_all_cases():
-    for stats in list(CASES.values()) + [FIXTURE_LONG_NAME, FIXTURE_ESCAPE_NAME]:
+    for stats in list(CASES.values()) + [_share_stats(1, 201), _share_stats(200, 201)]:
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             root = ET.fromstring(svg)  # raises ParseError if malformed
@@ -452,18 +380,35 @@ def test_bar_proportional_to_top_row():
 
 
 def test_long_display_name_truncated_with_ellipsis():
-    svg = render_summary(FIXTURE_LONG_NAME, THEMES["github-light"])
-    assert "…" in svg
-    assert _LONG_NAME not in svg
+    """Renderer defense-in-depth: since gate-7 H-01, a VizStats with an
+    arbitrary long display name cannot be CONSTRUCTED (pinned in
+    test_viz_contract), so truncation is exercised at the helper layer
+    it still guards."""
+    from aiprofile.render.summary_svg import NAME_FONT_SIZE, NAME_WIDTH, _text_width, _truncate
+
+    long_name = (
+        "This Is An Absurdly Long AI Tool Display Name That Should Overflow The"
+        " Column Width Easily"
+    )
+    out = _truncate(long_name, NAME_WIDTH, NAME_FONT_SIZE)
+    assert out.endswith("…")
+    assert out != long_name
+    assert _text_width(out, NAME_FONT_SIZE) <= NAME_WIDTH
 
 
-def test_display_name_text_is_escaped():
-    svg = render_summary(FIXTURE_ESCAPE_NAME, THEMES["github-light"])
-    root = ET.fromstring(svg)  # would raise if unescaped '<'/'&' broke the XML
-    assert "&amp;" in svg
-    assert "&lt;Beta&gt;" in svg
-    assert "<Beta>" not in svg
-    del root  # parsed only to assert well-formedness
+def test_text_content_is_escaped():
+    """Renderer defense-in-depth: every text node escapes XML specials
+    regardless of source — exercised at the helper layer since the
+    closed public vocabulary (gate-7 H-01) removed the arbitrary-string
+    construction path."""
+    from aiprofile.render.summary_svg import _text
+
+    node = _text(0, 0, 'R&D <Beta> "Y"', size=12, fill="#000000")
+    assert "&amp;" in node
+    assert "&lt;Beta&gt;" in node
+    assert "<Beta>" not in node
+    root = ET.fromstring(node)  # would raise if unescaped specials broke the XML
+    del root
 
 
 # ---------------------------------------------------------------------------
@@ -600,9 +545,28 @@ def _write_all_snapshots() -> int:
     return count
 
 
+ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "docs" / "assets"
+
+
+def _write_sample_assets() -> int:
+    """The committed README preview assets regenerate from the SAME
+    authoritative fixture through this same sanctioned entry point
+    (gate-7 L-02) — no manual copying, guarded byte-exact by
+    test_docs_sample_assets_match_current_renderer."""
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    count = 0
+    for theme_name, suffix in _THEME_SUFFIX.items():
+        svg = render_summary(FIXTURE_POPULATED, THEMES[theme_name])
+        (ASSETS_DIR / f"summary-sample-{suffix}.svg").write_bytes(svg.encode("utf-8"))
+        count += 1
+    return count
+
+
 if __name__ == "__main__":
     written = _write_all_snapshots()
+    samples = _write_sample_assets()
     print(f"Wrote {written} snapshot files to {SNAPSHOT_DIR}")
+    print(f"Wrote {samples} sample assets to {ASSETS_DIR}")
 
 
 def test_coordinate_hygiene_no_float_noise():
@@ -610,7 +574,7 @@ def test_coordinate_hygiene_no_float_noise():
     attribute must be an integer or a short decimal (the 0.5 border) —
     never raw double-precision noise like x="120.67999999999999"."""
     attr_re = re.compile(r'\b(?:x|y|x1|y1|x2|y2|width|height)="([^"]+)"')
-    for stats in list(CASES.values()) + [FIXTURE_LONG_NAME, FIXTURE_ESCAPE_NAME]:
+    for stats in list(CASES.values()) + [_share_stats(1, 201), _share_stats(200, 201)]:
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             for value in attr_re.findall(svg):
@@ -629,7 +593,7 @@ _ALLOWED_SVG_TAGS = {
 
 
 def test_svg_uses_only_allowlisted_elements_and_no_active_content():
-    for stats in list(CASES.values()) + [FIXTURE_LONG_NAME, FIXTURE_ESCAPE_NAME]:
+    for stats in list(CASES.values()) + [_share_stats(1, 201), _share_stats(200, 201)]:
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             root = ET.fromstring(svg)
@@ -730,3 +694,78 @@ def test_docs_sample_assets_match_current_renderer():
         assert path.exists(), f"missing committed sample: {path}"
         rendered = render_summary(FIXTURE_POPULATED, THEMES[theme_name]).encode("utf-8")
         assert path.read_bytes() == rendered, f"stale sample asset: {path}"
+
+
+def _share_stats(ai: int, total: int) -> VizStats:
+    return VizStats(
+        schema_version="0.1.0",
+        period=_period(),
+        totals=Totals(total, ai, max(ai, 1) if ai else 0, 0, total - ai, 1 if ai else 0),
+        providers=(
+            (ProviderRow("anthropic", "Claude", ai, ai, 1),) if ai else ()
+        ),
+        provider_count=1 if ai else 0,
+        evidence=EvidenceTotals(0, ai, 0, 0, total - ai, total),
+        privacy=PrivacySplit(total, 0, False),
+        generated_on=GENERATED_ON,
+    )
+
+
+def test_share_percentage_never_lies_at_the_boundaries():
+    """Gate-7 M-02: whole-number rounding published "0%" for a nonzero
+    share (1/201) and "100%" for a non-total share (200/201) — both
+    contradicting the hero count and share bar. Boundary shares must use
+    the deterministic endpoint labels. Confirmed failing pre-fix."""
+    svg_low = render_summary(_share_stats(1, 201), THEMES["github-light"])
+    assert "<1% of 201 unique commits scanned" in svg_low.replace("&lt;", "<")
+    assert ">0% of 201" not in svg_low
+
+    svg_high = render_summary(_share_stats(200, 201), THEMES["github-light"])
+    assert ">99% of 201 unique commits scanned" in svg_high.replace("&gt;", ">")
+    assert "100% of 201" not in svg_high
+
+
+def test_share_percentage_exact_endpoints_stay_exact():
+    svg_zero = render_summary(_share_stats(0, 10), THEMES["github-light"])
+    assert "0% of 10 unique commits scanned" in svg_zero
+    svg_full = render_summary(_share_stats(10, 10), THEMES["github-light"])
+    assert "100% of 10 unique commits scanned" in svg_full
+
+
+def test_provider_percentage_never_lies_at_the_boundaries():
+    stats = VizStats(
+        schema_version="0.1.0",
+        period=_period(),
+        totals=Totals(300, 201, 202, 0, 99, 5),
+        providers=(
+            ProviderRow("anthropic", "Claude", 200, 201, 5),
+            ProviderRow("openai", "OpenAI", 1, 1, 1),
+        ),
+        provider_count=2,
+        evidence=EvidenceTotals(0, 202, 0, 0, 0, 202),
+        privacy=PrivacySplit(300, 0, False),
+        generated_on=GENERATED_ON,
+    )
+    svg = render_summary(stats, THEMES["github-light"])
+    # 1/201 rounds to 0 but is nonzero; 200/201 rounds to 100 but is not total
+    assert "&lt;1%" in svg
+    assert "&gt;99%" in svg
+    assert "· 0%" not in svg
+    assert "· 100%" not in svg
+
+
+def test_evidence_unknown_mark_meets_graphical_contrast():
+    """Gate-7 L-01: the light-theme unknown evidence mark sat at 2.85:1
+    against the provenance panel — below the 3:1 graphical threshold the
+    rest of the evidence system clears. Confirmed failing pre-fix."""
+
+    def lum(h):
+        h = h.lstrip("#")
+        c = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        c = [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+    for theme in THEMES.values():
+        la, lb = sorted((lum(theme.evidence_unknown), lum(theme.chip_bg)), reverse=True)
+        ratio = (la + 0.05) / (lb + 0.05)
+        assert ratio >= 3.0, (theme.name, round(ratio, 2))

@@ -105,7 +105,13 @@ in `cli.py` and passed explicitly.
 are counts, canonical provider slugs/display names, evidence totals,
 period, boolean flags, and a UTC generation date. No repository
 uid/name/path, no author emails, no commit shas, no messages, no local
-paths, no raw trailer strings exist in the type.
+paths, no raw trailer strings exist in the type — and since gate-7 H-01
+this is VALIDATED, not conventional: `VizStats.__post_init__` pins every
+string field to a closed public vocabulary (the supported ACE schema
+version, the fixed v0.1 all-time period, canonical provider slugs from
+schema.md §10, and the schema-owned display name for each slug), so a
+validated instance structurally cannot carry arbitrary private text into
+SVG or JSON regardless of who constructed it.
 
 `privacy.py::build_viz_stats(repo_aggs, config, generated_on) -> VizStats`
 is the single constructor, and applies exactly these rules:

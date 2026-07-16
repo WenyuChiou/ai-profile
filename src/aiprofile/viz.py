@@ -1,10 +1,14 @@
 """VizStats — the visualization data contract and privacy redaction boundary
 (architecture.md sections 3 and 8).
 
-Renderers and exporters accept only this type. Its fields are counts,
-canonical slugs/display names, evidence totals, period, flags, and a UTC
-date: repository identity, emails, shas, paths, and raw trailer strings are
-structurally unrepresentable. Only privacy.build_viz_stats constructs it.
+Renderers and exporters accept only this type, and validation ENFORCES the
+boundary (gate-7 H-01): every string field is pinned to a closed public
+vocabulary — the ACE schema version, the fixed v0.1 all-time period,
+canonical provider slugs, and the schema-owned display name for each slug.
+Repository identity, emails, shas, paths, org names, and raw trailer
+strings are therefore structurally unrepresentable in a VALIDATED instance,
+not merely absent from the supported constructor path
+(privacy.build_viz_stats remains the only production builder).
 """
 
 from __future__ import annotations
@@ -13,8 +17,19 @@ import json
 import re
 from dataclasses import dataclass
 
+from . import ACE_SCHEMA_VERSION
 from .errors import RenderError
-from .schema.vocab import UNRECOGNIZED_PROVIDER
+from .schema.vocab import (
+    CANONICAL_PROVIDERS,
+    PROVIDER_DISPLAY,
+    UNRECOGNIZED_DISPLAY,
+    UNRECOGNIZED_PROVIDER,
+)
+
+#: The single period the v0.1 contract can express (schema.md section 15:
+#: the v0.1 reporting period is all-time with null bounds). Post-v0.1
+#: period support must extend this contract, not free-text it.
+V01_PERIOD_LABEL = "All time"
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -165,8 +180,45 @@ def _validate(s: VizStats) -> None:
             "VizStats.provider_count must equal providers excluding the"
             " unrecognized bucket"
         )
-    if not s.period.label:
-        raise RenderError("VizStats.period.label is required")
+    # ---- Structural privacy boundary for STRING fields (gate-7 H-01):
+    # a validated VizStats must be unable to carry arbitrary text into
+    # SVG/JSON. Every string is pinned to a closed public vocabulary; the
+    # reproduced leak (canary period label / display name published
+    # verbatim) fails HERE, before any renderer runs.
+    if s.schema_version != ACE_SCHEMA_VERSION:
+        raise RenderError(
+            f"VizStats.schema_version must be the supported ACE version"
+            f" ({ACE_SCHEMA_VERSION!r}); free-form version strings are not"
+            " publishable"
+        )
+    if (
+        s.period.from_date is not None
+        or s.period.to_date is not None
+        or s.period.label != V01_PERIOD_LABEL
+    ):
+        raise RenderError(
+            "VizStats.period: the v0.1 contract is the all-time period"
+            f" (bounds None, label {V01_PERIOD_LABEL!r}); free-form period"
+            " text is not publishable"
+        )
+    allowed_slugs = CANONICAL_PROVIDERS | {UNRECOGNIZED_PROVIDER}
+    for row in s.providers:
+        if row.provider not in allowed_slugs:
+            raise RenderError(
+                f"VizStats provider slug {row.provider!r} is not in the"
+                " canonical public vocabulary (schema.md section 10)"
+            )
+        expected_display = (
+            UNRECOGNIZED_DISPLAY
+            if row.provider == UNRECOGNIZED_PROVIDER
+            else PROVIDER_DISPLAY.get(row.provider, row.provider)
+        )
+        if row.display_name != expected_display:
+            raise RenderError(
+                f"VizStats display name for {row.provider!r} must be the"
+                f" schema-owned public display {expected_display!r} —"
+                " arbitrary display text is not publishable"
+            )
 
 
 def to_json_dict(s: VizStats) -> dict:

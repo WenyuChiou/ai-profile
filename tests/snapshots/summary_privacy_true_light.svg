@@ -37,10 +37,10 @@
 <rect x="24" y="328" width="782" height="104" rx="6" fill="#f6f8fa"/>
 <text x="40" y="344" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#59636e" text-anchor="start" letter-spacing="0.2">Evidence (all records: 61)</text>
 <rect x="40" y="364" width="711" height="8" rx="2" fill="#0550ae"/>
-<rect x="753" y="364" width="37" height="8" rx="2" fill="#8c959f"/>
+<rect x="753" y="364" width="37" height="8" rx="2" fill="#6e7781"/>
 <rect x="40" y="385" width="8" height="8" rx="1" fill="#0550ae"/>
 <text x="52" y="392" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">declared 58</text>
-<rect x="127" y="385" width="8" height="8" rx="1" fill="#8c959f"/>
+<rect x="127" y="385" width="8" height="8" rx="1" fill="#6e7781"/>
 <text x="139" y="392" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">unknown 3</text>
 <rect x="40" y="409" width="8" height="8" rx="1" fill="#59636e"/>
 <text x="52" y="416" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Includes aggregate-only activity (repository identity withheld)</text>

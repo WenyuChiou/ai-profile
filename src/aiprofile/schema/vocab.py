@@ -103,6 +103,25 @@ PUBLICATION_RESTRICTIVENESS: dict[PublicationLevel, int] = {
 UNRECOGNIZED_PROVIDER = "unrecognized"
 UNRECOGNIZED_DISPLAY = "Unrecognized"
 
+#: Canonical provider slug -> PUBLIC display name (gate-7 H-01: the schema
+#: owns the public display vocabulary, exactly as it owns the slugs — the
+#: VizStats boundary validates display text against THIS map, so an
+#: arbitrary string cannot pose as a display name; the registry maps
+#: aliases into the slugs and reads displays from here).
+PROVIDER_DISPLAY: dict[str, str] = {
+    "anthropic": "Claude",
+    "openai": "OpenAI",
+    "google": "Gemini",
+    "github": "Copilot",
+    "amazon": "Amazon Q",
+    "cursor": "Cursor",
+    "aider": "Aider",
+    "roo-code": "Roo Code",
+    "openhands": "OpenHands",
+    "windsurf": "Windsurf",
+    "cognition": "Devin",
+}
+
 #: Canonical slug vocabularies (schema.md section 10; gate finding H-02).
 #: The schema OWNS these sets: `build_event` rejects any canonical
 #: provider/tool value outside them, so an arbitrary string (e.g. a private

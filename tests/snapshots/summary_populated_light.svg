@@ -52,14 +52,14 @@
 <rect x="40" y="472" width="19" height="8" rx="2" fill="#033d8b"/>
 <rect x="61" y="472" width="643" height="8" rx="2" fill="#0550ae"/>
 <rect x="706" y="472" width="8" height="8" rx="2" fill="#218bff"/>
-<rect x="716" y="472" width="74" height="8" rx="2" fill="#8c959f"/>
+<rect x="716" y="472" width="74" height="8" rx="2" fill="#6e7781"/>
 <rect x="40" y="493" width="8" height="8" rx="1" fill="#033d8b"/>
 <text x="52" y="500" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">verified 12</text>
 <rect x="122" y="493" width="8" height="8" rx="1" fill="#0550ae"/>
 <text x="134" y="500" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">declared 400</text>
 <rect x="215" y="493" width="8" height="8" rx="1" fill="#218bff"/>
 <text x="227" y="500" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">inferred 5</text>
-<rect x="293" y="493" width="8" height="8" rx="1" fill="#8c959f"/>
+<rect x="293" y="493" width="8" height="8" rx="1" fill="#6e7781"/>
 <text x="305" y="500" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#1f2328" text-anchor="start">unknown 46</text>
 <rect x="40" y="517" width="8" height="8" rx="1" fill="#59636e"/>
 <text x="52" y="524" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#59636e" text-anchor="start">Includes aggregate-only activity (repository identity withheld) — publishable 200 · aggregate-only 320</text>

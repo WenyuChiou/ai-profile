@@ -220,6 +220,28 @@ which is authoritative).
   recommendation) so future card changes must regenerate the assets or
   fail loudly. Suite: **310 passed, 1 skipped**; ruff clean.
 
+- **Gate-7 review received and remediated** (2026-07-15, UNCOMMITTED
+  pending authorization): `docs/reviews/gate-review.md` reviewed
+  `b899d11..9933308`, verdict NOT READY (1 High, 2 Medium, 2 Low) — all
+  5 independently reproduced and accepted (`gate-disposition.md`,
+  gate-7 section), each behavioral fix with a pre-fix-failing
+  regression:
+  - **H-01**: VizStats is now the ENFORCED structural privacy boundary —
+    every string field pinned to a closed public vocabulary (ACE version,
+    fixed all-time period, canonical slugs, schema-owned display names;
+    `PROVIDER_DISPLAY` moved into schema.vocab); the reproduced
+    canary-to-SVG/JSON leak fails at construction;
+  - **M-01**: merge timestamp resolves by the ADR-008 strongest-leaf rule
+    (was first-leaf copy — reversed inputs produced different canonical
+    events); schema §8.3 states the rule;
+  - **M-02**: percentages never lie at the boundaries — `<1%`/`>99%`
+    endpoint labels for hero share and provider rows;
+  - **L-01**: light-theme unknown evidence mark #8c959f → #6e7781
+    (2.85:1 → 4.27:1); both ramps re-validated ALL PASS;
+  - **L-02**: one sanctioned command now regenerates snapshots AND the
+    README sample assets; CONTRIBUTING documents it.
+  Suite after the pass: **323 passed, 1 skipped**; ruff clean.
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

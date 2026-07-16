@@ -425,7 +425,13 @@ def merge_event_group(events: list[AceEvent] | tuple[AceEvent, ...]) -> AceEvent
         roles=roles,
         contribution_mode=resolve("contribution_mode"),
         human_reviewed=resolve("human_reviewed"),
-        timestamp=first.timestamp,
+        # Timestamp is NOT part of event identity, so same-identity leaves
+        # can legally disagree (gate-7 M-01: first.timestamp made the
+        # reduction order-dependent). It resolves by the same
+        # strongest-leaf canonical rule as every other scalar (ADR-008),
+        # restoring the permutation-purity guarantee. Required on every
+        # leaf, so resolve() can never return None here.
+        timestamp=resolve("timestamp"),
         repository_uid=first.repository_uid,
         commit_sha=first.commit_sha,
         evidence_level=evidence,

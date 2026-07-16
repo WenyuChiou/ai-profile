@@ -20,6 +20,7 @@ from .schema.vocab import (
     PublicationLevel,
 )
 from .viz import (
+    V01_PERIOD_LABEL,
     EvidenceTotals,
     Period,
     PrivacySplit,
@@ -109,7 +110,7 @@ def build_viz_stats(
 
     return VizStats(
         schema_version=ACE_SCHEMA_VERSION,
-        period=Period(from_date=None, to_date=None, label="All time"),
+        period=Period(from_date=None, to_date=None, label=V01_PERIOD_LABEL),
         totals=Totals(
             commits_scanned=commits_scanned,
             ai_attributed_commits=sum(a.ai_attributed_commits for a, _ in included),

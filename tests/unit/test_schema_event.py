@@ -860,3 +860,39 @@ def test_m01_derivation_state_is_envelope_only_never_persisted():
     assert "recorded_at" not in json.dumps(payload)
     # The persisted-schema half of this contract (no `merged` column)
     # lives with the storage/migration tests (gate-6 L-03).
+
+
+def test_gate7_timestamp_conflict_resolves_order_free():
+    """Gate-7 M-01: timestamp is not part of event identity, so two valid
+    same-identity leaves can carry different timestamps — the merge
+    previously copied first.timestamp, breaking the permutation-purity
+    guarantee (reproduced: reversed inputs produced different canonical
+    events). Timestamp now resolves by the same strongest-leaf canonical
+    rule as the other scalars (ADR-008). Confirmed failing pre-fix."""
+    kw = dict(
+        actor_type=ActorType.AI,
+        repository_uid="remote:v5:github.com/o/r",
+        commit_sha="a" * 40,
+        provider="anthropic",
+    )
+    a = build_event(
+        **kw,
+        timestamp="2026-07-14T01:00:00+00:00",
+        sources=[ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")],
+    )
+    b = build_event(
+        **kw,
+        timestamp="2026-07-15T01:00:00+00:00",
+        sources=[
+            ProvenanceSource(
+                SourceType.GIT_TRAILER_COAUTHOR, EvidenceLevel.DECLARED, "co-authored-by"
+            )
+        ],
+    )
+    assert a.event_id == b.event_id
+    ab = merge_event_group([a, b])
+    ba = merge_event_group([b, a])
+    assert canonical_json(ab) == canonical_json(ba)
+    # the strongest leaf (git_trailer outranks coauthor at equal evidence)
+    # asserts the timestamp, in both orders:
+    assert ab.timestamp == ba.timestamp == "2026-07-14T01:00:00+00:00"

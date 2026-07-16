@@ -11,7 +11,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .schema.vocab import CANONICAL_PROVIDERS, CANONICAL_TOOLS, UNRECOGNIZED_PROVIDER
+from .schema.vocab import (
+    CANONICAL_PROVIDERS,
+    CANONICAL_TOOLS,
+    PROVIDER_DISPLAY,
+    UNRECOGNIZED_PROVIDER,
+)
 
 #: raw (lowercased) AI-Provider trailer value -> canonical provider slug
 PROVIDER_ALIASES: dict[str, str] = {
@@ -30,20 +35,9 @@ PROVIDER_ALIASES: dict[str, str] = {
     "cognition": "cognition",
 }
 
-#: canonical provider slug -> display name for cards/exports
-PROVIDER_DISPLAY: dict[str, str] = {
-    "anthropic": "Claude",
-    "openai": "OpenAI",
-    "google": "Gemini",
-    "github": "Copilot",
-    "amazon": "Amazon Q",
-    "cursor": "Cursor",
-    "aider": "Aider",
-    "roo-code": "Roo Code",
-    "openhands": "OpenHands",
-    "windsurf": "Windsurf",
-    "cognition": "Devin",
-}
+# Display names live in the schema-owned public vocabulary
+# (schema.vocab.PROVIDER_DISPLAY, gate-7 H-01); the registry re-exports the
+# lookup below for its callers.
 
 #: raw (lowercased) AI-Tool trailer value -> (tool slug, owning provider slug)
 TOOL_ALIASES: dict[str, tuple[str, str]] = {

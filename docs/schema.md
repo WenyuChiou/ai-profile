@@ -325,6 +325,19 @@ group plus a matching co-author line), and to future multi-source imports
   identity (never an incremental pairwise fold — pooled ranks are
   fold-order dependent; ADR-008), so the same evidence set in any order
   yields identical events (exhaustively permutation-tested).
+- **`activity.timestamp`** (gate-7 M-01): timestamp is not part of event
+  identity (§8.1), so same-identity leaves can legally disagree (e.g. a
+  future import asserting a different author date). The merged timestamp
+  resolves by the SAME strongest-leaf canonical rule as the scalars
+  above — higher evidence precedence, then source-type priority, then
+  locator, then value — so the reduction stays permutation-pure; the
+  first-leaf copy it replaces made canonical bytes depend on input order.
+  The final value tie-break is a DETERMINISTIC STRING comparison, not a
+  chronological one: offset-aware timestamps at different UTC offsets
+  compare digit-by-digit, so a source supplying timestamps in a second
+  offset should normalize to a common offset before merge (reviewer
+  note, gate-7 — unreachable in v0.1, where all leaves of a commit share
+  one CommitRecord author-date string).
 - **Leaf-only inputs** (gate-4 High): a multi-input reduction accepts
   leaf productions only, enforced via the `merged` derivation marker
   (§1) — a previously merged result would have its values re-ranked
