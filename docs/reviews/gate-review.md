@@ -1,160 +1,152 @@
-# Current Gate remediation report
+# Gate 7 remediation verification review
 
-Date: 2026-07-15
-Remediation range: working tree on top of `9933308` (uncommitted by task
-constraint — commit authorization not granted; 18 modified files + 1 new
-test file, verified by `git status --short`).
-Reviewer posture: remediating implementer, with two mandatory independent
-gates applied — the repository code-review skill (verdict APPROVE) and the
-persistent independent code-reviewer agent (verdict APPROVE after
-independent reproduction of every fix).
+Date: 2026-07-16
+
+Review range: `99333087d603c5de9f96d7fa44f91b6db3062c87..73279cd5897eb9e669a863f60ebc47d3e249bec7`
+
+Reviewer posture: independent Principal Software Engineer; verification only. No production code, test code, architecture, schema, or MVP design was changed during this review.
 
 ## Executive summary
 
-All five findings of the prior review (`b899d11..9933308`, NOT READY:
-1 High, 2 Medium, 2 Low) were independently reproduced BEFORE acceptance,
-accepted 5/5, and fixed with regressions that each failed against the
-pre-fix code. The High finding is closed structurally: a validated
-`VizStats` can no longer carry arbitrary text into SVG or JSON — every
-string field is pinned to a closed public vocabulary at construction.
-Both Medium correctness defects (order-dependent merge timestamps, false
-endpoint percentages) are closed with narrow contract fixes, and both Low
-hardening items (unknown-mark contrast, sample regeneration path) are
-resolved rather than deferred.
+The remediation is narrow, architecture-consistent, and generally well tested. Four of the five Gate 7 dispositions are verified closed: timestamp merging is permutation-pure under the documented strongest-leaf order; hero and provider percentages do not fabricate endpoint values; the revised light-theme evidence mark clears the stated contrast threshold; and the sanctioned regeneration command updates both snapshots and README sample assets without drift. The full suite passes with the expected count, Ruff is clean, both evidence ramps pass the independent palette validator, and a fresh synthetic repository produced privacy-clean public assets.
 
-Final suite: **323 passed, 1 skipped** (baseline 310+1; +13 net new
-regressions); Ruff clean; `git diff --check` clean; the full adversarial
-probe battery re-ran green. Both independent reviews returned APPROVE
-with only non-blocking suggestions, all of which were applied.
+The High privacy finding is not fully closed. `VizStats` validates nested values only during `__post_init__`, but it neither enforces the declared nested dataclass types nor reconstructs the input into an owned immutable graph. A mutable `list` passes for the tuple-annotated `providers` field; more importantly, even a tuple containing a mutable duck-typed row passes, as does a mutable period-like object. After successful construction, changing either display text or the period label is published by both `render_summary()` and `dumps_stats()` without revalidation. This directly contradicts the new architectural guarantee that any validated instance is structurally unable to carry arbitrary private text, regardless of who constructs it.
 
-## Commands and exact outputs
+A second, Low validation gap remains in `generated_on`: the Unicode-aware `\d` pattern with `$` accepts Unicode digit confusables, a trailing newline, and impossible calendar dates such as `2026-99-99`. The supported production builder supplies a real ASCII UTC date, so this is not a normal-path leak, but the contract and documentation claim more than the validator guarantees.
 
-- Baseline (pre-edit): `python -m pytest tests -p no:cacheprovider` →
-  `310 passed, 1 skipped in 24.68s`; `python -m ruff check src tests` →
-  `All checks passed!`; tree clean except the review file itself.
-- Final: `python -m pytest tests -p no:cacheprovider` →
-  `323 passed, 1 skipped in 16.36s` (exit 0); `python -m ruff check src
-  tests` → `All checks passed!`; `git diff --check` → clean.
-- Palette validator (both ordinal ramps, unchanged blues, re-run for the
-  record): `ALL CHECKS PASS` light (`#033d8b,#0550ae,#0969da,#218bff` on
-  `#f6f8fa`) and dark (`#a5d6ff,#58a6ff,#388bfd,#1f6feb` on `#161b22`).
-- Contrast (changed token): light `#6e7781` vs `#f6f8fa` = **4.27:1**
-  (was `#8c959f` = 2.85:1); dark `#6e7681` vs `#161b22` = 3.77:1.
-- Adversarial probes re-run green: canary-rejection ×5 (period label,
-  schema version, provider slug, display name, period bounds — each a
-  reproduced pre-fix leak, each now fails at construction),
-  reversed-timestamp merge equality, boundary percentages
-  (1/201 → `<1%`, 200/201 → `>99%`, 0/10 → `0%`, 10/10 → `100%`),
-  deterministic double render ×8 state/theme pairs, byte-level privacy
-  sweep over all 8 snapshots + both `docs/assets` samples (only the
-  required w3.org xmlns), README sample drift guard green.
+No redesign is required. Both findings are localized contract-hardening fixes, but the reproduced SVG/JSON publication path makes advancement unsafe until the High finding is closed and regression-tested.
 
-## Disposition of every prior finding
+## Review basis and verification evidence
 
-### H-01 — ACCEPTED, fixed (structural)
+The review covered repository guidance; architecture, ACE schema, MVP, privacy threat model, roadmap, progress, proposal, landscape and non-duplication analysis; all ADRs; prior Gate review and disposition records; README and CONTRIBUTING; the complete pinned diff; affected production code; affected tests; snapshots; and committed sample assets.
 
-Reproduced first: a fully validated `VizStats` carried
-`SecretPeriod-Repo`, `SecretOrg-PrivateRepo`, a fake provider slug, and a
-fake schema version verbatim into both `render_summary` and
-`dumps_stats`. Fix (`src/aiprofile/viz.py`): `_validate` pins every
-string field — `schema_version == ACE_SCHEMA_VERSION`; period must be the
-fixed v0.1 all-time contract (`None` bounds, `V01_PERIOD_LABEL`);
-provider slugs must come from `CANONICAL_PROVIDERS ∪ {unrecognized}`;
-display names must equal the schema-owned display for the slug.
-`PROVIDER_DISPLAY` moved into `src/aiprofile/schema/vocab.py` (the schema
-owns the public vocabulary — the established H-02 precedent);
-`registry.py` consumes it unchanged; `privacy.py` now imports
-`V01_PERIOD_LABEL` (single source). Dependency direction unchanged:
-`viz → schema.vocab` pre-existed; the render/export AST fence is
-untouched; no renderer sanitization was added. `docs/architecture.md` §3
-now states the enforcement. Regressions: `tests/unit/test_viz_contract.py`
-(6 rejection + 2 construction cases, all rejections red pre-fix).
-Consequence honestly recorded: two old render fixtures that DEPENDED on
-arbitrary display names (long-name truncation, XML-escape) are no longer
-constructable — by design; those renderer properties are now pinned at
-the `_truncate`/`_text` helper layer, and the independent reviewer
-verified this preserves (and in one respect extends) the original
-coverage.
+Commands and observed results:
 
-### M-01 — ACCEPTED, fixed
+- `git rev-parse HEAD` -> `73279cd5897eb9e669a863f60ebc47d3e249bec7`.
+- `git status --short` before review -> no output (clean working tree).
+- `python -m pytest tests -p no:cacheprovider` -> `323 passed, 1 skipped in 29.36s` (exit 0). Two unrelated environment warnings were emitted by globally installed `requests`/`langsmith`; no project test failed.
+- `python -m ruff check src tests` -> `All checks passed!`.
+- `python tests/unit/test_render_summary.py` -> `Wrote 8 snapshot files` and `Wrote 2 sample assets`; the subsequent `git status --short` remained empty.
+- Light ordinal palette validator (`#033d8b,#0550ae,#0969da,#218bff` on `#f6f8fa`) -> `ALL CHECKS PASS`.
+- Dark ordinal palette validator (`#a5d6ff,#58a6ff,#388bfd,#1f6feb` on `#161b22`) -> `ALL CHECKS PASS`.
+- Snapshot/asset diff inspection -> exactly three light snapshots and the light README sample changed, with two occurrences per file of `#8c959f` -> `#6e7781`; no unrelated geometry, text, or dark-theme drift.
+- Public artifact sweep over all snapshots and both committed samples -> zero matches for 40-hex SHAs, emails, local paths, non-xmlns URLs, or GitHub owner/repository paths.
+- Fresh end-to-end synthetic scan (`init` -> `scan` -> `render`) with distinctive repository name, organization, remote URL, local path, raw provider, commit message, author email, SHA, repository UID, and salt -> all commands returned 0; all three dist files were byte-swept; `leaks []`; the raw provider appeared only as the public `unrecognized` bucket.
 
-Reproduced first: same-identity leaves with different timestamps merged
-to different canonical events under reversed input
-(`canonical_equal False`). Fix (`src/aiprofile/schema/event.py`):
-`timestamp=resolve("timestamp")` — the same strongest-leaf canonical rule
-(ADR-008) used by the other scalars; permutation purity restored.
-`docs/schema.md` §8.3 states the rule, including the reviewer's note that
-the final tie-break is a deterministic string comparison, not a
-chronological one (cross-offset sources should normalize before merge —
-unreachable in v0.1). Regression: reversed-order byte-identity plus
-strongest-leaf winner assertion, red pre-fix.
+### Direct adversarial probes
 
-### M-02 — ACCEPTED, fixed
+- Mutable validated-boundary probes: a valid one-element provider list could be replaced after construction (`svg_leak=True`, `json_leak=True`). Stronger probes kept `providers` as a tuple but supplied a mutable row-like object, then changed its `display_name`; and supplied a mutable period-like object, then changed its `label`. Both tuple-row and period probes likewise produced `svg_leak=True` and `json_leak=True`.
+- `dataclasses.replace()` probe with an invalid tuple display name -> correctly rejected with `RenderError`; this confirms the gap is mutability/type enforcement, not the new string comparison itself.
+- Date probe -> `2026-07-15`, `2026-99-99`, full-width `２０２６-０７-１５`, Arabic-Indic `٢٠٢٦-٠٧-١٥`, and `"2026-07-15\n"` were all accepted.
+- Timestamp probe over all six permutations of three same-identity leaves, including equal-rank/equal-locator conflicts and cross-offset representations -> one canonical output; strongest-leaf/value tie-break winner stable; `merged=True` preserved.
+- Percentage probe -> `1/201` renders `<1%`, `200/201` renders `>99%`, exact zero/total remain `0%`/`100%`; 10,000- and 100,000-digit integer ratios also returned the correct compact endpoint labels without overflow.
+- Renderer determinism/security -> full pinned state/theme suite passed XML parsing, element allowlist, active-content rejection, coordinate hygiene, dynamic height, width, font-size, and byte-exact snapshot tests.
 
-Reproduced first: `1/201 → "0% of 201"`, `200/201 → "100% of 201"`. Fix
-(`src/aiprofile/render/summary_svg.py`): `_pct_label` — exact `0%`/`100%`
-only for exactly-zero/exactly-total shares; a rounding that would
-fabricate an endpoint renders `<1%` / `>99%` (deterministic, compact);
-applied to the hero share and the provider rows. Aggregation values
-untouched; fixture snapshots unaffected (no fixture share hits an
-endpoint); label and share bar communicate compatible states (verified:
-2px sliver + `<1%`, 358px + `>99%`). Regressions: both surfaces,
-boundaries and exact endpoints, red pre-fix.
+## Findings
 
-### L-01 — ACCEPTED, fixed
+### H-01 — High — The validated `VizStats` object graph is not structurally immutable
 
-Reproduced first: light-theme `evidence_unknown` `#8c959f` at 2.85:1
-against the `#f6f8fa` panel. Fix (`src/aiprofile/render/themes.py`):
-Primer fg-muted `#6e7781` (4.27:1), still neutral and visually
-subordinate; dark theme already passed. Both ordinal ramps re-validated
-ALL CHECKS PASS; a contrast pin regression (≥3:1 both themes) was red
-pre-fix for light. Exactly 3 light snapshots + the light sample asset
-changed (2 rects each), regenerated via the sanctioned script.
+**Description:** `src/aiprofile/viz.py:85-96` declares frozen nested dataclasses and a `tuple[ProviderRow, ...]`, but `_validate()` does not enforce those runtime types or defensively rebuild the graph. It accesses attributes by duck typing at `src/aiprofile/viz.py:100-120` and `src/aiprofile/viz.py:194-220`. Consequently, an ordinary provider list passes; a tuple containing a mutable row-like object also passes; and a mutable period-like object passes. The frozen outer dataclass prevents only reassignment of its direct attributes. It does not freeze caller-owned nested objects. Render and export trust the previously validated graph and publish later mutations.
 
-### L-02 — ACCEPTED, fixed
+Reproduction:
 
-Confirmed first: the sanctioned script wrote only `tests/snapshots`;
-CONTRIBUTING documented snapshots only. Fix: `python
-tests/unit/test_render_summary.py` now also regenerates both
-`docs/assets` samples from the same authoritative fixture
-(`_write_sample_assets`); `CONTRIBUTING.md` documents the single command
-and forbids hand-editing; the byte-exact drift guard is unchanged.
+```python
+from dataclasses import dataclass
+from aiprofile.render.summary_svg import render_summary
+from aiprofile.render.themes import THEMES
+from aiprofile.viz import (
+    EvidenceTotals, Period, PrivacySplit, Totals, VizStats, dumps_stats,
+)
 
-## Newly discovered findings
+@dataclass
+class MutableRow:
+    provider: str = "anthropic"
+    display_name: str = "Claude"
+    attributed_commits: int = 5
+    actor_presences: int = 6
+    active_days: int = 3
 
-None retained. Two non-blocking review suggestions were applied in-round
-(period-label single-sourcing; the §8.3 tie-break note). One pre-existing
-observation from the independent reviewer, explicitly not introduced by
-this round and not blocking: `viz.py` itself is not in the AST
-dependency-scan file list (runtime isolation already covers the chain
-transitively) — a candidate for a future hardening pass.
+row = MutableRow()
+stats = VizStats(
+    "0.1.0", Period(None, None, "All time"),
+    Totals(10, 5, 6, 0, 5, 3), (row,), 1,
+    EvidenceTotals(0, 6, 0, 0, 4, 10),
+    PrivacySplit(10, 0, False), "2026-07-15",
+)  # accepted even though row is not ProviderRow
+row.display_name = "SecretOrg-PrivateRepo"
+assert "SecretOrg-PrivateRepo" in render_summary(stats, THEMES["github-light"])
+assert "SecretOrg-PrivateRepo" in dumps_stats(stats)
+```
+
+The same probe succeeds with a mutable `period` object whose initially valid `label` is changed after construction. Therefore converting only the provider container to a tuple would not close the boundary.
+
+This falsifies the new claims in `docs/architecture.md:109-114`, `docs/progress.md:229-233`, and the Gate 7 disposition that a validated instance cannot carry arbitrary private text regardless of who constructed it. The supported `privacy.build_viz_stats()` path currently supplies a tuple and the fresh end-to-end privacy probe is clean, but the remediation explicitly broadened the guarantee beyond that single constructor.
+
+**Impact:** Library callers, future adapters, tests, or refactors can accidentally retain and mutate nested objects after validation — including a provider list, a row-like object held inside a tuple, or a period-like object — exposing repository names, organization names, prompts, commit messages, paths, or other arbitrary strings in both public SVG and JSON. The central structural privacy guarantee is therefore not enforced as documented.
+
+**Recommendation:** Make `VizStats` own a fully immutable validated graph. Either reject unexpected nested types (`Period`, `Totals`, every `ProviderRow`, `EvidenceTotals`, and `PrivacySplit`, plus a tuple container), or defensively reconstruct all nested inputs into the exact frozen dataclasses and a new tuple before exposing the instance. Add regressions for an externally retained provider list, a tuple containing a mutable row-like object, and a mutable period-like object; after attempted mutation, prove the validated graph and rendered/exported bytes cannot change. Keep enforcement centralized in `VizStats`; do not add renderer-specific sanitization.
+
+### L-01 — Low — `generated_on` accepts non-canonical and invalid dates
+
+**Description:** `src/aiprofile/viz.py:34` defines `_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")`, and `src/aiprofile/viz.py:124` uses `.match()`. Python `\d` accepts Unicode decimal digits, `$` matches before a final newline, and the pattern checks shape rather than calendar validity. Direct construction accepted full-width and Arabic-Indic digits, `"2026-07-15\n"`, and `2026-99-99`.
+
+**Impact:** The normal production builder supplies a real UTC date, so this does not presently expose arbitrary alphabetic text or corrupt aggregation. It does, however, violate the documented ASCII `YYYY-MM-DD`/UTC-date contract and weakens the Gate's claim that every public string field is tightly constrained. Non-canonical output can also break downstream consumers expecting ISO dates.
+
+**Recommendation:** Require a plain string in canonical ASCII ISO date form and validate calendar semantics, for example with strict `[0-9]` matching plus `date.fromisoformat()` and a round-trip equality check. Add regressions for Unicode digits, a final newline, invalid month/day, and a valid leap day.
 
 ## Verified areas without findings
 
-- Renderer/exporter isolation: fresh-interpreter probe re-run — no
-  banned modules load; `aiprofile/__init__.py` holds constants only, so
-  the new `viz → package-root` import creates no cycle.
-- Aggregation semantics: unique commits / presences / provider commits /
-  active author-local days / evidence records remain distinct; unknown
-  remains distinct from human; no inference.
-- Privacy on the supported path: `privacy.build_viz_stats` unchanged in
-  behavior; byte-level sweeps clean across dist-shaped outputs,
-  snapshots, and committed samples.
-- Determinism, XML well-formedness, element allowlist, coordinate
-  hygiene, minimum font size, WIDTH 830, dynamic height ordering — all
-  pinned tests green with the new states included in the loops.
-- MVP scope: no new features, dependencies, network code, or duplication
-  entered the diff.
+### Architecture and dependency direction
 
-## Severity summary (after remediation)
+- Collection, schema, storage, aggregation, privacy, visualization data, rendering, and export responsibilities remain separated.
+- Renderers consume `VizStats` only; they do not scan Git, access SQLite, infer attribution, or recalculate aggregates.
+- The provider display mapping moved to schema-owned vocabulary without introducing a cycle. Registry normalization behavior remains unchanged, and render/export import fences pass.
+- The remediation adds no runtime dependency, network path, GitHub authentication, or hosted component.
+
+### Schema and merge semantics
+
+- `activity.timestamp` now resolves through the same strongest-leaf rank as other scalar conflicts. Equal-rank ties are deterministic, and input permutations produce byte-identical canonical events.
+- `merged` remains operational envelope state, participates in equality/hash, stays out of canonical payload and persistence, and the leaf-only merge boundary remains intact.
+- Event identity, evidence precedence, unknown-versus-human separation, and the explicit-evidence-only rule are unchanged. No source-code-style inference exists.
+
+### Aggregation correctness
+
+- Unique commits, AI-attributed commits, AI actor presences, provider-attributed commits, active author-date days, and evidence records remain separately named, validated, and rendered.
+- One multi-AI commit counts once in unique/AI-attributed commit totals while contributing multiple actor presences and potentially multiple provider commit credits.
+- Evidence categories sum over all ACE records and remain distinct from commit and presence units.
+- Duplicate scans, rewritten history, merge permutations, unknown commits, and fixture-repository cases pass.
+
+### Privacy and security on the supported path
+
+- Aggregate-only activity withholds repository identity; excluded repositories fail closed; unrecognized provider text collapses before publication.
+- The fresh end-to-end dist sweep and committed snapshot/sample sweeps found no repository names, paths, organizations, URLs, prompts/messages, author emails, SHAs, UIDs, or salt.
+- SVG output remains deterministic, XML-well-formed, allowlisted, free of event attributes/external references, and generated from validated aggregate data.
+- v0.1 contains no GitHub token handling, authentication, telemetry, or network client.
+
+### Visualization and documentation
+
+- The static SVG strategy remains feasible for GitHub README `<picture>` embedding; width, dynamic height, light/dark outputs, accessibility text, and deterministic samples are pinned.
+- `<1%`/`>99%` labels are semantically consistent with their count/bar states and XML-safe.
+- The revised light unknown mark clears 3:1; both ordinal ramps independently pass all validator checks.
+- Moving arbitrary-name truncation and XML escaping tests to helper-level coverage is acceptable once the structural boundary is actually immutable: those helpers directly own the behaviors, while public-vocabulary rejection is separately tested.
+- CONTRIBUTING now documents one authoritative regeneration command, and the byte-exact docs asset drift guard passes.
+
+### MVP scope, non-duplication, and OSS readiness
+
+- No feature creep entered the range: no Git Notes implementation, Git AI line attribution, GitHub API client, generic profile statistics, contribution graph, additional card, dashboard, or session-log adapter.
+- The project continues to reuse provenance conventions and renderer patterns without reproducing Git AI, generic README statistics generators, or contribution-snake tooling.
+- README, privacy threat model, contribution guidance, ADRs, roadmap, sample assets, and current limitations remain understandable to a new contributor.
+- The roadmap honestly retains packaged-install smoke testing, release packaging, permission/symlink hardening, and wider diagnostics canary sweeps as pre-release work.
+
+## Severity summary
 
 | Severity | Count |
 |---|---:|
 | Critical | 0 |
-| High | 0 |
+| High | 1 |
 | Medium | 0 |
-| Low | 0 |
+| Low | 1 |
 
 ## Final recommendation
 
-READY FOR NEXT GATE
+NOT READY

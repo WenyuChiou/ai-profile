@@ -242,6 +242,25 @@ which is authoritative).
     README sample assets; CONTRIBUTING documents it.
   Suite after the pass: **323 passed, 1 skipped**; ruff clean.
 
+- **Gate-8 review received and remediated** (2026-07-16, UNCOMMITTED
+  pending authorization): independent verification of `9933308..73279cd`
+  (gate-review.md, preserved untouched) confirmed 4/5 gate-7 closures
+  and found two gaps in the fifth — both reproduced, accepted, fixed
+  red-first (`gate-disposition.md`, gate-8 section):
+  - **H-01**: the validated VizStats graph is now structurally
+    IMMUTABLE — exact frozen contract types enforced for every nested
+    record, the tuple container, and every string leaf, before any
+    duck-typed access; the reproduced mutate-after-validate leaks
+    (mutable list / tuple-held mutable row / mutable period) all fail
+    at construction, and post-construction mutation raises with output
+    bytes pinned unchanged; the in-round review pass caught and closed
+    an int-subclass __str__ variant the same way (exact int/bool);
+  - **L-01**: `generated_on` is a canonical ASCII calendar date
+    (ASCII fullmatch + fromisoformat + round-trip) — Unicode digits,
+    trailing newline, and impossible dates rejected.
+  Suite after the pass: **339 passed, 1 skipped**; ruff clean; snapshot
+  regeneration byte-stable (no visual change, as required).
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

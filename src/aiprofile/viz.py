@@ -13,6 +13,7 @@ not merely absent from the supported constructor path
 
 from __future__ import annotations
 
+import datetime
 import json
 import re
 from dataclasses import dataclass
@@ -31,7 +32,11 @@ from .schema.vocab import (
 #: period support must extend this contract, not free-text it.
 V01_PERIOD_LABEL = "All time"
 
-_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+#: ASCII-only, fullmatched (gate-8 L-01): Python's \d accepts Unicode
+#: decimals and `$` tolerates a trailing newline — both reproduced
+#: bypasses. Calendar validity is checked separately via
+#: date.fromisoformat + round-trip.
+_DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 
 @dataclass(frozen=True)
@@ -96,7 +101,46 @@ class VizStats:
         _validate(self)
 
 
+def _require_exact(value: object, expected: type, what: str) -> None:
+    # Exact-type check, deliberately NOT isinstance (gate-8 H-01): a
+    # subclass — or any duck type — can be mutable or emit different
+    # text at render time than validation saw. Rejection over coercion,
+    # matching the schema layer's own philosophy.
+    if type(value) is not expected:
+        raise RenderError(
+            f"VizStats: {what} must be exact {expected.__name__},"
+            f" got {type(value).__name__}"
+        )
+
+
 def _validate(s: VizStats) -> None:
+    # ---- Structural immutability of the validated graph (gate-8 H-01),
+    # enforced BEFORE any duck-typed attribute access below: a mutable
+    # provider list, a tuple holding a mutable row-like object, and a
+    # mutable period-like object all passed validation and published
+    # post-construction mutations through BOTH render_summary and
+    # dumps_stats (reproduced). Exact frozen contract types close every
+    # probe: after this block the whole graph is frozen dataclasses,
+    # tuples, plain str/int/bool/None leaves.
+    _require_exact(s.period, Period, "period")
+    _require_exact(s.totals, Totals, "totals")
+    _require_exact(s.evidence, EvidenceTotals, "evidence")
+    _require_exact(s.privacy, PrivacySplit, "privacy")
+    _require_exact(s.providers, tuple, "providers container")
+    for row in s.providers:
+        _require_exact(row, ProviderRow, "each provider row")
+    # String leaves must be exact str (gate-8 H-01): a str subclass can
+    # override __str__/__format__ and emit text validation never saw.
+    for value, what in (
+        (s.schema_version, "schema_version"),
+        (s.period.label, "period.label"),
+        (s.generated_on, "generated_on"),
+        *((r.provider, "provider slug") for r in s.providers),
+        *((r.display_name, "display name") for r in s.providers),
+    ):
+        if type(value) is not str:
+            raise RenderError(f"VizStats: {what} must be exact str")
+
     counts = [
         s.totals.commits_scanned,
         s.totals.ai_attributed_commits,
@@ -119,11 +163,35 @@ def _validate(s: VizStats) -> None:
         *(p.actor_presences for p in s.providers),
         *(p.active_days for p in s.providers),
     ]
-    if any((not isinstance(c, int)) or c < 0 for c in counts):
-        raise RenderError("VizStats: all counts must be non-negative integers")
-    if not _DATE_RE.match(s.generated_on):
+    # Exact int, deliberately not isinstance (gate-8 code-review pass):
+    # an int SUBCLASS can override __str__ and emit render-time text
+    # validation never saw (reproduced: EvilInt leaked into the SVG),
+    # and bool is an int subclass. Same rejection rule as the str leaves.
+    if any(type(c) is not int or c < 0 for c in counts):
         raise RenderError(
-            "VizStats.generated_on must be a date (YYYY-MM-DD), never a timestamp"
+            "VizStats: all counts must be exact int and non-negative"
+        )
+    if type(s.privacy.includes_anonymous_aggregate) is not bool:
+        raise RenderError(
+            "VizStats: includes_anonymous_aggregate must be exact bool"
+        )
+    # Canonical ASCII calendar date (gate-8 L-01): fullmatch kills the
+    # trailing-newline artifact, [0-9] kills Unicode decimals, and the
+    # fromisoformat round-trip kills impossible dates like 2026-99-99.
+    if not _DATE_RE.fullmatch(s.generated_on):
+        raise RenderError(
+            "VizStats.generated_on must be an ASCII YYYY-MM-DD date, never"
+            " a timestamp"
+        )
+    try:
+        parsed = datetime.date.fromisoformat(s.generated_on)
+    except ValueError as exc:
+        raise RenderError(
+            f"VizStats.generated_on is not a real calendar date: {exc}"
+        ) from exc
+    if parsed.isoformat() != s.generated_on:
+        raise RenderError(
+            "VizStats.generated_on must be the canonical YYYY-MM-DD form"
         )
     if (
         s.privacy.explicitly_publishable_commits

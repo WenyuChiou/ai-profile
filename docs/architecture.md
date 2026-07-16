@@ -111,7 +111,17 @@ string field to a closed public vocabulary (the supported ACE schema
 version, the fixed v0.1 all-time period, canonical provider slugs from
 schema.md §10, and the schema-owned display name for each slug), so a
 validated instance structurally cannot carry arbitrary private text into
-SVG or JSON regardless of who constructed it.
+SVG or JSON regardless of who constructed it. Since gate-8 H-01 the
+GRAPH is immutable too: validation requires the exact frozen contract
+types (never subclasses or duck types) for every nested record, the
+tuple container, and exact `str` for every string leaf — so
+post-construction mutation of anything a validated instance references
+raises rather than republishing. Scope (honest limit): this protects
+against ordinary attribute assignment and duck-typed/subclass
+construction; deliberate low-level bypasses (`object.__setattr__`,
+ctypes, pickle surgery) are out of scope, consistent with the
+`merged`-marker precedent — a local single-user CLI has no adversarial
+multi-tenant threat model.
 
 `privacy.py::build_viz_stats(repo_aggs, config, generated_on) -> VizStats`
 is the single constructor, and applies exactly these rules:
