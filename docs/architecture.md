@@ -116,12 +116,21 @@ GRAPH is immutable too: validation requires the exact frozen contract
 types (never subclasses or duck types) for every nested record, the
 tuple container, and exact `str` for every string leaf — so
 post-construction mutation of anything a validated instance references
-raises rather than republishing. Scope (honest limit): this protects
-against ordinary attribute assignment and duck-typed/subclass
-construction; deliberate low-level bypasses (`object.__setattr__`,
-ctypes, pickle surgery) are out of scope, consistent with the
-`merged`-marker precedent — a local single-user CLI has no adversarial
-multi-tenant threat model.
+raises rather than republishing. Since gate-9 H-01, `VizStats` is SEALED against subclassing at
+class-definition time (`__init_subclass__` raises): a plain subclass is
+an ordinary Python construct that defeats every in-method guard — it can
+override `__getattribute__` to hand render/export a private-canary row,
+or simply override `__post_init__` to skip validation entirely — so the
+boundary type itself, not just its fields, must be exact, and no subclass
+can even be defined (a `type(s) is VizStats` backstop remains inside
+validation). Nothing legitimate subclasses `VizStats`
+(`dataclasses.replace`/`copy`/`pickle` all yield exact `VizStats`).
+Scope (honest limit): this protects against ordinary attribute
+assignment, duck-typed construction, and all subclassing; deliberate
+low-level bypasses
+(`object.__setattr__`, ctypes, pickle surgery) are out of scope,
+consistent with the `merged`-marker precedent — a local single-user CLI
+has no adversarial multi-tenant threat model.
 
 `privacy.py::build_viz_stats(repo_aggs, config, generated_on) -> VizStats`
 is the single constructor, and applies exactly these rules:

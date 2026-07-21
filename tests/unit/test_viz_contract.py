@@ -245,3 +245,25 @@ def test_int_subclass_leaves_rejected():
         _stats(totals=Totals(True, 5, 6, 0, 2, 3))  # bool is an int subclass
     with pytest.raises(RenderError, match="exact bool"):
         _stats(privacy=PrivacySplit(10, 0, 0))  # falsy int posing as the flag
+
+
+def test_vizstats_cannot_be_subclassed():
+    """Gate-9 H-01: VizStats is SEALED against subclassing at
+    class-definition time. A subclass is an ordinary Python construct
+    that defeats every in-method guard — it can override __getattribute__
+    to substitute a private-canary ProviderRow at render/export time
+    (gate-9 first PoC), OR simply override __post_init__ to skip
+    validation entirely (gate-9 review PoC: the malicious row is present
+    from construction, no class flag needed). Both leak into SVG and
+    JSON. Guarding inside _validate is whack-a-mole; __init_subclass__
+    closes the whole family at definition. Confirmed failing pre-fix
+    (subclass definition succeeded)."""
+    # The class statement itself must raise — before any instance exists.
+    with pytest.raises(TypeError, match="subclass"):
+        type("GetattrEvil", (VizStats,), {})
+
+    with pytest.raises(TypeError, match="subclass"):
+
+        class SkipValidationEvil(VizStats):
+            def __post_init__(self):  # never calls _validate
+                pass

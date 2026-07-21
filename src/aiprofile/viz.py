@@ -97,6 +97,23 @@ class VizStats:
     privacy: PrivacySplit
     generated_on: str     # UTC date, YYYY-MM-DD — never a full timestamp
 
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        # SEAL against subclassing at class-definition time (gate-9 H-01):
+        # VizStats IS the privacy boundary, and a subclass is an ordinary
+        # Python construct that defeats every in-method guard — it can
+        # override __getattribute__ to substitute a private-canary row at
+        # render time, or simply override __post_init__ to skip validation
+        # entirely. Checking type() inside _validate is whack-a-mole
+        # (a subclass can decline to call it); raising here closes the
+        # whole family — no subclass can even be defined. Nothing legit
+        # subclasses VizStats (replace/copy/pickle all yield exact
+        # VizStats), so this breaks nothing.
+        raise TypeError(
+            "VizStats must not be subclassed — it is the privacy boundary;"
+            " any subclass can override __post_init__/__getattribute__ to"
+            " bypass validation and publish arbitrary private text"
+        )
+
     def __post_init__(self) -> None:
         _validate(self)
 
@@ -114,6 +131,15 @@ def _require_exact(value: object, expected: type, what: str) -> None:
 
 
 def _validate(s: VizStats) -> None:
+    # ---- Exact TOP-LEVEL type backstop (gate-9 H-01): subclassing is
+    # already sealed at class-definition time by __init_subclass__, so no
+    # ordinary subclass can reach here. This is cheap defense-in-depth
+    # for any exotic instance (e.g. a custom metaclass that skips
+    # __init_subclass__) that still routes through __post_init__.
+    if type(s) is not VizStats:
+        raise RenderError(
+            f"VizStats must be exact VizStats, not {type(s).__name__}"
+        )
     # ---- Structural immutability of the validated graph (gate-8 H-01),
     # enforced BEFORE any duck-typed attribute access below: a mutable
     # provider list, a tuple holding a mutable row-like object, and a

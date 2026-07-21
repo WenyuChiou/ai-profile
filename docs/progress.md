@@ -220,8 +220,8 @@ which is authoritative).
   recommendation) so future card changes must regenerate the assets or
   fail loudly. Suite: **310 passed, 1 skipped**; ruff clean.
 
-- **Gate-7 review received and remediated** (2026-07-15, UNCOMMITTED
-  pending authorization): `docs/reviews/gate-review.md` reviewed
+- **Gate-7 review received and resolved** (2026-07-15, committed
+  `73279cd`): `docs/reviews/gate-review.md` reviewed
   `b899d11..9933308`, verdict NOT READY (1 High, 2 Medium, 2 Low) — all
   5 independently reproduced and accepted (`gate-disposition.md`,
   gate-7 section), each behavioral fix with a pre-fix-failing
@@ -242,8 +242,8 @@ which is authoritative).
     README sample assets; CONTRIBUTING documents it.
   Suite after the pass: **323 passed, 1 skipped**; ruff clean.
 
-- **Gate-8 review received and remediated** (2026-07-16, UNCOMMITTED
-  pending authorization): independent verification of `9933308..73279cd`
+- **Gate-8 review received and resolved** (2026-07-16, committed
+  `e0fa569`): independent verification of `9933308..73279cd`
   (gate-review.md, preserved untouched) confirmed 4/5 gate-7 closures
   and found two gaps in the fifth — both reproduced, accepted, fixed
   red-first (`gate-disposition.md`, gate-8 section):
@@ -260,6 +260,26 @@ which is authoritative).
     trailing newline, and impossible dates rejected.
   Suite after the pass: **339 passed, 1 skipped**; ruff clean; snapshot
   regeneration byte-stable (no visual change, as required).
+
+- **Gate-9 review received and remediated** (2026-07-18, UNCOMMITTED
+  pending authorization): independent verification of `73279cd..e0fa569`
+  (gate-review.md, preserved untouched) confirmed the gate-8 closures
+  and found the exact-type boundary incomplete at the TOP level, plus a
+  stale-status doc gap — both reproduced, accepted, fixed red-first
+  (`gate-disposition.md`, gate-9 section):
+  - **H-01**: `VizStats` is SEALED against subclassing —
+    `__init_subclass__` raises `TypeError` at class-definition time. A
+    plain subclass defeats in-method guards (override `__getattribute__`
+    to substitute a private-canary row, or `__post_init__` to skip
+    validation — both reproduced svg+json leaks; the review caught the
+    second, stronger variant after a first-pass `_validate`-only fix);
+    sealing closes the whole family at its root, with a
+    `type(s) is VizStats` backstop retained. Regression added;
+  - **L-01**: the gate-7/gate-8 remediation records (progress +
+    disposition) corrected from "UNCOMMITTED" to their actual commit
+    hashes (`73279cd`, `e0fa569`).
+  Suite after the pass: **340 passed, 1 skipped**; ruff clean; snapshot
+  regeneration byte-stable (no visual change).
 
 ## Open items
 

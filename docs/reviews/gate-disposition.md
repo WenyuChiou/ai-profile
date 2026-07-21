@@ -139,8 +139,8 @@ An independent review of `b899d11..9933308` confirmed all gate-6
 closures and the visual work, then produced three reproduced defects and
 two hardening items. All 5 findings adjudicated **accepted** after
 independent reproduction; every behavioral fix shipped with a regression
-confirmed failing pre-fix. Remediation left UNCOMMITTED pending
-authorization (task constraint).
+confirmed failing pre-fix. Remediation committed as `73279cd` (gate-7
+disposition below records the same round).
 
 | Finding | Disposition | Technical justification + resolution |
 |---|---|---|
@@ -158,11 +158,27 @@ authorization (task constraint).
 An independent verification review of `9933308..73279cd` confirmed four
 of five gate-7 dispositions closed and produced two reproduced gaps in
 the fifth (the H-01 boundary work). Both adjudicated **accepted** after
-independent reproduction; both fixed red-first. Remediation left
-UNCOMMITTED pending authorization. The review artifact itself is
-preserved untouched in gate-review.md.
+independent reproduction; both fixed red-first. Remediation committed
+as `e0fa569`. The review artifact itself is preserved untouched in
+gate-review.md.
 
 | Finding | Disposition | Technical justification + resolution |
 |---|---|---|
 | H-01 — the validated VizStats graph is not structurally immutable | **Accepted** | Reproduced all three bypasses: a mutable list passed for the tuple-annotated providers field; a tuple holding a mutable duck-typed row passed; a mutable period-like object passed — and post-construction mutation of the latter two published private strings through BOTH render_summary and dumps_stats. Root cause: `_validate` checked VALUES via duck-typed attribute access but never the declared runtime TYPES, and frozen semantics only covered the outer dataclass. Fix (strict rejection — option 1, the smallest architecture-consistent choice, matching the schema layer's rejection-over-coercion philosophy): `_require_exact` enforces `type(x) is` the exact frozen contract type for the COMPLETE graph (Period, Totals, EvidenceTotals, PrivacySplit, tuple container, every ProviderRow) BEFORE any duck-typed access, plus exact-`str` checks on every string leaf (schema_version, period.label, generated_on, slugs, display names — a str subclass can emit render-time text validation never saw). `isinstance` deliberately avoided: subclasses can be mutable or dynamic. After validation the whole graph is frozen dataclasses, tuples, and plain immutable leaves — mutation raises FrozenInstanceError and output bytes cannot change (pinned). Regressions: 8 new cases, each pre-fix-failing bypass or pin; no renderer sanitization; enforcement stays centralized in VizStats. The in-round code-review pass then found (and reproduced: svg_leak=True) a surviving variant — an int SUBCLASS overriding __str__ passed `isinstance` and lied at render time — closed the same way: counts require exact int (which also rejects bool), the privacy flag exact bool; 4 more pre-fix-failing regressions. |
 | L-01 — generated_on accepts non-canonical and invalid dates | **Accepted** | Reproduced all five: full-width digits, Arabic-Indic digits, trailing newline, 2026-99-99, and invalid leap 2025-02-29 all constructed. Root cause: Unicode-aware `\d` + `.match()` with `$` checks shape, not the contract. Fix: ASCII `[0-9]` pattern with `fullmatch` (kills Unicode digits and the newline artifact) + `datetime.date.fromisoformat` + canonical round-trip equality (kills impossible dates and non-canonical forms). Regressions: 7 rejection params (each pre-fix-failing) + leap-day/production-date acceptance. |
+
+
+---
+
+## Gate-9 review round (gate-review.md, 2026-07-18; NOT READY)
+
+An independent verification of `73279cd..e0fa569` confirmed the gate-8
+closures but found the exact-type work incomplete at the TOP level, plus
+a documentation-integrity gap. Both findings independently reproduced,
+both accepted, H-01 fixed red-first. The review artifact is preserved
+untouched in gate-review.md.
+
+| Finding | Disposition | Technical justification + resolution |
+|---|---|---|
+| H-01 — a VizStats subclass can inject private text after validation | **Accepted** | Reproduced: an ordinary subclass (`EvilStats(VizStats)`) inherits the validating constructor, passes `__post_init__` with a legitimate graph while a class flag is False, then its overridden `__getattribute__` returns a different exact `ProviderRow` (private canary) for `providers` once the flag flips — svg_leak AND json_leak both True, using no `object.__setattr__`/ctypes/pickle. Gate-8's exact NESTED checks could not catch it: they run while the subclass is still honest. Root cause: no guard required `type(s) is VizStats`. A first-pass fix that checked type inside `_validate` was INCOMPLETE — the gate-9 verification review reproduced a stronger variant: a subclass overriding `__post_init__` to `pass` never calls `_validate` at all and leaks from construction (an ordinary, documented dataclass extension point, not a low-level bypass). Final fix: `VizStats.__init_subclass__` raises `TypeError` at class-definition time, sealing the entire family (deferred-`__getattribute__` substitution, `__post_init__`-skip, deep chains, any future dunder override) at its root; a `type(s) is VizStats` backstop remains inside validation for exotic metaclass-created instances. Confirmed no legitimate subclass exists and replace/copy/pickle all yield exact `VizStats`, so sealing breaks nothing. Regression: subclass DEFINITION (both variants) raises `TypeError`. architecture.md §3 updated to "sealed against subclassing". |
+| L-01 — remediation status records contradict committed state | **Accepted** | Correct: `progress.md` and this file described the gate-7 and gate-8 remediations as "UNCOMMITTED pending authorization" while both are in history (`73279cd`, `e0fa569`). Fix: both records now state the actual commit hashes and "resolved/committed"; the fact that each independent review predated its fix is preserved, and the review artifact's original findings/recommendation are untouched. (The gate-7 record was equally stale and corrected in the same pass, for a consistent audit trail.) |
