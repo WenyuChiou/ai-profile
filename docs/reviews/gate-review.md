@@ -1,16 +1,16 @@
-# Gate 12 final pre-release verification review
+# Gate 13 brand identity verification review
 
 Date: 2026-07-22
 
-Review range: `278c138..ac21d4d`
+Review range: `1d63814..08922b7`
 
 Reviewer posture: independent Principal Software Engineer; verification only. No production code, test code, schema, or design code was changed during this review. This report overwrites the prior gate review artifact per repository convention.
 
 ## Executive summary
 
-The final pre-release range is verified. The gate-11 permission retrofit now runs through `load_config()` for pre-existing installations and remains non-fatal on chmod failure. The Round B tests are non-vacuous and deterministic in isolation, the full suite and lint are green, package metadata passes build/twine checks, release smoke passes, snapshot/sample generation is byte-stable, and a fresh synthetic end-to-end privacy byte sweep found no canary leaks.
+The round D1 brand identity layer is ready for the next gate. The renderer now selects branded glyph tiles only from the canonical public provider slug, keeps fallback providers on neutral letter tiles, leaves `VizStats` untouched, and preserves the privacy boundary. Full suite, lint, targeted privacy tests, snapshot/sample regeneration, and a fresh synthetic release smoke all passed.
 
-No release-blocking or minor findings were found.
+One evidence limitation: this environment could not connect from the local shell to `raw.githubusercontent.com`, so I could not independently byte-diff the vendored `d=` attributes against the exact pinned upstream commit from the command line. Browser-searchable public metadata did corroborate `simple-icons` package version `16.27.0`, CC0-1.0 licensing, and CDN presence of relevant icon slugs, but not the exact pinned-commit path bytes.
 
 ## Findings
 
@@ -20,39 +20,55 @@ No release-blocking or minor findings were found.
 
 ## Review basis
 
-Reviewed `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, the handoff brief, the full `278c138..ac21d4d` diff, changed implementation/test/docs files, `docs/decisions/ADR-012-schema-versioning.md`, `docs/decisions/ADR-004-sqlite-access-and-migrations.md`, `src/aiprofile/aggregate.py`, `src/aiprofile/storage/db.py`, and `src/aiprofile/storage/migrations.py`.
+Reviewed `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, the handoff brief, `.ai/round_d1_brand_identity_spec.md`, the full `1d63814..08922b7` diff, `docs/decisions/ADR-017-provider-brand-glyphs.md`, `src/aiprofile/render/brand.py`, `src/aiprofile/render/summary_svg.py`, `src/aiprofile/render/themes.py`, `src/aiprofile/schema/vocab.py`, `src/aiprofile/viz.py`, `tests/unit/test_brand.py`, `tests/unit/test_render_summary.py`, `tests/unit/test_dependency_isolation.py`, and the privacy/render/export integration tests.
+
+External source checks:
+
+- `https://www.npmjs.com/package/simple-icons`: public package metadata showed version `16.27.0` and license `CC0-1.0`.
+- `https://cdn.jsdelivr.net/npm/simple-icons/`: public CDN listing showed `simple-icons@16.27.0`, `LICENSE.md`, and package files.
+- `https://cdn.jsdelivr.net/npm/simple-icons/icons/`: public CDN icon listing showed relevant slugs including `googlegemini.svg`, `cursor.svg`, and `windsurf.svg`.
+- `https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md`: GitHub-rendered license page showed `CC0 1.0 Universal`.
 
 ## Verification evidence
 
 Commands and observed results:
 
 - `git status --porcelain=v1` before verification: clean.
-- `git log --oneline --decorate -5`: HEAD was `ac21d4d (HEAD -> main, origin/main) Round C: packaging metadata, CHANGELOG + upgrade policy, bilingual README`.
-- `git diff --stat 278c138..ac21d4d`: 12 files changed, 1052 insertions, 51 deletions.
-- `git diff --name-only 278c138..ac21d4d`: `AGENTS.md`, `CHANGELOG.md`, `README.md`, `README.zh-TW.md`, `docs/progress.md`, `docs/reviews/gate-disposition.md`, `docs/reviews/gate-review.md`, `pyproject.toml`, `src/aiprofile/config.py`, `tests/integration/test_console_privacy.py`, `tests/unit/test_config.py`, `tests/unit/test_properties.py`.
-- `python -m pytest tests/integration/test_console_privacy.py tests/unit/test_properties.py -p no:cacheprovider`: `9 passed in 6.55s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
-- Re-run of the same isolation command: `9 passed in 6.34s` (exit 0), supporting the Hypothesis determinism claim.
-- `python -m pytest tests -p no:cacheprovider`: `364 passed, 4 skipped in 25.84s` (exit 0). The run emitted the same unrelated global-environment warnings.
+- `git diff --stat 1d63814..08922b7`: 14 files changed, 887 insertions, 66 deletions.
+- `git diff --name-only 1d63814..08922b7`: `docs/architecture.md`, 2 docs sample assets, `docs/decisions/ADR-017-provider-brand-glyphs.md`, `src/aiprofile/render/brand.py`, `src/aiprofile/render/summary_svg.py`, 6 SVG snapshots, and 2 unit test files.
+- `git diff 1d63814..08922b7 -- src/aiprofile/viz.py`: empty.
+- `python -m pytest tests -p no:cacheprovider`: `375 passed, 4 skipped in 25.90s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
 - `python -m ruff check src tests scripts`: `All checks passed!` (exit 0).
-- `python -m build --no-isolation`: successfully built `ai_profile-0.1.0.tar.gz` and `ai_profile-0.1.0-py3-none-any.whl`.
-- Wheel `METADATA` inspection: `Metadata-Version: 2.4`, `Name: ai-profile`, `Version: 0.1.0`, `License-Expression: MIT`, `License-File: LICENSE`, and four `Project-URL` entries (`Homepage`, `Repository`, `Issues`, `Changelog`).
-- `python -m twine check dist/*`: both wheel and sdist `PASSED`. Generated `dist/` artifacts were removed afterward; `dist exists: False`.
-- `python scripts/release_smoke.py`: `RESULT: PASS - all steps green`. Its current scratch directory was removed. Two older `aiprofile-release-smoke-*` directories from 2026-07-21 were already present under `%TEMP%` and remained; they were not created by this run.
-- `%TEMP%` cleanup check for release smoke: current scratch `aiprofile-release-smoke-hgasnzpz` was absent; pre-existing directories were `aiprofile-release-smoke-maa517v9` and `aiprofile-release-smoke-rdv1mxu4`.
-- Chmod failure probe for pre-existing config: `load_config()` returned `loaded identities: ['u@example.com']` after attempted chmod calls for `(home, 0o700)` and `(home/config.json, 0o600)` both raised `OSError`.
-- `python tests/unit/test_render_summary.py`: wrote 8 snapshot files and 2 sample assets; subsequent `git status --porcelain=v1` stayed clean.
-- Fresh synthetic-repo end-to-end privacy sweep: created a temporary repo with canary repo name, remote org/repo/URL, author email, raw unrecognized provider, commit message, salt, and commit SHA; ran `init`, `scan`, and `render`; byte-swept `profile.json`, `summary-dark.svg`, and `summary-light.svg`; checked 9 forbidden canaries; `leaks: []`.
+- `python -m pytest tests/integration/test_end_to_end.py::test_privacy_leak tests/integration/test_end_to_end.py::test_privacy_leak_remote_org_and_uid_canaries tests/integration/test_console_privacy.py tests/unit/test_viz_contract.py -p no:cacheprovider`: `30 passed in 6.19s` (exit 0). The run emitted the same unrelated global-environment warnings.
+- `python tests/unit/test_render_summary.py; git status --porcelain=v1; python tests/unit/test_render_summary.py; git status --porcelain=v1`: each run wrote 8 snapshot files and 2 sample assets; both subsequent status checks produced no output, confirming byte-stable regenerated artifacts.
+- `python scripts/release_smoke.py`: all steps passed, including throwaway venv install, synthetic trailer repo, `init`, `scan`, `aggregate`, `render`, `profile.json` structural sanity, SVG well-formedness, and canary byte-sweep of dist outputs; final line `RESULT: PASS - all steps green`.
+- `git diff --check 1d63814..08922b7`: no output (exit 0).
+- `rg -n "#[0-9A-Fa-f]{6}" src/aiprofile/render/summary_svg.py src/aiprofile/render/brand.py src/aiprofile/render/themes.py`: no hex literals in `summary_svg.py`; hex values are confined to token/data modules (`themes.py`, `brand.py`) and comments.
+- `rg -n "BRAND|get\\(row\\.provider\\)|row\\.display_name|provider_raw|tool_raw|repository|remote|sha|email" src/aiprofile/render src/aiprofile/viz.py`: renderer branch point is `BRAND.get(row.provider)` in `summary_svg.py`; private/raw-value terms do not appear in render modules except public explanatory text.
+- `Invoke-WebRequest` probes to `https://raw.githubusercontent.com/simple-icons/simple-icons/f7cc40071c00ca767e6f5532fb99bfbc25efb8fe/{icons/claude.svg,icons/googlegemini.svg,icons/githubcopilot.svg,LICENSE.md}`: all failed with `Unable to connect to the remote server`.
+
+Independent Python probe over brand/render behavior:
+
+```text
+CONTRAST anthropic light=4.213 dark=6.757
+CONTRAST google light=3.221 dark=3.883
+CONTRAST github light=14.394 dark=10.318
+CONTRAST cursor light=15.300 dark=10.503
+PATH_SAFETY checked=5 unsafe=0
+FALLBACK_PATHS checked=aider,amazon,cognition,openai,openhands,roo-code,unrecognized path_elements=0
+BRANDED_PATHS checked=anthropic,cursor,github,google,windsurf path_elements_each=1
+```
 
 ## Verified areas without findings
 
-- Gate-11 retrofit: `load_config()` now chmods both the existing home directory and existing `config.json`, covering upgraded installations that skip `init_home()` creation.
-- Chmod errors remain best-effort and non-fatal.
-- Round B console privacy sweeps are not vacuous: default-mode tests assert the deliberate repo-display exception, verbose scan asserts SHA/local-detail output, and verbose aggregate asserts raw unrecognized provider output.
-- Round B property tests use `derandomize=True`, bounded examples, and ASCII-only generated strings.
-- Changelog upgrade-policy claims match ADR-004's forward-only migration runner and ADR-012's incompatible `major.minor` aggregation refusal.
-- README.zh-TW.md spot check: install/name-collision and privacy-model sections mirror the English README's high-risk claims, including the hyphenated PyPI name, `aggregate_only` default, public-output exclusions, raw unrecognized provider visibility only via `aggregate -v`, aggregate-only non-anonymity caveat, and dotfiles warning.
-- Packaging metadata is release-ready for the checked wheel.
-- Snapshot/sample assets are byte-stable.
+- Brand rendering depends on the canonical provider slug, not raw provider strings or repository-local values: `summary_svg._glyph_tile_svg()` uses `BRAND.get(row.provider)` for branded tiles and the validated public display name only for neutral fallback lettering.
+- `VizStats` remains the privacy boundary and is unchanged in the review range.
+- The mirrored render-layer vocabulary is backed by drift tests against the real schema constants.
+- Fallback providers (`openai`, `amazon`, `aider`, `roo-code`, `openhands`, `cognition`) and the reserved `unrecognized` row render without `<path>` elements.
+- XML safety is covered both by unit tests and an independent probe: vendored paths are ASCII and contain no `"`, `&`, `<`, `>`, newline, tab, or carriage return characters.
+- SVG active-content checks still cover the newly allowed `<path>` element: no event-handler attributes, no `href`, no external references, no `<script>`, no `foreignObject`.
+- WCAG contrast for sampled brand foreground/tint pairs cleared 3:1 in both themes using an independent luminance implementation.
+- The nominative-use/trademark posture is appropriately modest. ADR-017 says the glyphs identify providers/tools and do not imply endorsement; it also records the Simple Icons trademark caveat indirectly via fallback and source policy. I did not find overclaiming in the project docs.
 
 ## Severity summary
 
@@ -63,4 +79,4 @@ Commands and observed results:
 
 ## Final recommendation
 
-READY FOR RELEASE
+READY FOR NEXT GATE

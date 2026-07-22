@@ -248,3 +248,24 @@ fresh synthetic-repo privacy byte-sweep (9 canaries, leaks: []).
 The v0.1 release gate chain closes here: gates 2 through 12, eleven
 independent adversarial rounds, the final round with zero findings.
 The review artifact is committed verbatim with this release closure.
+
+---
+
+## Gate-13 review round (gate-review.md, 2026-07-22; READY FOR NEXT GATE - zero findings)
+
+Independent verification of `1d63814..08922b7` (Image 2.0 round D1,
+provider brand identity) via the headless handoff lane (brief 005).
+Zero findings at every severity. The reviewer independently: re-ran the
+suite (375 passed, 4 skipped), ruff, the targeted privacy battery (30
+passed), snapshot determinism (twice, clean), and the release smoke
+script; probed contrast ratios (all >=3:1), XML-attribute safety of all
+five glyph paths, fallback purity (0 path elements for non-branded
+slugs), and confirmed `viz.py` has an empty diff across the range.
+Honest limitation recorded in the review: the reviewer's sandbox could
+not reach raw.githubusercontent.com to re-diff the vendored path data
+against the pinned upstream commit; it corroborated version/license/
+slug-presence via public npm/CDN metadata instead. That exact
+byte-level diff was independently performed against commit f7cc400 by
+the internal review during the round (all five identical), so the
+provenance claim is covered by one direct and one corroborating check.
+The review artifact is committed verbatim with this closure.
