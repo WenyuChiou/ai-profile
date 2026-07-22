@@ -35,13 +35,13 @@ Compatibility: Python 3.11–3.14 · git ≥ 2.17 · SHA-1 repositories
 macOS, Linux. Zero runtime dependencies.
 
 ```bash
-pip install ai-profile
+pip install git+https://github.com/WenyuChiou/ai-profile
 ```
 
-Note the hyphen: the PyPI package is **`ai-profile`** (the CLI it
-installs is `aiprofile`). The unhyphenated PyPI name `aiprofile` is an
-unrelated project — `pip install aiprofile` gets you someone else's
-package.
+A PyPI package is coming; the name is being finalized (PyPI's
+name-similarity rule blocks `ai-profile` because an unrelated project
+already holds `aiprofile` — and `pip install aiprofile` gets you that
+other project, not this one).
 
 From a clone (development):
 

@@ -35,12 +35,12 @@ Code、Codex、Cursor、Copilot、Aider 等)——正規化為統一的事件格
 依賴。
 
 ```bash
-pip install ai-profile
+pip install git+https://github.com/WenyuChiou/ai-profile
 ```
 
-注意連字號:PyPI 套件名是 **`ai-profile`**(裝出來的 CLI 叫
-`aiprofile`)。PyPI 上沒有連字號的 `aiprofile` 是別人的無關專案——
-`pip install aiprofile` 會裝到別人的套件。
+PyPI 套件即將推出;名稱正在定案中(PyPI 的名稱相似度規則擋下了
+`ai-profile`,因為一個無關的專案已持有 `aiprofile`——而
+`pip install aiprofile` 裝到的是那個別人的專案,不是這個)。
 
 從 clone 安裝(開發用):
 
