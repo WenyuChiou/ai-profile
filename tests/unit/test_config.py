@@ -146,3 +146,32 @@ def test_save_config_chmods_file_owner_only(tmp_path, monkeypatch):
     save_config(tmp_path, cfg)
     tmp_file = str(tmp_path / "config.json.tmp")
     assert (tmp_file, 0o600) in calls
+
+
+def test_load_config_retrofits_owner_only_permissions(tmp_path, monkeypatch):
+    """Gate-11 M-01: an EXISTING installation (config.json predates the
+    permission hardening) must still get owner-only permissions - the
+    init_home early-return path skipped every chmod, so upgraded users
+    were never retrofitted. load_config is the choke point every command
+    passes through (mirrors db.connect's restrict-on-every-call)."""
+    import json as _json
+
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / "config.json").write_text(
+        _json.dumps({"identities": [], "repositories": [], "salt": "s" * 64}),
+        encoding="utf-8",
+    )
+
+    calls: list[tuple[str, int]] = []
+    real_chmod = os.chmod
+
+    def recording_chmod(path, mode):
+        calls.append((str(path), mode))
+        real_chmod(path, mode)
+
+    monkeypatch.setattr(os, "chmod", recording_chmod)
+    load_config(home)
+
+    assert (str(home), 0o700) in calls
+    assert (str(home / "config.json"), 0o600) in calls

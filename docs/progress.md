@@ -301,6 +301,16 @@ which is authoritative).
   self-referential "UNCOMMITTED" note on the gate-9 bullet above was
   corrected in this closure.
 
+- **Round A hardening + Gate-11 verification** (2026-07-22, `278c138` +
+  gate-11 resolve): four ROADMAP pre-release checkboxes closed
+  (owner-only permissions, worktree warning, packaged smoke script,
+  cherry-pick semantics) plus the cp950-safe console-text sweep
+  (repo-wide, not itself a distinct checkbox). Gate-11 external
+  review (headless handoff lane): READY AFTER MINOR FIXES, one Medium -
+  existing installations skipped the permission retrofit via
+  init_home's early return; fixed red-first by retrofitting in
+  load_config (every command's choke point, mirrors db.connect).
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

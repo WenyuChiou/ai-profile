@@ -216,3 +216,15 @@ same verdict: READY FOR NEXT GATE, no findings at any severity. Its
 report is preserved verbatim as `gate9-second-opinion.md`; the headless
 round's report remains the canonical `gate-review.md` record. Two
 transports, two sessions, one clean verdict.
+
+---
+
+## Gate-11 review round (gate-review.md, 2026-07-22; READY AFTER MINOR FIXES)
+
+Independent verification of `77ed004..278c138` (pre-release hardening
+round A) via the headless handoff lane (brief 003). One Medium finding,
+reproduced by the reviewer and accepted; fixed red-first.
+
+| Finding | Disposition | Technical justification + resolution |
+|---|---|---|
+| M-01 - existing installations never receive the permission retrofit | **Accepted** | Reproduced: `init_home()` returns `load_config(home), False` BEFORE any chmod when config.json already exists (`created False`, `chmod_calls []`), so a user whose AIPROFILE_HOME predates the hardening keeps default-permission files forever unless they delete and re-init. Fix: `load_config` now calls `_restrict_to_owner(home, 0o700)` + `_restrict_to_owner(config_path, 0o600)` on every load - the choke point every command (init early-return, scan, aggregate, render) passes through, mirroring `db.connect`'s restrict-on-every-call design. Cheap, idempotent, and reaches upgraded users on their first post-upgrade command. Regression: `test_load_config_retrofits_owner_only_permissions` (pre-existing config written WITHOUT init_home, chmod recorder) - proven red against the pre-fix code (observed `calls == []`), green after. |

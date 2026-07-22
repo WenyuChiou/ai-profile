@@ -104,6 +104,13 @@ def load_config(home: Path) -> Config:
         raise ConfigError(
             f"no configuration at {path} - run 'aiprofile init' first"
         )
+    # Retrofit owner-only permissions on every load (gate-11 M-01): an
+    # installation whose config.json predates the permission hardening
+    # never passes through init_home's creation path, so this is the
+    # choke point that reaches existing users - mirroring db.connect's
+    # restrict-on-every-call. Cheap and idempotent.
+    _restrict_to_owner(home, 0o700)
+    _restrict_to_owner(path, 0o600)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
