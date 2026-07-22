@@ -7,6 +7,8 @@ name = "ai-profile"
 version = "0.1.0"
 description = "Local-first, profile-level AI collaboration analytics for GitHub: aggregate explicit AI provenance across repositories into privacy-safe SVG/JSON README assets."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = []
 keywords = ["git", "ai", "attribution", "provenance", "github-profile"]
@@ -18,6 +20,12 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Software Development :: Version Control :: Git",
 ]
+
+[project.urls]
+Homepage = "https://github.com/WenyuChiou/ai-profile"
+Repository = "https://github.com/WenyuChiou/ai-profile"
+Issues = "https://github.com/WenyuChiou/ai-profile/issues"
+Changelog = "https://github.com/WenyuChiou/ai-profile/blob/main/CHANGELOG.md"
 
 [project.scripts]
 aiprofile = "aiprofile.cli:main"

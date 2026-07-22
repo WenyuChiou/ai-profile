@@ -53,6 +53,12 @@ Codex's file tools read them regardless):
   (this happened live on 2026-07-21: an app round reusing brief 001
   silently clobbered the headless round's 001 reply; recovered from a
   session transcript, which will not always exist).
+- While an external review of a committed range is in flight, do not
+  draft next-round files in the same working tree: the reviewer's
+  `git status` picks up the strays (observed live during gate-11 — a
+  concurrently-drafted test file appeared mid-review; the reviewer
+  disclosed rather than touched it, but the ambiguity is avoidable).
+  Range-pinned checks are immune, tree-state checks are not.
 
 To run a round from the Codex app, open it with cwd = this repo's root
 and say exactly:

@@ -1,5 +1,7 @@
 # ai-profile
 
+English · [繁體中文](README.zh-TW.md)
+
 Local-first, profile-level **AI collaboration analytics** for your GitHub
 README. `aiprofile` scans your local Git repositories for *explicit* AI
 provenance — `AI-*` commit trailers and known AI co-author trailers (Claude
@@ -33,7 +35,18 @@ Compatibility: Python 3.11–3.14 · git ≥ 2.17 · SHA-1 repositories
 macOS, Linux. Zero runtime dependencies.
 
 ```bash
-pip install -e ".[dev]"   # from a clone; dev extras = pytest + ruff
+pip install ai-profile
+```
+
+Note the hyphen: the PyPI package is **`ai-profile`** (the CLI it
+installs is `aiprofile`). The unhyphenated PyPI name `aiprofile` is an
+unrelated project — `pip install aiprofile` gets you someone else's
+package.
+
+From a clone (development):
+
+```bash
+pip install -e ".[dev]"   # dev extras = pytest + ruff + hypothesis
 ```
 
 ## Quickstart
