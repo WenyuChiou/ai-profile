@@ -23,7 +23,7 @@ classifiers = [
 aiprofile = "aiprofile.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.4"]
+dev = ["pytest>=8", "ruff>=0.4", "hypothesis>=6"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aiprofile"]
