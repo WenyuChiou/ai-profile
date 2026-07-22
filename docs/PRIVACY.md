@@ -48,9 +48,12 @@ GitHub, and "aggregate-only" is not a claim that it is private.
   assets, enforced before the Action ships.
 - **Local storage** — `AIPROFILE_HOME` holds private data by design:
   don't sync it into published dotfiles; deleting it deletes config+DB
-  (generated `dist/` copies are yours to remove). Planned hardening
-  (ROADMAP): owner-only file permissions, symlink refusal, and a warning
-  when `AIPROFILE_HOME` sits inside a git worktree.
+  (generated `dist/` copies are yours to remove). Implemented hardening:
+  owner-only file permissions (0o700 on `AIPROFILE_HOME`, 0o600 on
+  `config.json` and `aiprofile.db`, best-effort — POSIX enforces this,
+  Windows has no equivalent bits so `os.chmod` there is a documented
+  no-op) and a stderr warning at `init` time when `AIPROFILE_HOME` sits
+  inside a git worktree. Still planned (ROADMAP): symlink refusal.
 - **Snapshot differencing** — see the guarantee above; inherent to
   publishing exact counts.
 - **Future anonymous repo IDs** — must use a dedicated secret, never the

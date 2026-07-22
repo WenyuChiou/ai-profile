@@ -156,7 +156,7 @@ def write_outputs(
                         " (the partial new content remains published)"
                     )
                 raise RenderError(
-                    f"cannot write assets to {out_dir}: {exc} — rollback"
+                    f"cannot write assets to {out_dir}: {exc} - rollback"
                     f" incomplete: {'; '.join(problems)}"
                 ) from exc
             raise

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -48,12 +49,46 @@ def db_path(home: Path) -> Path:
     return home / DB_NAME
 
 
+def _restrict_to_owner(path: Path, mode: int) -> None:
+    """Best-effort owner-only permissions (ROADMAP "owner-only file
+    permissions where supported").
+
+    POSIX: sets the requested mode (0o700 for directories, 0o600 for
+    files) exactly. Windows: ``os.chmod`` cannot express POSIX owner/
+    group/other bits at all - it only toggles the read-only attribute,
+    and clearing it (which is what any mode with the owner-write bit set
+    does) is a no-op against the default-writable files this code
+    creates. Real Windows access control needs the ACL APIs (icacls /
+    win32security), which is out of scope for v0.1. We call ``os.chmod``
+    unconditionally anyway rather than branching on platform: on POSIX it
+    does the real work, on Windows it is a harmless no-op, and every call
+    site stays uniform. A failure (e.g. a filesystem that rejects chmod
+    entirely) must never break config/db creation, so it is swallowed.
+    """
+    try:
+        os.chmod(path, mode)
+    except OSError:
+        # On POSIX (where the bits are real) a failure deserves a signal,
+        # not silence - this is a privacy feature. Path + platform only
+        # (diagnostics hygiene, architecture.md section 10). Windows stays
+        # quiet: chmod there is a documented no-op, not a failure.
+        if sys.platform != "win32":
+            print(
+                f"warning: could not restrict permissions on {path}",
+                file=sys.stderr,
+            )
+
+
 def init_home(home: Path, identities: list[str]) -> tuple[Config, bool]:
     """Create AIPROFILE_HOME with a fresh salt. Idempotent: an existing
     config is loaded and returned unchanged (created=False)."""
     if config_path(home).exists():
         return load_config(home), False
-    home.mkdir(parents=True, exist_ok=True)
+    # mode= narrows the creation-time window (no interval at umask-default
+    # 0o755); the follow-up chmod covers pre-existing dirs (retrofit) and
+    # platforms where mkdir's mode is umask-masked.
+    home.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _restrict_to_owner(home, 0o700)
     cfg = Config(
         identities=[i.strip().lower() for i in identities if i.strip()],
         salt=secrets.token_hex(32),
@@ -67,7 +102,7 @@ def load_config(home: Path) -> Config:
     path = config_path(home)
     if not path.exists():
         raise ConfigError(
-            f"no configuration at {path} — run 'aiprofile init' first"
+            f"no configuration at {path} - run 'aiprofile init' first"
         )
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -105,7 +140,7 @@ def load_config(home: Path) -> Config:
             raise ConfigError(
                 f"{path}: repositories[{i}].publication_level"
                 " 'repository_anonymous' is reserved for post-v0.1 (anonymous"
-                " per-repository views do not exist yet — G2-12); use"
+                " per-repository views do not exist yet - G2-12); use"
                 " 'aggregate_only'"
             )
         p, uid = raw.get("path"), raw.get("repository_uid")
@@ -122,7 +157,8 @@ def load_config(home: Path) -> Config:
 
 def save_config(home: Path, cfg: Config) -> None:
     """Atomic write (tmp + replace); human-editable layout."""
-    home.mkdir(parents=True, exist_ok=True)
+    home.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _restrict_to_owner(home, 0o700)
     data = {
         "identities": cfg.identities,
         "repositories": [
@@ -138,13 +174,17 @@ def save_config(home: Path, cfg: Config) -> None:
     path = config_path(home)
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # Restrict BEFORE the rename: os.replace is atomic and preserves the
+    # source inode's mode bits on POSIX, so config.json never has a window
+    # at default permissions after the swap.
+    _restrict_to_owner(tmp, 0o600)
     os.replace(tmp, path)
 
 
 def resolve_publication_levels(cfg: Config) -> dict[str, PublicationLevel]:
     """uid -> effective level; duplicate uids resolve to the MOST restrictive
     (schema.md section 9). A uid absent from the result is excluded
-    (fail-closed) — callers must treat missing as EXCLUDED."""
+    (fail-closed) - callers must treat missing as EXCLUDED."""
     resolved: dict[str, PublicationLevel] = {}
     for entry in cfg.repositories:
         current = resolved.get(entry.repository_uid)

@@ -109,7 +109,7 @@ class VizStats:
         # subclasses VizStats (replace/copy/pickle all yield exact
         # VizStats), so this breaks nothing.
         raise TypeError(
-            "VizStats must not be subclassed — it is the privacy boundary;"
+            "VizStats must not be subclassed - it is the privacy boundary;"
             " any subclass can override __post_init__/__getattribute__ to"
             " bypass validation and publish arbitrary private text"
         )
@@ -310,7 +310,7 @@ def _validate(s: VizStats) -> None:
         if row.display_name != expected_display:
             raise RenderError(
                 f"VizStats display name for {row.provider!r} must be the"
-                f" schema-owned public display {expected_display!r} —"
+                f" schema-owned public display {expected_display!r} -"
                 " arbitrary display text is not publishable"
             )
 

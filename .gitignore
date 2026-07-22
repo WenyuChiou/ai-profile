@@ -7,3 +7,11 @@ dist/
 build/
 .venv/
 .playwright-mcp/
+
+# Agent-collaboration working files (briefs, transcripts, replies) and
+# local artifact exports — never repo content. Shared here (not in
+# .git/info/exclude) so fresh clones are protected too: these files can
+# carry local absolute paths.
+/.ai/
+/.artifact/
+.claude/settings.local.json

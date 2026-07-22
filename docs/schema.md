@@ -350,6 +350,32 @@ group plus a matching co-author line), and to future multi-source imports
   rows, so re-scanning an unchanged repository yields identical state and
   identical counts.
 
+### 8.4 Cherry-pick and cross-repository counting
+
+Identity (§8.1) is keyed on `repository_uid` + `commit_sha` (among the
+other §8.1 identity fields), not on the patch content. A cherry-pick (`git cherry-pick`, or any equivalent —
+re-committing the same diff by hand) produces a new `commit_sha`, so it is
+a **new commit** with its own identity: the same logical change, cherry-
+picked once, is counted **again** — once per repository it lands in, and
+again within the same repository if picked more than once (e.g. onto
+several release branches, each scanned). This holds whether the target is
+a different repository (`repository_uid` differs) or the same repository
+under a different sha (`repository_uid` matches, `commit_sha` doesn't).
+
+This is **accepted by design**, not a defect: ADR-007 deliberately excludes
+`model` and `roles` from identity so that multiple *sources describing the
+same participation* merge, but a cherry-pick is not that case — it is a
+distinct commit object with its own author date, tree, and (usually) its
+own trailer evidence, indistinguishable at the identity layer from an
+independent commit that happens to carry the same trailers. **aiprofile
+counts commits, not changes**: `ai_attributed_commits` and
+`ai_actor_presences` (§8.2) measure how many commits an AI actor was
+present in, and a cherry-picked commit is, by git's own model, a different
+commit. Tested in `tests/integration/test_cherry_pick.py`: one AI-trailer
+commit cherry-picked from repo A into an unrelated repo B (new sha, no
+shared history) is scanned as two independent AI actor presences, one per
+repository, summed in the published `totals` (§15).
+
 ## 9. Privacy publication levels
 
 ```text

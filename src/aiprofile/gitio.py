@@ -77,7 +77,7 @@ def assert_repository(repo_path: Path) -> None:
         raise GitError(f"cannot resolve repository root for {repo_path}: {exc}") from exc
     if not is_root:
         raise GitError(
-            f"{repo_path} is inside the repository at {toplevel} —"
+            f"{repo_path} is inside the repository at {toplevel} -"
             " scan the repository root instead"
         )
 
@@ -110,7 +110,7 @@ def enumerate_commits(repo_path: Path) -> list[CommitRecord]:
             # (gate H-04: default errors must not leak repository paths).
             raise GitError(
                 "this repository uses the SHA-256 object format, which v0.1"
-                " does not support (SHA-1 repositories only — ADR-005); no"
+                " does not support (SHA-1 repositories only - ADR-005); no"
                 " data was imported"
             )
         trailers = tuple(

@@ -53,6 +53,12 @@ Only commits authored by your configured identities count (seeded from
 `git config user.email` at init; add more emails in
 `~/.aiprofile/config.json`).
 
+Run `aiprofile init` **from inside one of your own repos**: identity
+seeding reads `git config user.email` in the directory where you run
+it, so running from an unrelated folder can seed your global email
+instead of the one you actually commit with (or none at all). Check
+the seeded identities in `~/.aiprofile/config.json` after init.
+
 Embed in your profile README:
 
 ```html

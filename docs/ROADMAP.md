@@ -89,13 +89,22 @@ Exit criteria:
 - [x] LICENSE (MIT, owner decision 2026-07-14) + CONTRIBUTING.md.
 - [x] Threat model (`docs/PRIVACY.md`).
 - [x] Sample profile output (committed example, docs/assets/).
-- [ ] clean-install/packaged smoke test.
-- [ ] Pre-release hardening tests from Gate 2 §14 not landed in the
-      conformance pass: property-based unit-invariant fuzzing; canary
-      sweeps over stdout/stderr/logs (not only dist/); cherry-pick
-      cross-repository counting documented+tested; owner-only file
-      permissions where supported; warn when `AIPROFILE_HOME` is inside a
-      git worktree.
+- [x] clean-install/packaged smoke test — `scripts/release_smoke.py`
+      (standalone release-time tooling, deliberately outside the
+      network-free pytest suite; run green 2026-07-21).
+- Pre-release hardening tests from Gate 2 §14 not landed in the
+  conformance pass:
+  - [ ] property-based unit-invariant fuzzing (next hardening pass).
+  - [ ] canary sweeps over stdout/stderr/logs, not only dist/ (next
+        hardening pass).
+  - [x] cherry-pick cross-repository counting documented+tested
+        (schema.md §8.4 + `tests/integration/test_cherry_pick.py`,
+        2026-07-21).
+  - [x] owner-only file permissions where supported (0o700 home /
+        0o600 config+db, POSIX-enforced, documented Windows no-op,
+        2026-07-21).
+  - [x] warn when `AIPROFILE_HOME` is inside a git worktree
+        (2026-07-21).
 - [ ] Packaged release (not editable-install-only) + upgrade policy note.
 
 ## v0.2 — import and reconciliation

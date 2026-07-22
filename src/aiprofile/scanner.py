@@ -60,12 +60,12 @@ def scan_repository(
         # Path-free by design (gate H-04).
         raise GitError(
             f"this repository uses the {fmt} object format, which v0.1 does"
-            " not support (SHA-1 repositories only — ADR-005); no data was"
+            " not support (SHA-1 repositories only - ADR-005); no data was"
             " imported and no configuration was changed"
         )
     if not cfg.identities:
         raise ConfigError(
-            "no identities configured — add your git author email(s) to"
+            "no identities configured - add your git author email(s) to"
             " config.json (identities)"
         )
 
@@ -172,7 +172,7 @@ def _migrate_alias_uids(cfg: Config, scanned_entry, old_uid: str) -> tuple[str, 
                 "uid-algorithm migration halted fail-closed (gate C-03): the"
                 f" config entry for {sibling.path!r} shares the rescanned"
                 " repository's previous identity but cannot be re-derived"
-                f" ({exc}); fix or remove that entry, then rescan — no"
+                f" ({exc}); fix or remove that entry, then rescan - no"
                 " configuration or cache was changed"
             ) from exc
     return (old_uid,)

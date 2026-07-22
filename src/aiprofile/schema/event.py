@@ -202,14 +202,14 @@ def build_event(
             # a KeyError (gate round-2 P3): fail with the schema's own error.
             raise SchemaValidationError(
                 f"source type {src.source_type.value!r} has no allowed-locator"
-                " set defined (schema.md 6.2) — define it before shipping"
+                " set defined (schema.md 6.2) - define it before shipping"
             )
         if src.source_reference not in allowed:
             names = ", ".join(sorted(str(a) for a in allowed))
             raise SchemaValidationError(
                 "provenance.sources[].source_reference"
                 f" {src.source_reference!r} is not an allowed locator for"
-                f" {src.source_type.value} (allowed: [{names}]) — locators are"
+                f" {src.source_type.value} (allowed: [{names}]) - locators are"
                 " enum-constrained (schema.md 6.2, G2-07)"
             )
     evidence = max(
@@ -219,19 +219,19 @@ def build_event(
 
     if human_reviewed is not None and not isinstance(human_reviewed, bool):
         raise SchemaValidationError(
-            f"activity.human_reviewed must be true, false, or null — got"
+            f"activity.human_reviewed must be true, false, or null - got"
             f" {human_reviewed!r} (gate H-05)"
         )
     if provider is not None and provider not in CANONICAL_PROVIDERS:
         raise SchemaValidationError(
             f"actor.provider {provider!r} is not a canonical provider slug"
-            " (schema.md 10, gate H-02) — unrecognized values belong in"
+            " (schema.md 10, gate H-02) - unrecognized values belong in"
             " provider_raw with provider=null"
         )
     if tool is not None and tool not in CANONICAL_TOOLS:
         raise SchemaValidationError(
             f"actor.tool {tool!r} is not a canonical tool slug (schema.md 10,"
-            " gate H-02) — unrecognized values belong in tool_raw with"
+            " gate H-02) - unrecognized values belong in tool_raw with"
             " tool=null"
         )
 
@@ -257,7 +257,7 @@ def build_event(
         ):
             raise SchemaValidationError(
                 "actor.type=human requires declared evidence from an explicit"
-                " declaration source — a human record never arises from"
+                " declaration source - a human record never arises from"
                 " absence of evidence (schema.md 2, gate H-05)"
             )
 
@@ -337,7 +337,7 @@ def merge_event_group(events: list[AceEvent] | tuple[AceEvent, ...]) -> AceEvent
     for e in events:
         if e.merged:
             raise SchemaValidationError(
-                "merge_event_group accepts leaf productions only — this"
+                "merge_event_group accepts leaf productions only - this"
                 " input is itself a merged result, and nested/incremental"
                 " composition is not ingestion-order-free; pass every leaf"
                 " of the identity in a single call"

@@ -1,7 +1,7 @@
 """CLI wiring (ADR-002): init / scan / aggregate / render.
 
 Exit codes: 0 success, 1 operational error, 2 usage. `aggregate` prints
-exactly the published contract — it IS the v0.1 privacy preview
+exactly the published contract - it IS the v0.1 privacy preview
 (mvp.md section 2); `-v` adds clearly-marked local-only detail.
 """
 
@@ -25,6 +25,30 @@ from .render.themes import THEMES
 from .scanner import scan_repository
 from .storage.db import connect, migrate
 from .viz import VizStats
+
+
+def _is_inside_git_worktree(path: Path) -> bool:
+    """True if ``path`` (or any ancestor) contains a ``.git`` entry.
+
+    Pure path walk, deliberately not a ``git`` subprocess call (unlike
+    gitio.py's identity/uid helpers): this check runs unconditionally on
+    every ``aiprofile init``, including against paths that are not git
+    repositories at all (the common case - AIPROFILE_HOME normally lives
+    outside any repo), so shelling out would mean a hard, always-paid git
+    dependency at init time for what is fundamentally a filesystem
+    question. It also keeps this concern out of config.py, which
+    documents itself as deliberately git-free.
+
+    A ``.git`` entry may be a directory (an ordinary repository) or a
+    file (a worktree's or submodule's gitdir pointer) - either shape
+    means "inside a work tree" for our purposes, so we only need to
+    check existence, never open or parse it.
+    """
+    resolved = path.resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / ".git").exists():
+            return True
+    return False
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -67,7 +91,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "set this repository's publication level to 'full' (explicitly"
-            " publishable — a policy decision, not a visibility claim);"
+            " publishable - a policy decision, not a visibility claim);"
             " default is aggregate_only and a repeat scan never downgrades"
         ),
     )
@@ -100,6 +124,14 @@ def _cmd_init(args: argparse.Namespace) -> int:
     from . import gitio  # git lookup stays out of config.py (architecture section 2)
 
     home = aiprofile_home()
+    if _is_inside_git_worktree(home):
+        print(
+            f"warning: {home} is inside a git work tree; consider setting"
+            " AIPROFILE_HOME to a directory outside any git repository so"
+            " its private contents (salt, repository paths, identities)"
+            " cannot be accidentally committed",
+            file=sys.stderr,
+        )
     email = gitio.config_user_email(Path.cwd())
     cfg, created = init_home(home, [email] if email else [])
     conn = connect(db_path(home))
@@ -113,7 +145,7 @@ def _cmd_init(args: argparse.Namespace) -> int:
             print(f"identities: {', '.join(cfg.identities)} (from git config user.email)")
         else:
             print(
-                "identities: none found — add your git author email(s) to"
+                "identities: none found - add your git author email(s) to"
                 f" {home / 'config.json'} before scanning"
             )
         print("note: do not sync this directory to published dotfiles (it holds a salt)")
@@ -140,7 +172,7 @@ def _cmd_scan(args: argparse.Namespace) -> int:
         conn.close()
 
     if summary.excluded:
-        print(f"{summary.display_name}: excluded by publication policy — not scanned")
+        print(f"{summary.display_name}: excluded by publication policy - not scanned")
         return 0
     print(
         f"{summary.display_name}: {summary.commits_seen} commits seen,"
@@ -226,13 +258,13 @@ def _print_stats(s: VizStats) -> None:
 def _print_warnings(warnings, *, verbose: bool, limit: int = 20) -> None:
     """Diagnostics hygiene (architecture.md section 10, G2-08): default output
     names only the warning code, trailer key, and a scan-local commit
-    ordinal — never SHAs or trailer values (those require --verbose)."""
+    ordinal - never SHAs or trailer values (those require --verbose)."""
     for ordinal, sha, warning in warnings[:limit]:
         line = f"warning: {warning.code} ({warning.trailer_key}) in commit #{ordinal}"
         if verbose:
             line += f" [{sha[:12]}]"
             if warning.local_detail:
-                line += f" — {warning.local_detail}"
+                line += f" - {warning.local_detail}"
         print(line)
     if len(warnings) > limit:
         print(f"...and {len(warnings) - limit} more warnings")
