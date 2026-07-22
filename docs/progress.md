@@ -261,8 +261,8 @@ which is authoritative).
   Suite after the pass: **339 passed, 1 skipped**; ruff clean; snapshot
   regeneration byte-stable (no visual change, as required).
 
-- **Gate-9 review received and remediated** (2026-07-18, UNCOMMITTED
-  pending authorization): independent verification of `73279cd..e0fa569`
+- **Gate-9 review received and remediated** (2026-07-18, committed as
+  `d9161cb`): independent verification of `73279cd..e0fa569`
   (gate-review.md, preserved untouched) confirmed the gate-8 closures
   and found the exact-type boundary incomplete at the TOP level, plus a
   stale-status doc gap — both reproduced, accepted, fixed red-first
@@ -280,6 +280,26 @@ which is authoritative).
     hashes (`73279cd`, `e0fa569`).
   Suite after the pass: **340 passed, 1 skipped**; ruff clean; snapshot
   regeneration byte-stable (no visual change).
+
+- **Gate-10 verification passed — VizStats finding chain (gates 7-10)
+  closed** (2026-07-22):
+  independent verification of `e0fa569..d9161cb` (gate-review.md,
+  preserved untouched and committed with this closure) returned
+  **READY FOR NEXT GATE with zero findings** — the first review round
+  in the chain with nothing to remediate. The reviewer replayed eight
+  from-scratch subclass-bypass vectors against the seal
+  (`__post_init__`-skip, `__getattribute__` substitution, deep chains,
+  multiple inheritance, custom metaclass `__new__`, `types.new_class`,
+  `__bases__` splice, direct `type.__new__`) — all rejected with
+  `TypeError` — and confirmed the legitimate lifecycle intact
+  (replace/copy/deepcopy/pickle yield exact `VizStats`) plus fresh
+  privacy-sweep integration tests green. Suite: **340 passed,
+  1 skipped**; ruff clean; snapshot regeneration byte-stable.
+  Process note: this was the first round run through the file-based
+  handoff protocol (`.ai/handoff/`, headless `codex exec` via the
+  codex-delegate wrapper) — no manual copy-paste transport; one stale
+  self-referential "UNCOMMITTED" note on the gate-9 bullet above was
+  corrected in this closure.
 
 ## Open items
 

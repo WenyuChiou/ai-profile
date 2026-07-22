@@ -182,3 +182,29 @@ untouched in gate-review.md.
 |---|---|---|
 | H-01 — a VizStats subclass can inject private text after validation | **Accepted** | Reproduced: an ordinary subclass (`EvilStats(VizStats)`) inherits the validating constructor, passes `__post_init__` with a legitimate graph while a class flag is False, then its overridden `__getattribute__` returns a different exact `ProviderRow` (private canary) for `providers` once the flag flips — svg_leak AND json_leak both True, using no `object.__setattr__`/ctypes/pickle. Gate-8's exact NESTED checks could not catch it: they run while the subclass is still honest. Root cause: no guard required `type(s) is VizStats`. A first-pass fix that checked type inside `_validate` was INCOMPLETE — the gate-9 verification review reproduced a stronger variant: a subclass overriding `__post_init__` to `pass` never calls `_validate` at all and leaks from construction (an ordinary, documented dataclass extension point, not a low-level bypass). Final fix: `VizStats.__init_subclass__` raises `TypeError` at class-definition time, sealing the entire family (deferred-`__getattribute__` substitution, `__post_init__`-skip, deep chains, any future dunder override) at its root; a `type(s) is VizStats` backstop remains inside validation for exotic metaclass-created instances. Confirmed no legitimate subclass exists and replace/copy/pickle all yield exact `VizStats`, so sealing breaks nothing. Regression: subclass DEFINITION (both variants) raises `TypeError`. architecture.md §3 updated to "sealed against subclassing". |
 | L-01 — remediation status records contradict committed state | **Accepted** | Correct: `progress.md` and this file described the gate-7 and gate-8 remediations as "UNCOMMITTED pending authorization" while both are in history (`73279cd`, `e0fa569`). Fix: both records now state the actual commit hashes and "resolved/committed"; the fact that each independent review predated its fix is preserved, and the review artifact's original findings/recommendation are untouched. (The gate-7 record was equally stale and corrected in the same pass, for a consistent audit trail.) |
+
+---
+
+## Gate-10 review round (gate-review.md, 2026-07-22; READY FOR NEXT GATE — zero findings)
+
+An independent verification of `e0fa569..d9161cb` (the gate-9
+remediation) returned **zero findings** at every severity — the first
+clean round in the chain. The reviewer's own from-scratch bypass replay
+(eight subclass vectors, all `TypeError` at class-definition time),
+lifecycle checks (replace/copy/deepcopy/pickle -> exact `VizStats`),
+fresh-repo privacy sweeps, full suite (340 passed, 1 skipped), ruff,
+and byte-stable snapshot regeneration all passed. No remediation
+required; the VizStats structural-immutability finding chain (gates
+7-10) is closed. Further gate rounds are expected before OSS release
+(pre-release hardening/packaging, progress.md Open items). The review
+artifact is preserved untouched in gate-review.md and committed with
+this closure, restoring the commit-alongside-resolution convention that
+gate-9 had deferred.
+
+Process note: this round ran through the file-based handoff protocol
+(brief at `.ai/handoff/001_gate9_remediation_verification.to_codex.md`,
+reply at the sibling `.to_fable.md`, headless `codex exec` via the
+codex-delegate wrapper) instead of manual copy-paste between apps. The
+gate-8 review text, which gate-9 deliberately left uncommitted and this
+round's report overwrote, is preserved verbatim in the local (ignored)
+snapshot `.ai/handoff/000_gate8_review_snapshot.to_fable.md`.
