@@ -10,15 +10,27 @@ profiles never show a dead band — see `card_height`.
 
 Module graph is enforced by a separate unit test (architecture.md section 2):
 this module may import stdlib plus `aiprofile.viz`, `aiprofile.render.themes`,
-and `aiprofile.errors` only — never storage, gitio, schema, or sqlite3.
+`aiprofile.render.brand`, and `aiprofile.errors` only — never storage,
+gitio, schema, or sqlite3. `render.brand` (round D1, ADR-017) is the vendored
+provider-glyph table; it is a sibling render-package module, not a schema
+import, so it does not cross the isolation boundary.
 """
 
 from __future__ import annotations
 
 from xml.sax.saxutils import escape
 
-from ..viz import Totals, VizStats
+from ..viz import ProviderRow, Totals, VizStats
+from .brand import BRAND, BrandSpec
 from .themes import Theme
+
+# Mirrors aiprofile.schema.vocab.UNRECOGNIZED_PROVIDER verbatim. The
+# render-layer isolation boundary (architecture.md section 2) forbids
+# importing aiprofile.schema here, so the Unrecognized-bucket sentinel is
+# hand-mirrored — the same precedent brand.py sets for
+# `_CANONICAL_PROVIDERS_MIRROR`. `tests/unit/test_brand.py` cross-checks
+# this value against the real schema constant so drift fails loudly.
+_UNRECOGNIZED_PROVIDER = "unrecognized"
 
 # ---------------------------------------------------------------------------
 # Layout constants (ADR-010: fixed constants, no template engine).
@@ -58,8 +70,29 @@ LEDGER_ROW_STEP = 24
 TABLE_LABEL_Y = 208
 ROWS_TOP = 224
 ROW_HEIGHT = 28
-NAME_X = PADDING
-NAME_WIDTH = 150
+
+# Provider identity tile (round D1 brand identity spec, "Provider row
+# lockup"): a 20x20 rounded-rect glyph tile sits where the name used to
+# start; the name shifts right to make room. BAR_X, COUNT_X, ROW_HEIGHT are
+# unchanged (minimal geometry churn per the spec).
+GLYPH_TILE_X = PADDING  # 24 - the old NAME_X
+GLYPH_TILE_SIZE = 20
+GLYPH_TILE_RADIUS = 4
+GLYPH_TILE_Y_INSET = (ROW_HEIGHT - GLYPH_TILE_SIZE) // 2  # 4 - centers the tile in the row
+GLYPH_RENDER_SIZE = 14  # glyph drawn at 14x14 inside the 20x20 tile
+GLYPH_VIEWBOX_SIZE = 24  # BrandSpec.path is authored in a 24x24 viewBox
+GLYPH_INSET = (GLYPH_TILE_SIZE - GLYPH_RENDER_SIZE) // 2  # 3 - centers the glyph in the tile
+# GLYPH_RENDER_SIZE / GLYPH_VIEWBOX_SIZE (14/24) as a fixed literal: the
+# transform attribute is outside the coordinate-hygiene regex (that test
+# only polices x/y/x1/y1/x2/y2/width/height), but a literal string keeps
+# the scale factor deterministic and readable without a runtime float format.
+GLYPH_SCALE = "0.583333"
+LETTER_TILE_CX = GLYPH_TILE_X + GLYPH_TILE_SIZE // 2  # 34 - horizontal tile center
+LETTER_TILE_TEXT_DY = 14  # baseline offset from the tile's top y
+LETTER_TILE_FONT_SIZE = 11
+
+NAME_X = GLYPH_TILE_X + GLYPH_TILE_SIZE + 8  # 52 (spec: tile + 8px gap)
+NAME_WIDTH = 122  # 150 - 28 (spec: NAME_WIDTH shrinks by 28)
 BAR_X = 184
 COUNT_X = WIDTH - PADDING  # right anchor for "count · pct%"
 BAR_MAX_WIDTH = 500  # COUNT_X - reserved count column (110) - gap (12) - BAR_X
@@ -325,6 +358,70 @@ def _hero_svg(stats: VizStats, theme: Theme) -> str:
     return "\n".join(parts)
 
 
+def _brand_fg_tint(spec: BrandSpec, theme: Theme) -> tuple[str, str]:
+    """Per-theme (fg, tint) hex pair for a vendored brand glyph tile."""
+    if theme.name == "github-dark":
+        return spec.dark_fg, spec.dark_tint
+    return spec.light_fg, spec.light_tint
+
+
+def _glyph_tile_svg(row: ProviderRow, theme: Theme, tile_y: int) -> tuple[str, str]:
+    """One provider row's identity tile (round D1 spec "Provider row lockup"
+    + "Fallback" sections). Returns ``(tile_svg, bar_fill)``: the bar fill
+    is the brand FG for a branded row, ``theme.bar_fill`` for a fallback
+    row — decided here so the caller never duplicates the branded/fallback
+    branch.
+    """
+    spec = BRAND.get(row.provider)
+    if spec is not None:
+        fg, tint = _brand_fg_tint(spec, theme)
+        glyph_x = GLYPH_TILE_X + GLYPH_INSET
+        glyph_y = tile_y + GLYPH_INSET
+        tile = "\n".join(
+            (
+                _rect(
+                    GLYPH_TILE_X,
+                    tile_y,
+                    GLYPH_TILE_SIZE,
+                    GLYPH_TILE_SIZE,
+                    fill=tint,
+                    rx=GLYPH_TILE_RADIUS,
+                ),
+                f'<path d="{spec.path}" fill="{fg}"'
+                f' transform="translate({glyph_x},{glyph_y}) scale({GLYPH_SCALE})"/>',
+            )
+        )
+        return tile, fg
+
+    # Fallback tile (first-class, not an afterthought): neutral chip
+    # background, muted letter, first letter of display_name uppercase -
+    # or "?" for the reserved Unrecognized bucket.
+    letter = "?" if row.provider == _UNRECOGNIZED_PROVIDER else row.display_name[:1].upper()
+    letter_y = tile_y + LETTER_TILE_TEXT_DY
+    tile = "\n".join(
+        (
+            _rect(
+                GLYPH_TILE_X,
+                tile_y,
+                GLYPH_TILE_SIZE,
+                GLYPH_TILE_SIZE,
+                fill=theme.chip_bg,
+                rx=GLYPH_TILE_RADIUS,
+            ),
+            _text(
+                LETTER_TILE_CX,
+                letter_y,
+                letter,
+                size=LETTER_TILE_FONT_SIZE,
+                weight=600,
+                fill=theme.muted,
+                anchor="middle",
+            ),
+        )
+    )
+    return tile, theme.bar_fill
+
+
 def _provider_row_svg(
     index: int, stats: VizStats, max_attributed: int, denominator: int, theme: Theme
 ) -> str:
@@ -332,15 +429,19 @@ def _provider_row_svg(
     row_top = ROWS_TOP + index * ROW_HEIGHT
     bar_y = row_top + 8
     text_y = row_top + 20
+    tile_y = row_top + GLYPH_TILE_Y_INSET
+
+    tile_svg, bar_fill = _glyph_tile_svg(row, theme, tile_y)
 
     name = _truncate(row.display_name, NAME_WIDTH, NAME_FONT_SIZE)
     elements = [
+        tile_svg,
         _text(NAME_X, text_y, name, size=NAME_FONT_SIZE, fill=theme.text),
         _rect(BAR_X, bar_y, BAR_MAX_WIDTH, BAR_HEIGHT, fill=theme.bar_track, rx=2),
     ]
     if max_attributed > 0 and row.attributed_commits > 0:
         bar_w = round(BAR_MAX_WIDTH * row.attributed_commits / max_attributed)
-        elements.append(_rect(BAR_X, bar_y, bar_w, BAR_HEIGHT, fill=theme.bar_fill, rx=2))
+        elements.append(_rect(BAR_X, bar_y, bar_w, BAR_HEIGHT, fill=bar_fill, rx=2))
 
     count_spans = _tspan(str(row.attributed_commits), fill=theme.text, weight=600)
     if denominator > 0:

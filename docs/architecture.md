@@ -64,6 +64,9 @@ src/aiprofile/
   viz.py               VizStats dataclasses (the visualization contract)
   render/
     themes.py          theme tokens (github-light / github-dark)
+    brand.py           vendored provider marks + per-theme brand palette
+                       (CC0 simple-icons subset; ADR-017; schema-free by
+                       design - drift-tested mirror of the vocab set)
     summary_svg.py     deterministic summary card renderer
   export.py            profile.json writer
   cli.py               argparse wiring: init / scan / aggregate / render

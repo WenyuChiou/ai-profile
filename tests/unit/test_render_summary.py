@@ -588,7 +588,12 @@ def test_coordinate_hygiene_no_float_noise():
 
 _ALLOWED_SVG_TAGS = {
     f"{SVG_NS}{t}"
-    for t in ("svg", "title", "desc", "rect", "line", "text", "tspan", "polygon")
+    # "path" added for round D1 (ADR-017): vendored provider brand glyphs
+    # (aiprofile.render.brand.BRAND) are 24x24 viewBox path data drawn as
+    # a single static <path fill="..." transform="...">, never active
+    # content — still covered by the checks below (no "on*" handlers, no
+    # href, no external refs).
+    for t in ("svg", "title", "desc", "rect", "line", "text", "tspan", "polygon", "path")
 }
 
 
