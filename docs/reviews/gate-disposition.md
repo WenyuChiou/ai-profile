@@ -228,3 +228,23 @@ reproduced by the reviewer and accepted; fixed red-first.
 | Finding | Disposition | Technical justification + resolution |
 |---|---|---|
 | M-01 - existing installations never receive the permission retrofit | **Accepted** | Reproduced: `init_home()` returns `load_config(home), False` BEFORE any chmod when config.json already exists (`created False`, `chmod_calls []`), so a user whose AIPROFILE_HOME predates the hardening keeps default-permission files forever unless they delete and re-init. Fix: `load_config` now calls `_restrict_to_owner(home, 0o700)` + `_restrict_to_owner(config_path, 0o600)` on every load - the choke point every command (init early-return, scan, aggregate, render) passes through, mirroring `db.connect`'s restrict-on-every-call design. Cheap, idempotent, and reaches upgraded users on their first post-upgrade command. Regression: `test_load_config_retrofits_owner_only_permissions` (pre-existing config written WITHOUT init_home, chmod recorder) - proven red against the pre-fix code (observed `calls == []`), green after. |
+
+---
+
+## Gate-12 review round (gate-review.md, 2026-07-22; READY FOR RELEASE - final gate)
+
+Independent final pre-release verification of `278c138..ac21d4d` (the
+gate-11 resolution, Round B console-sweep + property-fuzzing tests, and
+Round C packaging/CHANGELOG/bilingual-README) via the headless handoff
+lane (brief 004). **Zero findings at every severity.** The reviewer
+independently: re-ran the full suite (364 passed, 4 skipped) and ruff;
+ran both new Round B test files twice (hypothesis determinism); built
+the wheel and verified PEP 639 metadata + twine check on both
+artifacts; ran the release smoke script end-to-end (PASS, clean
+scratch); probed the gate-11 retrofit under injected chmod failure
+(warns, never raises); regenerated snapshots (byte-stable); and ran a
+fresh synthetic-repo privacy byte-sweep (9 canaries, leaks: []).
+
+The v0.1 release gate chain closes here: gates 2 through 12, eleven
+independent adversarial rounds, the final round with zero findings.
+The review artifact is committed verbatim with this release closure.

@@ -311,6 +311,22 @@ which is authoritative).
   init_home's early return; fixed red-first by retrofitting in
   load_config (every command's choke point, mirrors db.connect).
 
+- **Rounds B/C + Gate-12 final verification — v0.1.0 RELEASED**
+  (2026-07-22): Round B closed the last two Gate-2 §14 checkboxes
+  (console stdout/stderr canary sweeps with positive controls;
+  hypothesis property fuzzing, six derandomized invariant families).
+  Round C: PEP 639 packaging metadata, CHANGELOG.md with the upgrade
+  policy, README install section led by `pip install ai-profile` (with
+  the unhyphenated-name collision warning), hand-written
+  README.zh-TW.md mirror (claim-by-claim parity reviewed), AGENTS.md
+  handoff-process rule. Gate-12 (final pre-release, range
+  `278c138..ac21d4d`): **READY FOR RELEASE, zero findings** — suite,
+  ruff, wheel metadata + twine, release smoke, chmod-failure probe,
+  snapshot byte-stability, and a fresh synthetic privacy sweep all
+  independently green. Released as one unit immediately following this
+  commit: GitHub repo public + PyPI upload of `ai-profile 0.1.0`, tag
+  `v0.1.0`.
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening

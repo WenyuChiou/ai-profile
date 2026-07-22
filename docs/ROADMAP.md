@@ -105,7 +105,10 @@ Exit criteria:
         2026-07-21).
   - [x] warn when `AIPROFILE_HOME` is inside a git worktree
         (2026-07-21).
-- [ ] Packaged release (not editable-install-only) + upgrade policy note.
+- [x] Packaged release (not editable-install-only) + upgrade policy
+      note — CHANGELOG.md upgrade policy (2026-07-22); wheel/sdist
+      published to PyPI as `ai-profile 0.1.0` as part of this release
+      (upload immediately follows this commit).
 
 ## v0.2 — import and reconciliation
 
