@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-profile"
+name = "ai-profile-cli"
 version = "0.1.0"
 description = "Local-first, profile-level AI collaboration analytics for GitHub: aggregate explicit AI provenance across repositories into privacy-safe SVG/JSON README assets."
 readme = "README.md"

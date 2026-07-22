@@ -106,9 +106,12 @@ Exit criteria:
   - [x] warn when `AIPROFILE_HOME` is inside a git worktree
         (2026-07-21).
 - [x] Packaged release (not editable-install-only) + upgrade policy
-      note — CHANGELOG.md upgrade policy (2026-07-22); wheel/sdist
-      published to PyPI as `ai-profile 0.1.0` as part of this release
-      (upload immediately follows this commit).
+      note — CHANGELOG.md upgrade policy (2026-07-22); non-editable
+      install available via `pip install git+https://...` (README);
+      wheel/sdist built and twine-verified. PyPI listing renamed to
+      `ai-profile-cli` after a name-similarity rejection vs the
+      unrelated existing `aiprofile`; upload still pending an
+      account-scoped credential fix — not yet live on PyPI.
 
 ## v0.2 — import and reconciliation
 

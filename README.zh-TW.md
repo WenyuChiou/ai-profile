@@ -38,9 +38,10 @@ Code、Codex、Cursor、Copilot、Aider 等)——正規化為統一的事件格
 pip install git+https://github.com/WenyuChiou/ai-profile
 ```
 
-PyPI 套件即將推出;名稱正在定案中(PyPI 的名稱相似度規則擋下了
-`ai-profile`,因為一個無關的專案已持有 `aiprofile`——而
-`pip install aiprofile` 裝到的是那個別人的專案,不是這個)。
+PyPI 套件名將為 **`ai-profile-cli`**(上傳處理中;PyPI 的名稱相似度
+規則擋下了 `ai-profile`,因為一個無關的專案已持有 `aiprofile`——而
+`pip install aiprofile` 裝到的是那個別人的專案,不是這個)。上架後:
+`pip install ai-profile-cli`。
 
 從 clone 安裝(開發用):
 

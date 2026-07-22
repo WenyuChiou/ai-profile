@@ -38,10 +38,11 @@ macOS, Linux. Zero runtime dependencies.
 pip install git+https://github.com/WenyuChiou/ai-profile
 ```
 
-A PyPI package is coming; the name is being finalized (PyPI's
-name-similarity rule blocks `ai-profile` because an unrelated project
-already holds `aiprofile` — and `pip install aiprofile` gets you that
-other project, not this one).
+The PyPI package will be **`ai-profile-cli`** (upload in progress;
+PyPI's name-similarity rule blocks `ai-profile` because an unrelated
+project already holds `aiprofile` — and `pip install aiprofile` gets
+you that other project, not this one). Once live:
+`pip install ai-profile-cli`.
 
 From a clone (development):
 
