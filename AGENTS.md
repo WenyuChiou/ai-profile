@@ -46,6 +46,13 @@ Codex's file tools read them regardless):
 - Exception: `000_gate8_review_snapshot.to_fable.md` is a one-off
   bootstrap snapshot authored by Fable (preserving the never-committed
   gate-8 review text), not a Codex reply.
+- NNN is single-use: a second round over the same range or brief (a
+  second opinion, a re-run) ALWAYS gets its own fresh NNN brief — never
+  point a new round at an existing NNN, because its reply instruction
+  would overwrite that round's supposedly-durable `.to_fable.md`
+  (this happened live on 2026-07-21: an app round reusing brief 001
+  silently clobbered the headless round's 001 reply; recovered from a
+  session transcript, which will not always exist).
 
 To run a round from the Codex app, open it with cwd = this repo's root
 and say exactly:

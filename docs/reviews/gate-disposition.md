@@ -208,3 +208,11 @@ codex-delegate wrapper) instead of manual copy-paste between apps. The
 gate-8 review text, which gate-9 deliberately left uncommitted and this
 round's report overwrote, is preserved verbatim in the local (ignored)
 snapshot `.ai/handoff/000_gate8_review_snapshot.to_fable.md`.
+
+Second independent confirmation: a parallel Codex-app round (run by the
+owner over the same `e0fa569..d9161cb` range, written 2026-07-21 21:27
+local — after this closure was committed) independently returned the
+same verdict: READY FOR NEXT GATE, no findings at any severity. Its
+report is preserved verbatim as `gate9-second-opinion.md`; the headless
+round's report remains the canonical `gate-review.md` record. Two
+transports, two sessions, one clean verdict.
