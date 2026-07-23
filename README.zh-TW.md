@@ -47,9 +47,9 @@ Code、Codex、Cursor、Copilot、Aider 等)——正規化為統一的事件格
 彙總工具(行級歸因屬於 git-ai 這類工具;完整分析:
 [市場定位與差異化](docs/landscape.md))。
 
-狀態:**v0.2**——v0.1 的垂直切片(單一 repo → trailer → SQLite →
-彙總 → 摘要卡片)加上 provider 品牌識別與「僅明示可發布」的等距
-每日日曆。設計文件在 [`docs/`](docs/):
+狀態:**v0.3**——v0.1 的垂直切片(單一 repo → trailer → SQLite →
+彙總 → 摘要卡片)加上 provider 品牌識別(15 個 mark、雙圖標來源)、
+「僅明示可發布」的等距每日日曆,以及協作比例 heatmap 與徽章。設計文件在 [`docs/`](docs/):
 [架構](docs/architecture.md) · [ACE schema](docs/schema.md) ·
 [MVP 邊界](docs/mvp.md) · [市場定位與差異化](docs/landscape.md)
 · [決策記錄](docs/decisions/)。

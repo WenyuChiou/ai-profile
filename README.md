@@ -49,9 +49,10 @@ explicit-provenance profile aggregation tool (line-level attribution
 belongs to tools like git-ai; full analysis:
 [landscape & positioning](docs/landscape.md)).
 
-Status: **v0.2** — the v0.1 vertical slice (one repo → trailers → SQLite →
-aggregate → summary card) plus provider brand identity and the
-publishable-only isometric daily calendar. Design docs live in
+Status: **v0.3** — the v0.1 vertical slice (one repo → trailers → SQLite →
+aggregate → summary card) plus provider brand identity (15 marks, two
+icon sources), the publishable-only isometric daily calendar, and the
+collaboration-ratio heatmap + badge. Design docs live in
 [`docs/`](docs/):
 [architecture](docs/architecture.md) · [ACE schema](docs/schema.md) ·
 [MVP boundary](docs/mvp.md) · [landscape & non-duplication](docs/landscape.md)

@@ -60,7 +60,15 @@ FIXTURE_AUTHOR_NAME = "Smoke Fixture"
 _PASS = "PASS"
 _FAIL = "FAIL"
 
-_EXPECTED_DIST_FILES = ["profile.json", "summary-dark.svg", "summary-light.svg"]
+_EXPECTED_DIST_FILES = [
+    "badge-dark.svg",
+    "badge-light.svg",
+    "heatmap-dark.svg",
+    "heatmap-light.svg",
+    "profile.json",
+    "summary-dark.svg",
+    "summary-light.svg",
+]
 
 
 class SmokeFailure(RuntimeError):
@@ -251,7 +259,14 @@ def _check_profile_json(out_dir: Path) -> dict:
 
 
 def _check_svgs(out_dir: Path) -> None:
-    for name in ("summary-light.svg", "summary-dark.svg"):
+    for name in (
+        "summary-light.svg",
+        "summary-dark.svg",
+        "heatmap-light.svg",
+        "heatmap-dark.svg",
+        "badge-light.svg",
+        "badge-dark.svg",
+    ):
         path = out_dir / name
         if not path.exists():
             raise SmokeFailure(f"missing {path}")

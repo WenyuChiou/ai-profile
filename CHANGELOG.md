@@ -25,6 +25,10 @@ below.
 
 ## [Unreleased]
 
+(nothing yet)
+
+## [0.3.0] — 2026-07-23
+
 ### Added
 
 - **Collaboration-ratio heatmap** (`heatmap-{light,dark}.svg`,
@@ -38,13 +42,10 @@ below.
   shield — "AI-assisted | K% · verified by git" — using the summary
   card's own headline share and rounding. `aiprofile render` now
   writes all six SVG assets plus profile.json in one atomic bundle.
-
-- Provider brand marks for **OpenAI** and **Grok (xAI)**, vendored from
-  a second icon source (lobe-icons, MIT, pinned commit) via
-  `vendor_brand_icons.py --source lobe` — both render as proper glyph
-  tiles instead of letter tiles. New `THIRD_PARTY_NOTICES.md` carries
-  the MIT license text (ADR-017 D5 addendum).
-
+- Provider brand marks for **OpenAI** and **Grok (xAI)** from a second
+  icon source (lobe-icons, MIT, pinned commit) via
+  `vendor_brand_icons.py --source lobe`; new `THIRD_PARTY_NOTICES.md`
+  carries the MIT text (ADR-017 D5 addendum).
 - Two-tier provider model (ADR-019): the DECLARATION tier grows by ten
   providers - Kimi (moonshot), DeepSeek, Qwen (alibaba), Mistral, Grok
   (xai), GLM (zhipu), Ollama, Llama (meta), Replit, Amp - so
@@ -53,13 +54,27 @@ below.
   (`amp@ampcode.com`, documented default-on co-author trailer).
 - Eight new provider marks vendored mechanically from the pinned CC0
   simple-icons commit via the new `scripts/vendor_brand_icons.py`
-  (byte-verified provenance; Amp and Grok have no mark and keep the
-  honest letter tile).
+  (byte-verified provenance; Amp keeps the honest letter tile - its
+  lobe icon is multi-path - and Grok gained its mark via the second
+  source above).
 - Calendar band polish: intensity-bin legend + "publishable repos only"
   cue, clock-free month boundary labels, and clearer provider-overflow
   wording.
 - Repo social-preview card (docs/assets/social-preview.{svg,png}) in
   the banner's visual language.
+
+### Fixed
+
+- Display-name provider declarations resolve (latent since v0.1):
+  `AI-Provider: Claude` / `Gemini` / `Copilot` / `Kimi` / `Qwen` /
+  `Grok` / `GLM` / `Llama` etc. previously produced canonical-null
+  events that published as "Unrecognized". `PROVIDER_ALIASES` now
+  derives an entry from every schema-owned display name plus common
+  spacing/punctuation variants (Mistral AI, Meta AI, x.ai, Z.ai,
+  Moonshot AI), closing the class for future providers too.
+- `aiprofile --version` now reports the real version: 0.2.0 bumped
+  `pyproject.toml` but not `__version__`, so the CLI kept saying
+  0.1.0. Both sources are now pinned together by a regression test.
 
 ## [0.2.0] — 2026-07-23
 

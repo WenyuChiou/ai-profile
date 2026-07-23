@@ -227,3 +227,19 @@ def test_all_raised_exception_messages_are_ascii():
                     ):
                         offenders.append((py.name, sub.lineno, sub.value))
     assert offenders == []
+
+
+def test_package_version_consistent_with_pyproject():
+    """The 0.2.0 release bumped pyproject.toml but not __version__ (caught
+    preparing 0.3.0: `aiprofile --version` said 0.1.0 while the package
+    metadata said 0.2.0). Pin the two sources together permanently.
+    Written red-first against the inconsistent pair."""
+    import tomllib
+    from pathlib import Path
+
+    import aiprofile
+
+    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    with open(pyproject, "rb") as fh:
+        declared = tomllib.load(fh)["project"]["version"]
+    assert aiprofile.__version__ == declared
