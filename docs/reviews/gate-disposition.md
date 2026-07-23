@@ -352,3 +352,23 @@ Severity: Critical 0, High 0, Medium 0, Low 1.
 | L-01 - stale comment: summary_svg.py:171 claimed CAL_WINDOW_DAYS "matches viz.DAILY_WINDOW_DAYS exactly", untrue since the D4 window widened to 365 | **Accepted** | Comment rewritten to describe the band's own newest-anchored 84-day slice of the wider series; suite re-run green. |
 
 **Rounds D5 and D4 are closed.**
+
+---
+
+## Gate-18 review round (gate-review.md, 2026-07-23; READY AFTER MINOR FIXES)
+
+Independent verification of `b70f3a5..63f00c6` (round D6 aesthetic
+pass) via the headless handoff lane (brief 011). The reviewer verified
+the range is genuinely renderer-only (byte-compared badge/empty
+snapshots against the pre-range tree), probed the color math for
+bg/track collisions (none), confirmed grid positions identical to the
+previous range, and ran the end-to-end seven-asset privacy canary.
+Suite 493 passed / 4 skipped; ruff clean.
+Severity: Critical 0, High 0, Medium 0, Low 2.
+
+| Finding | Disposition | Resolution |
+|---|---|---|
+| L-01 - _cell_rects recomputed the fill formula inline instead of calling _cell_fill, contradicting the round's single-color-source claim | **Accepted** | Day cells now call _cell_fill directly; snapshots unchanged (byte-neutral refactor - the two paths were provably identical, now structurally so). |
+| L-02 - stale fill-opacity wording in the module docstring and _cell_rects docstring | **Accepted** | Both rewritten to describe the solid background-mix encoding. |
+
+**Round D6 is closed.**

@@ -1,8 +1,8 @@
-# Gate 17 D5 + D4 verification review
+# Gate 18 D6 heatmap aesthetics verification review
 
 Date: 2026-07-23
 
-Review range: `bd0e3ce..1864d65`
+Review range: `b70f3a5..63f00c6`
 
 Reviewer posture: independent Principal Software Engineer; verification only.
 No production code, test code, schema, or design code was changed during this
@@ -11,103 +11,128 @@ convention.
 
 ## Executive summary
 
-Rounds D5 and D4 are ready for the next gate. The D4 privacy boundary is the
-right shape: aggregation remains policy-free, `_build_daily` applies the
-FULL-only chokepoint to both provider rows and whole-rhythm totals, and a
-provider-date without a matching totals row fails loudly instead of fabricating
-or dropping data.
+Round D6 is behaviorally sound but should take a small cleanup before the next
+gate. The requested aesthetic changes render correctly: populated day cells are
+11px squares on the same 14px step, `rx=3`, solid hex fills replace heatmap
+`fill-opacity`, the stat line uses styled `tspan`s, the date window is
+right-aligned, and the redesigned legend renders with numeric volume labels and
+0%/100% share endpoints.
 
-Full suite and lint are clean. Independent probes confirmed aggregate-only
-dates/totals do not surface through `build_viz_stats` or through an end-to-end
-`init -> scan -> render` flow across all seven dist assets; invalid D4
-`DayCell` shapes are rejected; heatmap bin math, Monday anchoring, badge
-rounding, zero-state behavior, SMIL/static rendering, and the closed bundle
-allowlist behave as expected.
+Full suite and lint are clean. Independent probes confirmed byte determinism,
+snapshot/sample consistency, unchanged badge and empty-state bytes from the
+pre-range tree, unchanged Monday-anchored grid positions, no SMIL, well-formed
+XML, intact title/desc accessibility metadata, no heatmap `fill-opacity`, no
+color collisions with the card background or empty-track color, and no
+repo/path/email leakage across an end-to-end temp-home render.
+
+The remaining issues are narrow maintainability/documentation defects in the
+renderer source: `_cell_rects` duplicates the color formula instead of using the
+new `_cell_fill` helper, and two comments/docstrings still describe the old
+opacity model.
 
 ## Findings
 
 | Severity | Issue | Location |
 |---|---|---|
-| Low | Stale source comment says the 84-day summary band window "matches viz.DAILY_WINDOW_DAYS exactly"; D4 intentionally widened the validated daily contract to 365 days while the band slices its own 84-day window. The code is correct, but the comment now contradicts the design and can mislead future maintenance. | `src/aiprofile/render/summary_svg.py:171` |
+| Low | `_cell_rects` recomputes day-cell colors with `_lerp_hex(...)` instead of calling `_cell_fill(...)`, even though the D6 brief says `_cell_fill` is the single color source for day cells and legend swatches. The current output matches, but this leaves two formulas that can drift on the next palette change. | `src/aiprofile/render/heatmap_svg.py:176`, `src/aiprofile/render/heatmap_svg.py:189` |
+| Low | Stale renderer comments still describe intensity as `fill-opacity` / `volume-bin opacity` after the implementation moved to solid bg-mixed hexes. This is not user-facing output, but it contradicts the new renderer contract and can mislead future changes. | `src/aiprofile/render/heatmap_svg.py:6`, `src/aiprofile/render/heatmap_svg.py:168` |
 
 ## Review basis
 
 Reviewed `README.md`, `CONTRIBUTING.md`, the handoff brief, the
-`bd0e3ce..1864d65` diff, and the relevant changed files:
-`src/aiprofile/aggregate.py`, `src/aiprofile/privacy.py`,
-`src/aiprofile/viz.py`, `src/aiprofile/export.py`, `src/aiprofile/cli.py`,
-`src/aiprofile/render/summary_svg.py`, `src/aiprofile/render/heatmap_svg.py`,
-`src/aiprofile/render/badge_svg.py`, `src/aiprofile/render/brand.py`,
-`scripts/vendor_brand_icons.py`, `THIRD_PARTY_NOTICES.md`, and the D4/D5
-unit and integration tests.
+`b70f3a5..63f00c6` diff, and the changed source/test artifacts:
+`CHANGELOG.md`, `src/aiprofile/render/heatmap_svg.py`,
+`tests/unit/test_heatmap_svg.py`, `tests/snapshots/heatmap_light.svg`,
+`tests/snapshots/heatmap_dark.svg`,
+`docs/assets/heatmap-sample-light.svg`, and
+`docs/assets/heatmap-sample-dark.svg`.
 
-The codebase-memory MCP discovery call was cancelled by the tool, so review
-fell back to local diff/file inspection.
+The range is renderer/test/sample scoped. `git diff --name-only
+b70f3a5..63f00c6` does not touch `src/aiprofile/viz.py`,
+aggregate/privacy/export/CLI modules, `src/aiprofile/render/badge_svg.py`, or
+`src/aiprofile/render/summary_svg.py`.
 
 ## Verification evidence
 
 Commands and observed results:
 
 - `git status --short`: clean before verification.
-- `git log --oneline --decorate -8`: HEAD was `1864d65 (HEAD -> main, origin/main) Round D4: collaboration-ratio heatmap + badge (your own commits included)`.
-- `git diff --stat bd0e3ce..1864d65`: 47 files changed, 3918 insertions, 161 deletions.
-- `git diff --name-only bd0e3ce..1864d65`: confirmed the expected D5/D4 source, docs, asset, and test files.
-- `python -m pytest tests -p no:cacheprovider`: `491 passed, 4 skipped in 25.05s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
+- `git rev-parse --short HEAD`: `63f00c6`.
+- `git log --oneline --decorate -5`: HEAD was `63f00c6 (HEAD -> main, origin/main) Round D6: heatmap aesthetic pass (solid cells, styled stats, clean legend)`.
+- `git diff --name-only b70f3a5..63f00c6`: only `CHANGELOG.md`, heatmap sample assets, `src/aiprofile/render/heatmap_svg.py`, heatmap snapshots, and `tests/unit/test_heatmap_svg.py`.
+- `git diff --stat b70f3a5..63f00c6`: 7 files changed, 1680 insertions, 1626 deletions.
+- `git diff --check b70f3a5..63f00c6`: no whitespace errors.
+- `python -m pytest tests -p no:cacheprovider`: `493 passed, 4 skipped in 26.86s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
 - `python -m ruff check src tests scripts`: `All checks passed!` (exit 0).
-- `python scripts/vendor_brand_icons.py --source lobe --ref fbd2d56e3f734e889f1373e71c8368cc4e60e0d7 --map openai:openai:OpenAI --map xai:grok:Grok`: exit 0; `2 vendored, 0 skipped, 2 attempted`, with OpenAI/Grok BrandSpec stubs and WCAG contrast rows emitted.
-- Follow-up direct network fetch using `vendor_one_lobe(...)` failed with `WinError 10051` unreachable network. Because of that sandbox flake, I did not claim a second independent network byte-diff; I verified the successful pinned vendoring output plus local committed constraints.
-- Local D5 constraint probe: `BRAND["openai"]` and `BRAND["xai"]` are present, ASCII path strings, forbidden XML-attribute characters absent, and their achromatic color fields match the vendoring tool output (`#000000/#EBEBEB`, `#7A7A7A/#2E2E2E`).
-- `Select-String THIRD_PARTY_NOTICES.md` confirmed the lobe-icons pinned source, commit `fbd2d56e3f734e889f1373e71c8368cc4e60e0d7`, MIT License header, and `Copyright (c) 2023 LobeHub`.
-- `Select-String src/aiprofile/render/*.py -Pattern "datetime\.today|datetime\.now|<animate|<set|@keyframes"` found no render-time clock use or SMIL/CSS animation; the only match was a comment documenting the ban.
-- `Select-String tests/snapshots/*.svg -Pattern "<animate|<set|@keyframes"` found no snapshot animation markup.
+- Byte-safe `git show b70f3a5:<path>` comparisons against current files:
+  `tests/snapshots/badge_light.svg`, `badge_dark.svg`,
+  `badge_zero_light.svg`, `badge_zero_dark.svg`,
+  `heatmap_empty_light.svg`, `heatmap_empty_dark.svg`,
+  `docs/assets/badge-sample-light.svg`, and
+  `docs/assets/badge-sample-dark.svg` were all byte-identical.
+- `rg -n "fill-opacity|opacity|_cell_fill" ...`: heatmap rendered SVG/tests
+  correctly ban `fill-opacity`; the remaining heatmap source matches were the
+  stale comments/docstrings listed above and the intended `_cell_fill` helper
+  usage in the legend/tests.
 
-Independent adversarial probe result:
+Independent renderer probe result:
 
 ```text
-custom probes passed: in-process privacy, CLI canary assets, DayCell contract, bin math, badge honesty, grid anchoring
+determinism populated light True
+determinism empty dark True
+github-light bg/track collisions: none
+github-light share0-volume0: #B4B9BE track: #eff2f5 bg: #ffffff
+github-dark bg/track collisions: none
+github-dark share0-volume0: #484E55 track: #21262d bg: #0d1117
+geometry light: positions_equal=True; old_day_count=365 current_day_count=365; old_widths=['10']; current_widths=['11']; current_rx=['3']
+geometry dark: positions_equal=True; old_day_count=365 current_day_count=365; old_widths=['10']; current_widths=['11']; current_rx=['3']
+populated-light role img title True desc True smil False fill-opacity False
+empty-dark role img title True desc True smil False fill-opacity False
 ```
 
-That probe covered:
+Independent privacy canary result:
 
-- Direct `build_viz_stats` input with one FULL repo and one aggregate-only repo. The private repo carried AI and human-only canary dates (`2026-07-21`, `2026-07-20`) and distinctive totals; `stats.daily`, `profile.json`, summary SVG, heatmap SVG, and badge SVG carried only the FULL dates.
-- End-to-end CLI flow with two real git repositories: `init`, `scan --full` for the FULL repo, default aggregate-only `scan` for the private repo, then `render`. The seven output files were exactly `badge-dark.svg`, `badge-light.svg`, `heatmap-dark.svg`, `heatmap-light.svg`, `profile.json`, `summary-dark.svg`, and `summary-light.svg`; none contained the private date or repo-name canaries. `profile.json["daily"]` contained only the FULL repo dates.
-- `_build_daily` raised on provider rows without matching whole-rhythm totals.
-- Invalid `DayCell` shapes were rejected: `ai_commits > total_commits`, nonempty counts with `ai_commits == 0`, provider count greater than `ai_commits`, `ai_commits` greater than sum of provider counts, bool leaves, and a 365-day span. A 364-day span was accepted.
-- Heatmap share bins at zero, tiny nonzero, 1/4, 1/2, 3/4, and 100%; volume bins at 1, 2, 4, 5, 7, and 8.
-- Badge percentage uses the summary `_pct_label` behavior, including `<1%`, `>99%`, exact `100%`, and zero-commit `no data`.
-- Known-date grid anchoring: newest Sunday `2026-07-19` yields window start `2025-07-20`, 53 Monday-anchored columns, and the summary band keeps an 84-cell newest-anchored slice.
+```text
+assets: badge-dark.svg, badge-light.svg, heatmap-dark.svg, heatmap-light.svg, profile.json, summary-dark.svg, summary-light.svg
+badge-dark.svg: leaks=0
+badge-light.svg: leaks=0
+heatmap-dark.svg: leaks=0
+heatmap-light.svg: leaks=0
+profile.json: leaks=0
+summary-dark.svg: leaks=0
+summary-light.svg: leaks=0
+total_leaks=0
+```
+
+The canary used a temp `AIPROFILE_HOME`, a temp git repo named
+`SECRET_REPO_NAME_CANARY`, author email
+`secret.email.canary@example.test`, and filename
+`sensitive_file_canary.txt`; none appeared in the seven dist assets.
 
 ## Verified areas without blocking findings
 
-- `compute_daily_commit_totals` counts all stored commits per repository/date
-  and AI/mixed distinct commits as the subset, using the author-date ISO prefix
-  rather than SQLite date conversion.
-- `_build_daily` filters both provider rows and totals rows through resolved
-  publication levels, merges same-date FULL repo totals, includes human-only
-  FULL days, trims clock-free from the newest publishable date, and refuses
-  mismatched provider/totals input.
-- `VizStats` validates the D4 whole-rhythm fields with exact int/bool rules,
-  ordered unique dates, ordered unique provider counts, provider-row subset
-  checks, 365-day window bound, and canonical provider vocabulary.
-- Heatmap rendering is deterministic, static, window-scoped, and uses integer
-  share-bin arithmetic.
-- The summary calendar band correctly slices its own last 84 days and renders
-  D4 human-only days as flat base diamonds.
-- Badge share matches the summary headline rounding and has the honest
-  `commits_scanned == 0` state.
-- `write_outputs` now uses the closed six-name SVG allowlist plus
-  `profile.json`, sorted deterministic output order, and the existing rollback
-  guarantees remain covered by `test_export_atomic`.
-- D5 keeps unsupported multi-path marks as letter tiles rather than
-  approximating them, and lobe-icons notice preservation is documented.
+- Heatmap day cells are flat hex fills; `fill-opacity` is absent from
+  populated and empty heatmap output.
+- All 20 `(share_bin, volume_bin)` colors per theme are pairwise distinct by
+  the committed tests; the independent probe also found no collisions with
+  `theme.bg` or `theme.bar_track`.
+- The share-0/volume-0 color is distinguishable from empty-track and card-bg
+  colors in both themes.
+- Monday-anchored `x,y` positions match the pre-range populated heatmap
+  snapshots; only cell width changed from 10 to 11.
+- XML is well-formed; `role="img"`, `<title>`, and `<desc>` are present.
+- The static rendering ban remains intact for the heatmap path: no `<animate`,
+  `<set`, or `@keyframes`.
+- Snapshot and docs sample assets match the current renderer; badge and
+  heatmap empty-state files are byte-identical to the pre-range tree.
 
 ## Severity summary
 
 - Critical: 0
 - High: 0
 - Medium: 0
-- Low: 1
+- Low: 2
 
 ## Final recommendation
 
-READY FOR NEXT GATE
+READY AFTER MINOR FIXES

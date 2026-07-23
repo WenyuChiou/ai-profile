@@ -3,9 +3,9 @@
 
 A GitHub-style year grid where each day cell encodes TWO dimensions:
 
-- INTENSITY (fill-opacity): the day's total_commits — the owner's whole
-  working rhythm, human-only commits included (the round's driving
-  requirement) — bucketed 1 / 2-4 / 5-7 / 8+.
+- INTENSITY (solid background-mix depth): the day's total_commits — the
+  owner's whole working rhythm, human-only commits included (the
+  round's driving requirement) — bucketed 1 / 2-4 / 5-7 / 8+.
 - HUE (fill color): the day's AI-collaboration share, quantized into five
   bins (0%, and quarters up to 100%), interpolated between the theme's
   neutral and accent colors. A solo-coding week reads neutral and quiet;
@@ -165,15 +165,15 @@ def _grid_columns(daily: tuple[DayCell, ...]) -> tuple[datetime.date, int]:
 
 
 def _cell_rects(daily: tuple[DayCell, ...], theme: Theme) -> str:
-    """Every in-window day square: data days get (share-bin hue x
-    volume-bin opacity); absent in-window days get the flat track square.
-    Days outside [window_start, newest] render nothing (partial first/last
-    grid columns stay blank, never fabricated)."""
+    """Every in-window day square: data days get the solid (share-bin x
+    volume-bin) hex from _cell_fill — the single color source shared
+    with the legend swatches; absent in-window days get the flat track
+    square. Days outside [window_start, newest] render nothing (partial
+    first/last grid columns stay blank, never fabricated)."""
     newest = datetime.date.fromisoformat(daily[-1].date)
     window_start, _cols = _grid_columns(daily)
     first_monday = _monday_of(window_start)
     by_date = {cell.date: cell for cell in daily}
-    colors = _share_colors(theme)
 
     parts: list[str] = []
     day = window_start
@@ -186,10 +186,10 @@ def _cell_rects(daily: tuple[DayCell, ...], theme: Theme) -> str:
         if cell is None:
             parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=theme.bar_track, rx=3))
         else:
-            fill = _lerp_hex(
-                theme.bg,
-                colors[_share_bin(cell.ai_commits, cell.total_commits)],
-                HM_VOLUME_MIX[_volume_bin(cell.total_commits)],
+            fill = _cell_fill(
+                theme,
+                _share_bin(cell.ai_commits, cell.total_commits),
+                _volume_bin(cell.total_commits),
             )
             parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=fill, rx=3))
         day += datetime.timedelta(days=1)
