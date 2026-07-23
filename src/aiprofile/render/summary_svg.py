@@ -101,7 +101,7 @@ BAR_HEIGHT = 7
 NAME_FONT_SIZE = 13
 COUNT_FONT_SIZE = 13
 
-MORE_LINE_EXTRA = 24  # vertical room for the "+N more" line when present
+MORE_LINE_EXTRA = 24  # vertical room for the "+N providers not shown" line when present
 
 # Evidence/privacy provenance panel.
 PANEL_GAP_ABOVE = 20
@@ -151,11 +151,20 @@ ZERO_BODY_BOTTOM = 164
 # same invariant for the new element).
 # ---------------------------------------------------------------------------
 
-CAL_GAP_ABOVE = 20  # rows/"+N more" bottom -> calendar label top (mirrors PANEL_GAP_ABOVE)
+CAL_GAP_ABOVE = 20  # rows/"+N providers not shown" bottom -> label top (mirrors PANEL_GAP_ABOVE)
 CAL_GAP_BELOW = 20  # calendar bottom -> evidence panel top (mirrors PANEL_GAP_ABOVE)
 CAL_LABEL_SIZE = 12
 CAL_LABEL_BASELINE_Y = 14  # local y (band-relative) of the label's text baseline
 CAL_LABEL_TEXT = "Daily AI collaboration (last 84 days)"
+
+# Round D3 P2: month-boundary labels sit in their own row between the band
+# header and the diamond grid. CAL_GRID_TOP_Y (below) derives from these so
+# bumping either constant here re-flows the whole grid/legend/CAL_HEIGHT
+# automatically -- the same "everything downstream recomputes" discipline
+# the original D2 layout uses for CAL_GRID_TOP_Y itself.
+CAL_MONTH_LABEL_SIZE = 11
+CAL_MONTH_LABEL_BASELINE_Y = 30  # local y of the month-label row's text baseline
+CAL_MONTH_LABEL_GRID_GAP = 10  # month-label baseline -> grid top
 
 CAL_WEEKS = 12
 CAL_DAYS = 7
@@ -173,8 +182,10 @@ CAL_CAP_COMMITS = 8
 #: Local (band-relative) y where the grid starts: high enough that even a
 #: full-height column at (col=0, row=0) never draws above y=0 within the
 #: band. Local y=0 is the very top of the whole band (the label's own
-#: baseline sits below it, at CAL_LABEL_BASELINE_Y).
-CAL_GRID_TOP_Y = 24
+#: baseline sits below it, at CAL_LABEL_BASELINE_Y). Round D3 P2 moved this
+#: from a bare literal (24) to a derived value: the month-label row now
+#: owns the space between the band header and the grid.
+CAL_GRID_TOP_Y = CAL_MONTH_LABEL_BASELINE_Y + CAL_MONTH_LABEL_GRID_GAP  # 40
 CAL_GRID_BOTTOM_MARGIN = 6
 
 #: Bounding box of the flat (unraised) diamond grid, in a LOCAL x space
@@ -193,9 +204,36 @@ CAL_ORIGIN_Y = CAL_GRID_TOP_Y + CAL_TILE_HH + CAL_MAX_STACK_PX
 
 #: Bottommost point of the grid (col=CAL_WEEKS-1, row=CAL_DAYS-1, elevation 0).
 CAL_GRID_BOTTOM_Y = CAL_ORIGIN_Y + (CAL_WEEKS - 1 + CAL_DAYS - 1) * CAL_TILE_HH + CAL_TILE_HH
-#: Total fixed footprint of the band (label + grid + margins); added to the
-#: layout only when stats.daily is non-empty.
-CAL_HEIGHT = CAL_GRID_BOTTOM_Y + CAL_GRID_BOTTOM_MARGIN
+
+# Round D3 P1: a compact single-line intensity legend sits under the grid
+# (CAL_CAP_COMMITS-derived bins, see `_legend_bins`) plus the "publishable
+# repos only" cue. CAL_LEGEND_ROW_HEIGHT is the NAMED constant CAL_HEIGHT
+# grows by -- the legend renders only inside the same `if stats.daily:`
+# branch as the rest of the band, so an empty-daily card never sees it.
+CAL_LEGEND_TILE_HW = 6  # legend diamond half-width (smaller than a grid tile)
+CAL_LEGEND_TILE_HH = 3  # legend diamond half-height (2:1 ratio, matches CAL_TILE_HW/HH)
+CAL_LEGEND_LABEL_SIZE = 11
+CAL_LEGEND_LABEL_GAP = 4  # a diamond's right edge -> its own label's x
+CAL_LEGEND_ITEM_GAP = 14  # one bin's label -> the next bin's diamond
+CAL_LEGEND_DIAMOND_DY = -4  # diamond center, relative to the legend baseline
+CAL_LEGEND_TOP_GAP = 14  # grid-bottom margin -> legend baseline
+CAL_LEGEND_BOTTOM_PAD = 4  # legend baseline -> band bottom (descender clearance)
+CAL_LEGEND_ROW_HEIGHT = CAL_LEGEND_TOP_GAP + CAL_LEGEND_BOTTOM_PAD  # the named growth constant
+CAL_LEGEND_CUE_TEXT = "publishable repos only"
+
+#: Local (band-relative) y of the legend row's text baseline.
+CAL_LEGEND_BASELINE_Y = CAL_GRID_BOTTOM_Y + CAL_GRID_BOTTOM_MARGIN + CAL_LEGEND_TOP_GAP
+
+#: Fixed literal fill-opacity per bin index (never computed/blended, same
+#: discipline as CAL_FACE_OPACITY_*): all legend diamonds share the SAME
+#: theme.muted fill and are distinguished only by opacity, lightest bin
+#: first. Never indexed past its own length (`_legend_bins` never returns
+#: more than 4 bins).
+CAL_LEGEND_OPACITIES = (0.35, 0.55, 0.75, 1.0)
+
+#: Total fixed footprint of the band (label + month-label row + grid +
+#: legend); added to the layout only when stats.daily is non-empty.
+CAL_HEIGHT = CAL_LEGEND_BASELINE_Y + CAL_LEGEND_BOTTOM_PAD
 
 #: Isometric face shading -- same flat token color for all three faces of a
 #: column, distinguished only by fill-opacity (never a computed/blended
@@ -679,8 +717,18 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Isometric calendar band builders (round D2, ADR-018).
+# Isometric calendar band builders (round D2, ADR-018; round D3 P1/P2
+# card-polish additions live alongside it, same module section).
 # ---------------------------------------------------------------------------
+
+#: ASCII 3-letter English month abbreviations, index 0 = January (P2).
+#: Never locale-dependent (ADR-010: fixed decimal/text formatting) and
+#: never derived from the clock -- only ever indexed by a real
+#: `datetime.date.month` computed from `stats.daily`.
+_MONTH_ABBR = (
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
 
 
 def _calendar_color(provider: str, theme: Theme) -> str:
@@ -799,13 +847,162 @@ def _calendar_cell_position(offset: int) -> tuple[int, int, int, int]:
     return col, row, cx, cy
 
 
+def _month_boundaries(dates: tuple[datetime.date, ...]) -> tuple[tuple[int, str], ...]:
+    """Raw ``(col, 3-letter month label)`` pairs for every month BOUNDARY
+    in an ordered, contiguous, oldest-to-newest date sequence (P2) -- col
+    = index // CAL_DAYS, matching `_calendar_cell_position`'s own column
+    math. A "boundary" is a transition INTO a new month: the sequence's
+    own first (possibly partial) month is never a boundary, so a
+    single-month input yields an empty tuple (falsifiable directly, no
+    need to construct a real 84-day window to prove it). Deterministic in
+    ``dates`` alone -- never `datetime.date.today()`; the caller is
+    responsible for deriving ``dates`` from `stats.daily` only.
+    """
+    if not dates:
+        return ()
+    boundaries: list[tuple[int, str]] = []
+    prev_month = dates[0].month
+    for index, d in enumerate(dates):
+        if d.month != prev_month:
+            boundaries.append((index // CAL_DAYS, _MONTH_ABBR[d.month - 1]))
+            prev_month = d.month
+    return tuple(boundaries)
+
+
+def _dedupe_colliding_month_labels(
+    boundaries: tuple[tuple[int, str], ...],
+) -> tuple[tuple[int, str], ...]:
+    """Collision rule (P2, documented not just implemented): a boundary is
+    DROPPED outright -- never shifted, abbreviated further, or allowed to
+    overlap -- when it would land in the SAME grid column as the
+    immediately preceding KEPT label (not the raw previous boundary, so a
+    run of 3+ same-column boundaries collapses to the first one rather
+    than alternating). Real calendar months are always >= 28 days == >=
+    4 CAL_DAYS-wide columns apart, so this never actually fires on a real
+    `stats.daily` window (see test_month_labels_span_three_to_four_months
+    for the real-date case) -- it exists as a documented, independently
+    falsifiable invariant, exercised directly here with synthetic input.
+    """
+    kept: list[tuple[int, str]] = []
+    for col, label in boundaries:
+        if kept and kept[-1][0] == col:
+            continue
+        kept.append((col, label))
+    return tuple(kept)
+
+
+def _month_label_columns(stats: VizStats) -> tuple[tuple[int, str], ...]:
+    """``(col, label)`` pairs to actually render (P2): derives the
+    window's own contiguous date sequence purely from `stats.daily`'s
+    newest date (never the clock -- same anchor `_calendar_grid_cells`
+    uses), then applies the boundary + collision rules above. Empty when
+    there is no daily series."""
+    if not stats.daily:
+        return ()
+    newest = datetime.date.fromisoformat(stats.daily[-1].date)
+    window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
+    dates = tuple(
+        window_start + datetime.timedelta(days=offset) for offset in range(CAL_WINDOW_DAYS)
+    )
+    return _dedupe_colliding_month_labels(_month_boundaries(dates))
+
+
+def _calendar_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    """The month-boundary label row (P2), rendered between the band header
+    and the diamond grid (see CAL_MONTH_LABEL_BASELINE_Y). Each label
+    anchors at its month's own first visible column, using that column's
+    row=0 x (the top/left-most point of its isometric skew)."""
+    baseline_y = top + CAL_MONTH_LABEL_BASELINE_Y
+    parts = [
+        _text(
+            CAL_X_OFFSET + col * CAL_TILE_HW,
+            baseline_y,
+            label,
+            size=CAL_MONTH_LABEL_SIZE,
+            fill=theme.muted,
+            anchor="middle",
+        )
+        for col, label in _month_label_columns(stats)
+    ]
+    return "\n".join(parts)
+
+
+def _legend_bins(cap: int) -> tuple[tuple[int, str], ...]:
+    """Up to 4 ``(representative_count, ASCII label)`` intensity bins
+    derived from ``cap`` (P1): "1", "2-{mid}", "{mid+1}-{cap-1}",
+    "{cap}+" where ``mid = cap // 2`` -- e.g. cap=8 (CAL_CAP_COMMITS
+    today) gives exactly "1", "2-4", "5-7", "8+". Recomputed from ``cap``
+    alone (never a hand-typed literal), so a future CAL_CAP_COMMITS change
+    keeps the legend true: a smaller cap collapses degenerate ranges
+    (low > high, e.g. cap=3's would-be "2-1") down to 2-3 bins
+    automatically instead of emitting a bogus range."""
+    mid = cap // 2
+    candidates = ((1, 1), (2, mid), (mid + 1, cap - 1))
+    bins: list[tuple[int, str]] = []
+    for low, high in candidates:
+        if low > high:
+            continue
+        label = str(low) if low == high else f"{low}-{high}"
+        bins.append((high, label))
+    bins.append((cap, f"{cap}+"))
+    return tuple(bins)
+
+
+def _legend_diamond_points(cx: int, cy: int) -> tuple[tuple[int, int], ...]:
+    """(top, right, bottom, left) corners of a flat legend diamond
+    centered at ``(cx, cy)`` -- same 2:1 shape as the grid tiles, sized by
+    the smaller CAL_LEGEND_TILE_HW/HH constants (P1, no elevation: the
+    legend never stacks)."""
+    return (
+        (cx, cy - CAL_LEGEND_TILE_HH),
+        (cx + CAL_LEGEND_TILE_HW, cy),
+        (cx, cy + CAL_LEGEND_TILE_HH),
+        (cx - CAL_LEGEND_TILE_HW, cy),
+    )
+
+
+def _calendar_legend_svg(theme: Theme, top: int) -> str:
+    """The compact single-line intensity legend (P1): CAL_CAP_COMMITS
+    -derived bins (`_legend_bins`) so it stays true if the cap changes,
+    plus the "publishable repos only" cue. Diamonds are uniform size and
+    share theme.muted, distinguished only by CAL_LEGEND_OPACITIES (never a
+    new hex value -- same discipline as CAL_FACE_OPACITY_*)."""
+    baseline_y = top + CAL_LEGEND_BASELINE_Y
+    diamond_cy = baseline_y + CAL_LEGEND_DIAMOND_DY
+    parts: list[str] = []
+    x = PADDING
+    for index, (_, label) in enumerate(_legend_bins(CAL_CAP_COMMITS)):
+        opacity = CAL_LEGEND_OPACITIES[min(index, len(CAL_LEGEND_OPACITIES) - 1)]
+        cx = x + CAL_LEGEND_TILE_HW
+        parts.append(
+            _polygon(_legend_diamond_points(cx, diamond_cy), fill=theme.muted, opacity=opacity)
+        )
+        label_x = cx + CAL_LEGEND_TILE_HW + CAL_LEGEND_LABEL_GAP
+        parts.append(
+            _text(label_x, baseline_y, label, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
+        )
+        x = label_x + round(_text_width(label, CAL_LEGEND_LABEL_SIZE)) + CAL_LEGEND_ITEM_GAP
+    parts.append(
+        _text(
+            WIDTH - PADDING,
+            baseline_y,
+            CAL_LEGEND_CUE_TEXT,
+            size=CAL_LEGEND_LABEL_SIZE,
+            fill=theme.muted,
+            anchor="end",
+        )
+    )
+    return "\n".join(parts)
+
+
 def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The calendar band: an always-visible label plus the isometric grid,
-    fully STATIC (see the no-entrance-animation note in the constants
-    section - two animation attempts each left the band invisible in
-    static captures). ``top`` is the band's absolute y (see
-    `_calendar_top`); all local y math from the constants section is
-    offset by it here, once.
+    """The calendar band: an always-visible label, the month-boundary row
+    (P2), the isometric grid, and the intensity legend (P1) -- fully
+    STATIC (see the no-entrance-animation note in the constants section -
+    two animation attempts each left the band invisible in static
+    captures). ``top`` is the band's absolute y (see `_calendar_top`);
+    all local y math from the constants section is offset by it here,
+    once.
     """
     cells = _calendar_grid_cells(stats)
     # Painter's algorithm: cells must be drawn back-to-front (ascending
@@ -823,20 +1020,21 @@ def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
         _, _, cx, cy = _calendar_cell_position(offset)
         diamonds.append(_day_cell_svg(cells[offset], cx, top + cy, theme))
 
-    return "\n".join(
-        (
-            _text(
-                PADDING,
-                top + CAL_LABEL_BASELINE_Y,
-                CAL_LABEL_TEXT,
-                size=CAL_LABEL_SIZE,
-                weight=600,
-                fill=theme.muted,
-                letter_spacing=0.2,
-            ),
-            "\n".join(diamonds),
-        )
+    sections = (
+        _text(
+            PADDING,
+            top + CAL_LABEL_BASELINE_Y,
+            CAL_LABEL_TEXT,
+            size=CAL_LABEL_SIZE,
+            weight=600,
+            fill=theme.muted,
+            letter_spacing=0.2,
+        ),
+        _calendar_month_labels_svg(stats, theme, top),
+        "\n".join(diamonds),
+        _calendar_legend_svg(theme, top),
     )
+    return "\n".join(section for section in sections if section)
 
 
 def render_summary(stats: VizStats, theme: Theme) -> str:
@@ -933,7 +1131,13 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
             more_y = ROWS_TOP + MAX_PROVIDER_ROWS * ROW_HEIGHT + 16
             remaining = len(stats.providers) - MAX_PROVIDER_ROWS
             parts.append(
-                _text(PADDING, more_y, f"+{remaining} more", size=12, fill=theme.muted)
+                _text(
+                    PADDING,
+                    more_y,
+                    f"+{remaining} providers not shown",
+                    size=12,
+                    fill=theme.muted,
+                )
             )
 
         # Isometric daily-activity calendar band (round D2, ADR-018): only

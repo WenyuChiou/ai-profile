@@ -213,6 +213,36 @@ def test_glyph_path_data_is_single_ascii_and_xml_attr_safe():
         assert path == path.strip(), slug  # no incidental leading/trailing whitespace
 
 
+# ---------------------------------------------------------------------------
+# Round D3 (.ai/round_d3_provider_ecosystem_spec.md): eight declaration-tier
+# marks vendored via scripts/vendor_brand_icons.py. The tests above already
+# cover every BRAND entry generically (they iterate BRAND.items() /
+# CANONICAL_PROVIDERS, not a hard-coded slug list), so the new entries are
+# exercised automatically - these two tests pin the round's two explicit
+# provenance decisions so a future edit can't silently drop or add one.
+# ---------------------------------------------------------------------------
+
+_ROUND_D3_VENDORED_SLUGS = frozenset(
+    {"moonshot", "deepseek", "alibaba", "mistral", "ollama", "replit", "zhipu", "meta"}
+)
+_ROUND_D3_LETTER_TILE_ONLY_SLUGS = frozenset({"amp", "xai"})
+
+
+def test_round_d3_vendored_slugs_are_all_branded():
+    for slug in sorted(_ROUND_D3_VENDORED_SLUGS):
+        assert slug in BRAND, f"{slug}: expected a round D3 vendored BrandSpec, found none"
+
+
+def test_round_d3_amp_and_xai_have_no_mark_by_owner_ruling():
+    # ADR-017's D3 addendum + the round spec: amp and xai carry no
+    # simple-icons mark and are letter-tile-only by explicit owner ruling,
+    # not a vendoring gap - this pins that decision against accidental
+    # future fabrication.
+    for slug in sorted(_ROUND_D3_LETTER_TILE_ONLY_SLUGS):
+        assert slug in CANONICAL_PROVIDERS, slug
+        assert slug not in BRAND, f"{slug}: expected letter-tile fallback, found a BrandSpec"
+
+
 def test_glyph_path_hex_colors_are_well_formed():
     hex_re_len = 7  # "#RRGGBB"
     for slug, spec in sorted(BRAND.items()):

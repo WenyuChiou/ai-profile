@@ -19,6 +19,12 @@ from .schema.vocab import (
 )
 
 #: raw (lowercased) AI-Provider trailer value -> canonical provider slug
+#:
+#: ADR-019 two-tier note (round D3): the ten entries below `cognition`
+#: are DECLARATION-tier only — a hand-written `AI-Provider:` trailer
+#: using one of these normalizes to its canonical slug, but only `amp`
+#: also has an auto-match co-author identity (COAUTHOR_IDENTITIES
+#: below); the other nine are never inferred from commit history alone.
 PROVIDER_ALIASES: dict[str, str] = {
     "anthropic": "anthropic",
     "openai": "openai",
@@ -33,6 +39,16 @@ PROVIDER_ALIASES: dict[str, str] = {
     "openhands": "openhands",
     "windsurf": "windsurf",
     "cognition": "cognition",
+    "amp": "amp",
+    "replit": "replit",
+    "moonshot": "moonshot",
+    "deepseek": "deepseek",
+    "alibaba": "alibaba",
+    "mistral": "mistral",
+    "xai": "xai",
+    "zhipu": "zhipu",
+    "ollama": "ollama",
+    "meta": "meta",
 }
 
 # Display names live in the schema-owned public vocabulary
@@ -64,6 +80,16 @@ TOOL_ALIASES: dict[str, tuple[str, str]] = {
     "cascade": ("windsurf", "windsurf"),
     "amazon-q": ("amazon-q", "amazon"),
     "amazon q": ("amazon-q", "amazon"),
+    "amp": ("amp", "amp"),
+    "replit-agent": ("replit-agent", "replit"),
+    "replit agent": ("replit-agent", "replit"),
+    "kimi-code": ("kimi-code", "moonshot"),
+    "kimi code": ("kimi-code", "moonshot"),
+    "qwen-code": ("qwen-code", "alibaba"),
+    "qwen code": ("qwen-code", "alibaba"),
+    "vibe-code": ("vibe-code", "mistral"),
+    "vibe code": ("vibe-code", "mistral"),
+    "ollama": ("ollama", "ollama"),
 }
 
 
@@ -102,6 +128,11 @@ COAUTHOR_IDENTITIES: dict[str, CoauthorIdentity] = {
     # Generic Google noreply: only with a "Gemini..." display name (ADR-013
     # name-prefix condition); tool not attributable from the email alone.
     "noreply@google.com": CoauthorIdentity("google", None, name_prefix="gemini"),
+    # ADR-019 (round D3, owner ruling 3): the ONLY new auto-match identity
+    # this round. Official manual: amp.git.commit.coauthor.enabled defaults
+    # true and adds this exact co-author to agent commits.
+    # https://ampcode.com/manual
+    "amp@ampcode.com": CoauthorIdentity("amp", "amp"),
 }
 
 

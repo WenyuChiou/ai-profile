@@ -23,6 +23,26 @@ below.
   irreplaceable (config identities/policy aside, which are a few lines
   of JSON you can note down first).
 
+## [Unreleased]
+
+### Added
+
+- Two-tier provider model (ADR-019): the DECLARATION tier grows by ten
+  providers - Kimi (moonshot), DeepSeek, Qwen (alibaba), Mistral, Grok
+  (xai), GLM (zhipu), Ollama, Llama (meta), Replit, Amp - so
+  hand-written `AI-Provider:` trailers resolve and rank; the AUTO-MATCH
+  tier stays evidence-gated and gains exactly one identity: Amp
+  (`amp@ampcode.com`, documented default-on co-author trailer).
+- Eight new provider marks vendored mechanically from the pinned CC0
+  simple-icons commit via the new `scripts/vendor_brand_icons.py`
+  (byte-verified provenance; Amp and Grok have no mark and keep the
+  honest letter tile).
+- Calendar band polish: intensity-bin legend + "publishable repos only"
+  cue, clock-free month boundary labels, and clearer provider-overflow
+  wording.
+- Repo social-preview card (docs/assets/social-preview.{svg,png}) in
+  the banner's visual language.
+
 ## [0.2.0] — 2026-07-23
 
 ### Added

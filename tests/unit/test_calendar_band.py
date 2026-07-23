@@ -12,6 +12,7 @@ module import time, not just in a targeted assertion.
 from __future__ import annotations
 
 import dataclasses
+import datetime
 import re
 import xml.etree.ElementTree as ET
 
@@ -26,6 +27,8 @@ from aiprofile.render.summary_svg import (
     CAL_GAP_BELOW,
     CAL_HEIGHT,
     CAL_LABEL_TEXT,
+    CAL_LEGEND_CUE_TEXT,
+    CAL_LEGEND_OPACITIES,
     CAL_MAX_STACK_PX,
     CAL_TILE_HH,
     CAL_WINDOW_DAYS,
@@ -35,7 +38,13 @@ from aiprofile.render.summary_svg import (
     _calendar_color,
     _calendar_desc_suffix,
     _calendar_grid_cells,
+    _calendar_legend_svg,
+    _calendar_month_labels_svg,
     _day_cell_svg,
+    _dedupe_colliding_month_labels,
+    _legend_bins,
+    _month_boundaries,
+    _month_label_columns,
     _panel_top,
     _rows_bottom,
     card_height,
@@ -210,6 +219,12 @@ def test_empty_daily_omits_band_and_matches_pre_d2_geometry():
         assert "<polygon" not in svg
         assert "<animate" not in svg
         assert CAL_LABEL_TEXT not in svg
+        # Round D3 additions (P1 legend, P2 month labels) live entirely
+        # inside the same `if stats.daily:` branch -- they must vanish
+        # together with the rest of the band, not leak into a no-daily
+        # card.
+        assert CAL_LEGEND_CUE_TEXT not in svg
+        assert "Jan" not in svg and "Feb" not in svg  # no stray month labels
         root = ET.fromstring(svg)  # still well-formed
         del root
 
@@ -437,3 +452,128 @@ def test_daily_exceeding_provider_row_total_is_rejected_by_vizstats():
                 ),
             ),
         )
+
+
+# ---------------------------------------------------------------------------
+# 9. P1: compact intensity legend (round D3).
+# ---------------------------------------------------------------------------
+
+
+def test_legend_bins_math_for_the_current_cap():
+    """Falsifiable: with CAL_CAP_COMMITS == 8 today, `_legend_bins` must
+    produce EXACTLY the 4 bins the round D3 spec worked through by hand
+    ("1", "2-4", "5-7", "8+") -- fails if the derivation drifts from that
+    worked example."""
+    assert _legend_bins(8) == ((1, "1"), (4, "2-4"), (7, "5-7"), (8, "8+"))
+
+
+def test_legend_bins_resilient_to_a_cap_change():
+    """Falsifiable: recomputing bins for OTHER cap values must still
+    satisfy the general contract (first bin "1", last bin "{cap}+", every
+    label's own numbers ASCII, no bin with low > high ever emitted) --
+    proves the derivation is a real function of ``cap``, not a hand-typed
+    table that happens to match cap=8."""
+    for cap in (2, 3, 4, 6, 8, 12, 15):
+        bins = _legend_bins(cap)
+        assert bins[0] == (1, "1")
+        assert bins[-1] == (cap, f"{cap}+")
+        assert len(bins) <= 4
+        for _, label in bins:
+            assert label.isascii()
+            if "-" in label:
+                low, high = (int(n) for n in label.split("-"))
+                assert low <= high
+
+
+def test_legend_absent_when_daily_empty():
+    """Confirmed failing pre-fix by construction: before the `if
+    stats.daily:` guard around `_calendar_svg` (round D2, still governing
+    the legend since it lives inside the same band), any card would carry
+    the legend markup unconditionally."""
+    no_daily = dataclasses.replace(FIXTURE_MAIN, daily=())
+    for theme in THEMES.values():
+        svg = render_summary(no_daily, theme)
+        assert CAL_LEGEND_CUE_TEXT not in svg
+        assert "8+" not in svg
+
+
+def test_legend_renders_with_the_band_ascii_and_muted():
+    for theme in THEMES.values():
+        svg = _calendar_legend_svg(theme, top=0)
+        assert svg.isascii()
+        assert CAL_LEGEND_CUE_TEXT in svg
+        assert f'fill="{theme.muted}"' in svg
+        # Every non-final bin's opacity literal appears at least once
+        # (the final bin, opacity 1, is rendered with NO fill-opacity
+        # attribute at all -- `_polygon`'s own has_opacity rule).
+        for opacity in CAL_LEGEND_OPACITIES[:-1]:
+            assert f'fill-opacity="{opacity}"' in svg
+
+
+def test_legend_diamonds_carry_no_float_noise():
+    coord_re = re.compile(r"-?\d+,-?\d+")
+    pt_re = re.compile(r'<polygon points="([^"]+)"')
+    for theme in THEMES.values():
+        svg = _calendar_legend_svg(theme, top=0)
+        for points_attr in pt_re.findall(svg):
+            for pair in points_attr.split(" "):
+                assert coord_re.fullmatch(pair), pair
+
+
+# ---------------------------------------------------------------------------
+# 10. P2: month-boundary labels (round D3).
+# ---------------------------------------------------------------------------
+
+
+def test_month_boundaries_empty_for_a_single_month_window():
+    """Falsifiable directly (no need to build a real 84-day window): a
+    contiguous date sequence that never leaves its own first month yields
+    NO boundaries -- the sequence's own first month is never itself a
+    'boundary'."""
+    dates = tuple(datetime.date(2026, 3, 1) + datetime.timedelta(days=i) for i in range(10))
+    assert _month_boundaries(dates) == ()
+
+
+def test_month_boundaries_span_three_to_four_months():
+    """FIXTURE_MAIN/FIXTURE_POPULATED's own 84-day window (2026-04-22 to
+    2026-07-14, the D2 fixture's documented span) crosses 4 calendar
+    months (Apr partial, May, Jun, Jul partial) -- exactly 3 boundaries
+    (May 1, Jun 1, Jul 1), April itself unlabeled since it is the
+    window's own first, partial month."""
+    labels = _month_label_columns(FIXTURE_MAIN)
+    assert [label for _, label in labels] == ["May", "Jun", "Jul"]
+    # Columns strictly increase (each later month starts in a later
+    # column than the one before it).
+    cols = [col for col, _ in labels]
+    assert cols == sorted(cols)
+    assert len(set(cols)) == len(cols)
+
+
+def test_month_labels_empty_when_daily_empty():
+    assert _month_label_columns(dataclasses.replace(FIXTURE_MAIN, daily=())) == ()
+
+
+def test_month_label_collision_rule_drops_same_column_boundaries():
+    """Collision rule (documented in `_dedupe_colliding_month_labels`):
+    a later boundary in the SAME column as the immediately preceding KEPT
+    label is dropped outright. Exercised directly with synthetic input
+    since real calendar months (>= 28 days == >= 4 columns apart) never
+    actually trigger it on a real 84-day window."""
+    # Two boundaries collide with column 2 (a run of 3) then a genuinely
+    # later one in column 5.
+    boundaries = ((2, "Jan"), (2, "Feb"), (2, "Mar"), (5, "Apr"))
+    assert _dedupe_colliding_month_labels(boundaries) == ((2, "Jan"), (5, "Apr"))
+
+
+def test_month_label_collision_rule_no_collision_passes_through():
+    boundaries = ((1, "Jan"), (5, "Feb"), (9, "Mar"))
+    assert _dedupe_colliding_month_labels(boundaries) == boundaries
+
+
+def test_month_labels_render_ascii_and_muted():
+    for theme in THEMES.values():
+        svg = _calendar_month_labels_svg(FIXTURE_MAIN, theme, top=0)
+        assert svg.isascii()
+        assert f'fill="{theme.muted}"' in svg
+        for label in ("May", "Jun", "Jul"):
+            assert f">{label}<" in svg

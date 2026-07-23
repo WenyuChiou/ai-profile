@@ -448,6 +448,23 @@ spellings and co-author identities live in the registry, seeded only from
 landscape-verified claims. `cline` is deliberately absent — landscape.md
 §2.1.)
 
+**Two-tier vocabulary (round D3, ADR-019):** the v0.1 set above is
+single-tier (declaration and auto-match coincide). Starting round D3,
+`CANONICAL_PROVIDERS`/`CANONICAL_TOOLS` also carry ten DECLARATION-tier
+providers whose auto-match bar (a stable co-author trailer/noreply
+identity) is not met: `amp`, `replit`, `moonshot` (display `Kimi`),
+`deepseek`, `alibaba` (display `Qwen`), `mistral`, `xai` (display
+`Grok`), `zhipu` (display `GLM`), `ollama`, `meta` (display `Llama`).
+Their tool slugs: `amp`, `replit-agent`, `kimi-code`, `qwen-code`,
+`vibe-code` (`deepseek`/`xai`/`zhipu`/`meta` add no tool slug). A
+hand-written `AI-Provider:`/`AI-Tool:` trailer using one of these
+resolves and renders with its brand mark; none of them is inferred from
+commit history alone. The single exception is `amp`, which ALSO has an
+auto-match co-author identity (`amp@ampcode.com`, ADR-019) because it
+meets the same evidence bar as the v0.1 set. Declaration-tier membership
+is never a claim that the named provider auto-attributes its own
+commits.
+
 ## 11. Unknown handling
 
 Every commit inside a scan (authored by a configured identity, ADR-015)

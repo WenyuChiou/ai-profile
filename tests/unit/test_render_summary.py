@@ -367,15 +367,18 @@ def test_all_font_sizes_at_least_11px():
 
 
 def test_plus_n_more_for_eight_provider_fixture():
+    # P7 (round D3): "+N more" -> "+N providers not shown" -- more explicit
+    # about what is actually hidden.
     for theme in THEMES.values():
         svg = render_summary(FIXTURE_POPULATED, theme)
-        assert "+2 more" in svg
+        assert "+2 providers not shown" in svg
+        assert "+2 more" not in svg
 
 
 def test_no_more_line_when_six_or_fewer_providers():
     for theme in THEMES.values():
         svg = render_summary(FIXTURE_PRIVACY_TRUE, theme)
-        assert "more" not in svg.lower()
+        assert "not shown" not in svg.lower()
 
 
 def test_provider_table_label_present():

@@ -185,3 +185,147 @@ bar than a foreground mark against its own tile).
   glyphs invented for providers simple-icons does not carry — the letter
   fallback is permanent for those slugs until (if ever) a real mark
   appears upstream.
+
+## D3 addendum: mechanical vendoring tool + eight declaration-tier marks
+
+Status: accepted (2026-07-23), per `.ai/round_d3_provider_ecosystem_spec.md`
+item 5 (owner ruling: "Icon extraction script: YES —
+`scripts/vendor_brand_icons.py`, mechanical extraction from a pinned
+simple-icons commit, emits `BrandSpec` stubs + WCAG contrast report; no
+hand-typed path data").
+
+### The vendoring tool
+
+`scripts/vendor_brand_icons.py` is a standalone, manually-run release tool
+(not pytest-collected — same discipline as `scripts/release_smoke.py`: it
+lives outside `tests/`, the sole `testpaths` root). Given a pinned
+simple-icons commit SHA and a repeatable `--map canonical-slug:icon-slug`
+argument, it:
+
+1. Fetches `data/simple-icons.json` (title → hex) and, per mapping entry,
+   `icons/<icon-slug>.svg` from the public `raw.githubusercontent.com`
+   mirror at the pinned ref only.
+2. Extracts `<title>` and the sole `<path d="...">` mechanically (regex
+   over the fetched SVG text — never hand-typed path data) and verifies
+   exactly one `<path>` element; a 404 or a multi-path icon is **skipped
+   and reported**, never faked with an approximated glyph.
+3. Looks the brand hex up by exact `<title>` match against
+   `data/simple-icons.json` (this simple-icons schema version carries no
+   `slug` field, so title is the mechanical join key actually present in
+   both documents).
+4. Derives `(fg, tint)` per theme from the brand hex: the tint is a
+   same-hue HSL wash of the brand color (high lightness for the light
+   theme, low lightness for the dark theme, saturation capped so highly
+   saturated brand hues don't produce a shouty chip); `fg` is the **literal
+   brand hex** wherever it already clears WCAG ≥3:1 against that derived
+   tint, otherwise a same-hue, lightness-walked shade (darkened toward the
+   light tint, lightened toward the dark tint) is substituted via a fixed,
+   deterministic step scan — the same "adjust a monochrome mark's fg, never
+   the tint" treatment the D1 GitHub Copilot/Cursor/Windsurf entries used
+   by hand.
+5. Prints ready-to-paste `BrandSpec(...)` stubs plus a WCAG contrast table
+   (fg-vs-tint ≥3:1, tint-vs-card ≥1.1, both themes) for every icon
+   attempted.
+
+Deterministic given the pinned ref: no random sampling, no hand-tuned
+"looks nicer" adjustment — same ref + mapping always reproduces the same
+stubs.
+
+### Pinned ref and provenance
+
+Source: simple-icons (https://github.com/simple-icons/simple-icons),
+package version **16.27.0**, commit
+`f7cc40071c00ca767e6f5532fb99bfbc25efb8fe` — verified as `master`'s current
+HEAD via the GitHub REST API on 2026-07-23 (the planning reply's cited SHA,
+`44a643f819e3c71aba635d15f132c33c5cc3d000`, does not match what `master`
+actually resolves to at extraction time and was not used); this is the
+*same* commit D1 already vendored from (`master` had not advanced between
+the two lookups), so both rounds vendor from one consistent snapshot.
+`package.json`'s `version` field at that commit reads `16.27.0`;
+`LICENSE.md` at that commit is CC0-1.0, confirmed exactly as D1 recorded.
+
+### Mapping and mechanical verification (all 8 present, single-path, at the pinned ref)
+
+| canonical slug | `PROVIDER_DISPLAY` | simple-icons title | `icons/` slug | brand hex |
+|---|---|---|---|---|
+| `moonshot` | Kimi | "KIMI" | `kimi` | `#000000` |
+| `deepseek` | DeepSeek | "DeepSeek" | `deepseek` | `#5786FE` |
+| `alibaba` | Qwen | "QWen" | `qwen` | `#6950EF` |
+| `mistral` | Mistral | "Mistral AI" | `mistralai` | `#FA520F` |
+| `ollama` | Ollama | "Ollama" | `ollama` | `#000000` |
+| `replit` | Replit | "Replit" | `replit` | `#F26207` |
+| `zhipu` | GLM | "Z.ai" | `zdotai` | `#2D2D2D` |
+| `meta` | Llama | "Meta AI" | `metaai` | `#9844FF` |
+
+Every one of the 8 mapped icons existed at the pinned ref and carried
+exactly one `<path>` element — no skips this round. Post-write
+verification (the D1 discipline: never trust the paste, diff it): each
+`BrandSpec.path` string committed to `brand.py` was independently
+byte-diffed against a fresh fetch of `icons/<slug>.svg` at the pinned ref
+after pasting — all 8 are byte-identical to upstream.
+
+`amp` and `xai` (also declaration-tier per ADR-019) get **no** `BrandSpec`
+entry — not a vendoring failure, an explicit owner ruling
+(`round_d3_provider_ecosystem_spec.md`: "NO icons exist for amp / xai →
+letter tiles (never hand-draw)"); simple-icons was never probed for them,
+since the spec states up front no mark exists. Both render through the
+existing D1 letter-tile fallback path (`BRAND.get(row.provider)` returns
+`None`, `summary_svg.py` requires no change) — pinned by
+`tests/unit/test_brand.py::test_round_d3_amp_and_xai_have_no_mark_by_owner_ruling`.
+
+### Color derivation and WCAG contrast (D3 run)
+
+Same rule as D1 (§ "Contrast" above), computed mechanically rather than by
+hand this round. `moonshot` and `ollama` both carry the official brand hex
+`#000000` (monochrome, like D1's GitHub Copilot/Cursor/Windsurf): the
+literal hex is kept for `light_fg` (`#000000` on a light pastel clears
+3:1 with enormous headroom — 17.62:1 measured), and a lightness-walked
+same-hue (achromatic) shade (`#7A7A7A`) is substituted for `dark_fg`,
+exactly the "lighten a monochrome mark for the dark surface" treatment D1
+established. `zhipu`'s `#2D2D2D` is dark but not pure black; its
+`light_fg` clears at the literal hex (11.55:1) and its `dark_fg` needed the
+same lightening treatment. The other five providers' brand hexes cleared
+3:1 on both derived tints without adjustment and are kept literal in all
+four fields. Full measured ratios (script output, reproduced verbatim):
+
+```
+slug       theme  fg-vs-tint  tint-vs-card  fg       tint
+-------------------------------------------------------------
+alibaba    light        4.04          1.30  #6950EF  #E3DFF6   OK
+alibaba    dark         3.19          1.13  #6950EF  #1D1547   OK
+deepseek   light        3.16          1.25  #4377FE  #DFE6F6   OK
+deepseek   dark         4.58          1.23  #5786FE  #152347   OK
+meta       light        3.55          1.28  #9844FF  #E9DFF6   OK
+meta       dark         3.54          1.17  #9844FF  #2B1547   OK
+mistral    light        3.07          1.21  #F04805  #F6E6DF   OK
+mistral    dark         4.13          1.37  #FA520F  #472315   OK
+moonshot   light       17.62          1.19  #000000  #EBEBEB   OK
+moonshot   dark         3.16          1.39  #7A7A7A  #2E2E2E   OK
+ollama     light       17.62          1.19  #000000  #EBEBEB   OK
+ollama     dark         3.16          1.39  #7A7A7A  #2E2E2E   OK
+replit     light        3.15          1.20  #DE5A06  #F6E8DF   OK
+replit     dark         4.12          1.43  #F26207  #472815   OK
+zhipu      light       11.55          1.19  #2D2D2D  #EBEBEB   OK
+zhipu      dark         3.16          1.39  #7A7A7A  #2E2E2E   OK
+```
+
+`tests/unit/test_brand.py`'s existing parametrized contrast tests
+(`test_brand_fg_meets_3_to_1_contrast_against_its_own_tint`,
+`test_brand_tint_distinguishable_from_theme_card_background`) iterate
+`BRAND.items()` generically, so they picked up all 8 new entries without
+any test edit; two new tests were added only to pin the round's two
+provenance decisions themselves (which slugs got vendored, which two were
+deliberately skipped) against future silent drift.
+
+### Consequences (D3)
+
+- `BRAND` grows from 5 to 13 entries; `brand.py`'s
+  `_CANONICAL_PROVIDERS_MIRROR` already carried all 21 D3-round canonical
+  slugs (landed with the vocabulary change, ADR-019) and needed no further
+  edit for this pass — only the `BRAND` dict and module docstring changed.
+- No `summary_svg.py` change (per the original ADR's stated consequence:
+  adding a mark is a `brand.py`-only diff).
+- `scripts/vendor_brand_icons.py` is now the sanctioned path for any future
+  vendoring pass — a maintainer should never hand-type path data or
+  hand-pick fg/tint hexes again; if a provider gains a mark later, run the
+  script against a freshly pinned ref and paste its output.

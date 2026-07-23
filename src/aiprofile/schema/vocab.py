@@ -108,6 +108,11 @@ UNRECOGNIZED_DISPLAY = "Unrecognized"
 #: VizStats boundary validates display text against THIS map, so an
 #: arbitrary string cannot pose as a display name; the registry maps
 #: aliases into the slugs and reads displays from here).
+#:
+#: ADR-019 two-tier note: the ten entries below `cognition` are
+#: DECLARATION-tier only (round D3) — display names follow PRODUCT
+#: identity per the google->Gemini precedent (owner ruling 4):
+#: moonshot->Kimi, alibaba->Qwen, xai->Grok, zhipu->GLM.
 PROVIDER_DISPLAY: dict[str, str] = {
     "anthropic": "Claude",
     "openai": "OpenAI",
@@ -120,6 +125,16 @@ PROVIDER_DISPLAY: dict[str, str] = {
     "openhands": "OpenHands",
     "windsurf": "Windsurf",
     "cognition": "Devin",
+    "amp": "Amp",
+    "replit": "Replit",
+    "moonshot": "Kimi",
+    "deepseek": "DeepSeek",
+    "alibaba": "Qwen",
+    "mistral": "Mistral",
+    "xai": "Grok",
+    "zhipu": "GLM",
+    "ollama": "Ollama",
+    "meta": "Llama",
 }
 
 #: Canonical slug vocabularies (schema.md section 10; gate finding H-02).
@@ -129,6 +144,10 @@ PROVIDER_DISPLAY: dict[str, str] = {
 #: input) is structurally unable to pose as canonical. The registry maps
 #: aliases INTO these sets and asserts it never emits anything else. Raw
 #: (`*_raw`) fields stay free-form and local-only.
+#: ADR-019 two-tier note (round D3): the ten slugs below `cognition` are
+#: DECLARATION-tier only — accepted so a hand-written `AI-Provider:`
+#: trailer resolves and gets its brand mark, with NO auto-match co-author
+#: identity (only `amp` also has one, in registry.COAUTHOR_IDENTITIES).
 CANONICAL_PROVIDERS = frozenset(
     {
         "anthropic",
@@ -142,6 +161,16 @@ CANONICAL_PROVIDERS = frozenset(
         "openhands",
         "windsurf",
         "cognition",
+        "amp",
+        "replit",
+        "moonshot",
+        "deepseek",
+        "alibaba",
+        "mistral",
+        "xai",
+        "zhipu",
+        "ollama",
+        "meta",
     }
 )
 CANONICAL_TOOLS = frozenset(
@@ -159,6 +188,12 @@ CANONICAL_TOOLS = frozenset(
         "gemini-code-assist",
         "windsurf",
         "amazon-q",
+        "amp",
+        "replit-agent",
+        "kimi-code",
+        "qwen-code",
+        "vibe-code",
+        "ollama",
     }
 )
 

@@ -5,6 +5,7 @@ and the provider/tool/co-author registry (docs/schema.md section 10; ADR-013).
 from __future__ import annotations
 
 from aiprofile.registry import (
+    COAUTHOR_IDENTITIES,
     PROVIDER_ALIASES,
     PROVIDER_DISPLAY,
     TOOL_ALIASES,
@@ -14,6 +15,8 @@ from aiprofile.registry import (
     resolve_tool,
 )
 from aiprofile.schema.vocab import (
+    CANONICAL_PROVIDERS,
+    CANONICAL_TOOLS,
     EVIDENCE_PRECEDENCE,
     PUBLICATION_RESTRICTIVENESS,
     UNRECOGNIZED_PROVIDER,
@@ -117,3 +120,96 @@ def test_publication_restrictiveness_ordering():
         > PUBLICATION_RESTRICTIVENESS[PublicationLevel.REPOSITORY_ANONYMOUS]
         > PUBLICATION_RESTRICTIVENESS[PublicationLevel.FULL]
     )
+
+
+# --- round D3: two-tier provider vocabulary (ADR-019) -----------------------
+
+#: canonical slug -> expected PUBLIC display name for the ten round-D3
+#: declaration-tier providers (owner ruling 4: product identity, matching
+#: the pre-existing google->Gemini precedent).
+_D3_DECLARATION_TIER_DISPLAY: dict[str, str] = {
+    "amp": "Amp",
+    "replit": "Replit",
+    "moonshot": "Kimi",
+    "deepseek": "DeepSeek",
+    "alibaba": "Qwen",
+    "mistral": "Mistral",
+    "xai": "Grok",
+    "zhipu": "GLM",
+    "ollama": "Ollama",
+    "meta": "Llama",
+}
+
+
+def test_d3_declaration_tier_slugs_are_canonical():
+    assert set(_D3_DECLARATION_TIER_DISPLAY) <= CANONICAL_PROVIDERS
+
+
+def test_d3_every_new_slug_resolves_display_name():
+    for slug, expected_display in _D3_DECLARATION_TIER_DISPLAY.items():
+        assert provider_display(slug) == expected_display
+
+
+def test_d3_every_new_slug_normalizes_from_its_raw_trailer_form():
+    # Declaration tier means a hand-written AI-Provider trailer resolves,
+    # not just that the slug exists in the display map (schema.md section
+    # 10, ADR-019).
+    for slug in _D3_DECLARATION_TIER_DISPLAY:
+        assert normalize_provider(slug) == slug
+        assert normalize_provider(slug.upper()) == slug
+
+
+def test_d3_new_tool_slugs_resolve_and_are_canonical():
+    expected = {
+        "amp": ("amp", "amp"),
+        "replit-agent": ("replit-agent", "replit"),
+        "kimi-code": ("kimi-code", "moonshot"),
+        "qwen-code": ("qwen-code", "alibaba"),
+        "vibe-code": ("vibe-code", "mistral"),
+        "ollama": ("ollama", "ollama"),
+    }
+    for raw, resolved in expected.items():
+        assert resolve_tool(raw) == resolved
+    assert {tool for tool, _ in expected.values()} <= CANONICAL_TOOLS
+
+
+def test_d3_amp_coauthor_matches_via_registry():
+    identity = match_coauthor("Amp", "amp@ampcode.com")
+    assert identity is not None
+    assert identity.provider == "amp"
+    assert identity.tool == "amp"
+    # case-insensitive on email, consistent with every other identity
+    assert match_coauthor("Amp", "AMP@AMPCODE.COM") == identity
+
+
+def test_d3_declaration_tier_slug_without_identity_does_not_auto_match():
+    # deepseek is declaration-tier only (owner ruling 1: no auto-match for
+    # backend-model providers) - no email should resolve to it, including
+    # the most plausible noreply-style guesses.
+    assert "deepseek" not in {i.provider for i in COAUTHOR_IDENTITIES.values()}
+    for candidate_email in ("noreply@deepseek.com", "deepseek@deepseek.com"):
+        identity = match_coauthor("DeepSeek", candidate_email)
+        assert identity is None
+
+
+def test_d3_only_amp_gained_a_new_auto_match_identity():
+    # Every round-D3 slug except amp stays out of COAUTHOR_IDENTITIES
+    # entirely (ADR-019: declaration tier != auto-match tier).
+    new_auto_match_providers = {
+        i.provider for i in COAUTHOR_IDENTITIES.values()
+    } & set(_D3_DECLARATION_TIER_DISPLAY)
+    assert new_auto_match_providers == {"amp"}
+
+
+def test_d3_vocab_and_tool_subset_asserts_still_hold():
+    # Mirrors the module-level asserts in registry.py (belt and suspenders:
+    # a future edit that broke one of these would fail at import time
+    # already, but pinning it here gives a readable failure).
+    assert set(PROVIDER_ALIASES.values()) <= CANONICAL_PROVIDERS
+    assert set(PROVIDER_DISPLAY.keys()) <= CANONICAL_PROVIDERS
+    assert {slug for slug, _ in TOOL_ALIASES.values()} <= CANONICAL_TOOLS
+    assert {owner for _, owner in TOOL_ALIASES.values()} <= CANONICAL_PROVIDERS
+    assert {i.provider for i in COAUTHOR_IDENTITIES.values()} <= CANONICAL_PROVIDERS
+    assert {
+        i.tool for i in COAUTHOR_IDENTITIES.values() if i.tool
+    } <= CANONICAL_TOOLS
