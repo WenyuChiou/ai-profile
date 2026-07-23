@@ -5,6 +5,10 @@
 
 # ai-profile
 
+[![tests](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml/badge.svg)](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![python 3.11–3.14](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](pyproject.toml)
+
 [English](README.md) · 繁體中文
 
 本機優先(local-first)的 **AI 協作分析**工具,為你的 GitHub 個人頁
@@ -27,11 +31,15 @@ Code、Codex、Cursor、Copilot、Aider 等)——正規化為統一的事件格
 證據的 commit 誠實地標為 `unknown`——不會被默默算成人寫的,也不會
 被猜成某個 provider。
 
+就我們所知,這是唯一免費、本機優先、跨 repo、顯式溯源的 profile
+彙總工具(行級歸因屬於 git-ai 這類工具;完整分析:
+[市場定位與差異化](docs/landscape.md))。
+
 狀態:**v0.2**——v0.1 的垂直切片(單一 repo → trailer → SQLite →
 彙總 → 摘要卡片)加上 provider 品牌識別與「僅明示可發布」的等距
 每日日曆。設計文件在 [`docs/`](docs/):
 [架構](docs/architecture.md) · [ACE schema](docs/schema.md) ·
-[MVP 邊界](docs/mvp.md) · [產品定位與不重複性](docs/landscape.md)
+[MVP 邊界](docs/mvp.md) · [市場定位與差異化](docs/landscape.md)
 · [決策記錄](docs/decisions/)。
 
 ## 安裝
@@ -58,8 +66,9 @@ pip install -e ".[dev]"   # dev extras = pytest + ruff + hypothesis
 ## 快速開始
 
 ```bash
-aiprofile init            # 建立 ~/.aiprofile(config + salt + db)
-aiprofile scan ~/my/repo  # 註冊並掃描(預設即隱私安全)
+aiprofile init            # 在你自己的 repo 裡面執行——身分種子取自
+                          #   該 repo 的 git config user.email
+aiprofile scan ~/my/repo  # 註冊並掃描(換成真實路徑;預設即隱私安全)
 aiprofile aggregate       # 印出將發布的統計 = 隱私預覽
 aiprofile render          # 寫出 dist/summary-{light,dark}.svg + profile.json
 ```
@@ -87,6 +96,15 @@ init 之後檢查一下 `~/.aiprofile/config.json` 裡的身分。
 
 ## 宣告 AI 參與(trailer)
 
+**如果你是透過 Claude Code、Codex、Cursor、Copilot、Aider 或 Amp
+commit,多半什麼都不用做**:會自帶 co-author trailer 的工具(例如
+Claude Code 的 `Co-Authored-By: Claude <noreply@anthropic.com>`)
+透過已驗證的身分 registry 自動辨識。
+
+其他情況——或想要更豐富的細節(model、角色、審查狀態)——就用
+`AI-*` trailer 顯式宣告;產品名如 `Kimi`、`Claude`、`Gemini` 也能
+解析:
+
 ```text
 feat: add aggregation service
 
@@ -98,9 +116,7 @@ AI-Mode: AI-Assisted
 AI-Reviewed-By: Human
 ```
 
-會自帶 co-author trailer 的工具(例如 Claude Code 的
-`Co-Authored-By: Claude <noreply@anthropic.com>`)透過已驗證的身分
-registry 自動辨識。一個 commit 可以帶多個 **AI actor presence**
+一個 commit 可以帶多個 **AI actor presence**
 (「Claude 實作、Codex 審查」= 1 個 unique commit、2 個 presence——
 這兩種指標永不混淆;presence 的意思是「這個 provider/tool 出現在
 這個 commit」,所以 Claude 同時實作又審查同一個 commit 只誠實地算
@@ -129,14 +145,16 @@ registry 自動辨識。一個 commit 可以帶多個 **AI actor presence**
   (「明示可發布」/「僅彙總」),永不是對 GitHub 可見性的宣稱。
 - 不要把 `~/.aiprofile` 同步進公開的 dotfiles(裡面有 salt 和私有
   repo 路徑)。刪掉該目錄即刪除所有本機資料;產生的 `dist/` 檔案
-  另行自行移除。
+  另行自行移除。POSIX 上目錄與檔案為僅擁有者可讀寫(0700/0600);
+  Windows 沒有對應的權限位元,`os.chmod` 在該平台是文件化的
+  no-op——資料無論如何都不離開你的機器。
 
 ## 誠實標示的指標
 
 - **AI 參與的 commit 數**——帶有 ≥1 個顯式 AI actor presence 的
   unique commit。各 provider 的計數加總可能超過此數(多 AI 協作的
   commit),且一律標為 provider-attributed commits,永不冒充
-  unique 總數。證據籤片標明其母體;百分比標明其分母;活躍天數以
+  unique 總數。證據徽章標明其母體;百分比標明其分母;活躍天數以
   commit 作者日期計。
 - **證據品質**是一級公民:`verified > declared > imported >
   inferred > unknown`。v0.1 產出 `declared`(trailer)與 `unknown`。

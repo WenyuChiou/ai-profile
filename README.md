@@ -5,6 +5,10 @@
 
 # ai-profile
 
+[![tests](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml/badge.svg)](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![python 3.11–3.14](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](pyproject.toml)
+
 English · [繁體中文](README.zh-TW.md)
 
 Local-first, profile-level **AI collaboration analytics** for your GitHub
@@ -26,6 +30,11 @@ Sample rendered from a synthetic showcase fixture; no real repository data.
 It is **not** an AI code detector: nothing is ever inferred from code style.
 Commits without explicit evidence are honestly reported as `unknown` —
 never silently counted as human, never guessed into a provider.
+
+As far as we know it is the only free, local-first, cross-repository,
+explicit-provenance profile aggregation tool (line-level attribution
+belongs to tools like git-ai; full analysis:
+[landscape & positioning](docs/landscape.md)).
 
 Status: **v0.2** — the v0.1 vertical slice (one repo → trailers → SQLite →
 aggregate → summary card) plus provider brand identity and the
@@ -60,8 +69,10 @@ pip install -e ".[dev]"   # dev extras = pytest + ruff + hypothesis
 ## Quickstart
 
 ```bash
-aiprofile init            # creates ~/.aiprofile (config + salt + db)
-aiprofile scan ~/my/repo  # register + scan (private-safe default)
+aiprofile init            # run from INSIDE one of your repos - seeds your
+                          #   identity from that repo's git config user.email
+aiprofile scan ~/my/repo  # register + scan (replace with a real path;
+                          #   private-safe default)
 aiprofile aggregate       # print the published stats = privacy preview
 aiprofile render          # write dist/summary-{light,dark}.svg + profile.json
 ```
@@ -91,6 +102,16 @@ Embed in your profile README:
 
 ## Declaring AI participation (trailers)
 
+**If you commit through Claude Code, Codex, Cursor, Copilot, Aider, or
+Amp, you likely have nothing to do**: tools that add their own
+co-author trailer (e.g. Claude Code's
+`Co-Authored-By: Claude <noreply@anthropic.com>`) are recognized
+automatically via a verified identity registry.
+
+For everything else — or for richer detail (model, role, review
+status) — declare explicitly with `AI-*` trailers; product names like
+`Kimi`, `Claude`, or `Gemini` resolve too:
+
 ```text
 feat: add aggregation service
 
@@ -102,9 +123,7 @@ AI-Mode: AI-Assisted
 AI-Reviewed-By: Human
 ```
 
-Tools that add their own co-author trailer (e.g. Claude Code's
-`Co-Authored-By: Claude <noreply@anthropic.com>`) are recognized
-automatically via a verified identity registry. One commit can carry
+One commit can carry
 several **AI actor presences** ("Claude implements, Codex reviews" =
 1 unique commit, 2 presences — the two metrics are never conflated; a
 presence means "this provider/tool appeared in this commit", so Claude
@@ -136,7 +155,10 @@ that is explicitly yours alone: `AI-Mode: Human-Only`.
   GitHub visibility.
 - Do not sync `~/.aiprofile` into published dotfiles (it holds a salt and
   private repository paths). Deleting that directory deletes all local
-  data; generated `dist/` files are yours to remove separately.
+  data; generated `dist/` files are yours to remove separately. On
+  POSIX the directory and files are owner-only (0700/0600); Windows
+  has no equivalent permission bits, so there `os.chmod` is a
+  documented no-op — the data still never leaves your machine.
 
 ## Metrics, honestly labeled
 
