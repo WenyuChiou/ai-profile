@@ -310,3 +310,25 @@ same network limitation as gate-13); that diff was performed directly
 by the internal review round (8/8 identical) and independently
 reproduced via the vendoring script - one direct plus one
 corroborating check, per the gate-13 precedent.
+
+---
+
+## Gate-16 review round (gate-review.md, 2026-07-23; READY, zero findings)
+
+Independent re-verification of `d2c1147..66bc3e9` (gate-15 resolution)
+via the headless handoff lane (brief 009). The reviewer re-ran the
+gate-15 probe verbatim plus widened checks: 15 direct aliases, all 21
+schema-owned display names, 23 pre-existing alias keys unchanged, no
+collisions, and a synthetic `AI-Provider: Kimi` commit rendered
+end-to-end as `moonshot`/`Kimi` with the vendored Moonshot mark and no
+public-output privacy canary leaks. Suite 444 passed / 4 skipped;
+ruff clean. Severity: Critical 0, High 0, Medium 0, Low 0.
+
+No findings to disposition. **Round D3 is closed.**
+
+Process disclosure (same class as the gate-14 note): while this review
+ran, the working tree carried uncommitted doc-only edits (README user-
+audit fixes + new `.github/workflows/ci.yml`). The review target -
+`src/aiprofile/registry.py` and its tests at `66bc3e9` - was untouched
+and committed; the reviewer's suite/probes ran against that committed
+code. The doc edits ship separately with their own review round.
