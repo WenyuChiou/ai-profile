@@ -23,6 +23,30 @@ below.
   irreplaceable (config identities/policy aside, which are a few lines
   of JSON you can note down first).
 
+## [Unreleased]
+
+### Added
+
+- Provider brand identity on the summary card (round D1, ADR-017):
+  official marks for Claude / Gemini / GitHub Copilot / Cursor /
+  Windsurf (CC0 simple-icons subset, byte-verified) with per-theme
+  brand-colored bars; honest letter-tile fallback for providers with
+  no CC0 mark (OpenAI, Amazon Q, Aider, Roo Code, OpenHands, Devin).
+- Isometric daily AI-collaboration calendar (round D2, ADR-018):
+  a 12-week 3D activity grid, stacked by provider color, built ONLY
+  from explicitly-publishable repositories — aggregate-only
+  repositories never surface their activity dates. Fully static SVG
+  (no animation - two entrance attempts were invisible in static
+  captures and were removed).
+
+### Changed
+
+- ACE schema version 0.1.0 -> 0.2.0: `profile.json` and the internal
+  visualization contract gain the additive `daily` series (ADR-012's
+  minor-bump rule for additive optional fields, binding post-v0.1.0).
+  Databases scanned under 0.1 remain fully aggregatable; new scans
+  stamp 0.2.0.
+
 ## [0.1.0] — 2026-07-22
 
 First public release.

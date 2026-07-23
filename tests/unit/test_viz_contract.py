@@ -10,6 +10,7 @@ from dataclasses import dataclass as _dataclass
 
 import pytest
 
+from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.errors import RenderError
 from aiprofile.render.summary_svg import render_summary
 from aiprofile.render.themes import THEMES
@@ -26,7 +27,7 @@ from aiprofile.viz import (
 
 def _stats(**overrides):
     base = dict(
-        schema_version="0.1.0",
+        schema_version=ACE_SCHEMA_VERSION,
         period=Period(None, None, "All time"),
         totals=Totals(10, 5, 6, 0, 2, 3),
         providers=(ProviderRow("anthropic", "Claude", 5, 6, 3),),
@@ -267,3 +268,148 @@ def test_vizstats_cannot_be_subclassed():
         class SkipValidationEvil(VizStats):
             def __post_init__(self):  # never calls _validate
                 pass
+
+
+# ---------------------------------------------------------------------------
+# Round D2 (ADR-018): the publishable-only daily series joins the validated
+# contract. Every rejection below written RED-FIRST against the field
+# landing without its validation battery.
+# ---------------------------------------------------------------------------
+
+from aiprofile.viz import DayCell, DayCount  # noqa: E402
+
+
+def _daily_ok():
+    return (
+        DayCell("2026-07-14", (DayCount("anthropic", 2),)),
+        DayCell("2026-07-15", (DayCount("anthropic", 3),)),
+    )
+
+
+def test_daily_valid_series_accepted():
+    s = _stats(daily=_daily_ok())
+    assert len(s.daily) == 2
+
+
+def test_daily_default_empty_accepted():
+    assert _stats().daily == ()
+
+
+def test_daily_container_must_be_exact_tuple():
+    with pytest.raises(RenderError):
+        _stats(daily=list(_daily_ok()))
+
+
+def test_daily_cell_must_be_exact_daycell():
+    @_dataclass(frozen=True)
+    class FakeCell:
+        date: str
+        counts: tuple
+
+    with pytest.raises(RenderError):
+        _stats(daily=(FakeCell("2026-07-15", (DayCount("anthropic", 1),)),))
+
+
+def test_daily_count_must_be_exact_daycount():
+    @_dataclass(frozen=True)
+    class FakeCount:
+        provider: str
+        attributed_commits: int
+
+    with pytest.raises(RenderError):
+        _stats(daily=(DayCell("2026-07-15", (FakeCount("anthropic", 1),)),))
+
+
+def test_daily_date_rejects_noncanonical_and_invalid():
+    for bad in ("2026-7-15", "2026-99-99", "2026-07-15\n", "２026-07-15"):
+        with pytest.raises(RenderError):
+            _stats(daily=(DayCell(bad, (DayCount("anthropic", 1),)),))
+
+
+def test_daily_dates_must_ascend_without_duplicates():
+    cells = (
+        DayCell("2026-07-15", (DayCount("anthropic", 1),)),
+        DayCell("2026-07-14", (DayCount("anthropic", 1),)),
+    )
+    with pytest.raises(RenderError):
+        _stats(daily=cells)
+    dup = (
+        DayCell("2026-07-15", (DayCount("anthropic", 1),)),
+        DayCell("2026-07-15", (DayCount("anthropic", 1),)),
+    )
+    with pytest.raises(RenderError):
+        _stats(daily=dup)
+
+
+def test_daily_counts_must_be_nonempty_sorted_unique():
+    with pytest.raises(RenderError):
+        _stats(daily=(DayCell("2026-07-15", ()),))
+    with pytest.raises(RenderError):
+        _stats(
+            providers=(
+                ProviderRow("anthropic", "Claude", 3, 4, 3),
+                ProviderRow("openai", "OpenAI", 2, 2, 2),
+            ),
+            provider_count=2,
+            daily=(
+                DayCell(
+                    "2026-07-15",
+                    (DayCount("openai", 1), DayCount("anthropic", 1)),
+                ),
+            ),
+        )
+    with pytest.raises(RenderError):
+        _stats(
+            daily=(
+                DayCell(
+                    "2026-07-15",
+                    (DayCount("anthropic", 1), DayCount("anthropic", 2)),
+                ),
+            ),
+        )
+
+
+def test_daily_count_must_be_positive_exact_int():
+    with pytest.raises(RenderError):
+        _stats(daily=(DayCell("2026-07-15", (DayCount("anthropic", 0),)),))
+    with pytest.raises(RenderError):
+        _stats(daily=(DayCell("2026-07-15", (DayCount("anthropic", True),)),))
+
+
+def test_daily_slug_must_be_public_vocabulary():
+    with pytest.raises(RenderError):
+        _stats(
+            daily=(DayCell("2026-07-15", (DayCount("secret-org-name", 1),)),)
+        )
+
+
+def test_daily_provider_must_appear_in_provider_rows():
+    # A slug in daily that has no provider row cannot be a publishable
+    # subset of anything - reject.
+    with pytest.raises(RenderError):
+        _stats(daily=(DayCell("2026-07-15", (DayCount("cursor", 1),)),))
+
+
+def test_daily_per_provider_sum_cannot_exceed_provider_total():
+    # anthropic row has attributed_commits=5; daily sums to 6 -> reject.
+    cells = (
+        DayCell("2026-07-14", (DayCount("anthropic", 3),)),
+        DayCell("2026-07-15", (DayCount("anthropic", 3),)),
+    )
+    with pytest.raises(RenderError):
+        _stats(daily=cells)
+
+
+def test_daily_window_bounded_to_84_days():
+    cells = (
+        DayCell("2026-01-01", (DayCount("anthropic", 1),)),
+        DayCell("2026-07-15", (DayCount("anthropic", 1),)),
+    )
+    with pytest.raises(RenderError):
+        _stats(daily=cells)
+
+
+def test_daily_appears_in_json_dump():
+    s = _stats(daily=_daily_ok())
+    out = dumps_stats(s)
+    assert '"daily"' in out and '"2026-07-14"' in out

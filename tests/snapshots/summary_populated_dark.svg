@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="830" height="612" viewBox="0 0 830 612" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="865" viewBox="0 0 830 865" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
 <title id="aiprofileSummaryTitle">AI Collaboration Summary — All time</title>
-<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI actor presences across 58 active AI days (author dates), 7 AI providers. Generated 2026-07-14.</desc>
-<rect x="0.5" y="0.5" width="829" height="611" rx="8" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
+<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI actor presences across 58 active AI days (author dates), 7 AI providers. Daily activity calendar 2026-04-22 to 2026-07-14, peak day 10 attributed commits. Generated 2026-07-14.</desc>
+<rect x="0.5" y="0.5" width="829" height="864" rx="8" fill="#0d1117" stroke="#3d444d" stroke-width="1"/>
 <rect x="24" y="24" width="16" height="16" rx="3" fill="#0d1117" stroke="#4493f8" stroke-width="1"/>
 <rect x="29" y="29" width="6" height="6" rx="1" fill="#4493f8"/>
 <text x="48" y="36" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#f0f6fc" text-anchor="start">AI Collaboration Summary</text>
@@ -59,23 +59,124 @@
 <rect x="184" y="372" width="83" height="7" rx="2" fill="#4493f8"/>
 <text x="806" y="384" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="13" text-anchor="end"><tspan fill="#f0f6fc" font-weight="600">20</tspan><tspan fill="#9198a1" font-weight="400"> · 5%</tspan></text>
 <text x="24" y="408" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#9198a1" text-anchor="start">+2 more</text>
-<rect x="24" y="436" width="782" height="104" rx="6" fill="#161b22"/>
-<text x="40" y="452" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#9198a1" text-anchor="start" letter-spacing="0.2">Evidence (all records: 463)</text>
-<rect x="40" y="472" width="19" height="8" rx="2" fill="#a5d6ff"/>
-<rect x="61" y="472" width="643" height="8" rx="2" fill="#58a6ff"/>
-<rect x="706" y="472" width="8" height="8" rx="2" fill="#1f6feb"/>
-<rect x="716" y="472" width="74" height="8" rx="2" fill="#6e7681"/>
-<rect x="40" y="493" width="8" height="8" rx="1" fill="#a5d6ff"/>
-<text x="52" y="500" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#f0f6fc" text-anchor="start">verified 12</text>
-<rect x="122" y="493" width="8" height="8" rx="1" fill="#58a6ff"/>
-<text x="134" y="500" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#f0f6fc" text-anchor="start">declared 400</text>
-<rect x="215" y="493" width="8" height="8" rx="1" fill="#1f6feb"/>
-<text x="227" y="500" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#f0f6fc" text-anchor="start">inferred 5</text>
-<rect x="293" y="493" width="8" height="8" rx="1" fill="#6e7681"/>
-<text x="305" y="500" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#f0f6fc" text-anchor="start">unknown 46</text>
-<rect x="40" y="517" width="8" height="8" rx="1" fill="#9198a1"/>
-<text x="52" y="524" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#9198a1" text-anchor="start">Includes aggregate-only activity (repository identity withheld) — publishable 200 · aggregate-only 320</text>
-<line x1="24" y1="556" x2="806" y2="556" stroke="#3d444d"/>
-<text x="24" y="580" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#9198a1" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
-<text x="24" y="596" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#9198a1" text-anchor="start">One commit may include several AI actor presences (one per provider/tool).</text>
+<text x="24" y="450" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#9198a1" text-anchor="start" letter-spacing="0.2">Daily AI collaboration (last 84 days)</text>
+<polygon points="352,493 370,502 370,510 352,501" fill="#4493f8" fill-opacity="0.72"/>
+<polygon points="370,502 388,493 388,501 370,510" fill="#4493f8" fill-opacity="0.5"/>
+<polygon points="370,484 388,493 370,502 352,493" fill="#4493f8"/>
+<polygon points="352,501 370,510 352,519 334,510" fill="#21262d"/>
+<polygon points="388,501 406,510 388,519 370,510" fill="#21262d"/>
+<polygon points="334,510 352,519 334,528 316,519" fill="#21262d"/>
+<polygon points="370,510 388,519 370,528 352,519" fill="#21262d"/>
+<polygon points="406,510 424,519 406,528 388,519" fill="#21262d"/>
+<polygon points="316,519 334,528 316,537 298,528" fill="#21262d"/>
+<polygon points="352,519 370,528 352,537 334,528" fill="#21262d"/>
+<polygon points="388,519 406,528 388,537 370,528" fill="#21262d"/>
+<polygon points="424,519 442,528 424,537 406,528" fill="#21262d"/>
+<polygon points="298,528 316,537 298,546 280,537" fill="#21262d"/>
+<polygon points="334,528 352,537 334,546 316,537" fill="#21262d"/>
+<polygon points="370,528 388,537 370,546 352,537" fill="#21262d"/>
+<polygon points="406,528 424,537 406,546 388,537" fill="#21262d"/>
+<polygon points="442,528 460,537 442,546 424,537" fill="#21262d"/>
+<polygon points="280,537 298,546 280,555 262,546" fill="#21262d"/>
+<polygon points="316,537 334,546 316,555 298,546" fill="#21262d"/>
+<polygon points="352,537 370,546 352,555 334,546" fill="#21262d"/>
+<polygon points="370,534 388,543 388,555 370,546" fill="#E2A28D" fill-opacity="0.72"/>
+<polygon points="388,543 406,534 406,546 388,555" fill="#E2A28D" fill-opacity="0.5"/>
+<polygon points="388,525 406,534 388,543 370,534" fill="#E2A28D"/>
+<polygon points="424,537 442,546 424,555 406,546" fill="#21262d"/>
+<polygon points="460,537 478,546 460,555 442,546" fill="#21262d"/>
+<polygon points="262,546 280,555 262,564 244,555" fill="#21262d"/>
+<polygon points="298,546 316,555 298,564 280,555" fill="#21262d"/>
+<polygon points="334,546 352,555 334,564 316,555" fill="#21262d"/>
+<polygon points="370,546 388,555 370,564 352,555" fill="#21262d"/>
+<polygon points="406,546 424,555 406,564 388,555" fill="#21262d"/>
+<polygon points="442,546 460,555 442,564 424,555" fill="#21262d"/>
+<polygon points="478,546 496,555 478,564 460,555" fill="#21262d"/>
+<polygon points="280,555 298,564 280,573 262,564" fill="#21262d"/>
+<polygon points="316,555 334,564 316,573 298,564" fill="#21262d"/>
+<polygon points="352,555 370,564 352,573 334,564" fill="#21262d"/>
+<polygon points="388,555 406,564 388,573 370,564" fill="#21262d"/>
+<polygon points="424,555 442,564 424,573 406,564" fill="#21262d"/>
+<polygon points="442,548 460,557 460,573 442,564" fill="#E2A28D" fill-opacity="0.72"/>
+<polygon points="460,557 478,548 478,564 460,573" fill="#E2A28D" fill-opacity="0.5"/>
+<polygon points="442,540 460,549 460,557 442,548" fill="#8E75B2" fill-opacity="0.72"/>
+<polygon points="460,549 478,540 478,548 460,557" fill="#8E75B2" fill-opacity="0.5"/>
+<polygon points="442,536 460,545 460,549 442,540" fill="#6e7681" fill-opacity="0.72"/>
+<polygon points="460,545 478,536 478,540 460,549" fill="#6e7681" fill-opacity="0.5"/>
+<polygon points="460,527 478,536 460,545 442,536" fill="#6e7681"/>
+<polygon points="496,555 514,564 496,573 478,564" fill="#21262d"/>
+<polygon points="298,564 316,573 298,582 280,573" fill="#21262d"/>
+<polygon points="334,564 352,573 334,582 316,573" fill="#21262d"/>
+<polygon points="370,564 388,573 370,582 352,573" fill="#21262d"/>
+<polygon points="406,564 424,573 406,582 388,573" fill="#21262d"/>
+<polygon points="442,564 460,573 442,582 424,573" fill="#21262d"/>
+<polygon points="478,564 496,573 478,582 460,573" fill="#21262d"/>
+<polygon points="514,564 532,573 514,582 496,573" fill="#21262d"/>
+<polygon points="316,573 334,582 316,591 298,582" fill="#21262d"/>
+<polygon points="352,573 370,582 352,591 334,582" fill="#21262d"/>
+<polygon points="388,573 406,582 388,591 370,582" fill="#21262d"/>
+<polygon points="424,573 442,582 424,591 406,582" fill="#21262d"/>
+<polygon points="460,573 478,582 460,591 442,582" fill="#21262d"/>
+<polygon points="496,573 514,582 496,591 478,582" fill="#21262d"/>
+<polygon points="532,573 550,582 532,591 514,582" fill="#21262d"/>
+<polygon points="334,582 352,591 334,600 316,591" fill="#21262d"/>
+<polygon points="370,582 388,591 370,600 352,591" fill="#21262d"/>
+<polygon points="406,582 424,591 406,600 388,591" fill="#21262d"/>
+<polygon points="442,582 460,591 442,600 424,591" fill="#21262d"/>
+<polygon points="478,582 496,591 478,600 460,591" fill="#21262d"/>
+<polygon points="514,582 532,591 514,600 496,591" fill="#21262d"/>
+<polygon points="550,582 568,591 550,600 532,591" fill="#21262d"/>
+<polygon points="352,591 370,600 352,609 334,600" fill="#21262d"/>
+<polygon points="388,591 406,600 388,609 370,600" fill="#21262d"/>
+<polygon points="424,591 442,600 424,609 406,600" fill="#21262d"/>
+<polygon points="460,591 478,600 460,609 442,600" fill="#21262d"/>
+<polygon points="496,591 514,600 496,609 478,600" fill="#21262d"/>
+<polygon points="532,591 550,600 532,609 514,600" fill="#21262d"/>
+<polygon points="568,591 586,600 568,609 550,600" fill="#21262d"/>
+<polygon points="370,600 388,609 370,618 352,609" fill="#21262d"/>
+<polygon points="406,600 424,609 406,618 388,609" fill="#21262d"/>
+<polygon points="442,600 460,609 442,618 424,609" fill="#21262d"/>
+<polygon points="478,600 496,609 478,618 460,609" fill="#21262d"/>
+<polygon points="514,600 532,609 514,618 496,609" fill="#21262d"/>
+<polygon points="550,600 568,609 550,618 532,609" fill="#21262d"/>
+<polygon points="388,609 406,618 388,627 370,618" fill="#21262d"/>
+<polygon points="424,609 442,618 424,627 406,618" fill="#21262d"/>
+<polygon points="460,609 478,618 460,627 442,618" fill="#21262d"/>
+<polygon points="478,586 496,595 496,627 478,618" fill="#E2A28D" fill-opacity="0.72"/>
+<polygon points="496,595 514,586 514,618 496,627" fill="#E2A28D" fill-opacity="0.5"/>
+<polygon points="496,577 514,586 496,595 478,586" fill="#E2A28D"/>
+<polygon points="532,609 550,618 532,627 514,618" fill="#21262d"/>
+<polygon points="406,618 424,627 406,636 388,627" fill="#21262d"/>
+<polygon points="442,618 460,627 442,636 424,627" fill="#21262d"/>
+<polygon points="478,618 496,627 478,636 460,627" fill="#21262d"/>
+<polygon points="514,618 532,627 514,636 496,627" fill="#21262d"/>
+<polygon points="424,627 442,636 424,645 406,636" fill="#21262d"/>
+<polygon points="460,627 478,636 460,645 442,636" fill="#21262d"/>
+<polygon points="496,627 514,636 496,645 478,636" fill="#21262d"/>
+<polygon points="442,636 460,645 442,654 424,645" fill="#21262d"/>
+<polygon points="478,636 496,645 478,654 460,645" fill="#21262d"/>
+<polygon points="442,642 460,651 460,663 442,654" fill="#4493f8" fill-opacity="0.72"/>
+<polygon points="460,651 478,642 478,654 460,663" fill="#4493f8" fill-opacity="0.5"/>
+<polygon points="442,622 460,631 460,651 442,642" fill="#E2A28D" fill-opacity="0.72"/>
+<polygon points="460,631 478,622 478,642 460,651" fill="#E2A28D" fill-opacity="0.5"/>
+<polygon points="460,613 478,622 460,631 442,622" fill="#E2A28D"/>
+<rect x="24" y="689" width="782" height="104" rx="6" fill="#161b22"/>
+<text x="40" y="705" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#9198a1" text-anchor="start" letter-spacing="0.2">Evidence (all records: 463)</text>
+<rect x="40" y="725" width="19" height="8" rx="2" fill="#a5d6ff"/>
+<rect x="61" y="725" width="643" height="8" rx="2" fill="#58a6ff"/>
+<rect x="706" y="725" width="8" height="8" rx="2" fill="#1f6feb"/>
+<rect x="716" y="725" width="74" height="8" rx="2" fill="#6e7681"/>
+<rect x="40" y="746" width="8" height="8" rx="1" fill="#a5d6ff"/>
+<text x="52" y="753" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#f0f6fc" text-anchor="start">verified 12</text>
+<rect x="122" y="746" width="8" height="8" rx="1" fill="#58a6ff"/>
+<text x="134" y="753" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#f0f6fc" text-anchor="start">declared 400</text>
+<rect x="215" y="746" width="8" height="8" rx="1" fill="#1f6feb"/>
+<text x="227" y="753" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#f0f6fc" text-anchor="start">inferred 5</text>
+<rect x="293" y="746" width="8" height="8" rx="1" fill="#6e7681"/>
+<text x="305" y="753" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#f0f6fc" text-anchor="start">unknown 46</text>
+<rect x="40" y="770" width="8" height="8" rx="1" fill="#9198a1"/>
+<text x="52" y="777" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#9198a1" text-anchor="start">Includes aggregate-only activity (repository identity withheld) — publishable 200 · aggregate-only 320</text>
+<line x1="24" y1="809" x2="806" y2="809" stroke="#3d444d"/>
+<text x="24" y="833" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#9198a1" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
+<text x="24" y="849" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#9198a1" text-anchor="start">One commit may include several AI actor presences (one per provider/tool).</text>
 </svg>

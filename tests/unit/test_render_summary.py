@@ -26,10 +26,20 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.render.summary_svg import render_summary
 from aiprofile.render.themes import THEMES
 from aiprofile.schema.vocab import UNRECOGNIZED_DISPLAY, UNRECOGNIZED_PROVIDER
-from aiprofile.viz import EvidenceTotals, Period, PrivacySplit, ProviderRow, Totals, VizStats
+from aiprofile.viz import (
+    DayCell,
+    DayCount,
+    EvidenceTotals,
+    Period,
+    PrivacySplit,
+    ProviderRow,
+    Totals,
+    VizStats,
+)
 
 SNAPSHOT_DIR = Path(__file__).resolve().parent.parent / "snapshots"
 SVG_NS = "{http://www.w3.org/2000/svg}"
@@ -64,8 +74,54 @@ _POPULATED_PROVIDERS = (
                 actor_presences=6, active_days=3),
 )
 
+# ---------------------------------------------------------------------------
+# Round D2: synthetic publishable daily series for the "populated" fixture
+# (isometric calendar band). Constructed against the REAL VizStats
+# validators — this is not just documentation, an invalid series here
+# fails every test in this module at import time (subset-of-provider-rows,
+# window < 84 days, slug-ascending unique counts, date-ascending unique
+# cells are all enforced by VizStats.__post_init__).
+#
+# Newest date 2026-07-14 (matches GENERATED_ON, though the renderer does
+# not require or check that relationship — it is a pure function of
+# stats.daily alone). Oldest date is exactly 83 days back (the window's
+# own left edge, viz.DAILY_WINDOW_DAYS - 1). Deliberately sparse (5 of 84
+# days populated — the overwhelming common case) and covers:
+#   - a lone fallback-tile provider (openai — no BrandSpec entry)
+#   - a lone branded provider (anthropic)
+#   - a 3-way stack mixing two branded providers + the reserved
+#     "unrecognized" bucket (exercises DayCell counts' slug-ascending
+#     order together with 3-segment cumulative-rounding)
+#   - a single-provider day whose total (10) EXCEEDS
+#     summary_svg.CAL_CAP_COMMITS (8) — cap behavior
+#   - the newest day, exactly AT the cap boundary (8), split across a
+#     fallback-tile provider and a branded provider (amazon sorts before
+#     anthropic — DayCount slugs are ascending, not insertion/value order)
+# ---------------------------------------------------------------------------
+
+_POPULATED_DAILY = (
+    DayCell(date="2026-04-22", counts=(DayCount(provider="openai", attributed_commits=2),)),
+    DayCell(date="2026-05-15", counts=(DayCount(provider="anthropic", attributed_commits=3),)),
+    DayCell(
+        date="2026-06-04",
+        counts=(
+            DayCount(provider="anthropic", attributed_commits=4),
+            DayCount(provider="google", attributed_commits=2),
+            DayCount(provider=UNRECOGNIZED_PROVIDER, attributed_commits=1),
+        ),
+    ),
+    DayCell(date="2026-07-04", counts=(DayCount(provider="anthropic", attributed_commits=10),)),
+    DayCell(
+        date="2026-07-14",
+        counts=(
+            DayCount(provider="amazon", attributed_commits=3),
+            DayCount(provider="anthropic", attributed_commits=5),
+        ),
+    ),
+)
+
 FIXTURE_POPULATED = VizStats(
-    schema_version="0.1.0",
+    schema_version=ACE_SCHEMA_VERSION,
     period=_period(),
     totals=Totals(
         commits_scanned=520,
@@ -91,6 +147,7 @@ FIXTURE_POPULATED = VizStats(
         includes_anonymous_aggregate=True,
     ),
     generated_on=GENERATED_ON,
+    daily=_POPULATED_DAILY,
 )
 
 # ---------------------------------------------------------------------------
@@ -98,7 +155,7 @@ FIXTURE_POPULATED = VizStats(
 # ---------------------------------------------------------------------------
 
 FIXTURE_ZERO = VizStats(
-    schema_version="0.1.0",
+    schema_version=ACE_SCHEMA_VERSION,
     period=_period(),
     totals=Totals(
         commits_scanned=0,
@@ -161,7 +218,7 @@ _PRIVACY_EVIDENCE = EvidenceTotals(
 )
 
 FIXTURE_PRIVACY_TRUE = VizStats(
-    schema_version="0.1.0",
+    schema_version=ACE_SCHEMA_VERSION,
     period=_period(),
     totals=_PRIVACY_TOTALS,
     providers=_PRIVACY_PROVIDERS,
@@ -176,7 +233,7 @@ FIXTURE_PRIVACY_TRUE = VizStats(
 )
 
 FIXTURE_PRIVACY_FALSE = VizStats(
-    schema_version="0.1.0",
+    schema_version=ACE_SCHEMA_VERSION,
     period=_period(),
     totals=_PRIVACY_TOTALS,
     providers=_PRIVACY_PROVIDERS,
@@ -593,7 +650,17 @@ _ALLOWED_SVG_TAGS = {
     # a single static <path fill="..." transform="...">, never active
     # content — still covered by the checks below (no "on*" handlers, no
     # href, no external refs).
-    for t in ("svg", "title", "desc", "rect", "line", "text", "tspan", "polygon", "path")
+    # "polygon" was pre-provisioned for round D2 (isometric calendar band,
+    # ADR-018): each grid cell's flat diamond or stacked-column faces are
+    # static <polygon points="..." fill="..."> elements.
+    # "g"/"animate" were briefly allowed for a D2 SMIL entrance and then
+    # REMOVED with the animation itself (two static-capture invisibility
+    # failures - see summary_svg's no-entrance-animation note): the band
+    # ships fully static, so the allowlist shrinks back accordingly and
+    # the sweep would catch any reintroduction.
+    for t in (
+        "svg", "title", "desc", "rect", "line", "text", "tspan", "polygon", "path",
+    )
 }
 
 
@@ -626,7 +693,7 @@ def test_evidence_segments_never_negative_and_sum_exactly():
     this test to BAR_HEIGHT never reaching 8 while bar_fill coincides
     with a ramp step (true in github-light)."""
     stats = VizStats(
-        schema_version="0.1.0",
+        schema_version=ACE_SCHEMA_VERSION,
         period=_period(),
         totals=Totals(
             commits_scanned=4000000,
@@ -703,7 +770,7 @@ def test_docs_sample_assets_match_current_renderer():
 
 def _share_stats(ai: int, total: int) -> VizStats:
     return VizStats(
-        schema_version="0.1.0",
+        schema_version=ACE_SCHEMA_VERSION,
         period=_period(),
         totals=Totals(total, ai, max(ai, 1) if ai else 0, 0, total - ai, 1 if ai else 0),
         providers=(
@@ -739,7 +806,7 @@ def test_share_percentage_exact_endpoints_stay_exact():
 
 def test_provider_percentage_never_lies_at_the_boundaries():
     stats = VizStats(
-        schema_version="0.1.0",
+        schema_version=ACE_SCHEMA_VERSION,
         period=_period(),
         totals=Totals(300, 201, 202, 0, 99, 5),
         providers=(

@@ -18,9 +18,10 @@ import, so it does not cross the isolation boundary.
 
 from __future__ import annotations
 
+import datetime
 from xml.sax.saxutils import escape
 
-from ..viz import ProviderRow, Totals, VizStats
+from ..viz import DayCell, ProviderRow, Totals, VizStats
 from .brand import BRAND, BrandSpec
 from .themes import Theme
 
@@ -130,6 +131,95 @@ ZERO_HINT = "Add AI-* trailers or scan a repository with AI co-authored commits.
 ZERO_MESSAGE_Y = 120
 ZERO_HINT_Y = 144
 ZERO_BODY_BOTTOM = 164
+
+# ---------------------------------------------------------------------------
+# Isometric daily-activity calendar band (round D2, ADR-018,
+# .ai/round_d2_isometric_calendar_spec.md "Renderer" section). Rendered
+# between the provider rows and the evidence panel, ONLY when
+# `stats.daily` is non-empty — an empty series omits the band entirely
+# and every geometry constant below drops out of the layout, so a
+# no-daily card stays byte-identical to the pre-D2 renderer (pinned by
+# tests/unit/test_calendar_band.py::test_empty_daily_omits_band_and_matches_pre_d2_geometry).
+#
+# Geometry is precomputed INTEGER affine arithmetic on purpose: every
+# constant here (tile half-extents, the stack-height cap, the grid
+# origin) is an int, and col/row/elevation are always ints too, so a
+# <polygon> "points" list can never carry floating-point noise — the
+# same "no float noise" discipline test_coordinate_hygiene_no_float_noise
+# enforces on x/y/width/height (that regex does not reach "points";
+# test_calendar_band.py::test_polygon_points_carry_no_float_noise pins the
+# same invariant for the new element).
+# ---------------------------------------------------------------------------
+
+CAL_GAP_ABOVE = 20  # rows/"+N more" bottom -> calendar label top (mirrors PANEL_GAP_ABOVE)
+CAL_GAP_BELOW = 20  # calendar bottom -> evidence panel top (mirrors PANEL_GAP_ABOVE)
+CAL_LABEL_SIZE = 12
+CAL_LABEL_BASELINE_Y = 14  # local y (band-relative) of the label's text baseline
+CAL_LABEL_TEXT = "Daily AI collaboration (last 84 days)"
+
+CAL_WEEKS = 12
+CAL_DAYS = 7
+CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- matches viz.DAILY_WINDOW_DAYS exactly
+
+CAL_TILE_HW = 18  # isometric tile half-width
+CAL_TILE_HH = 9  # isometric tile half-height (2:1 diamond ratio)
+CAL_MAX_STACK_PX = 32  # column height at CAL_CAP_COMMITS attributed commits
+#: A day with >= this many attributed commits (summed across providers)
+#: renders at the full CAL_MAX_STACK_PX column height. Documented cap, not
+#: a silent clip: one outlier day cannot dwarf the rest of the 84-day
+#: window or blow out the card's fixed geometry budget.
+CAL_CAP_COMMITS = 8
+
+#: Local (band-relative) y where the grid starts: high enough that even a
+#: full-height column at (col=0, row=0) never draws above y=0 within the
+#: band. Local y=0 is the very top of the whole band (the label's own
+#: baseline sits below it, at CAL_LABEL_BASELINE_Y).
+CAL_GRID_TOP_Y = 24
+CAL_GRID_BOTTOM_MARGIN = 6
+
+#: Bounding box of the flat (unraised) diamond grid, in a LOCAL x space
+#: centered on nothing in particular (col=0,row=0 sits at local x=0) --
+#: used only to size/center the grid; final absolute x adds CAL_X_OFFSET.
+CAL_LEFTMOST_LOCAL_X = -(CAL_DAYS - 1) * CAL_TILE_HW - CAL_TILE_HW  # -126
+CAL_RIGHTMOST_LOCAL_X = (CAL_WEEKS - 1) * CAL_TILE_HW + CAL_TILE_HW  # 216
+#: Centers the grid horizontally within the card (integer floor division;
+#: WIDTH/tile constants are fixed, so this is a deterministic constant).
+CAL_X_OFFSET = WIDTH // 2 - (CAL_LEFTMOST_LOCAL_X + CAL_RIGHTMOST_LOCAL_X) // 2
+
+#: Shifts the grid's own (col=0, row=0, elevation=0) tile center so that
+#: the topmost possible point (col=0, row=0, full CAL_MAX_STACK_PX column)
+#: lands exactly at CAL_GRID_TOP_Y.
+CAL_ORIGIN_Y = CAL_GRID_TOP_Y + CAL_TILE_HH + CAL_MAX_STACK_PX
+
+#: Bottommost point of the grid (col=CAL_WEEKS-1, row=CAL_DAYS-1, elevation 0).
+CAL_GRID_BOTTOM_Y = CAL_ORIGIN_Y + (CAL_WEEKS - 1 + CAL_DAYS - 1) * CAL_TILE_HH + CAL_TILE_HH
+#: Total fixed footprint of the band (label + grid + margins); added to the
+#: layout only when stats.daily is non-empty.
+CAL_HEIGHT = CAL_GRID_BOTTOM_Y + CAL_GRID_BOTTOM_MARGIN
+
+#: Isometric face shading -- same flat token color for all three faces of a
+#: column, distinguished only by fill-opacity (never a computed/blended
+#: hex): top face full strength, the two side "walls" progressively
+#: dimmer, giving a 3D cube read without introducing any new color value.
+CAL_FACE_OPACITY_TOP = 1
+CAL_FACE_OPACITY_LEFT = 0.72
+CAL_FACE_OPACITY_RIGHT = 0.5
+
+#: SMIL entrance (spec: "grow-in ... only if deterministic + byte-stable").
+#: Fixed literal dur/begin, one-shot (SMIL's default repeatCount is 1 --
+#: NO entrance animation - a deliberate REMOVAL, twice-earned during D2
+#: visual verification (spec rule: honest > flashy):
+#: 1. First attempt shipped `<g opacity="0">` + SMIL 0->1: renderers
+#:    that ignore SMIL showed the band NEVER (static state = empty).
+#: 2. Second attempt kept static opacity="1" with the same overriding
+#:    animation: Chrome's PRINT pipeline (and any SMIL-aware static
+#:    capture - screenshots, social previews) snapshots the timeline at
+#:    t=0, where the animated value (0) overrides the static value ->
+#:    the band was STILL invisible in every static capture, verified on
+#:    a real PDF print.
+#: Any from-nothing entrance has this structural problem: some real
+#: consumer always captures t=0. The calendar band is therefore fully
+#: static; a future entrance must prove a t=0-visible capture first.
 
 # ---------------------------------------------------------------------------
 # Conservative character-width table (ADR-010: no font dependency at render
@@ -266,11 +356,27 @@ def _has_more_line(stats: VizStats) -> bool:
     return len(stats.providers) > MAX_PROVIDER_ROWS
 
 
-def _panel_top(stats: VizStats) -> int:
+def _rows_bottom(stats: VizStats) -> int:
     bottom = ROWS_TOP + _visible_rows(stats) * ROW_HEIGHT
     if _has_more_line(stats):
         bottom += MORE_LINE_EXTRA
-    return bottom + PANEL_GAP_ABOVE
+    return bottom
+
+
+def _calendar_top(stats: VizStats) -> int:
+    return _rows_bottom(stats) + CAL_GAP_ABOVE
+
+
+def _panel_top(stats: VizStats) -> int:
+    # Round D2: when a publishable daily series exists, the calendar band
+    # sits between the provider rows and the evidence panel, and the panel
+    # shifts down by the band's fixed height. When stats.daily is empty
+    # this branch is never taken, so _rows_bottom(stats) + PANEL_GAP_ABOVE
+    # is EXACTLY the pre-D2 expression — zero geometry shift, byte-identical
+    # output for a no-daily card (pinned by test_calendar_band.py).
+    if stats.daily:
+        return _calendar_top(stats) + CAL_HEIGHT + CAL_GAP_BELOW
+    return _rows_bottom(stats) + PANEL_GAP_ABOVE
 
 
 def card_height(stats: VizStats) -> int:
@@ -282,6 +388,22 @@ def card_height(stats: VizStats) -> int:
     return divider2_y + FOOTER2_OFFSET + FOOTER_BOTTOM_PAD
 
 
+def _calendar_desc_suffix(stats: VizStats) -> str:
+    """One-line ASCII calendar summary appended to <desc> (round D2 spec
+    item 5): the window span (anchored at the series' own newest date,
+    never "today") plus the peak day's total attributed commits. Empty
+    string when there is no daily series to summarize."""
+    if not stats.daily:
+        return ""
+    newest = datetime.date.fromisoformat(stats.daily[-1].date)
+    window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
+    peak = max(sum(dc.attributed_commits for dc in cell.counts) for cell in stats.daily)
+    return (
+        f" Daily activity calendar {window_start.isoformat()} to {newest.isoformat()},"
+        f" peak day {peak} attributed commits."
+    )
+
+
 def _desc_text(stats: VizStats, zero_state: bool) -> str:
     if zero_state:
         return f"No AI collaboration recorded yet. Generated {stats.generated_on}."
@@ -289,8 +411,9 @@ def _desc_text(stats: VizStats, zero_state: bool) -> str:
     return (
         f"{t.ai_attributed_commits} AI-attributed commits, "
         f"{t.ai_actor_presences} AI actor presences across "
-        f"{t.active_ai_days} active AI days (author dates), {stats.provider_count} AI providers. "
-        f"Generated {stats.generated_on}."
+        f"{t.active_ai_days} active AI days (author dates), {stats.provider_count} AI providers."
+        f"{_calendar_desc_suffix(stats)}"
+        f" Generated {stats.generated_on}."
     )
 
 
@@ -555,6 +678,167 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
     return "\n".join(parts)
 
 
+# ---------------------------------------------------------------------------
+# Isometric calendar band builders (round D2, ADR-018).
+# ---------------------------------------------------------------------------
+
+
+def _calendar_color(provider: str, theme: Theme) -> str:
+    """Same branded/fallback/unrecognized precedence as the provider table
+    (`_glyph_tile_svg`'s bar_fill), reused for calendar column segments so
+    a provider's color reads identically in the table and the calendar."""
+    spec = BRAND.get(provider)
+    if spec is not None:
+        return _brand_fg_tint(spec, theme)[0]
+    if provider == _UNRECOGNIZED_PROVIDER:
+        return theme.evidence_unknown
+    return theme.bar_fill
+
+
+def _calendar_grid_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
+    """84-length tuple in oldest-to-newest offset order (index 0 = the
+    window's oldest day, CAL_WINDOW_DAYS-1 = the series' own newest date)
+    — ``None`` wherever there is no publishable activity for that date.
+    Per the spec, a day that predates the series and a genuine zero-commit
+    day inside the series are the SAME case here (both simply absent from
+    ``stats.daily``, since VizStats forbids storing a zero-count DayCell):
+    both render as the flat base diamond in ``_day_cell_svg``.
+    """
+    if not stats.daily:
+        return (None,) * CAL_WINDOW_DAYS
+    newest = datetime.date.fromisoformat(stats.daily[-1].date)
+    by_date = {cell.date: cell for cell in stats.daily}
+    return tuple(
+        by_date.get((newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1 - offset)).isoformat())
+        for offset in range(CAL_WINDOW_DAYS)
+    )
+
+
+def _iso_tile_corners(
+    cx: int, cy: int, elevation: int
+) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+    """(top, right, bottom, left) corners of the diamond tile centered at
+    ``(cx, cy)``, raised ``elevation`` px (screen-space vertical extrusion —
+    the standard flat-shaded approximation for an isometric column)."""
+    y = cy - elevation
+    return (
+        (cx, y - CAL_TILE_HH),
+        (cx + CAL_TILE_HW, y),
+        (cx, y + CAL_TILE_HH),
+        (cx - CAL_TILE_HW, y),
+    )
+
+
+def _polygon(
+    points: tuple[tuple[int, int], ...], *, fill: str, opacity: float | None = None
+) -> str:
+    pts = " ".join(f"{x},{y}" for x, y in points)
+    has_opacity = opacity is not None and opacity != 1
+    opacity_attr = f' fill-opacity="{opacity}"' if has_opacity else ""
+    return f'<polygon points="{pts}" fill="{fill}"{opacity_attr}/>'
+
+
+def _day_cell_svg(cell: DayCell | None, cx: int, cy: int, theme: Theme) -> str:
+    """One grid cell: a flat base diamond (zero/no-data day) or a stacked
+    isometric column — one prism "layer" per provider, bottom to top in
+    the cell's own slug-ascending order (the VizStats-enforced order),
+    each layer's height proportional to its share of the day's (capped)
+    total. Segment heights use the same cumulative-prefix-rounding trick
+    as `_evidence_panel_svg` (gate-6 finding): independently rounding each
+    segment can drift or go negative; rounding the running prefix keeps
+    every layer >= 0px and the layers sum exactly to the column height.
+    """
+    if cell is None:
+        top, right, bottom, left = _iso_tile_corners(cx, cy, 0)
+        return _polygon((top, right, bottom, left), fill=theme.bar_track)
+
+    total = sum(dc.attributed_commits for dc in cell.counts)
+    scaled = min(total, CAL_CAP_COMMITS)
+    height_px = round(CAL_MAX_STACK_PX * scaled / CAL_CAP_COMMITS)
+
+    parts: list[str] = []
+    prev_end = 0
+    prefix = 0
+    for dc in cell.counts:
+        prefix += dc.attributed_commits
+        end = round(height_px * prefix / total)
+        if end > prev_end:
+            color = _calendar_color(dc.provider, theme)
+            _, right0, bottom0, left0 = _iso_tile_corners(cx, cy, prev_end)
+            _, right1, bottom1, left1 = _iso_tile_corners(cx, cy, end)
+            parts.append(
+                _polygon(
+                    (left1, bottom1, bottom0, left0), fill=color, opacity=CAL_FACE_OPACITY_LEFT
+                )
+            )
+            parts.append(
+                _polygon(
+                    (bottom1, right1, right0, bottom0), fill=color, opacity=CAL_FACE_OPACITY_RIGHT
+                )
+            )
+        prev_end = end
+
+    # The cap (top face) always sits at the FINAL height_px regardless of
+    # whether the last provider's own slice rounded to 0px — its color
+    # still represents the top of the stack (cell.counts is non-empty and
+    # slug-ascending, enforced by VizStats validation).
+    top_color = _calendar_color(cell.counts[-1].provider, theme)
+    top1, right1, bottom1, left1 = _iso_tile_corners(cx, cy, height_px)
+    parts.append(
+        _polygon((top1, right1, bottom1, left1), fill=top_color, opacity=CAL_FACE_OPACITY_TOP)
+    )
+    return "\n".join(parts)
+
+
+def _calendar_cell_position(offset: int) -> tuple[int, int, int, int]:
+    """``(col, row, cx, cy)`` for a grid offset, cy relative to the band's
+    own local origin (add the band's absolute top separately)."""
+    col, row = offset // CAL_DAYS, offset % CAL_DAYS
+    cx = CAL_X_OFFSET + (col - row) * CAL_TILE_HW
+    cy = CAL_ORIGIN_Y + (col + row) * CAL_TILE_HH
+    return col, row, cx, cy
+
+
+def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    """The calendar band: an always-visible label plus the isometric grid,
+    fully STATIC (see the no-entrance-animation note in the constants
+    section - two animation attempts each left the band invisible in
+    static captures). ``top`` is the band's absolute y (see
+    `_calendar_top`); all local y math from the constants section is
+    offset by it here, once.
+    """
+    cells = _calendar_grid_cells(stats)
+    # Painter's algorithm: cells must be drawn back-to-front (ascending
+    # depth = col+row) or a tall column can visually occlude — or be
+    # wrongly occluded by — a neighboring column drawn out of order, since
+    # adjacent diamonds share an edge and a raised column overlaps into
+    # its back neighbors' screen space. The offset order used to look up
+    # dates (column-major) is unrelated and NOT depth order, so it is
+    # re-sorted here purely for draw order (deterministic tiebreak on the
+    # offset itself keeps output stable).
+    draw_order = sorted(range(CAL_WINDOW_DAYS), key=lambda o: ((o // CAL_DAYS) + (o % CAL_DAYS), o))
+
+    diamonds = []
+    for offset in draw_order:
+        _, _, cx, cy = _calendar_cell_position(offset)
+        diamonds.append(_day_cell_svg(cells[offset], cx, top + cy, theme))
+
+    return "\n".join(
+        (
+            _text(
+                PADDING,
+                top + CAL_LABEL_BASELINE_Y,
+                CAL_LABEL_TEXT,
+                size=CAL_LABEL_SIZE,
+                weight=600,
+                fill=theme.muted,
+                letter_spacing=0.2,
+            ),
+            "\n".join(diamonds),
+        )
+    )
+
+
 def render_summary(stats: VizStats, theme: Theme) -> str:
     """Render the summary card as SVG markup (ADR-010, architecture.md section 9).
 
@@ -651,6 +935,13 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
             parts.append(
                 _text(PADDING, more_y, f"+{remaining} more", size=12, fill=theme.muted)
             )
+
+        # Isometric daily-activity calendar band (round D2, ADR-018): only
+        # when a publishable daily series exists — an empty series omits
+        # the band entirely, and _panel_top already collapses to the
+        # pre-D2 expression in that case (zero geometry shift).
+        if stats.daily:
+            parts.append(_calendar_svg(stats, theme, _calendar_top(stats)))
 
         parts.append(_evidence_panel_svg(stats, theme, panel_top))
         divider2_y = panel_top + PANEL_HEIGHT + FOOTER_GAP_ABOVE

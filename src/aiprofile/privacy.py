@@ -8,8 +8,10 @@ artifacts is applied here, and the two leak tests (mvp.md section 7 tests
 
 from __future__ import annotations
 
+import datetime
+
 from . import ACE_SCHEMA_VERSION
-from .aggregate import RepoAggregates
+from .aggregate import DailyProviderRow, RepoAggregates
 from .config import Config, resolve_publication_levels
 from .registry import provider_display
 from .schema.vocab import (
@@ -20,7 +22,10 @@ from .schema.vocab import (
     PublicationLevel,
 )
 from .viz import (
+    DAILY_WINDOW_DAYS,
     V01_PERIOD_LABEL,
+    DayCell,
+    DayCount,
     EvidenceTotals,
     Period,
     PrivacySplit,
@@ -35,10 +40,58 @@ _PRIVATE_LEVELS = (
 )
 
 
+def _build_daily(
+    daily_rows: tuple[DailyProviderRow, ...],
+    levels: dict[str, PublicationLevel],
+) -> tuple[DayCell, ...]:
+    """Publishable-only daily series (round D2, ADR-018).
+
+    Policy applied HERE, at the single chokepoint: only repositories whose
+    effective level is FULL ("explicitly publishable") contribute -
+    aggregate-only and anonymous repositories NEVER surface their activity
+    dates. Non-canonical/None providers collapse into the reserved bucket
+    (same defense-in-depth as the provider rows), per-(date, slug) counts
+    merge across repositories, and the series is trimmed to the contract
+    window (the last DAILY_WINDOW_DAYS ending at the newest publishable
+    date - never "today"; the builder stays clock-free).
+    """
+    merged: dict[str, dict[str, int]] = {}
+    for row in daily_rows:
+        if levels.get(row.repository_uid, PublicationLevel.EXCLUDED) is not (
+            PublicationLevel.FULL
+        ):
+            continue
+        slug = (
+            row.provider
+            if row.provider in CANONICAL_PROVIDERS
+            else UNRECOGNIZED_PROVIDER
+        )
+        per_day = merged.setdefault(row.date, {})
+        per_day[slug] = per_day.get(slug, 0) + row.attributed_commits
+
+    if not merged:
+        return ()
+
+    newest = max(datetime.date.fromisoformat(d) for d in merged)
+    cutoff = (newest - datetime.timedelta(days=DAILY_WINDOW_DAYS - 1)).isoformat()
+    return tuple(
+        DayCell(
+            date=day,
+            counts=tuple(
+                DayCount(provider=slug, attributed_commits=count)
+                for slug, count in sorted(merged[day].items())
+            ),
+        )
+        for day in sorted(merged)
+        if day >= cutoff
+    )
+
+
 def build_viz_stats(
     repo_aggs: list[RepoAggregates],
     cfg: Config,
     generated_on: str,
+    daily_rows: tuple[DailyProviderRow, ...] = (),
 ) -> VizStats:
     """Apply publication policy and strip identity (architecture.md section 3):
 
@@ -141,6 +194,7 @@ def build_viz_stats(
             includes_anonymous_aggregate=private_commits > 0,
         ),
         generated_on=generated_on,
+        daily=_build_daily(daily_rows, levels),
     )
 
 

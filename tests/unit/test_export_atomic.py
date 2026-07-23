@@ -8,6 +8,7 @@ from __future__ import annotations
 import pytest
 
 import aiprofile.export as export_mod
+from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.errors import RenderError
 
 
@@ -20,7 +21,7 @@ def _zero_stats():
         VizStats,
     )
     return VizStats(
-        schema_version="0.1.0",
+        schema_version=ACE_SCHEMA_VERSION,
         period=Period(None, None, "All time"),
         totals=Totals(0, 0, 0, 0, 0, 0),
         providers=(),

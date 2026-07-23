@@ -38,6 +38,12 @@ V01_PERIOD_LABEL = "All time"
 #: date.fromisoformat + round-trip.
 _DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
+#: Maximum span of the daily activity series (round D2, ADR-018): the
+#: calendar publishes at most 12 weeks of publishable-repo activity.
+#: A hard contract bound, not a renderer preference — a validated
+#: instance cannot carry an unbounded activity history.
+DAILY_WINDOW_DAYS = 84
+
 
 @dataclass(frozen=True)
 class Period:
@@ -87,6 +93,23 @@ class PrivacySplit:
 
 
 @dataclass(frozen=True)
+class DayCount:
+    # One provider's attributed-commit count on one calendar day
+    # (round D2, ADR-018). Same commit-unit semantic as ProviderRow.
+    provider: str             # canonical slug or the unrecognized bucket
+    attributed_commits: int   # unit: commits; strictly positive
+
+
+@dataclass(frozen=True)
+class DayCell:
+    # One calendar day of the publishable-only activity series
+    # (ADR-018): dates from repositories the owner explicitly marked
+    # publishable — aggregate-only repositories NEVER contribute here.
+    date: str                        # YYYY-MM-DD, generated_on-class rules
+    counts: tuple[DayCount, ...]     # non-empty, slug-ascending, unique
+
+
+@dataclass(frozen=True)
 class VizStats:
     schema_version: str
     period: Period
@@ -96,6 +119,10 @@ class VizStats:
     evidence: EvidenceTotals
     privacy: PrivacySplit
     generated_on: str     # UTC date, YYYY-MM-DD — never a full timestamp
+    # Publishable-only daily series (round D2, ADR-018). Empty = no
+    # calendar band. Defaults to empty so the field is additive for
+    # existing constructor sites; validation runs regardless.
+    daily: tuple[DayCell, ...] = ()
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         # SEAL against subclassing at class-definition time (gate-9 H-01):
@@ -127,6 +154,27 @@ def _require_exact(value: object, expected: type, what: str) -> None:
         raise RenderError(
             f"VizStats: {what} must be exact {expected.__name__},"
             f" got {type(value).__name__}"
+        )
+
+
+def _require_canonical_date(value: str, what: str) -> None:
+    # Shared date battery (gate-8 L-01, reused for the D2 daily series):
+    # ASCII fullmatch kills Unicode decimals and trailing newlines;
+    # fromisoformat + round-trip kills impossible and non-canonical forms.
+    if not _DATE_RE.fullmatch(value):
+        raise RenderError(
+            f"VizStats {what} must be an ASCII YYYY-MM-DD date, never a"
+            " timestamp"
+        )
+    try:
+        parsed = datetime.date.fromisoformat(value)
+    except ValueError as exc:
+        raise RenderError(
+            f"VizStats {what} is not a real calendar date: {exc}"
+        ) from exc
+    if parsed.isoformat() != value:
+        raise RenderError(
+            f"VizStats {what} must be the canonical YYYY-MM-DD form"
         )
 
 
@@ -201,24 +249,8 @@ def _validate(s: VizStats) -> None:
         raise RenderError(
             "VizStats: includes_anonymous_aggregate must be exact bool"
         )
-    # Canonical ASCII calendar date (gate-8 L-01): fullmatch kills the
-    # trailing-newline artifact, [0-9] kills Unicode decimals, and the
-    # fromisoformat round-trip kills impossible dates like 2026-99-99.
-    if not _DATE_RE.fullmatch(s.generated_on):
-        raise RenderError(
-            "VizStats.generated_on must be an ASCII YYYY-MM-DD date, never"
-            " a timestamp"
-        )
-    try:
-        parsed = datetime.date.fromisoformat(s.generated_on)
-    except ValueError as exc:
-        raise RenderError(
-            f"VizStats.generated_on is not a real calendar date: {exc}"
-        ) from exc
-    if parsed.isoformat() != s.generated_on:
-        raise RenderError(
-            "VizStats.generated_on must be the canonical YYYY-MM-DD form"
-        )
+    # Canonical ASCII calendar date (gate-8 L-01), shared battery.
+    _require_canonical_date(s.generated_on, "generated_on")
     if (
         s.privacy.explicitly_publishable_commits
         + s.privacy.anonymous_aggregate_commits
@@ -295,7 +327,78 @@ def _validate(s: VizStats) -> None:
             f" (bounds None, label {V01_PERIOD_LABEL!r}); free-form period"
             " text is not publishable"
         )
+    # ---- Publishable-only daily series (round D2, ADR-018). Same
+    # battery as every other nested record: exact container/record
+    # types BEFORE duck-typed access, exact str/int leaves, closed
+    # vocabulary, and cross-checks that pin the series as an honest
+    # SUBSET of the provider rows.
+    _require_exact(s.daily, tuple, "daily container")
+    for cell in s.daily:
+        _require_exact(cell, DayCell, "each day cell")
+        _require_exact(cell.counts, tuple, "day cell counts container")
+        for dc in cell.counts:
+            _require_exact(dc, DayCount, "each day count")
+            if type(dc.provider) is not str:
+                raise RenderError("VizStats: day count provider must be exact str")
+            if type(dc.attributed_commits) is not int or dc.attributed_commits < 1:
+                raise RenderError(
+                    "VizStats: day count attributed_commits must be exact int"
+                    " and strictly positive - zero-activity entries are omitted,"
+                    " not stored"
+                )
+        if type(cell.date) is not str:
+            raise RenderError("VizStats: day cell date must be exact str")
+        _require_canonical_date(cell.date, "daily date")
+        if not cell.counts:
+            raise RenderError("VizStats: a day cell must carry at least one count")
+        slugs = [dc.provider for dc in cell.counts]
+        if slugs != sorted(slugs) or len(set(slugs)) != len(slugs):
+            raise RenderError(
+                "VizStats: day cell counts must be slug-ascending and unique"
+            )
+    dates = [cell.date for cell in s.daily]
+    if dates != sorted(dates) or len(set(dates)) != len(dates):
+        raise RenderError(
+            "VizStats.daily must be date-ascending without duplicates"
+        )
+    if s.daily:
+        span = (
+            datetime.date.fromisoformat(dates[-1])
+            - datetime.date.fromisoformat(dates[0])
+        ).days
+        if span >= DAILY_WINDOW_DAYS or len(s.daily) > DAILY_WINDOW_DAYS:
+            raise RenderError(
+                f"VizStats.daily must span fewer than {DAILY_WINDOW_DAYS} days"
+                " (ADR-018 window bound)"
+            )
+        row_totals = {p.provider: p.attributed_commits for p in s.providers}
+        daily_totals: dict[str, int] = {}
+        for cell in s.daily:
+            for dc in cell.counts:
+                daily_totals[dc.provider] = (
+                    daily_totals.get(dc.provider, 0) + dc.attributed_commits
+                )
+        for slug, total in daily_totals.items():
+            if slug not in row_totals:
+                raise RenderError(
+                    f"VizStats.daily carries provider {slug!r} with no matching"
+                    " provider row - the series must be a subset of the rows"
+                )
+            if total > row_totals[slug]:
+                raise RenderError(
+                    f"VizStats.daily total for {slug!r} exceeds that provider's"
+                    " attributed_commits - the publishable subset cannot be"
+                    " larger than the whole"
+                )
+
     allowed_slugs = CANONICAL_PROVIDERS | {UNRECOGNIZED_PROVIDER}
+    for cell in s.daily:
+        for dc in cell.counts:
+            if dc.provider not in allowed_slugs:
+                raise RenderError(
+                    f"VizStats daily provider slug {dc.provider!r} is not in"
+                    " the canonical public vocabulary"
+                )
     for row in s.providers:
         if row.provider not in allowed_slugs:
             raise RenderError(
@@ -356,6 +459,21 @@ def to_json_dict(s: VizStats) -> dict:
             "anonymous_aggregate_commits": s.privacy.anonymous_aggregate_commits,
             "includes_anonymous_aggregate": s.privacy.includes_anonymous_aggregate,
         },
+        # Publishable-only daily series (ADR-018): additive field; empty
+        # list when no explicitly-publishable activity exists.
+        "daily": [
+            {
+                "date": cell.date,
+                "counts": [
+                    {
+                        "provider": dc.provider,
+                        "attributed_commits": dc.attributed_commits,
+                    }
+                    for dc in cell.counts
+                ],
+            }
+            for cell in s.daily
+        ],
     }
 
 

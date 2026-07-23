@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from . import __version__
-from .aggregate import compute_repo_aggregates
+from .aggregate import compute_daily_provider_counts, compute_repo_aggregates
 from .config import aiprofile_home, db_path, init_home, load_config
 from .errors import AiProfileError
 from .export import write_outputs
@@ -213,9 +213,12 @@ def _compute(args: argparse.Namespace):
     try:
         migrate(conn)
         repo_aggs = compute_repo_aggregates(conn)
+        daily_rows = compute_daily_provider_counts(conn)
     finally:
         conn.close()
-    stats = build_viz_stats(repo_aggs, cfg, generated_on=_today_utc())
+    stats = build_viz_stats(
+        repo_aggs, cfg, generated_on=_today_utc(), daily_rows=daily_rows
+    )
     return stats, repo_aggs, cfg
 
 

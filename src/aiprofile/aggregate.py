@@ -14,9 +14,36 @@ from dataclasses import dataclass, field
 
 from .errors import StorageError
 
+#: DIVERGENCE NOTE (round D2 brief vs. this module's own established
+#: pattern) -- read before touching compute_daily_provider_counts:
+#:
+#: 1. Population filter. MAINTAINER RULING (round D2): the daily series
+#:    follows schema.md section 15's AI definition -
+#:    ``actor.type in {ai, mixed}`` - exactly like compute_repo_aggregates
+#:    and the provider rows, so the calendar can never drift from the
+#:    row counts if a 'mixed' producer ever ships. (The implementing lane
+#:    originally delivered a literal 'ai'-only filter per its pinned
+#:    brief and correctly flagged the divergence; the ruling aligned it.
+#:    Pinned by test_daily_mixed_actor_type_counts_as_ai.)
+#:
+#: 2. Date extraction. The brief's prose says "GROUP BY date(author_date)"
+#:    which reads as SQLite's date() function -- but date() applies a
+#:    UTC-offset conversion for any timestamp carrying a non-'Z'/non-'+00'
+#:    offset (verified empirically: date('2026-07-01T01:00:00+09:00') ->
+#:    '2026-06-30', not '2026-07-01'). That would violate schema.md
+#:    section 15's "author date's own UTC offset (the author's local
+#:    day)" contract and diverge from every other date extraction in this
+#:    module, which takes the stored ISO string's first 10 characters
+#:    verbatim (see active_ai_dates above, and
+#:    test_active_dates_use_author_local_iso_prefix in
+#:    tests/unit/test_aggregate.py). compute_daily_provider_counts below
+#:    uses the same verbatim-prefix extraction (SQL substr(), equivalent
+#:    to Python's [:10]) instead of date(), matching the established
+#:    pattern rather than the brief's literal SQL suggestion.
+
 #: major.minor ACE schema versions this aggregator knows how to read
 #: (ADR-012). Bump alongside a real migration, never to silence this guard.
-_SUPPORTED_SCHEMA_VERSIONS = {"0.1"}
+_SUPPORTED_SCHEMA_VERSIONS = {"0.1", "0.2"}
 
 
 @dataclass
@@ -58,7 +85,7 @@ def compute_repo_aggregates(conn: sqlite3.Connection) -> list[RepoAggregates]:
       raw_values collects events.provider_raw for canonical-null events.
     - Refuse to aggregate unsupported schema versions: if any stored
       events.schema_version has major.minor above the supported set
-      ({"0.1"}), raise StorageError naming the version (ADR-012) — never
+      (_SUPPORTED_SCHEMA_VERSIONS), raise StorageError naming the version (ADR-012) — never
       silently skip rows.
     - Read-only: plain SELECTs, no writes, no config access (publication
       policy is privacy.py's job, not aggregation's).
@@ -163,3 +190,85 @@ def _aggregate_repository(
     agg.unknown_commits = len(unknown_commits - ai_commits - human_commits)
 
     return agg
+
+
+@dataclass(frozen=True)
+class DailyProviderRow:
+    """One (repository, date, provider) attribution row for the round D2
+    isometric calendar (sibling return alongside RepoAggregates -- see the
+    divergence note above the module's schema-version guard).
+
+    Policy-free, like every row this module returns (architecture.md
+    section 7): every repository in the database is represented here,
+    including aggregate_only and excluded ones. The publishable-only
+    filter is privacy.py's job -- callers MUST restrict to the
+    repository_uid set for repositories whose effective publication level
+    is 'full' before this data (or dates derived from it) reaches any
+    public artifact.
+    """
+
+    repository_uid: str
+    date: str                  # "YYYY-MM-DD" -- commits.author_date[:10], verbatim
+    provider: str | None       # canonical slug from events.provider; None if NULL
+    attributed_commits: int    # COUNT(DISTINCT commit) with >=1 presence of this
+                                # provider on this date in this repository
+
+
+def compute_daily_provider_counts(conn: sqlite3.Connection) -> tuple[DailyProviderRow, ...]:
+    """Per (repository_uid, date, provider) attributed-commit counts for
+    AI actor events (round D2 spec, .ai/round_d2_isometric_calendar_spec.md).
+
+    Contract:
+    - Population: events with actor_type in {ai, mixed} - the same
+      schema.md section 15 AI definition compute_repo_aggregates uses
+      (maintainer ruling, see the divergence note above; pinned by
+      test_daily_mixed_actor_type_counts_as_ai).
+    - date is the first 10 characters of the stored commits.author_date
+      string, verbatim -- the author's own local calendar day, never
+      converted to another UTC offset (schema.md section 15; matches the
+      [:10]-slice convention used for active_ai_dates above, not SQLite's
+      date() function, which does convert offsets -- see the divergence
+      note).
+    - attributed_commits counts DISTINCT commits: a commit with two events
+      of the SAME provider on the same day still counts once; a commit
+      with two DIFFERENT providers produces one row per provider, each
+      counting that commit (attributed-commit semantic, matching
+      ProviderAgg.attributed_commits above).
+    - provider is the raw events.provider value (canonical slug, or None
+      for canonical-null) -- no collapsing into the 'unrecognized' bucket
+      here; that display-layer decision belongs to privacy.py.
+    - Read-only, policy-free: every stored repository is represented,
+      unfiltered by publication level (mirrors compute_repo_aggregates'
+      own layering -- privacy.py is the sole policy chokepoint).
+    - Refuses unsupported schema versions the same way
+      compute_repo_aggregates does (ADR-012); this reads the same events
+      table so it is exposed to the same versioning risk.
+    - Ordering: strictly ascending by (date, provider, repository_uid);
+      SQL NULL-sorts-first matches Python's None-before-str ordering used
+      for the comparison, so None providers sort before any named slug
+      within a date.
+    """
+    _check_schema_versions(conn)
+
+    rows = conn.execute(
+        "SELECT r.repository_uid AS repository_uid,"
+        " substr(c.author_date, 1, 10) AS date,"
+        " e.provider AS provider,"
+        " COUNT(DISTINCT e.commit_id) AS attributed_commits"
+        " FROM events e"
+        " JOIN commits c ON c.id = e.commit_id"
+        " JOIN repositories r ON r.id = e.repository_id"
+        " WHERE e.actor_type IN ('ai', 'mixed')"
+        " GROUP BY r.repository_uid, substr(c.author_date, 1, 10), e.provider"
+        " ORDER BY date, provider, r.repository_uid"
+    ).fetchall()
+
+    return tuple(
+        DailyProviderRow(
+            repository_uid=row["repository_uid"],
+            date=row["date"],
+            provider=row["provider"],
+            attributed_commits=row["attributed_commits"],
+        )
+        for row in rows
+    )

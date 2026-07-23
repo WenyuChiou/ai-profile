@@ -4,4 +4,4 @@ __version__ = "0.1.0"
 
 #: ACE (AI Collaboration Event) schema version written into every event.
 #: Governed by docs/schema.md and ADR-012.
-ACE_SCHEMA_VERSION = "0.1.0"
+ACE_SCHEMA_VERSION = "0.2.0"

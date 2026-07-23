@@ -12,6 +12,7 @@ import re
 
 import pytest
 
+from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.errors import SchemaValidationError
 from aiprofile.schema.event import (
     ProvenanceSource,
@@ -64,7 +65,7 @@ def _make_ai_event(**overrides):
 def test_valid_ai_event_accepted():
     event = _make_ai_event()
     assert event.actor_type is ActorType.AI
-    assert event.schema_version == "0.1.0"
+    assert event.schema_version == ACE_SCHEMA_VERSION
 
 
 def test_roles_stored_sorted_and_deduplicated():
@@ -73,7 +74,7 @@ def test_roles_stored_sorted_and_deduplicated():
 
 
 def test_schema_version_constant():
-    assert _make_ai_event().schema_version == "0.1.0"
+    assert _make_ai_event().schema_version == ACE_SCHEMA_VERSION
 
 
 # --- 2. SchemaValidationError for malformed/unknown fields ------------------
