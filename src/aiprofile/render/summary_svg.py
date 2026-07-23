@@ -168,7 +168,8 @@ CAL_MONTH_LABEL_GRID_GAP = 10  # month-label baseline -> grid top
 
 CAL_WEEKS = 12
 CAL_DAYS = 7
-CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- matches viz.DAILY_WINDOW_DAYS exactly
+CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- the band's OWN newest-anchored
+# slice of the (D4: 365-day) viz.DAILY_WINDOW_DAYS series; gate-17 L-01
 
 CAL_TILE_HW = 18  # isometric tile half-width
 CAL_TILE_HH = 9  # isometric tile half-height (2:1 diamond ratio)

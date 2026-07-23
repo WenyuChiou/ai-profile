@@ -332,3 +332,23 @@ audit fixes + new `.github/workflows/ci.yml`). The review target -
 `src/aiprofile/registry.py` and its tests at `66bc3e9` - was untouched
 and committed; the reviewer's suite/probes ran against that committed
 code. The doc edits ship separately with their own review round.
+
+---
+
+## Gate-17 review round (gate-review.md, 2026-07-23; READY, one Low)
+
+Independent verification of `bd0e3ce..1864d65` (rounds D5 + D4) via the
+headless handoff lane (brief 010). The reviewer re-ran the pinned lobe
+vendoring command independently (2 vendored, 0 skipped - provenance
+confirmed from upstream), and ran adversarial probes across in-process
+privacy, CLI end-to-end canary assets (all seven dist files), the
+DayCell contract battery, share/volume bin math at the exact quarter
+boundaries, badge honesty rounding, and Monday-anchored grid alignment.
+Suite 491 passed / 4 skipped; ruff clean.
+Severity: Critical 0, High 0, Medium 0, Low 1.
+
+| Finding | Disposition | Resolution |
+|---|---|---|
+| L-01 - stale comment: summary_svg.py:171 claimed CAL_WINDOW_DAYS "matches viz.DAILY_WINDOW_DAYS exactly", untrue since the D4 window widened to 365 | **Accepted** | Comment rewritten to describe the band's own newest-anchored 84-day slice of the wider series; suite re-run green. |
+
+**Rounds D5 and D4 are closed.**

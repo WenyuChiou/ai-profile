@@ -1,8 +1,8 @@
-# Gate 16 display-alias resolution verification review
+# Gate 17 D5 + D4 verification review
 
 Date: 2026-07-23
 
-Review range: `d2c1147..66bc3e9`
+Review range: `bd0e3ce..1864d65`
 
 Reviewer posture: independent Principal Software Engineer; verification only.
 No production code, test code, schema, or design code was changed during this
@@ -11,111 +11,102 @@ convention.
 
 ## Executive summary
 
-The gate-15 H-01 resolution is ready for the next gate. The fix derives
-provider aliases from every schema-owned display name and adds the expected
-manual spelling variants, closing both the D3 product-name gap and the latent
-v0.1-era display-name bug for Claude/Gemini/Copilot/Devin.
+Rounds D5 and D4 are ready for the next gate. The D4 privacy boundary is the
+right shape: aggregation remains policy-free, `_build_daily` applies the
+FULL-only chokepoint to both provider rows and whole-rhythm totals, and a
+provider-date without a matching totals row fails loudly instead of fabricating
+or dropping data.
 
-Full suite and lint are clean. Independent probes confirmed the old
-Kimi/Qwen/Grok/GLM/Llama failure now resolves, the v0.1-era names resolve, the
-variant spellings resolve, pre-existing aliases did not change targets, and an
-end-to-end `AI-Provider: Kimi` commit publishes as canonical `moonshot` with
-display `Kimi` and the vendored Moonshot/Kimi mark while preserving the privacy
-boundary.
+Full suite and lint are clean. Independent probes confirmed aggregate-only
+dates/totals do not surface through `build_viz_stats` or through an end-to-end
+`init -> scan -> render` flow across all seven dist assets; invalid D4
+`DayCell` shapes are rejected; heatmap bin math, Monday anchoring, badge
+rounding, zero-state behavior, SMIL/static rendering, and the closed bundle
+allowlist behave as expected.
 
 ## Findings
 
 | Severity | Issue | Location |
 |---|---|---|
-| None | No correctness, privacy, rendering, or alias-regression findings in this range. | n/a |
+| Low | Stale source comment says the 84-day summary band window "matches viz.DAILY_WINDOW_DAYS exactly"; D4 intentionally widened the validated daily contract to 365 days while the band slices its own 84-day window. The code is correct, but the comment now contradicts the design and can mislead future maintenance. | `src/aiprofile/render/summary_svg.py:171` |
 
 ## Review basis
 
-Reviewed `README.md`, `CONTRIBUTING.md`, the handoff brief, `docs/schema.md`,
-the `d2c1147..66bc3e9` diff, `src/aiprofile/registry.py`,
-`src/aiprofile/schema/vocab.py`, `src/aiprofile/adapters/trailers.py`,
-`src/aiprofile/privacy.py`, `src/aiprofile/render/brand.py`, and
-`tests/unit/test_vocab_registry.py`.
+Reviewed `README.md`, `CONTRIBUTING.md`, the handoff brief, the
+`bd0e3ce..1864d65` diff, and the relevant changed files:
+`src/aiprofile/aggregate.py`, `src/aiprofile/privacy.py`,
+`src/aiprofile/viz.py`, `src/aiprofile/export.py`, `src/aiprofile/cli.py`,
+`src/aiprofile/render/summary_svg.py`, `src/aiprofile/render/heatmap_svg.py`,
+`src/aiprofile/render/badge_svg.py`, `src/aiprofile/render/brand.py`,
+`scripts/vendor_brand_icons.py`, `THIRD_PARTY_NOTICES.md`, and the D4/D5
+unit and integration tests.
+
+The codebase-memory MCP discovery call was cancelled by the tool, so review
+fell back to local diff/file inspection.
 
 ## Verification evidence
 
 Commands and observed results:
 
 - `git status --short`: clean before verification.
-- `git rev-parse HEAD`: `66bc3e957ea59be483dc2b4046c84c936797eec5`.
-- `git diff --stat d2c1147..66bc3e9`: 4 files changed, 210 insertions, 82 deletions.
-- `git diff --name-only d2c1147..66bc3e9`: `docs/reviews/gate-disposition.md`, `docs/reviews/gate-review.md`, `src/aiprofile/registry.py`, `tests/unit/test_vocab_registry.py`.
-- `python -m pytest tests -p no:cacheprovider`: `444 passed, 4 skipped in 25.03s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
-- `python -m ruff check src tests`: `All checks passed!` (exit 0).
+- `git log --oneline --decorate -8`: HEAD was `1864d65 (HEAD -> main, origin/main) Round D4: collaboration-ratio heatmap + badge (your own commits included)`.
+- `git diff --stat bd0e3ce..1864d65`: 47 files changed, 3918 insertions, 161 deletions.
+- `git diff --name-only bd0e3ce..1864d65`: confirmed the expected D5/D4 source, docs, asset, and test files.
+- `python -m pytest tests -p no:cacheprovider`: `491 passed, 4 skipped in 25.05s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
+- `python -m ruff check src tests scripts`: `All checks passed!` (exit 0).
+- `python scripts/vendor_brand_icons.py --source lobe --ref fbd2d56e3f734e889f1373e71c8368cc4e60e0d7 --map openai:openai:OpenAI --map xai:grok:Grok`: exit 0; `2 vendored, 0 skipped, 2 attempted`, with OpenAI/Grok BrandSpec stubs and WCAG contrast rows emitted.
+- Follow-up direct network fetch using `vendor_one_lobe(...)` failed with `WinError 10051` unreachable network. Because of that sandbox flake, I did not claim a second independent network byte-diff; I verified the successful pinned vendoring output plus local committed constraints.
+- Local D5 constraint probe: `BRAND["openai"]` and `BRAND["xai"]` are present, ASCII path strings, forbidden XML-attribute characters absent, and their achromatic color fields match the vendoring tool output (`#000000/#EBEBEB`, `#7A7A7A/#2E2E2E`).
+- `Select-String THIRD_PARTY_NOTICES.md` confirmed the lobe-icons pinned source, commit `fbd2d56e3f734e889f1373e71c8368cc4e60e0d7`, MIT License header, and `Copyright (c) 2023 LobeHub`.
+- `Select-String src/aiprofile/render/*.py -Pattern "datetime\.today|datetime\.now|<animate|<set|@keyframes"` found no render-time clock use or SMIL/CSS animation; the only match was a comment documenting the ban.
+- `Select-String tests/snapshots/*.svg -Pattern "<animate|<set|@keyframes"` found no snapshot animation markup.
 
-Independent alias and collision probe:
-
-```text
-direct_probe_count: 15
-display_names_checked: 21
-pre_existing_aliases_checked: 23
-alias_collisions: {}
-```
-
-The direct probe covered the gate-15 adversarial product names
-`Kimi`, `Qwen`, `Grok`, `GLM`, and `Llama`; the v0.1-era display names
-`Claude`, `Gemini`, `Copilot`, and `Devin`; and the requested variants
-`Mistral AI`, `Meta AI`, `x.ai`, `Z.ai`, `Moonshot AI`, and `Amazon Q`.
-All normalized to the expected canonical slugs.
-
-Independent end-to-end Kimi probe:
+Independent adversarial probe result:
 
 ```text
-e2e_provider: moonshot/Kimi
-e2e_mark: BRAND[moonshot] path present in summary-light.svg
-privacy_sweep: profile.json + light/dark SVG contained no repo/home/email/filename canaries
+custom probes passed: in-process privacy, CLI canary assets, DayCell contract, bin math, badge honesty, grid anchoring
 ```
 
-The synthetic repository contained one commit with:
+That probe covered:
 
-```text
-AI-Provider: Kimi
-```
+- Direct `build_viz_stats` input with one FULL repo and one aggregate-only repo. The private repo carried AI and human-only canary dates (`2026-07-21`, `2026-07-20`) and distinctive totals; `stats.daily`, `profile.json`, summary SVG, heatmap SVG, and badge SVG carried only the FULL dates.
+- End-to-end CLI flow with two real git repositories: `init`, `scan --full` for the FULL repo, default aggregate-only `scan` for the private repo, then `render`. The seven output files were exactly `badge-dark.svg`, `badge-light.svg`, `heatmap-dark.svg`, `heatmap-light.svg`, `profile.json`, `summary-dark.svg`, and `summary-light.svg`; none contained the private date or repo-name canaries. `profile.json["daily"]` contained only the FULL repo dates.
+- `_build_daily` raised on provider rows without matching whole-rhythm totals.
+- Invalid `DayCell` shapes were rejected: `ai_commits > total_commits`, nonempty counts with `ai_commits == 0`, provider count greater than `ai_commits`, `ai_commits` greater than sum of provider counts, bool leaves, and a 365-day span. A 364-day span was accepted.
+- Heatmap share bins at zero, tiny nonzero, 1/4, 1/2, 3/4, and 100%; volume bins at 1, 2, 4, 5, 7, and 8.
+- Badge percentage uses the summary `_pct_label` behavior, including `<1%`, `>99%`, exact `100%`, and zero-commit `no data`.
+- Known-date grid anchoring: newest Sunday `2026-07-19` yields window start `2025-07-20`, 53 Monday-anchored columns, and the summary band keeps an 84-cell newest-anchored slice.
 
-After `init -> scan --full -> aggregate -> render`, `profile.json` ranked the
-single provider row as:
+## Verified areas without blocking findings
 
-```json
-{
-  "provider": "moonshot",
-  "display_name": "Kimi",
-  "attributed_commits": 1,
-  "actor_presences": 1,
-  "active_days": 1
-}
-```
-
-The same probe verified `provider_count == 1`, `ai_attributed_commits == 1`,
-and the privacy split as one explicitly publishable commit with no anonymous
-aggregate commits. The rendered light SVG contained the `Kimi` label and the
-vendored `BRAND["moonshot"]` path fragment; public JSON/SVG outputs did not
-contain repository path, home path, fixture email, or filename canaries.
-
-## Verified areas without findings
-
-- `PROVIDER_ALIASES.update({display.lower(): slug ...})` covers every
-  schema-owned display name, so future display vocabulary additions cannot miss
-  the alias table by omission.
-- The manual variants add only new spellings; no pre-existing alias key changed
-  canonical slug.
-- `Amazon Q` is covered by display-name derivation, matching the implementation
-  comment.
-- The fix does not touch `COAUTHOR_IDENTITIES`; declaration-tier display
-  aliases do not expand auto-match behavior.
-- The existing VizStats privacy boundary and renderer brand path handle the new
-  canonical result without special cases.
+- `compute_daily_commit_totals` counts all stored commits per repository/date
+  and AI/mixed distinct commits as the subset, using the author-date ISO prefix
+  rather than SQLite date conversion.
+- `_build_daily` filters both provider rows and totals rows through resolved
+  publication levels, merges same-date FULL repo totals, includes human-only
+  FULL days, trims clock-free from the newest publishable date, and refuses
+  mismatched provider/totals input.
+- `VizStats` validates the D4 whole-rhythm fields with exact int/bool rules,
+  ordered unique dates, ordered unique provider counts, provider-row subset
+  checks, 365-day window bound, and canonical provider vocabulary.
+- Heatmap rendering is deterministic, static, window-scoped, and uses integer
+  share-bin arithmetic.
+- The summary calendar band correctly slices its own last 84 days and renders
+  D4 human-only days as flat base diamonds.
+- Badge share matches the summary headline rounding and has the honest
+  `commits_scanned == 0` state.
+- `write_outputs` now uses the closed six-name SVG allowlist plus
+  `profile.json`, sorted deterministic output order, and the existing rollback
+  guarantees remain covered by `test_export_atomic`.
+- D5 keeps unsupported multi-path marks as letter tiles rather than
+  approximating them, and lobe-icons notice preservation is documented.
 
 ## Severity summary
 
 - Critical: 0
 - High: 0
 - Medium: 0
-- Low: 0
+- Low: 1
 
 ## Final recommendation
 
