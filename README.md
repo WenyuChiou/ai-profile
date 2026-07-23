@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <img alt="ai-profile - prove your AI collaboration, privately" src="docs/assets/banner-light.svg" width="100%">
+</picture>
+
 # ai-profile
 
 English · [繁體中文](README.zh-TW.md)
@@ -22,8 +27,10 @@ It is **not** an AI code detector: nothing is ever inferred from code style.
 Commits without explicit evidence are honestly reported as `unknown` —
 never silently counted as human, never guessed into a provider.
 
-Status: **v0.1** — the first vertical slice (one repo → trailers → SQLite →
-aggregate → summary card). Design docs live in [`docs/`](docs/):
+Status: **v0.2** — the v0.1 vertical slice (one repo → trailers → SQLite →
+aggregate → summary card) plus provider brand identity and the
+publishable-only isometric daily calendar. Design docs live in
+[`docs/`](docs/):
 [architecture](docs/architecture.md) · [ACE schema](docs/schema.md) ·
 [MVP boundary](docs/mvp.md) · [landscape & non-duplication](docs/landscape.md)
 · [decision records](docs/decisions/).

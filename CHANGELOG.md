@@ -23,7 +23,7 @@ below.
   irreplaceable (config identities/policy aside, which are a few lines
   of JSON you can note down first).
 
-## [Unreleased]
+## [0.2.0] — 2026-07-23
 
 ### Added
 
@@ -32,6 +32,12 @@ below.
   Windsurf (CC0 simple-icons subset, byte-verified) with per-theme
   brand-colored bars; honest letter-tile fallback for providers with
   no CC0 mark (OpenAI, Amazon Q, Aider, Roo Code, OpenHands, Devin).
+- README banner (docs/assets/banner-{light,dark}.svg): deterministic
+  generated hero in the card's own visual language (isometric brand
+  stacks), theme-paired.
+- Tag-triggered PyPI publish workflow (.github/workflows/publish.yml)
+  via PyPI Trusted Publishing (OIDC, no stored secrets); gated on the
+  full test suite + ruff before build/upload.
 - Isometric daily AI-collaboration calendar (round D2, ADR-018):
   a 12-week 3D activity grid, stacked by provider color, built ONLY
   from explicitly-publishable repositories — aggregate-only

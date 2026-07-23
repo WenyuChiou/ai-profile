@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <img alt="ai-profile - 證明你的 AI 協作,同時保有隱私" src="docs/assets/banner-light.svg" width="100%">
+</picture>
+
 # ai-profile
 
 [English](README.md) · 繁體中文
@@ -22,8 +27,9 @@ Code、Codex、Cursor、Copilot、Aider 等)——正規化為統一的事件格
 證據的 commit 誠實地標為 `unknown`——不會被默默算成人寫的,也不會
 被猜成某個 provider。
 
-狀態:**v0.1**——第一個垂直切片(單一 repo → trailer → SQLite →
-彙總 → 摘要卡片)。設計文件在 [`docs/`](docs/):
+狀態:**v0.2**——v0.1 的垂直切片(單一 repo → trailer → SQLite →
+彙總 → 摘要卡片)加上 provider 品牌識別與「僅明示可發布」的等距
+每日日曆。設計文件在 [`docs/`](docs/):
 [架構](docs/architecture.md) · [ACE schema](docs/schema.md) ·
 [MVP 邊界](docs/mvp.md) · [產品定位與不重複性](docs/landscape.md)
 · [決策記錄](docs/decisions/)。
