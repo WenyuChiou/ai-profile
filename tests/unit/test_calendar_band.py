@@ -102,8 +102,10 @@ _MAIN_PROVIDERS = (
 )
 
 _MAIN_DAILY = (
-    DayCell(date="2026-04-22", counts=(DayCount(provider="amazon", attributed_commits=2),)),
-    DayCell(date="2026-05-15", counts=(DayCount(provider="anthropic", attributed_commits=3),)),
+    DayCell(date="2026-04-22", counts=(DayCount(provider="amazon", attributed_commits=2),),
+            total_commits=3, ai_commits=2),
+    DayCell(date="2026-05-15", counts=(DayCount(provider="anthropic", attributed_commits=3),),
+            total_commits=3, ai_commits=3),
     DayCell(
         date="2026-06-04",
         counts=(
@@ -111,14 +113,19 @@ _MAIN_DAILY = (
             DayCount(provider="google", attributed_commits=2),
             DayCount(provider=UNRECOGNIZED_PROVIDER, attributed_commits=1),
         ),
+        total_commits=8,
+        ai_commits=7,
     ),
-    DayCell(date="2026-07-04", counts=(DayCount(provider="anthropic", attributed_commits=10),)),
+    DayCell(date="2026-07-04", counts=(DayCount(provider="anthropic", attributed_commits=10),),
+            total_commits=12, ai_commits=10),
     DayCell(
         date="2026-07-14",
         counts=(
             DayCount(provider="amazon", attributed_commits=3),
             DayCount(provider="anthropic", attributed_commits=5),
         ),
+        total_commits=8,
+        ai_commits=8,
     ),
 )
 
@@ -178,7 +185,8 @@ _SINGLE_KWARGS = dict(
 FIXTURE_SINGLE_DAY = VizStats(
     **_SINGLE_KWARGS,
     daily=(
-        DayCell(date="2026-07-14", counts=(DayCount(provider="anthropic", attributed_commits=5),)),
+        DayCell(date="2026-07-14", counts=(DayCount(provider="anthropic", attributed_commits=5),),
+            total_commits=5, ai_commits=5),
     ),
 )
 
@@ -452,6 +460,8 @@ def test_daily_exceeding_provider_row_total_is_rejected_by_vizstats():
                 DayCell(
                     date="2026-07-14",
                     counts=(DayCount(provider="openai", attributed_commits=999),),
+                    total_commits=999,
+                    ai_commits=999,
                 ),
             ),
         )
@@ -580,3 +590,33 @@ def test_month_labels_render_ascii_and_muted():
         assert f'fill="{theme.muted}"' in svg
         for label in ("May", "Jun", "Jul"):
             assert f">{label}<" in svg
+
+
+# ---------------------------------------------------------------------------
+# Round D4: the series now carries human-only days (ai_commits == 0,
+# empty counts). The BAND charts AI collaboration, so such a day renders
+# as the flat base diamond - byte-identical to a no-data day - and must
+# never crash the stack builder. Written RED-FIRST (pre-fix:
+# cell.counts[-1] IndexError).
+# ---------------------------------------------------------------------------
+
+
+def test_d4_human_only_day_renders_as_flat_base_diamond():
+    theme = THEMES["github-light"]
+    human_only = DayCell("2026-07-14", (), 3, 0)
+    none_svg = _day_cell_svg(None, 100, 100, theme)
+    human_svg = _day_cell_svg(human_only, 100, 100, theme)
+    assert human_svg == none_svg
+
+
+def test_d4_wider_series_band_shows_only_its_own_84_day_slice():
+    # A 300-day-old AI day is valid under the D4 365-day contract but
+    # must not surface anywhere in the band (grid, desc, months).
+    old_date = "2025-09-17"  # 300 days before 2026-07-14
+    daily = (
+        DayCell(old_date, (DayCount(provider="anthropic", attributed_commits=5),), 5, 5),
+    ) + _MAIN_DAILY
+    stats = dataclasses.replace(FIXTURE_MAIN, daily=daily)
+    svg = render_summary(stats, THEMES["github-light"])
+    assert old_date not in svg
+    assert "2026-04-22 to 2026-07-14" in svg  # window still newest-anchored

@@ -25,7 +25,19 @@ Code、Codex、Cursor、Copilot、Aider 等)——正規化為統一的事件格
   <img alt="以合成資料渲染的 AI 協作摘要卡片範例" src="docs/assets/summary-sample-light.svg">
 </picture>
 
-範例由合成的展示用 fixture 渲染;不含任何真實 repo 資料。
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/heatmap-sample-dark.svg">
+  <img alt="協作比例 heatmap 範例:深淺是當天總 commit 數(含你自己的),色相是當天的 AI 協作占比" src="docs/assets/heatmap-sample-light.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-sample-dark.svg">
+  <img alt="AI 協作占比徽章,由 git 溯源驗證" src="docs/assets/badge-sample-light.svg">
+</picture>
+
+範例由合成的展示用 fixture 渲染;不含任何真實 repo 資料。heatmap 是
+其他工具畫不出來的視角:深淺是你完整的 commit 節奏(包含你自己寫
+的),色相是每天有多少是 AI 協作。
 
 它**不是** AI 程式碼偵測器:絕不從程式碼風格推測任何事。沒有顯式
 證據的 commit 誠實地標為 `unknown`——不會被默默算成人寫的,也不會
@@ -70,7 +82,8 @@ aiprofile init            # 在你自己的 repo 裡面執行——身分種子�
                           #   該 repo 的 git config user.email
 aiprofile scan ~/my/repo  # 註冊並掃描(換成真實路徑;預設即隱私安全)
 aiprofile aggregate       # 印出將發布的統計 = 隱私預覽
-aiprofile render          # 寫出 dist/summary-{light,dark}.svg + profile.json
+aiprofile render          # 寫出 dist/:summary + heatmap + badge 三組
+                          #   SVG(light/dark)+ profile.json
 ```
 
 同一個輸出目錄**一次只跑一個 `render`**——並行渲染進同一目錄不受

@@ -44,7 +44,11 @@ def test_partial_failure_leaves_previous_generation_intact(tmp_path, monkeypatch
 
     monkeypatch.setattr(export_mod, "dumps_stats", boom)
     with pytest.raises((RenderError, RuntimeError)):
-        export_mod.write_outputs(object(), "NEW-LIGHT", "NEW-DARK", out)
+        export_mod.write_outputs(
+            object(),
+            {"summary-light.svg": "NEW-LIGHT", "summary-dark.svg": "NEW-DARK"},
+            out,
+        )
 
     assert (out / "summary-light.svg").read_text(encoding="utf-8") == "OLD-LIGHT"
     assert (out / "summary-dark.svg").read_text(encoding="utf-8") == "OLD-DARK"
@@ -78,7 +82,11 @@ def test_replacement_stage_failure_rolls_back_previous_generation(tmp_path, monk
 
     monkeypatch.setattr(export_mod.os, "replace", flaky_replace)
     with pytest.raises(RenderError):
-        export_mod.write_outputs(stats, "NEW-LIGHT", "NEW-DARK", out)
+        export_mod.write_outputs(
+            stats,
+            {"summary-light.svg": "NEW-LIGHT", "summary-dark.svg": "NEW-DARK"},
+            out,
+        )
     assert calls["n"] >= 1, "the injected failure point was never reached"
 
     assert (out / "summary-light.svg").read_text(encoding="utf-8") == "OLD-LIGHT"
@@ -105,7 +113,11 @@ def test_first_ever_render_failure_publishes_nothing(tmp_path, monkeypatch):
 
     monkeypatch.setattr(export_mod.os, "replace", flaky_replace)
     with pytest.raises(RenderError):
-        export_mod.write_outputs(stats, "NEW-LIGHT", "NEW-DARK", out)
+        export_mod.write_outputs(
+            stats,
+            {"summary-light.svg": "NEW-LIGHT", "summary-dark.svg": "NEW-DARK"},
+            out,
+        )
 
     leftovers = sorted(p.name for p in out.iterdir()) if out.exists() else []
     assert leftovers == [], leftovers
@@ -121,7 +133,11 @@ def test_m6_preexisting_user_backup_sentinel_survives(tmp_path):
     sentinel = out / "summary-light.svg.bak"
     sentinel.write_text("USER-SENTINEL", encoding="utf-8")
 
-    export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+    export_mod.write_outputs(
+        _zero_stats(),
+        {"summary-light.svg": "NEW-L", "summary-dark.svg": "NEW-D"},
+        out,
+    )
 
     assert sentinel.read_text(encoding="utf-8") == "USER-SENTINEL"
     assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"
@@ -157,7 +173,11 @@ def test_m3_restore_failure_still_restores_remaining_assets(tmp_path, monkeypatc
 
     monkeypatch.setattr(export_mod.os, "replace", flaky_replace)
     with pytest.raises(RenderError):
-        export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+        export_mod.write_outputs(
+            _zero_stats(),
+            {"summary-light.svg": "NEW-L", "summary-dark.svg": "NEW-D"},
+            out,
+        )
 
     # dark restored despite light's restore failing:
     assert (out / "summary-dark.svg").read_text(encoding="utf-8") == "OLD-DARK"
@@ -186,9 +206,14 @@ def test_l1_cleanup_failure_does_not_report_publication_failure(tmp_path, monkey
         return real_unlink(self, missing_ok=missing_ok)
 
     monkeypatch.setattr(_P, "unlink", flaky_unlink)
-    paths = export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+    paths = export_mod.write_outputs(
+        _zero_stats(),
+        {"summary-light.svg": "NEW-L", "summary-dark.svg": "NEW-D"},
+        out,
+    )
+    # D4: bundle order is sorted-by-name (deterministic), json last.
     assert [p.name for p in paths] == [
-        "summary-light.svg", "summary-dark.svg", "profile.json"
+        "summary-dark.svg", "summary-light.svg", "profile.json"
     ]
     assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"
 
@@ -226,14 +251,22 @@ def test_m02_attempt_scoped_names_protect_recovery_data_within_process(
 
     monkeypatch.setattr(export_mod.os, "replace", flaky_replace)
     with pytest.raises(RenderError):
-        export_mod.write_outputs(_zero_stats(), "NEW-L1", "NEW-D1", out)
+        export_mod.write_outputs(
+            _zero_stats(),
+            {"summary-light.svg": "NEW-L1", "summary-dark.svg": "NEW-D1"},
+            out,
+        )
 
     recovery = list(out.glob("summary-light.svg.*.bak"))
     assert len(recovery) == 1
     assert recovery[0].read_text(encoding="utf-8") == "OLD-LIGHT"
 
     inject["on"] = False
-    export_mod.write_outputs(_zero_stats(), "NEW-L2", "NEW-D2", out)
+    export_mod.write_outputs(
+        _zero_stats(),
+        {"summary-light.svg": "NEW-L2", "summary-dark.svg": "NEW-D2"},
+        out,
+    )
 
     # The second render owned its own artifacts: the first attempt's
     # recovery backup survives byte-identical.
@@ -254,26 +287,33 @@ def test_l01_failed_first_install_retraction_named_in_error(tmp_path, monkeypatc
 
     real_replace = os_mod.replace
 
+    # D4 bundle order is sorted-by-name: dark installs FIRST, so the
+    # install failure targets light (second) and the retraction failure
+    # targets dark (the already-installed first asset).
     def flaky_replace(src, dst):
-        if str(dst).endswith("summary-dark.svg") and ".tmp" in str(src):
+        if str(dst).endswith("summary-light.svg") and ".tmp" in str(src):
             raise OSError("install failure")
         return real_replace(src, dst)
 
     real_unlink = _P.unlink
 
     def flaky_unlink(self, missing_ok=False):
-        if str(self).endswith("summary-light.svg"):
+        if str(self).endswith("summary-dark.svg"):
             raise OSError("retraction failure")
         return real_unlink(self, missing_ok=missing_ok)
 
     monkeypatch.setattr(export_mod.os, "replace", flaky_replace)
     monkeypatch.setattr(_P, "unlink", flaky_unlink)
     with pytest.raises(RenderError) as err:
-        export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+        export_mod.write_outputs(
+            _zero_stats(),
+            {"summary-light.svg": "NEW-L", "summary-dark.svg": "NEW-D"},
+            out,
+        )
 
-    assert "summary-light.svg" in str(err.value)
+    assert "summary-dark.svg" in str(err.value)
     # the partial asset really is still published:
-    assert (out / "summary-light.svg").read_text(encoding="utf-8") == "NEW-L"
+    assert (out / "summary-dark.svg").read_text(encoding="utf-8") == "NEW-D"
 
 
 def test_gate6_stale_debris_from_pid_reuse_never_clobbered(tmp_path, monkeypatch):
@@ -297,7 +337,11 @@ def test_gate6_stale_debris_from_pid_reuse_never_clobbered(tmp_path, monkeypatch
     # New process, same pid: counter restarts at 1.
     monkeypatch.setattr(export_mod, "_ATTEMPT_IDS", itertools.count(1))
 
-    export_mod.write_outputs(_zero_stats(), "NEW-L", "NEW-D", out)
+    export_mod.write_outputs(
+        _zero_stats(),
+        {"summary-light.svg": "NEW-L", "summary-dark.svg": "NEW-D"},
+        out,
+    )
 
     assert stale_bak.exists(), "pid-reuse render consumed the recovery artifact"
     assert stale_bak.read_text(encoding="utf-8") == "RECOVERY-ONLY-COPY"

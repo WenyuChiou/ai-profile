@@ -214,6 +214,70 @@ class DailyProviderRow:
                                 # provider on this date in this repository
 
 
+@dataclass(frozen=True)
+class DailyTotalsRow:
+    """Per (repository, author-date) WHOLE-rhythm commit totals (round D4,
+    `.ai/round_d4_heatmap_spec.md`): every stored commit counts toward
+    total_commits — the owner's human-only and unknown commits included,
+    which is the round's entire point — and the distinct ai/mixed subset
+    toward ai_commits.
+
+    Policy-free, like every row this module returns (architecture.md
+    section 7): every repository in the database is represented here.
+    The publishable-only filter is privacy.py's job.
+    """
+
+    repository_uid: str
+    date: str            # "YYYY-MM-DD" -- commits.author_date[:10], verbatim
+    total_commits: int   # COUNT(DISTINCT commit) on this date, all actor types
+    ai_commits: int      # COUNT(DISTINCT commit) with >=1 ai/mixed event
+
+
+def compute_daily_commit_totals(conn: sqlite3.Connection) -> tuple[DailyTotalsRow, ...]:
+    """Per (repository_uid, date) whole-rhythm totals (round D4).
+
+    Contract:
+    - total_commits counts DISTINCT stored commits by author date. The
+      commits table holds every kept commit (scanner.py emits an UNKNOWN
+      event for evidence-less commits, so storage is never AI-filtered),
+      which makes this the owner's whole working rhythm.
+    - ai_commits counts the DISTINCT subset with >=1 event of actor_type
+      in {ai, mixed} — the same schema.md section 15 AI definition
+      compute_daily_provider_counts uses (maintainer ruling, D2).
+    - date is commits.author_date[:10] verbatim — the author's own
+      calendar day, never offset-converted (same divergence-note rule as
+      the provider series; substr, not SQLite date()).
+    - Read-only, policy-free, every repository represented.
+    - Refuses unsupported schema versions like every other reader here
+      (ADR-012; same events-table exposure).
+    - Ordering: strictly ascending (date, repository_uid).
+    """
+    _check_schema_versions(conn)
+
+    rows = conn.execute(
+        "SELECT r.repository_uid AS repository_uid,"
+        " substr(c.author_date, 1, 10) AS date,"
+        " COUNT(DISTINCT c.id) AS total_commits,"
+        " COUNT(DISTINCT CASE WHEN e.actor_type IN ('ai', 'mixed')"
+        "   THEN e.commit_id END) AS ai_commits"
+        " FROM commits c"
+        " JOIN repositories r ON r.id = c.repository_id"
+        " LEFT JOIN events e ON e.commit_id = c.id"
+        " GROUP BY r.repository_uid, substr(c.author_date, 1, 10)"
+        " ORDER BY date, r.repository_uid"
+    ).fetchall()
+
+    return tuple(
+        DailyTotalsRow(
+            repository_uid=row["repository_uid"],
+            date=row["date"],
+            total_commits=row["total_commits"],
+            ai_commits=row["ai_commits"],
+        )
+        for row in rows
+    )
+
+
 def compute_daily_provider_counts(conn: sqlite3.Connection) -> tuple[DailyProviderRow, ...]:
     """Per (repository_uid, date, provider) attributed-commit counts for
     AI actor events (round D2 spec, .ai/round_d2_isometric_calendar_spec.md).

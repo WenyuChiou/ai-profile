@@ -15,8 +15,9 @@ disagree, docs win and the code is the bug.
 - `python -m ruff check src tests` — clean.
 - Privacy invariants are test-enforced; anything weakening `VizStats`
   structural redaction needs its own ADR. Snapshot/sample regeneration
-  only via the single sanctioned command
-  `python tests/unit/test_render_summary.py` (byte-drift guarded).
+  only via the sanctioned per-family commands (byte-drift guarded):
+  `python tests/unit/test_render_summary.py` (summary family) and
+  `python tests/unit/test_heatmap_svg.py` (heatmap/badge family, D4).
 - Contract changes need an ADR under `docs/decisions/` + schema bump.
 
 ## Collaboration contract (Fable ↔ Codex gate loop)
@@ -113,6 +114,14 @@ paragraph, so a blank line silently drops every group above it
 (verified empirically 2026-07-21: the blank-line form lost the entire
 Anthropic group). The repeated `AI-Provider:` key alone is the group
 separator.
+
+AND a blank line BEFORE the block — the trailer paragraph must be
+separated from the body prose, or git rejects the whole paragraph as
+non-trailers (too many non-trailer lines in it). Found by dogfooding
+2026-07-23: commits ea5f37d / d2c1147 / 66bc3e9 glued their trailer
+block to the preceding body line and scan as `unknown` forever (pushed
+history is never rewritten here — this note is the erratum). The two
+rules together: blank line before the block, no blank line inside it.
 
 Honesty rules: only list actors that actually touched the commit;
 `AI-Reviewed-By: Human` only when a human actually read the diff

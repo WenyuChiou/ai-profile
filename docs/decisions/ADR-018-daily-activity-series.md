@@ -63,3 +63,25 @@ out directly).
 - Renderer omission on empty series keeps pre-D2 cards byte-identical.
 - Future finer policy (per-repo calendar opt-out separate from `full`)
   would extend config vocabulary, not this boundary.
+
+## Addendum (round D4, 2026-07-23): window 84 → 365 + whole-rhythm totals
+
+ADR-020's heatmap needs a year of context and per-day totals that
+include the owner's own human commits. Two changes to this ADR's
+contract, same privacy posture:
+
+1. `DAILY_WINDOW_DAYS` widens 84 → 365. Wider bounded window, still a
+   hard contract bound, still trimmed clock-free at the newest
+   publishable date. More date disclosure than the original 12 weeks —
+   explicitly accepted by the owner's heatmap ask, and still limited to
+   repositories the owner marked explicitly publishable.
+2. `DayCell` carries `total_commits`/`ai_commits` (ADR-020 records the
+   shape and validation). Publishing per-day totals discloses
+   human-activity VOLUME for publishable repositories — a new,
+   deliberate disclosure of the same publishable-only population;
+   aggregate-only repositories continue to contribute no dates and no
+   totals, enforced at the same single chokepoint and canary-swept
+   end-to-end across every published asset.
+
+The D2 isometric band is unchanged in meaning: it draws only its own
+newest-anchored 84-day slice of the wider series, AI activity only.

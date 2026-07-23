@@ -48,10 +48,25 @@ def _transaction_suffix(out_dir: Path, names: list[str]) -> str:
             return suffix
 
 
-def write_outputs(
-    stats: VizStats, svg_light: str, svg_dark: str, out_dir: Path
-) -> list[Path]:
-    """Write summary-light.svg, summary-dark.svg, profile.json as ONE
+#: Exact SVG filenames the bundle may publish (round D4 widened the set
+#: from the summary pair to the three-card family). A closed allowlist,
+#: not a pattern: the bundle writes into a user directory, so an
+#: unexpected name is a caller bug worth failing loudly on.
+_ALLOWED_SVG_NAMES = frozenset(
+    {
+        "summary-light.svg",
+        "summary-dark.svg",
+        "heatmap-light.svg",
+        "heatmap-dark.svg",
+        "badge-light.svg",
+        "badge-dark.svg",
+    }
+)
+
+
+def write_outputs(stats: VizStats, svgs: dict[str, str], out_dir: Path) -> list[Path]:
+    """Write the SVG assets in ``svgs`` (filename -> markup, names from
+    the closed ``_ALLOWED_SVG_NAMES`` set) plus profile.json as ONE
     bundle (gate M-07): every asset goes to a same-directory temp file
     first, and targets are replaced only after the whole bundle rendered.
 
@@ -72,7 +87,7 @@ def write_outputs(
     is additionally probed against the output directory and created
     exclusively, so even a REUSED pid whose counter replays a dead
     process's numbers skips that process's surviving recovery artifacts
-    (gate-6 M-01). The three
+    (gate-6 M-01). The
     PUBLISHED targets carry no such protection: they are replaced
     independently with no directory lock, so concurrent publication into
     one output directory is NOT SUPPORTED — overlapping writers can
@@ -86,13 +101,15 @@ def write_outputs(
     tmp_paths: list[Path] = []
     backups: list[tuple[Path, Path]] = []  # (target, backup) of moved-aside olds
     completed: list[Path] = []  # targets already replaced with new content
+    unexpected = sorted(set(svgs) - _ALLOWED_SVG_NAMES)
+    if unexpected:
+        raise RenderError(
+            f"refusing to publish unexpected asset name(s): {', '.join(unexpected)}"
+        )
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
-        targets = [
-            (out_dir / "summary-light.svg", svg_light),
-            (out_dir / "summary-dark.svg", svg_dark),
-            (out_dir / "profile.json", dumps_stats(stats)),
-        ]
+        targets = [(out_dir / name, content) for name, content in sorted(svgs.items())]
+        targets.append((out_dir / "profile.json", dumps_stats(stats)))
         suffix = _transaction_suffix(out_dir, [p.name for p, _ in targets])
         for path, content in targets:
             tmp = path.with_name(path.name + suffix + ".tmp")

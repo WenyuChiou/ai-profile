@@ -435,7 +435,14 @@ def _calendar_desc_suffix(stats: VizStats) -> str:
         return ""
     newest = datetime.date.fromisoformat(stats.daily[-1].date)
     window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
-    peak = max(sum(dc.attributed_commits for dc in cell.counts) for cell in stats.daily)
+    # Peak over the band's OWN 84-day slice only: since D4 widened the
+    # series to 365 days, an out-of-window day must not leak into this
+    # window-scoped claim.
+    peak = max(
+        sum(dc.attributed_commits for dc in cell.counts)
+        for cell in stats.daily
+        if cell.date >= window_start.isoformat()
+    )
     return (
         f" Daily activity calendar {window_start.isoformat()} to {newest.isoformat()},"
         f" peak day {peak} attributed commits."
@@ -796,7 +803,12 @@ def _day_cell_svg(cell: DayCell | None, cx: int, cy: int, theme: Theme) -> str:
     segment can drift or go negative; rounding the running prefix keeps
     every layer >= 0px and the layers sum exactly to the column height.
     """
-    if cell is None:
+    if cell is None or not cell.counts:
+        # No data for this day - or a D4 human-only day (ai_commits == 0,
+        # empty counts): the BAND charts AI collaboration specifically,
+        # so a day with commits but zero AI renders exactly like a
+        # zero-activity day here (the whole-rhythm view is the heatmap
+        # card's job, not this band's).
         top, right, bottom, left = _iso_tile_corners(cx, cy, 0)
         return _polygon((top, right, bottom, left), fill=theme.bar_track)
 

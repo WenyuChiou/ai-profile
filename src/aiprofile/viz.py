@@ -38,11 +38,13 @@ V01_PERIOD_LABEL = "All time"
 #: date.fromisoformat + round-trip.
 _DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
-#: Maximum span of the daily activity series (round D2, ADR-018): the
-#: calendar publishes at most 12 weeks of publishable-repo activity.
-#: A hard contract bound, not a renderer preference — a validated
-#: instance cannot carry an unbounded activity history.
-DAILY_WINDOW_DAYS = 84
+#: Maximum span of the daily activity series (round D2, ADR-018; widened
+#: 84 → 365 by round D4's heatmap, ADR-018 addendum): the series
+#: publishes at most a year of publishable-repo activity. A hard
+#: contract bound, not a renderer preference — a validated instance
+#: cannot carry an unbounded activity history. (The isometric band
+#: renders only its own last-84-day slice of this series.)
+DAILY_WINDOW_DAYS = 365
 
 
 @dataclass(frozen=True)
@@ -105,8 +107,16 @@ class DayCell:
     # One calendar day of the publishable-only activity series
     # (ADR-018): dates from repositories the owner explicitly marked
     # publishable — aggregate-only repositories NEVER contribute here.
+    # Round D4 (.ai/round_d4_heatmap_spec.md) adds the day's WHOLE
+    # rhythm: total_commits counts every commit the owner authored that
+    # day (human-only included — the heatmap's intensity axis), and
+    # ai_commits counts the distinct AI/mixed subset (the hue axis).
     date: str                        # YYYY-MM-DD, generated_on-class rules
-    counts: tuple[DayCount, ...]     # non-empty, slug-ascending, unique
+    counts: tuple[DayCount, ...]     # slug-ascending, unique; empty IFF
+    #                                  ai_commits == 0 (human-only day)
+    total_commits: int               # all actors; strictly positive
+    ai_commits: int                  # distinct ai/mixed commits;
+    #                                  0 <= ai_commits <= total_commits
 
 
 @dataclass(frozen=True)
@@ -349,8 +359,48 @@ def _validate(s: VizStats) -> None:
         if type(cell.date) is not str:
             raise RenderError("VizStats: day cell date must be exact str")
         _require_canonical_date(cell.date, "daily date")
-        if not cell.counts:
-            raise RenderError("VizStats: a day cell must carry at least one count")
+        # ---- Round D4 whole-rhythm fields (.ai/round_d4_heatmap_spec.md):
+        # exact ints, total strictly positive (a cell exists only for
+        # days with commits), 0 <= ai_commits <= total_commits.
+        if type(cell.total_commits) is not int or cell.total_commits < 1:
+            raise RenderError(
+                "VizStats: day cell total_commits must be exact int and"
+                " strictly positive - zero-commit days are omitted, not stored"
+            )
+        if type(cell.ai_commits) is not int or cell.ai_commits < 0:
+            raise RenderError(
+                "VizStats: day cell ai_commits must be exact int and non-negative"
+            )
+        if cell.ai_commits > cell.total_commits:
+            raise RenderError(
+                "VizStats: day cell ai_commits cannot exceed total_commits -"
+                " the AI subset cannot be larger than the day's whole"
+            )
+        # counts is the per-provider breakdown of ai_commits: empty IFF
+        # the day had zero AI commits (human-only day). When present,
+        # each provider's distinct-commit count is a subset of the day's
+        # distinct AI commits (count <= ai_commits), and every AI commit
+        # surfaces in >=1 count (ai_commits <= sum).
+        if cell.ai_commits == 0 and cell.counts:
+            raise RenderError(
+                "VizStats: day cell counts must be empty when ai_commits is 0"
+            )
+        if cell.ai_commits > 0 and not cell.counts:
+            raise RenderError(
+                "VizStats: day cell counts must be non-empty when ai_commits > 0"
+                " - an AI count with no provider breakdown cannot be cross-checked"
+            )
+        if cell.counts:
+            if max(dc.attributed_commits for dc in cell.counts) > cell.ai_commits:
+                raise RenderError(
+                    "VizStats: a day cell provider count exceeds ai_commits -"
+                    " each provider's commits are a subset of the day's AI commits"
+                )
+            if cell.ai_commits > sum(dc.attributed_commits for dc in cell.counts):
+                raise RenderError(
+                    "VizStats: day cell ai_commits exceeds the sum of its provider"
+                    " counts - every AI commit carries at least one provider presence"
+                )
         slugs = [dc.provider for dc in cell.counts]
         if slugs != sorted(slugs) or len(set(slugs)) != len(slugs):
             raise RenderError(
@@ -369,7 +419,7 @@ def _validate(s: VizStats) -> None:
         if span >= DAILY_WINDOW_DAYS or len(s.daily) > DAILY_WINDOW_DAYS:
             raise RenderError(
                 f"VizStats.daily must span fewer than {DAILY_WINDOW_DAYS} days"
-                " (ADR-018 window bound)"
+                " (ADR-018 window bound, widened by the D4 addendum)"
             )
         row_totals = {p.provider: p.attributed_commits for p in s.providers}
         daily_totals: dict[str, int] = {}
@@ -471,6 +521,9 @@ def to_json_dict(s: VizStats) -> dict:
                     }
                     for dc in cell.counts
                 ],
+                # Round D4 whole-rhythm fields (additive; heatmap axes).
+                "total_commits": cell.total_commits,
+                "ai_commits": cell.ai_commits,
             }
             for cell in s.daily
         ],

@@ -612,3 +612,136 @@ def test_daily_unsupported_schema_version_raises_storage_error(conn):
 
 def test_daily_empty_database_returns_empty_tuple(conn):
     assert compute_daily_provider_counts(conn) == ()
+
+
+# ---------------------------------------------------------------------------
+# Round D4 (.ai/round_d4_heatmap_spec.md): per-day WHOLE-rhythm totals -
+# every stored commit counts toward total_commits (the owner's human-only
+# and unknown commits included), the distinct ai/mixed subset toward
+# ai_commits. Policy-free like every other row this module returns.
+# Written RED-FIRST against compute_daily_commit_totals landing.
+# ---------------------------------------------------------------------------
+
+from aiprofile.aggregate import compute_daily_commit_totals  # noqa: E402
+
+
+def _totals_rows(conn, uid):
+    return [r for r in compute_daily_commit_totals(conn) if r.repository_uid == uid]
+
+
+def test_d4_totals_count_unknown_only_commits(conn):
+    # One AI commit + one evidence-less (unknown) commit, same day:
+    # total=2, ai=1. The unknown commit is exactly the owner's "include
+    # my own commits" case.
+    uid = "repo-d4-unknown"
+    ts = "2026-06-10T08:00:00+00:00"
+    sha_ai, sha_unknown = _sha(70), _sha(71)
+    _scan(conn, repository_uid=uid, commits=[
+        CommitEvents(sha_ai, "d@e.com", ts,
+                     [_ai_event(repository_uid=uid, commit_sha=sha_ai, timestamp=ts)]),
+        CommitEvents(sha_unknown, "d@e.com", ts,
+                     [_unknown_event(repository_uid=uid, commit_sha=sha_unknown, timestamp=ts)]),
+    ])
+    rows = _totals_rows(conn, uid)
+    assert len(rows) == 1
+    assert rows[0].date == "2026-06-10"
+    assert rows[0].total_commits == 2
+    assert rows[0].ai_commits == 1
+
+
+def test_d4_totals_human_only_day(conn):
+    uid = "repo-d4-human"
+    ts = "2026-06-11T09:00:00+00:00"
+    sha = _sha(72)
+    _scan(conn, repository_uid=uid, commits=[
+        CommitEvents(sha, "d@e.com", ts,
+                     [_human_event(repository_uid=uid, commit_sha=sha, timestamp=ts)]),
+    ])
+    rows = _totals_rows(conn, uid)
+    assert len(rows) == 1
+    assert rows[0].total_commits == 1
+    assert rows[0].ai_commits == 0
+
+
+def test_d4_totals_multi_provider_commit_counts_once(conn):
+    # One commit, two providers: distinct-commit semantics -> ai=1.
+    uid = "repo-d4-multi"
+    ts = "2026-06-12T10:00:00+00:00"
+    sha = _sha(73)
+    _scan(conn, repository_uid=uid, commits=[
+        CommitEvents(sha, "d@e.com", ts, [
+            _ai_event(repository_uid=uid, commit_sha=sha, timestamp=ts),
+            _ai_event(repository_uid=uid, commit_sha=sha, timestamp=ts,
+                      provider="openai", provider_raw="OpenAI",
+                      tool="codex-cli", tool_raw="Codex CLI"),
+        ]),
+    ])
+    rows = _totals_rows(conn, uid)
+    assert rows[0].total_commits == 1
+    assert rows[0].ai_commits == 1
+
+
+def test_d4_totals_mixed_counts_as_ai(conn):
+    # Same maintainer ruling as compute_daily_provider_counts: {ai, mixed}.
+    uid = "repo-d4-mixed"
+    ts = "2026-06-13T11:00:00+00:00"
+    sha = _sha(74)
+    ev = build_event(
+        actor_type=ActorType.MIXED,
+        repository_uid=uid,
+        commit_sha=sha,
+        timestamp=ts,
+        provider="anthropic",
+        provider_raw="Anthropic",
+        tool="claude-code",
+        tool_raw="Claude Code",
+        sources=[ProvenanceSource(SourceType.GIT_TRAILER, EvidenceLevel.DECLARED, "ai-provider")],
+    )
+    _scan(conn, repository_uid=uid, commits=[CommitEvents(sha, "d@e.com", ts, [ev])])
+    rows = _totals_rows(conn, uid)
+    assert rows[0].ai_commits == 1
+
+
+def test_d4_totals_date_slices_author_date_without_tz_conversion(conn):
+    # Same [:10]-slice convention as the provider series: a +11:00-offset
+    # evening timestamp stays on the author's own calendar day.
+    uid = "repo-d4-tz"
+    ts = "2026-06-14T23:30:00+11:00"
+    sha = _sha(75)
+    _scan(conn, repository_uid=uid, commits=[
+        CommitEvents(sha, "d@e.com", ts,
+                     [_unknown_event(repository_uid=uid, commit_sha=sha, timestamp=ts)]),
+    ])
+    rows = _totals_rows(conn, uid)
+    assert rows[0].date == "2026-06-14"
+
+
+def test_d4_totals_policy_free_and_ordered(conn):
+    # Every repository is represented (policy is privacy.py's job) and
+    # ordering is (date, repository_uid) ascending.
+    ts1, ts2 = "2026-06-15T08:00:00+00:00", "2026-06-16T08:00:00+00:00"
+    for uid, n, ts in (("repo-d4-b", 76, ts2), ("repo-d4-a", 77, ts1)):
+        sha = _sha(n)
+        _scan(conn, repository_uid=uid, commits=[
+            CommitEvents(sha, "d@e.com", ts,
+                         [_unknown_event(repository_uid=uid, commit_sha=sha, timestamp=ts)]),
+        ])
+    rows = [r for r in compute_daily_commit_totals(conn)
+            if r.repository_uid in ("repo-d4-a", "repo-d4-b")]
+    assert [(r.date, r.repository_uid) for r in rows] == [
+        ("2026-06-15", "repo-d4-a"),
+        ("2026-06-16", "repo-d4-b"),
+    ]
+
+
+def test_d4_totals_unsupported_schema_version_raises_storage_error(conn):
+    uid = "repo-d4-schema"
+    ts = "2026-06-17T08:00:00+00:00"
+    sha = _sha(78)
+    _scan(conn, repository_uid=uid, commits=[
+        CommitEvents(sha, "d@e.com", ts,
+                     [_ai_event(repository_uid=uid, commit_sha=sha, timestamp=ts)]),
+    ])
+    conn.execute("UPDATE events SET schema_version = '9.9.0'")
+    with pytest.raises(StorageError):
+        compute_daily_commit_totals(conn)

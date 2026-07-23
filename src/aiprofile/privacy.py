@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime
 
 from . import ACE_SCHEMA_VERSION
-from .aggregate import DailyProviderRow, RepoAggregates
+from .aggregate import DailyProviderRow, DailyTotalsRow, RepoAggregates
 from .config import Config, resolve_publication_levels
 from .registry import provider_display
 from .schema.vocab import (
@@ -42,9 +42,11 @@ _PRIVATE_LEVELS = (
 
 def _build_daily(
     daily_rows: tuple[DailyProviderRow, ...],
+    totals_rows: tuple[DailyTotalsRow, ...],
     levels: dict[str, PublicationLevel],
 ) -> tuple[DayCell, ...]:
-    """Publishable-only daily series (round D2, ADR-018).
+    """Publishable-only daily series (round D2, ADR-018; round D4 adds the
+    whole-rhythm totals, `.ai/round_d4_heatmap_spec.md`).
 
     Policy applied HERE, at the single chokepoint: only repositories whose
     effective level is FULL ("explicitly publishable") contribute -
@@ -54,6 +56,14 @@ def _build_daily(
     merge across repositories, and the series is trimmed to the contract
     window (the last DAILY_WINDOW_DAYS ending at the newest publishable
     date - never "today"; the builder stays clock-free).
+
+    D4: total_commits/ai_commits come ONLY from totals_rows (distinct-
+    commit semantics cannot be derived from per-provider counts, which
+    overlap on multi-AI commits), summed across FULL repositories per
+    date. Human-only days (totals with zero AI) are real cells with empty
+    counts. A date with provider rows but no totals row is structurally
+    impossible when both inputs come from one database - raise, never
+    fabricate and never silently drop.
     """
     merged: dict[str, dict[str, int]] = {}
     for row in daily_rows:
@@ -69,20 +79,40 @@ def _build_daily(
         per_day = merged.setdefault(row.date, {})
         per_day[slug] = per_day.get(slug, 0) + row.attributed_commits
 
-    if not merged:
+    rhythm: dict[str, tuple[int, int]] = {}
+    for trow in totals_rows:
+        if levels.get(trow.repository_uid, PublicationLevel.EXCLUDED) is not (
+            PublicationLevel.FULL
+        ):
+            continue
+        total, ai = rhythm.get(trow.date, (0, 0))
+        rhythm[trow.date] = (total + trow.total_commits, ai + trow.ai_commits)
+
+    missing = sorted(set(merged) - set(rhythm))
+    if missing:
+        raise ValueError(
+            "daily provider rows exist without matching whole-rhythm totals"
+            f" for date(s) {missing} - both series come from the same"
+            " database, so this indicates a caller bug; refusing to"
+            " fabricate totals"
+        )
+
+    if not rhythm:
         return ()
 
-    newest = max(datetime.date.fromisoformat(d) for d in merged)
+    newest = max(datetime.date.fromisoformat(d) for d in rhythm)
     cutoff = (newest - datetime.timedelta(days=DAILY_WINDOW_DAYS - 1)).isoformat()
     return tuple(
         DayCell(
             date=day,
             counts=tuple(
                 DayCount(provider=slug, attributed_commits=count)
-                for slug, count in sorted(merged[day].items())
+                for slug, count in sorted(merged.get(day, {}).items())
             ),
+            total_commits=rhythm[day][0],
+            ai_commits=rhythm[day][1],
         )
-        for day in sorted(merged)
+        for day in sorted(rhythm)
         if day >= cutoff
     )
 
@@ -92,6 +122,7 @@ def build_viz_stats(
     cfg: Config,
     generated_on: str,
     daily_rows: tuple[DailyProviderRow, ...] = (),
+    totals_rows: tuple[DailyTotalsRow, ...] = (),
 ) -> VizStats:
     """Apply publication policy and strip identity (architecture.md section 3):
 
@@ -194,7 +225,7 @@ def build_viz_stats(
             includes_anonymous_aggregate=private_commits > 0,
         ),
         generated_on=generated_on,
-        daily=_build_daily(daily_rows, levels),
+        daily=_build_daily(daily_rows, totals_rows, levels),
     )
 
 

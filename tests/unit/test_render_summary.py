@@ -101,8 +101,10 @@ _POPULATED_PROVIDERS = (
 # ---------------------------------------------------------------------------
 
 _POPULATED_DAILY = (
-    DayCell(date="2026-04-22", counts=(DayCount(provider="amazon", attributed_commits=2),)),
-    DayCell(date="2026-05-15", counts=(DayCount(provider="anthropic", attributed_commits=3),)),
+    DayCell(date="2026-04-22", counts=(DayCount(provider="amazon", attributed_commits=2),),
+            total_commits=3, ai_commits=2),
+    DayCell(date="2026-05-15", counts=(DayCount(provider="anthropic", attributed_commits=3),),
+            total_commits=3, ai_commits=3),
     DayCell(
         date="2026-06-04",
         counts=(
@@ -110,14 +112,19 @@ _POPULATED_DAILY = (
             DayCount(provider="google", attributed_commits=2),
             DayCount(provider=UNRECOGNIZED_PROVIDER, attributed_commits=1),
         ),
+        total_commits=8,
+        ai_commits=7,
     ),
-    DayCell(date="2026-07-04", counts=(DayCount(provider="anthropic", attributed_commits=10),)),
+    DayCell(date="2026-07-04", counts=(DayCount(provider="anthropic", attributed_commits=10),),
+            total_commits=12, ai_commits=10),
     DayCell(
         date="2026-07-14",
         counts=(
             DayCount(provider="amazon", attributed_commits=3),
             DayCount(provider="anthropic", attributed_commits=5),
         ),
+        total_commits=8,
+        ai_commits=8,
     ),
 )
 

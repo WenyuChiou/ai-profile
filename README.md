@@ -25,7 +25,20 @@ SVG cards + a JSON summary you can embed in a GitHub Profile README.
   <img alt="Sample AI collaboration summary card rendered from synthetic data" src="docs/assets/summary-sample-light.svg">
 </picture>
 
-Sample rendered from a synthetic showcase fixture; no real repository data.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/heatmap-sample-dark.svg">
+  <img alt="Sample collaboration heatmap: intensity is total commits including your own, hue is the day's AI share" src="docs/assets/heatmap-sample-light.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-sample-dark.svg">
+  <img alt="AI-assisted share badge, verified from git provenance" src="docs/assets/badge-sample-light.svg">
+</picture>
+
+Samples rendered from a synthetic showcase fixture; no real repository
+data. The heatmap is the view no other tool draws: intensity is your
+whole commit rhythm (your own commits included), hue is how much of
+each day was AI collaboration.
 
 It is **not** an AI code detector: nothing is ever inferred from code style.
 Commits without explicit evidence are honestly reported as `unknown` —
@@ -74,7 +87,8 @@ aiprofile init            # run from INSIDE one of your repos - seeds your
 aiprofile scan ~/my/repo  # register + scan (replace with a real path;
                           #   private-safe default)
 aiprofile aggregate       # print the published stats = privacy preview
-aiprofile render          # write dist/summary-{light,dark}.svg + profile.json
+aiprofile render          # write dist/: summary + heatmap + badge SVG
+                          #   pairs (light/dark) + profile.json
 ```
 
 Run **one `render` at a time per output directory** — concurrent renders

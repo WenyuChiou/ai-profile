@@ -27,6 +27,18 @@ below.
 
 ### Added
 
+- **Collaboration-ratio heatmap** (`heatmap-{light,dark}.svg`,
+  ADR-020): GitHub-style year grid where intensity = total commits
+  that day — your own human commits included — and hue = the day's
+  AI-collaboration share (five quantized bins, neutral → accent). The
+  daily series window widens to 365 days (ADR-018 addendum);
+  `profile.json` day cells gain `total_commits`/`ai_commits`
+  (additive).
+- **AI-collaboration badge** (`badge-{light,dark}.svg`): a small flat
+  shield — "AI-assisted | K% · verified by git" — using the summary
+  card's own headline share and rounding. `aiprofile render` now
+  writes all six SVG assets plus profile.json in one atomic bundle.
+
 - Provider brand marks for **OpenAI** and **Grok (xAI)**, vendored from
   a second icon source (lobe-icons, MIT, pinned commit) via
   `vendor_brand_icons.py --source lobe` — both render as proper glyph

@@ -281,8 +281,8 @@ from aiprofile.viz import DayCell, DayCount  # noqa: E402
 
 def _daily_ok():
     return (
-        DayCell("2026-07-14", (DayCount("anthropic", 2),)),
-        DayCell("2026-07-15", (DayCount("anthropic", 3),)),
+        DayCell("2026-07-14", (DayCount("anthropic", 2),), 3, 2),
+        DayCell("2026-07-15", (DayCount("anthropic", 3),), 3, 3),
     )
 
 
@@ -305,9 +305,11 @@ def test_daily_cell_must_be_exact_daycell():
     class FakeCell:
         date: str
         counts: tuple
+        total_commits: int
+        ai_commits: int
 
     with pytest.raises(RenderError):
-        _stats(daily=(FakeCell("2026-07-15", (DayCount("anthropic", 1),)),))
+        _stats(daily=(FakeCell("2026-07-15", (DayCount("anthropic", 1),), 1, 1),))
 
 
 def test_daily_count_must_be_exact_daycount():
@@ -317,25 +319,25 @@ def test_daily_count_must_be_exact_daycount():
         attributed_commits: int
 
     with pytest.raises(RenderError):
-        _stats(daily=(DayCell("2026-07-15", (FakeCount("anthropic", 1),)),))
+        _stats(daily=(DayCell("2026-07-15", (FakeCount("anthropic", 1),), 1, 1),))
 
 
 def test_daily_date_rejects_noncanonical_and_invalid():
     for bad in ("2026-7-15", "2026-99-99", "2026-07-15\n", "２026-07-15"):
         with pytest.raises(RenderError):
-            _stats(daily=(DayCell(bad, (DayCount("anthropic", 1),)),))
+            _stats(daily=(DayCell(bad, (DayCount("anthropic", 1),), 1, 1),))
 
 
 def test_daily_dates_must_ascend_without_duplicates():
     cells = (
-        DayCell("2026-07-15", (DayCount("anthropic", 1),)),
-        DayCell("2026-07-14", (DayCount("anthropic", 1),)),
+        DayCell("2026-07-15", (DayCount("anthropic", 1),), 1, 1),
+        DayCell("2026-07-14", (DayCount("anthropic", 1),), 1, 1),
     )
     with pytest.raises(RenderError):
         _stats(daily=cells)
     dup = (
-        DayCell("2026-07-15", (DayCount("anthropic", 1),)),
-        DayCell("2026-07-15", (DayCount("anthropic", 1),)),
+        DayCell("2026-07-15", (DayCount("anthropic", 1),), 1, 1),
+        DayCell("2026-07-15", (DayCount("anthropic", 1),), 1, 1),
     )
     with pytest.raises(RenderError):
         _stats(daily=dup)
@@ -343,7 +345,7 @@ def test_daily_dates_must_ascend_without_duplicates():
 
 def test_daily_counts_must_be_nonempty_sorted_unique():
     with pytest.raises(RenderError):
-        _stats(daily=(DayCell("2026-07-15", ()),))
+        _stats(daily=(DayCell("2026-07-15", (), 1, 1),))
     with pytest.raises(RenderError):
         _stats(
             providers=(
@@ -355,6 +357,8 @@ def test_daily_counts_must_be_nonempty_sorted_unique():
                 DayCell(
                     "2026-07-15",
                     (DayCount("openai", 1), DayCount("anthropic", 1)),
+                    2,
+                    2,
                 ),
             ),
         )
@@ -364,6 +368,8 @@ def test_daily_counts_must_be_nonempty_sorted_unique():
                 DayCell(
                     "2026-07-15",
                     (DayCount("anthropic", 1), DayCount("anthropic", 2)),
+                    3,
+                    3,
                 ),
             ),
         )
@@ -371,15 +377,15 @@ def test_daily_counts_must_be_nonempty_sorted_unique():
 
 def test_daily_count_must_be_positive_exact_int():
     with pytest.raises(RenderError):
-        _stats(daily=(DayCell("2026-07-15", (DayCount("anthropic", 0),)),))
+        _stats(daily=(DayCell("2026-07-15", (DayCount("anthropic", 0),), 1, 1),))
     with pytest.raises(RenderError):
-        _stats(daily=(DayCell("2026-07-15", (DayCount("anthropic", True),)),))
+        _stats(daily=(DayCell("2026-07-15", (DayCount("anthropic", True),), 1, 1),))
 
 
 def test_daily_slug_must_be_public_vocabulary():
     with pytest.raises(RenderError):
         _stats(
-            daily=(DayCell("2026-07-15", (DayCount("secret-org-name", 1),)),)
+            daily=(DayCell("2026-07-15", (DayCount("secret-org-name", 1),), 1, 1),)
         )
 
 
@@ -387,23 +393,26 @@ def test_daily_provider_must_appear_in_provider_rows():
     # A slug in daily that has no provider row cannot be a publishable
     # subset of anything - reject.
     with pytest.raises(RenderError):
-        _stats(daily=(DayCell("2026-07-15", (DayCount("cursor", 1),)),))
+        _stats(daily=(DayCell("2026-07-15", (DayCount("cursor", 1),), 1, 1),))
 
 
 def test_daily_per_provider_sum_cannot_exceed_provider_total():
     # anthropic row has attributed_commits=5; daily sums to 6 -> reject.
     cells = (
-        DayCell("2026-07-14", (DayCount("anthropic", 3),)),
-        DayCell("2026-07-15", (DayCount("anthropic", 3),)),
+        DayCell("2026-07-14", (DayCount("anthropic", 3),), 3, 3),
+        DayCell("2026-07-15", (DayCount("anthropic", 3),), 3, 3),
     )
     with pytest.raises(RenderError):
         _stats(daily=cells)
 
 
-def test_daily_window_bounded_to_84_days():
+def test_daily_window_bounded():
+    # D2 pinned 84 days; the D4 addendum widened the bound to 365 - a
+    # >=365-day span is still rejected (see test_d4_window_widens_to_365_days
+    # for the exact boundary pair).
     cells = (
-        DayCell("2026-01-01", (DayCount("anthropic", 1),)),
-        DayCell("2026-07-15", (DayCount("anthropic", 1),)),
+        DayCell("2024-01-01", (DayCount("anthropic", 1),), 1, 1),
+        DayCell("2026-07-15", (DayCount("anthropic", 1),), 1, 1),
     )
     with pytest.raises(RenderError):
         _stats(daily=cells)
@@ -413,3 +422,129 @@ def test_daily_appears_in_json_dump():
     s = _stats(daily=_daily_ok())
     out = dumps_stats(s)
     assert '"daily"' in out and '"2026-07-14"' in out
+
+
+# ---------------------------------------------------------------------------
+# Round D4 (.ai/round_d4_heatmap_spec.md): DayCell carries the day's WHOLE
+# rhythm - total_commits (all actors, the owner's own commits included)
+# and ai_commits (distinct AI/mixed commits) - and the window widens to
+# 365 days. Every rejection below written RED-FIRST against the fields
+# landing without their validation battery.
+# ---------------------------------------------------------------------------
+
+
+_D4_DEFAULT_COUNTS = (DayCount("anthropic", 2),)
+
+
+def _d4_cell(date="2026-07-15", counts=_D4_DEFAULT_COUNTS, total=3, ai=2):
+    return DayCell(date, counts, total, ai)
+
+
+def test_d4_valid_cell_with_totals_accepted():
+    s = _stats(daily=(_d4_cell(),))
+    assert s.daily[0].total_commits == 3
+    assert s.daily[0].ai_commits == 2
+
+
+def test_d4_human_only_day_accepted():
+    # The owner's explicit requirement: days with ONLY the user's own
+    # commits are real cells (neutral hue, nonzero intensity).
+    s = _stats(daily=(_d4_cell(counts=(), total=4, ai=0),))
+    assert s.daily[0].total_commits == 4
+    assert s.daily[0].ai_commits == 0
+    assert s.daily[0].counts == ()
+
+
+def test_d4_total_commits_must_be_positive_exact_int():
+    for bad in (0, -1, True, "3", 3.0, None):
+        with pytest.raises((RenderError, TypeError)):
+            _stats(daily=(_d4_cell(total=bad, ai=0, counts=()),))
+
+
+def test_d4_ai_commits_must_be_exact_nonnegative_int():
+    for bad in (-1, True, "2", 2.0, None):
+        with pytest.raises((RenderError, TypeError)):
+            _stats(daily=(_d4_cell(ai=bad),))
+
+
+def test_d4_ai_commits_cannot_exceed_total_commits():
+    with pytest.raises(RenderError, match="total"):
+        _stats(daily=(_d4_cell(total=2, ai=3, counts=(DayCount("anthropic", 3),)),))
+
+
+def test_d4_empty_counts_require_zero_ai():
+    # ai_commits > 0 with no provider breakdown would publish an AI count
+    # that cannot be cross-checked against the rows - reject.
+    with pytest.raises(RenderError, match="counts"):
+        _stats(daily=(_d4_cell(counts=(), total=2, ai=1),))
+
+
+def test_d4_nonempty_counts_require_positive_ai():
+    # A provider count on a day claimed to have zero AI commits is
+    # internally contradictory - reject.
+    with pytest.raises(RenderError, match="counts"):
+        _stats(daily=(_d4_cell(counts=(DayCount("anthropic", 1),), total=2, ai=0),))
+
+
+def test_d4_provider_count_cannot_exceed_ai_commits():
+    # Each provider's distinct-commit count is a subset of the day's
+    # distinct AI commits.
+    with pytest.raises(RenderError, match="ai_commits"):
+        _stats(daily=(_d4_cell(counts=(DayCount("anthropic", 3),), total=5, ai=2),))
+
+
+def test_d4_ai_commits_cannot_exceed_sum_of_counts():
+    # Every AI commit surfaces in >=1 provider count (unrecognized
+    # bucket included), so ai_commits > sum(counts) is impossible data.
+    with pytest.raises(RenderError, match="ai_commits"):
+        _stats(daily=(_d4_cell(counts=(DayCount("anthropic", 1),), total=5, ai=2),))
+
+
+def test_d4_multi_provider_day_with_overlap_accepted():
+    # "Claude implements, Gemini reviews the same commit": counts sum (3)
+    # exceeds ai_commits (2); each count <= ai_commits; accepted.
+    s = _stats(
+        totals=Totals(10, 5, 8, 0, 2, 3),
+        providers=(
+            ProviderRow("anthropic", "Claude", 5, 6, 3),
+            ProviderRow("google", "Gemini", 2, 2, 1),
+        ),
+        provider_count=2,
+        daily=(
+            _d4_cell(
+                counts=(DayCount("anthropic", 2), DayCount("google", 1)),
+                total=4,
+                ai=2,
+            ),
+        ),
+    )
+    assert s.daily[0].ai_commits == 2
+
+
+def test_d4_window_widens_to_365_days():
+    ok = _stats(
+        daily=(
+            _d4_cell(date="2025-07-17", counts=(DayCount("anthropic", 1),), total=1, ai=1),
+            _d4_cell(date="2026-07-16", counts=(DayCount("anthropic", 1),), total=1, ai=1),
+        )
+    )
+    assert len(ok.daily) == 2  # 364-day span: inside the D4 window
+    with pytest.raises(RenderError, match="365"):
+        _stats(
+            daily=(
+                _d4_cell(date="2025-07-16", counts=(DayCount("anthropic", 1),), total=1, ai=1),
+                _d4_cell(date="2026-07-16", counts=(DayCount("anthropic", 1),), total=1, ai=1),
+            )
+        )
+
+
+def test_d4_daily_json_serialization_carries_totals():
+    from aiprofile.viz import dumps_stats
+
+    s = _stats(daily=(_d4_cell(),))
+    import json as _json
+
+    payload = _json.loads(dumps_stats(s))
+    cell = payload["daily"][0]
+    assert cell["total_commits"] == 3
+    assert cell["ai_commits"] == 2

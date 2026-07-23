@@ -361,6 +361,10 @@ def test_privacy_leak(tmp_path):
 
     dist_files = sorted(p for p in out_dir.rglob("*") if p.is_file())
     assert [p.name for p in dist_files] == [
+        "badge-dark.svg",
+        "badge-light.svg",
+        "heatmap-dark.svg",
+        "heatmap-light.svg",
         "profile.json",
         "summary-dark.svg",
         "summary-light.svg",
@@ -571,7 +575,15 @@ def test_export_stability(tmp_path):
     assert r1.returncode == 0, r1.stderr
     assert r2.returncode == 0, r2.stderr
 
-    for name in ("summary-light.svg", "summary-dark.svg", "profile.json"):
+    for name in (
+        "summary-light.svg",
+        "summary-dark.svg",
+        "heatmap-light.svg",
+        "heatmap-dark.svg",
+        "badge-light.svg",
+        "badge-dark.svg",
+        "profile.json",
+    ):
         b1 = (out1 / name).read_bytes()
         b2 = (out2 / name).read_bytes()
         assert b1 == b2, f"{name} differs between two same-day renders"
