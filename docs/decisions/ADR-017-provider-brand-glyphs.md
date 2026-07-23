@@ -329,3 +329,62 @@ deliberately skipped) against future silent drift.
   vendoring pass — a maintainer should never hand-type path data or
   hand-pick fg/tint hexes again; if a provider gains a mark later, run the
   script against a freshly pinned ref and paste its output.
+
+## Addendum (round D5, 2026-07-23): second icon source — lobe-icons
+
+The owner explicitly asked for the OpenAI mark. simple-icons has never
+carried it (documented in the original ADR's fallback list), so this
+round adds a SECOND vendoring source rather than relaxing the
+no-fabrication rule: [lobe-icons](https://github.com/lobehub/lobe-icons),
+pinned at commit `fbd2d56e3f734e889f1373e71c8368cc4e60e0d7`
+(2026-07-17 upstream HEAD, consulted 2026-07-23). License: MIT,
+Copyright (c) 2023 LobeHub — the notice-preservation term is satisfied
+by mirroring the full license text in `THIRD_PARTY_NOTICES.md` (new
+file; also records the simple-icons CC0 provenance in one place).
+
+### What was vendored (D5)
+
+Two marks, both single-path `currentColor` SVGs on the same 24-grid
+viewBox simple-icons uses, byte-diffed against independently fetched
+copies of the upstream files:
+
+| canonical slug | display | lobe icon | COLOR_PRIMARY |
+|---|---|---|---|
+| `openai` | OpenAI | `static-svg/icons/openai.svg` | `#000` |
+| `xai` | Grok | `static-svg/icons/grok.svg` | `#000` |
+
+Per the product-identity convention (Kimi for moonshot, Qwen for
+alibaba), xai gets the Grok product mark, matching
+`PROVIDER_DISPLAY["xai"] == "Grok"`.
+
+Both upstream components declare `COLOR_PRIMARY = '#000'`
+(`packages/react-native/src/icons/<Component>/style.ts`, mechanically
+extracted), so the deterministic derivation lands on exactly the
+achromatic treatment the D3 moonshot entry established:
+`#000000/#EBEBEB` light, `#7A7A7A/#2E2E2E` dark — WCAG 17.62 / 3.16
+fg-vs-tint, 1.19 / 1.39 tint-vs-card, all OK.
+
+### Tooling (D5)
+
+`scripts/vendor_brand_icons.py` gained `--source lobe`: fetches the
+static SVG plus the component `style.ts` at the pinned ref, asserts the
+24-grid viewBox (any other geometry is a SKIP, never rescaled), takes
+`TITLE` from style.ts (lobe SVGs embed no `<title>`), and expands the
+3-digit hex shorthand. The single-`<path>` requirement, verbatim-`d=`
+rule, and skip-never-fake posture are unchanged — which is exactly why
+`amp` (an explicit owner ask back in D3) STAYS letter-tile-only: its
+lobe icon is 3 paths, and multi-path rendering support is a separate,
+deliberate change, not something to squeeze through a vendoring pass.
+Same for `devin` (3 paths). Candidates if multi-path support ever lands:
+amp, devin.
+
+### Consequences (D5)
+
+- `BRAND` grows from 13 to 15 entries; `xai` leaves the D3
+  letter-tile-only ruling (test updated with the supersession recorded),
+  `amp` remains, and the D1 fallback list loses `openai`.
+- The showcase/populated fixtures' "lone fallback-tile provider"
+  exemplar repointed openai → amazon (openai is now branded); snapshot
+  bytes regenerated via the sanctioned command.
+- New repo-root `THIRD_PARTY_NOTICES.md` is now the single place future
+  sources' license notices go.

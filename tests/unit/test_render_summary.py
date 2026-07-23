@@ -87,7 +87,8 @@ _POPULATED_PROVIDERS = (
 # stats.daily alone). Oldest date is exactly 83 days back (the window's
 # own left edge, viz.DAILY_WINDOW_DAYS - 1). Deliberately sparse (5 of 84
 # days populated — the overwhelming common case) and covers:
-#   - a lone fallback-tile provider (openai — no BrandSpec entry)
+#   - a lone fallback-tile provider (amazon — no BrandSpec entry; was
+#     openai until round D5 gave openai a mark)
 #   - a lone branded provider (anthropic)
 #   - a 3-way stack mixing two branded providers + the reserved
 #     "unrecognized" bucket (exercises DayCell counts' slug-ascending
@@ -100,7 +101,7 @@ _POPULATED_PROVIDERS = (
 # ---------------------------------------------------------------------------
 
 _POPULATED_DAILY = (
-    DayCell(date="2026-04-22", counts=(DayCount(provider="openai", attributed_commits=2),)),
+    DayCell(date="2026-04-22", counts=(DayCount(provider="amazon", attributed_commits=2),)),
     DayCell(date="2026-05-15", counts=(DayCount(provider="anthropic", attributed_commits=3),)),
     DayCell(
         date="2026-06-04",

@@ -27,6 +27,12 @@ below.
 
 ### Added
 
+- Provider brand marks for **OpenAI** and **Grok (xAI)**, vendored from
+  a second icon source (lobe-icons, MIT, pinned commit) via
+  `vendor_brand_icons.py --source lobe` — both render as proper glyph
+  tiles instead of letter tiles. New `THIRD_PARTY_NOTICES.md` carries
+  the MIT license text (ADR-017 D5 addendum).
+
 - Two-tier provider model (ADR-019): the DECLARATION tier grows by ten
   providers - Kimi (moonshot), DeepSeek, Qwen (alibaba), Mistral, Grok
   (xai), GLM (zhipu), Ollama, Llama (meta), Replit, Amp - so

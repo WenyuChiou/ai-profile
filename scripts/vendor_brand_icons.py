@@ -52,6 +52,19 @@ re-run automatically. No redrawing or simplifying of vendored path
 geometry — verbatim path data only. No glyph fabrication — an icon that is
 missing or multi-path at the pinned ref is skipped, never approximated.
 
+SECOND SOURCE (round D5): `--source lobe` switches to lobehub/lobe-icons
+(MIT; Copyright (c) 2023 LobeHub — full text mirrored in this repo's
+THIRD_PARTY_NOTICES.md), fetching `packages/static-svg/icons/<icon>.svg`
+plus the icon's `COLOR_PRIMARY` from
+`packages/react-native/src/icons/<Component>/style.ts` at the pinned
+commit. Lobe SVGs are monochrome `currentColor` marks with no embedded
+`<title>`, so the mapping gains a third segment naming the component dir
+(`slug:icon-slug:Component`), the style.ts `TITLE` constant is the join
+key, and the SVG's `viewBox` is asserted to be the same 24-grid
+simple-icons uses (any other geometry is a SKIP, never rescaled). All
+other discipline is unchanged: exactly one `<path>`, verbatim `d=` data,
+skips reported and never faked.
+
 Usage:
 
     python scripts/vendor_brand_icons.py --ref <commit-sha> \\
@@ -60,6 +73,9 @@ Usage:
         --map zhipu:zdotai --map meta:metaai
 
     python scripts/vendor_brand_icons.py --ref <commit-sha> --map slug:icon ...
+
+    python scripts/vendor_brand_icons.py --source lobe --ref <commit-sha> \\
+        --map openai:openai:OpenAI --map xai:grok:Grok
 
 Exit code 0 if the ref/data fetch succeeded (regardless of per-icon skips —
 skips are reported, not fatal); exit code 1 on a fetch/transport failure
@@ -78,8 +94,10 @@ import urllib.request
 from dataclasses import dataclass
 
 RAW_BASE = "https://raw.githubusercontent.com/simple-icons/simple-icons"
+RAW_BASE_LOBE = "https://raw.githubusercontent.com/lobehub/lobe-icons"
 USER_AGENT = "ai-profile-vendor-brand-icons/1.0 (+scripts/vendor_brand_icons.py)"
 TIMEOUT_SECONDS = 20
+EXPECTED_VIEWBOX = "0 0 24 24"
 
 # This project's two card backgrounds (src/aiprofile/render/themes.py
 # THEMES["github-light"/"github-dark"].bg) — mirrored here by hand for the
@@ -154,6 +172,42 @@ def fetch_icon_svg(ref: str, icon_slug: str) -> str | None:
 _TITLE_RE = re.compile(r"<title>(.*?)</title>")
 _PATH_D_RE = re.compile(r'<path\b[^>]*\bd="([^"]*)"[^>]*/?>')
 _PATH_TAG_RE = re.compile(r"<path\b")
+_VIEWBOX_RE = re.compile(r'viewBox="([^"]*)"')
+_LOBE_TITLE_RE = re.compile(r"export const TITLE = '([^']+)'")
+_LOBE_COLOR_PRIMARY_RE = re.compile(r"export const COLOR_PRIMARY = '(#[0-9A-Fa-f]{3,6})'")
+
+
+def fetch_lobe_icon_svg(ref: str, icon_slug: str) -> str | None:
+    """Returns packages/static-svg/icons/<icon_slug>.svg at ref, or None on 404."""
+    url = f"{RAW_BASE_LOBE}/{ref}/packages/static-svg/icons/{icon_slug}.svg"
+    try:
+        return _fetch(url).decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise
+
+
+def fetch_lobe_style_meta(ref: str, component: str) -> tuple[str, str] | None:
+    """Returns (TITLE, COLOR_PRIMARY as #RRGGBB) mechanically extracted from
+    packages/react-native/src/icons/<component>/style.ts at ref, or None if
+    the file 404s or either constant is missing. A 3-digit hex shorthand
+    (lobe writes '#000') is expanded to 6 digits; nothing else is altered."""
+    url = f"{RAW_BASE_LOBE}/{ref}/packages/react-native/src/icons/{component}/style.ts"
+    try:
+        text = _fetch(url).decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise
+    title_match = _LOBE_TITLE_RE.search(text)
+    color_match = _LOBE_COLOR_PRIMARY_RE.search(text)
+    if title_match is None or color_match is None:
+        return None
+    raw_hex = color_match.group(1).lstrip("#")
+    if len(raw_hex) == 3:
+        raw_hex = "".join(ch * 2 for ch in raw_hex)
+    return title_match.group(1), f"#{raw_hex.upper()}"
 
 
 def parse_icon_svg(svg_text: str) -> tuple[str, list[str]]:
@@ -297,6 +351,70 @@ def vendor_one(
     )
 
 
+def vendor_one_lobe(
+    ref: str, canonical_slug: str, icon_slug: str, component: str
+) -> VendorResult | VendorSkip:
+    """Round D5 lobe-icons variant of vendor_one: same single-path/verbatim
+    discipline, but the title + brand hex come from the icon component's
+    style.ts (lobe's static SVGs are monochrome currentColor marks with no
+    <title> and no central color index), and the 24-grid viewBox is asserted
+    rather than assumed (simple-icons guarantees it; lobe does not)."""
+    svg_text = fetch_lobe_icon_svg(ref, icon_slug)
+    if svg_text is None:
+        return VendorSkip(
+            canonical_slug, icon_slug, f"static-svg/icons/{icon_slug}.svg 404 at {ref}"
+        )
+
+    viewbox_match = _VIEWBOX_RE.search(svg_text)
+    if viewbox_match is None or viewbox_match.group(1) != EXPECTED_VIEWBOX:
+        found = viewbox_match.group(1) if viewbox_match else "none"
+        return VendorSkip(
+            canonical_slug, icon_slug, f"viewBox {found!r} != {EXPECTED_VIEWBOX!r}; never rescaled"
+        )
+
+    _title_unused, paths = parse_icon_svg(svg_text)
+    path_tag_count = len(_PATH_TAG_RE.findall(svg_text))
+    if path_tag_count != 1 or len(paths) != 1:
+        return VendorSkip(
+            canonical_slug,
+            icon_slug,
+            f"expected exactly 1 <path>, found {path_tag_count} tag(s)/{len(paths)} d= value(s)",
+        )
+
+    path_d = paths[0]
+    if not path_d.isascii():
+        return VendorSkip(canonical_slug, icon_slug, "path data is not ASCII")
+    for ch in FORBIDDEN_ATTR_CHARS:
+        if ch in path_d:
+            return VendorSkip(canonical_slug, icon_slug, f"path data contains {ch!r}")
+
+    meta = fetch_lobe_style_meta(ref, component)
+    if meta is None:
+        return VendorSkip(
+            canonical_slug,
+            icon_slug,
+            f"react-native/src/icons/{component}/style.ts missing TITLE/COLOR_PRIMARY at {ref}",
+        )
+    title, brand_hex = meta
+
+    light_tint = derive_tint(brand_hex, LIGHT_TINT_LIGHTNESS)
+    dark_tint = derive_tint(brand_hex, DARK_TINT_LIGHTNESS)
+    light_fg = adjust_fg_for_contrast(brand_hex, light_tint, darken=True)
+    dark_fg = adjust_fg_for_contrast(brand_hex, dark_tint, darken=False)
+
+    return VendorResult(
+        canonical_slug=canonical_slug,
+        icon_slug=icon_slug,
+        title=title,
+        brand_hex=brand_hex,
+        light_fg=light_fg,
+        light_tint=light_tint,
+        dark_fg=dark_fg,
+        dark_tint=dark_tint,
+        path=path_d,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Output formatting
 # ---------------------------------------------------------------------------
@@ -363,53 +481,68 @@ def format_contrast_table(results: list[VendorResult]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _parse_mapping(pairs: list[str]) -> list[tuple[str, str]]:
-    mapping: list[tuple[str, str]] = []
+def _parse_mapping(pairs: list[str], source: str) -> list[tuple[str, ...]]:
+    expected_parts = 3 if source == "lobe" else 2
+    shape = "slug:icon-slug:Component" if source == "lobe" else "slug:icon-slug"
+    mapping: list[tuple[str, ...]] = []
     for pair in pairs:
-        if ":" not in pair:
-            raise argparse.ArgumentTypeError(f"--map value {pair!r} must be slug:icon-slug")
-        canonical_slug, icon_slug = pair.split(":", 1)
-        mapping.append((canonical_slug, icon_slug))
+        parts = tuple(pair.split(":"))
+        if len(parts) != expected_parts or not all(parts):
+            raise argparse.ArgumentTypeError(f"--map value {pair!r} must be {shape}")
+        mapping.append(parts)
     return mapping
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
-        "--ref", required=True, help="Pinned simple-icons commit SHA (never a branch name)"
+        "--ref", required=True, help="Pinned upstream commit SHA (never a branch name)"
+    )
+    parser.add_argument(
+        "--source",
+        choices=("simple-icons", "lobe"),
+        default="simple-icons",
+        help="Icon source repository (default: simple-icons; lobe = lobehub/lobe-icons)",
     )
     parser.add_argument(
         "--map",
         action="append",
         default=[],
         dest="map_pairs",
-        metavar="CANONICAL_SLUG:ICON_SLUG",
-        help="Repeatable. e.g. --map moonshot:kimi",
+        metavar="CANONICAL_SLUG:ICON_SLUG[:COMPONENT]",
+        help="Repeatable. e.g. --map moonshot:kimi (simple-icons) or"
+        " --map openai:openai:OpenAI (lobe)",
     )
     args = parser.parse_args(argv)
 
     if not args.map_pairs:
-        parser.error("at least one --map slug:icon-slug is required")
+        parser.error("at least one --map value is required")
 
-    mapping = _parse_mapping(args.map_pairs)
+    mapping = _parse_mapping(args.map_pairs, args.source)
 
-    print(f"# Pinned simple-icons ref: {args.ref}")
-    try:
-        hex_by_title = fetch_icons_index(args.ref)
-    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
-        print(
-            f"FATAL: could not fetch data/simple-icons.json at {args.ref}: {exc}",
-            file=sys.stderr,
-        )
-        return 1
-    print(f"# Loaded {len(hex_by_title)} icon titles from data/simple-icons.json")
+    print(f"# Source: {args.source}; pinned ref: {args.ref}")
+    hex_by_title: dict[str, str] = {}
+    if args.source == "simple-icons":
+        try:
+            hex_by_title = fetch_icons_index(args.ref)
+        except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
+            print(
+                f"FATAL: could not fetch data/simple-icons.json at {args.ref}: {exc}",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"# Loaded {len(hex_by_title)} icon titles from data/simple-icons.json")
     print()
 
     results: list[VendorResult] = []
     skips: list[VendorSkip] = []
-    for canonical_slug, icon_slug in mapping:
+    for entry in mapping:
+        canonical_slug, icon_slug = entry[0], entry[1]
         try:
-            outcome = vendor_one(args.ref, canonical_slug, icon_slug, hex_by_title)
+            if args.source == "lobe":
+                outcome = vendor_one_lobe(args.ref, canonical_slug, icon_slug, entry[2])
+            else:
+                outcome = vendor_one(args.ref, canonical_slug, icon_slug, hex_by_title)
         except (urllib.error.URLError, urllib.error.HTTPError) as exc:
             outcome = VendorSkip(canonical_slug, icon_slug, f"transport error: {exc}")
         if isinstance(outcome, VendorResult):

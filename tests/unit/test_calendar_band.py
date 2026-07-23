@@ -81,7 +81,8 @@ def _period() -> Period:
 # here so the geometry tests below can address specific cells directly.
 # ---------------------------------------------------------------------------
 
-OFFSET_OLDEST = 0  # 2026-04-22 -- openai only (fallback-tile color)
+OFFSET_OLDEST = 0  # 2026-04-22 -- amazon only (fallback-tile color; was
+#   openai until round D5 gave openai a BrandSpec)
 OFFSET_LOW = 23  # 2026-05-15 -- anthropic only, under cap
 OFFSET_STACK = 43  # 2026-06-04 -- anthropic + google + unrecognized (3-way stack)
 OFFSET_OVER_CAP = 73  # 2026-07-04 -- anthropic=10, total > CAL_CAP_COMMITS
@@ -101,7 +102,7 @@ _MAIN_PROVIDERS = (
 )
 
 _MAIN_DAILY = (
-    DayCell(date="2026-04-22", counts=(DayCount(provider="openai", attributed_commits=2),)),
+    DayCell(date="2026-04-22", counts=(DayCount(provider="amazon", attributed_commits=2),)),
     DayCell(date="2026-05-15", counts=(DayCount(provider="anthropic", attributed_commits=3),)),
     DayCell(
         date="2026-06-04",
@@ -311,10 +312,12 @@ def test_calendar_color_matches_branded_fallback_and_unrecognized_rules():
     for theme in THEMES.values():
         assert _calendar_color("anthropic", theme) == _brand_fg_tint(BRAND["anthropic"], theme)[0]
         assert _calendar_color("google", theme) == _brand_fg_tint(BRAND["google"], theme)[0]
-        # openai/amazon: no BrandSpec entry -> the same fallback color the
-        # provider table uses for a non-branded row.
-        assert _calendar_color("openai", theme) == theme.bar_fill
+        # amazon/aider: no BrandSpec entry -> the same fallback color the
+        # provider table uses for a non-branded row. (openai moved to the
+        # branded branch in round D5.)
+        assert _calendar_color("openai", theme) == _brand_fg_tint(BRAND["openai"], theme)[0]
         assert _calendar_color("amazon", theme) == theme.bar_fill
+        assert _calendar_color("aider", theme) == theme.bar_fill
         assert _calendar_color(UNRECOGNIZED_PROVIDER, theme) == theme.evidence_unknown
         # Branded colors are theme-specific and never equal the fallback.
         assert _calendar_color("anthropic", theme) != theme.bar_fill
@@ -327,7 +330,7 @@ def test_rendered_card_uses_the_mapped_colors_for_each_daily_provider():
     google_fg = _brand_fg_tint(BRAND["google"], theme)[0]
     assert f'fill="{anthropic_fg}"' in svg
     assert f'fill="{google_fg}"' in svg
-    assert f'fill="{theme.bar_fill}"' in svg  # openai / amazon fallback
+    assert f'fill="{theme.bar_fill}"' in svg  # amazon fallback
     assert f'fill="{theme.evidence_unknown}"' in svg  # unrecognized bucket
 
 

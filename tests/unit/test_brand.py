@@ -225,7 +225,34 @@ def test_glyph_path_data_is_single_ascii_and_xml_attr_safe():
 _ROUND_D3_VENDORED_SLUGS = frozenset(
     {"moonshot", "deepseek", "alibaba", "mistral", "ollama", "replit", "zhipu", "meta"}
 )
-_ROUND_D3_LETTER_TILE_ONLY_SLUGS = frozenset({"amp", "xai"})
+# Round D5 narrowed this set: xai gained a mark from the SECOND source
+# (lobehub/lobe-icons, MIT — see the D5 pins below), superseding the D3
+# "no simple-icons mark" ruling for xai. amp remains letter-tile-only
+# (its lobe icon is multi-path; multi-path rendering is not supported).
+_ROUND_D3_LETTER_TILE_ONLY_SLUGS = frozenset({"amp"})
+
+# Round D5: two marks vendored from lobehub/lobe-icons at pinned commit
+# fbd2d56e3f734e889f1373e71c8368cc4e60e0d7 (MIT; THIRD_PARTY_NOTICES.md
+# carries the license text). Both are monochrome COLOR_PRIMARY='#000'
+# marks, so they must use the same achromatic tint treatment the D3
+# moonshot entry established.
+_ROUND_D5_VENDORED_SLUGS = frozenset({"openai", "xai"})
+_ACHROMATIC_TREATMENT = ("#000000", "#EBEBEB", "#7A7A7A", "#2E2E2E")
+
+
+def test_round_d5_lobe_vendored_slugs_are_all_branded():
+    for slug in sorted(_ROUND_D5_VENDORED_SLUGS):
+        assert slug in BRAND, f"{slug}: expected a round D5 vendored BrandSpec, found none"
+
+
+def test_round_d5_marks_use_the_established_achromatic_treatment():
+    # Both upstream marks declare COLOR_PRIMARY '#000'; the vendoring
+    # tool's deterministic derivation must therefore land on exactly the
+    # treatment the achromatic moonshot mark already uses in both themes.
+    for slug in sorted(_ROUND_D5_VENDORED_SLUGS):
+        spec = BRAND[slug]
+        actual = (spec.light_fg, spec.light_tint, spec.dark_fg, spec.dark_tint)
+        assert actual == _ACHROMATIC_TREATMENT, (slug, actual)
 
 
 def test_round_d3_vendored_slugs_are_all_branded():
@@ -233,11 +260,12 @@ def test_round_d3_vendored_slugs_are_all_branded():
         assert slug in BRAND, f"{slug}: expected a round D3 vendored BrandSpec, found none"
 
 
-def test_round_d3_amp_and_xai_have_no_mark_by_owner_ruling():
-    # ADR-017's D3 addendum + the round spec: amp and xai carry no
-    # simple-icons mark and are letter-tile-only by explicit owner ruling,
-    # not a vendoring gap - this pins that decision against accidental
-    # future fabrication.
+def test_letter_tile_only_slugs_stay_unbranded():
+    # ADR-017's D3 addendum ruled amp and xai letter-tile-only (no
+    # simple-icons mark); the D5 addendum supersedes that for xai via the
+    # lobe-icons source. amp stays letter-tile-only (multi-path lobe
+    # icon, unsupported) - this pins the remaining ruling against
+    # accidental future fabrication.
     for slug in sorted(_ROUND_D3_LETTER_TILE_ONLY_SLUGS):
         assert slug in CANONICAL_PROVIDERS, slug
         assert slug not in BRAND, f"{slug}: expected letter-tile fallback, found a BrandSpec"
