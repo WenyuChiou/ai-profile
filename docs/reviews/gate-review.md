@@ -1,128 +1,184 @@
-# Gate 14 D2 calendar verification review
+# Gate 15 D3 provider ecosystem verification review
 
-Date: 2026-07-22
+Date: 2026-07-23
 
-Review range: `383792f..5b01195`
+Review range: `ea5f37d..d2c1147`
 
-Reviewer posture: independent Principal Software Engineer; verification only. No production code, test code, schema, or design code was changed during this review. This report overwrites the prior gate review artifact per repository convention.
+Reviewer posture: independent Principal Software Engineer; verification only. No
+production code, test code, schema, or design code was changed during this
+review. This report overwrites the prior gate review artifact per repository
+convention.
 
 ## Executive summary
 
-The round D2 daily activity calendar is functionally ready, but one minor hygiene issue should be fixed before the next gate: `git diff --check 383792f..5b01195` fails on a blank line at EOF in `tests/unit/test_calendar_band.py`.
+The round D3 implementation is not ready for the next gate. The suite and lint
+pass, co-author auto-match isolation holds, slug-form declarations flow through
+parse -> ACE -> aggregate -> VizStats -> render, and privacy canaries stayed out
+of public SVG/JSON. However, the owner-facing product display names documented by
+the round spec and ADR-019 do not all resolve as `AI-Provider:` values.
 
-The privacy-critical behavior held under live CLI verification: an aggregate-only repository with an in-window canary date contributed to totals but did not publish its date in `profile.json` or either SVG, while the `--full` repository's date appeared as the positive control. The VizStats daily contract rejected malformed containers, duck records, subclass leaves, ordering violations, window-boundary violations, and provider-row subset violations. SQL, renderer, schema-version, lint, full-suite, and snapshot stability checks otherwise passed.
+Specifically, `AI-Provider: Kimi`, `AI-Provider: Qwen`, `AI-Provider: Grok`,
+`AI-Provider: GLM`, and `AI-Provider: Llama` produce canonical-null AI specs
+instead of the intended canonical slugs `moonshot`, `alibaba`, `xai`, `zhipu`,
+and `meta`. Those rows would publish as `Unrecognized` rather than the D3 brand
+identities.
 
 ## Findings
 
 | Severity | Issue | Location |
 |---|---|---|
-| Low | `git diff --check 383792f..5b01195` reports a new blank line at EOF. This is not a behavior defect, but it leaves the range failing Git whitespace hygiene and is trivial to remove. | `tests/unit/test_calendar_band.py:440` |
+| High | Product-identity provider declarations do not resolve for five D3 providers. ADR-019 says display names follow product identity, and the handoff explicitly required synthetic `AI-Provider: Kimi` / `DeepSeek` / etc. to resolve end-to-end. `PROVIDER_ALIASES` only includes company/canonical slug spellings for `moonshot`, `alibaba`, `xai`, `zhipu`, and `meta`, so user-written product-name trailers become canonical-null. | `src/aiprofile/registry.py:42` |
+
+## Details
+
+### High: product display aliases missing from declaration tier
+
+`PROVIDER_DISPLAY` maps the public identities as `moonshot -> Kimi`,
+`alibaba -> Qwen`, `xai -> Grok`, `zhipu -> GLM`, and `meta -> Llama`
+(`src/aiprofile/schema/vocab.py:128`). The round spec also lists these display
+names as the declaration-tier vocabulary (`.ai/round_d3_provider_ecosystem_spec.md:25`).
+But `PROVIDER_ALIASES` only accepts raw canonical/company spellings:
+
+```text
+moonshot -> moonshot
+alibaba -> alibaba
+xai -> xai
+zhipu -> zhipu
+meta -> meta
+```
+
+Independent parser probe:
+
+```text
+display_alias_results
+Amp->'amp' expected 'amp'
+Replit->'replit' expected 'replit'
+Kimi->None expected 'moonshot'
+DeepSeek->'deepseek' expected 'deepseek'
+Qwen->None expected 'alibaba'
+Mistral->'mistral' expected 'mistral'
+Grok->None expected 'xai'
+GLM->None expected 'zhipu'
+Ollama->'ollama' expected 'ollama'
+Llama->None expected 'meta'
+```
+
+This is not just a naming preference. It changes public behavior: a user who
+follows the product-identity naming model documented by ADR-019 gets
+`provider=None, provider_raw=<product name>`, which the privacy boundary
+collapses into the reserved `Unrecognized` public bucket.
+
+Suggested fix: add declaration-tier provider aliases for the product display
+spellings, at minimum:
+
+```python
+"kimi": "moonshot",
+"qwen": "alibaba",
+"grok": "xai",
+"glm": "zhipu",
+"llama": "meta",
+```
+
+Then add a test that parses `AI-Provider: <display>` for all ten D3 display
+names and asserts the canonical slug, not only `normalize_provider(slug)`.
 
 ## Review basis
 
-Reviewed `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, the handoff brief, `.ai/round_d2_isometric_calendar_spec.md`, the commit body for `5b01195`, the full `383792f..5b01195` file list/stat, `docs/decisions/ADR-018-daily-activity-series.md`, `src/aiprofile/viz.py`, `src/aiprofile/aggregate.py`, `src/aiprofile/privacy.py`, `src/aiprofile/cli.py`, `src/aiprofile/config.py`, `src/aiprofile/storage/db.py`, `src/aiprofile/render/summary_svg.py`, `tests/unit/test_aggregate.py`, `tests/unit/test_calendar_band.py`, `tests/unit/test_privacy_boundary.py`, `tests/unit/test_render_summary.py`, `tests/unit/test_schema_event.py`, `tests/unit/test_viz_contract.py`, and the integration helper/end-to-end tests needed for the live CLI probe.
+Reviewed `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, the handoff brief,
+`.ai/round_d3_provider_ecosystem_spec.md`, commit `d2c1147`'s body,
+`docs/decisions/ADR-017-provider-brand-glyphs.md`,
+`docs/decisions/ADR-019-two-tier-provider-vocabulary.md`, `docs/schema.md`,
+`src/aiprofile/schema/vocab.py`, `src/aiprofile/registry.py`,
+`src/aiprofile/adapters/trailers.py`, `src/aiprofile/scanner.py`,
+`src/aiprofile/schema/event.py`, `src/aiprofile/aggregate.py`,
+`src/aiprofile/privacy.py`, `src/aiprofile/viz.py`,
+`src/aiprofile/render/brand.py`, `src/aiprofile/render/summary_svg.py`,
+`scripts/vendor_brand_icons.py`, and the D3-adjacent tests.
 
 ## Verification evidence
 
 Commands and observed results:
 
-- `git status --porcelain=v1` before verification: clean.
-- `git diff --stat 383792f..5b01195`: 19 files changed, 2270 insertions, 132 deletions.
-- `git diff --name-only 383792f..5b01195`: `CHANGELOG.md`, 2 docs sample SVGs, `docs/decisions/ADR-018-daily-activity-series.md`, `src/aiprofile/__init__.py`, `src/aiprofile/aggregate.py`, `src/aiprofile/cli.py`, `src/aiprofile/privacy.py`, `src/aiprofile/render/summary_svg.py`, `src/aiprofile/viz.py`, 2 SVG snapshots, and 8 unit test files.
-- `python -m pytest tests -p no:cacheprovider`: `421 passed, 4 skipped in 23.52s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
+- `git status --short` before verification: clean.
+- `git diff --stat ea5f37d..d2c1147`: 19 files changed, 2151 insertions, 527 deletions.
+- `git diff --name-only ea5f37d..d2c1147`: `CHANGELOG.md`, social preview assets, summary sample assets, ADR-017, ADR-019, `docs/schema.md`, `scripts/vendor_brand_icons.py`, registry/vocab/render code, snapshots, and D3 unit tests.
+- `python -m pytest tests -p no:cacheprovider`: `442 passed, 4 skipped in 23.69s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
 - `python -m ruff check src tests scripts`: `All checks passed!` (exit 0).
-- `python -m pytest tests/unit/test_calendar_band.py tests/unit/test_render_summary.py -p no:cacheprovider`: `53 passed in 0.25s` (exit 0), with the same unrelated warnings.
-- `python tests/unit/test_render_summary.py`: wrote 8 snapshot files and 2 sample assets; subsequent `git status --porcelain=v1` produced no output.
-- `python tests/unit/test_render_summary.py` again: wrote the same 8 snapshot files and 2 sample assets; subsequent `git status --porcelain=v1` again produced no output.
-- `git diff --check 383792f..5b01195`: failed with `tests/unit/test_calendar_band.py:440: new blank line at EOF.`
+- `python -m pytest tests/unit/test_calendar_band.py tests/unit/test_render_summary.py tests/unit/test_brand.py tests/unit/test_vocab_registry.py -p no:cacheprovider`: `100 passed in 0.33s` (exit 0), with the same unrelated warnings.
+- `python tests/unit/test_render_summary.py`: wrote 8 snapshot files and 2 sample assets; `git status --short` stayed clean.
+- `python tests/unit/test_render_summary.py` again: wrote the same 8 snapshot files and 2 sample assets; targeted tests stayed green.
+- `python scripts/vendor_brand_icons.py --help`: exit 0, CLI help rendered.
+- `python -m pytest --collect-only -q | Select-String -Pattern 'vendor_brand_icons|scripts'`: no output, confirming the vendoring script is not collected by pytest.
+- `Invoke-WebRequest` to `https://raw.githubusercontent.com/simple-icons/simple-icons/f7cc40071c00ca767e6f5532fb99bfbc25efb8fe/icons/mistralai.svg`: failed with `Unable to connect to the remote server`; upstream byte-diff could not be independently repeated under this sandbox's network restriction.
 
-Independent live CLI privacy probe:
-
-```text
-CMD ['init'] RC 0
-CMD ['scan', '--full', '<temp>\\publishable'] RC 0
-CMD ['scan', '<temp>\\aggregate_only'] RC 0
-CMD ['render', '--out', '<temp>\\dist'] RC 0
-profile_daily [{'counts': [{'attributed_commits': 1, 'provider': 'anthropic'}], 'date': '2026-07-20'}]
-private_date_hits {'profile.json': False, 'summary-dark.svg': False, 'summary-light.svg': False}
-full_date_hits {'profile.json': True, 'summary-dark.svg': True, 'summary-light.svg': True}
-privacy {'anonymous_aggregate_commits': 1, 'explicitly_publishable_commits': 1, 'includes_anonymous_aggregate': True}
-totals {'active_ai_days': 2, 'ai_actor_presences': 2, 'ai_attributed_commits': 2, 'commits_scanned': 2, 'human_declared_commits': 0, 'unknown_commits': 0}
-```
-
-Independent VizStats adversarial probe:
+Independent two-tier isolation probe:
 
 ```text
-ACCEPT 83-day span boundary
-REJECT 84-day span boundary
-REJECT daily container list
-REJECT duck day cell
-REJECT duck day count
-REJECT str subclass date
-REJECT str subclass provider
-REJECT int subclass count
-REJECT bool count
-REJECT unknown slug
-REJECT provider without row
-REJECT daily exceeds provider total
-REJECT duplicate date
-REJECT duplicate slug
-REJECT slug order
-VIZ_PROBE_DONE
+coauthor_intersection {'amp'}
+amp [('amp', 'amp')]
+fabricated co-author emails for replit/moonshot/deepseek/alibaba/mistral/xai/zhipu/ollama/meta: zero specs
 ```
 
-Independent SQL/schema probe:
+Independent slug-form declaration, aggregation, render, and privacy probe:
 
 ```text
-sqlite_date_shift ('2026-06-30', '2026-07-01')
-multi_provider_rows (DailyProviderRow(repository_uid='repo-sql', date='2026-07-01', provider='anthropic', attributed_commits=1), DailyProviderRow(repository_uid='repo-sql', date='2026-07-01', provider='openai', attributed_commits=1))
-schema_010_daily accepted
-schema_010_repo_count 1
-schema_030_rejected compute_daily_provider_counts unsupported ACE schema_version '0.3.0'
-schema_030_rejected compute_repo_aggregates unsupported ACE schema_version '0.3.0'
-SQL_PROBE_DONE
+slug amp [('amp', 'amp')]
+slug replit [('replit', 'replit')]
+slug moonshot [('moonshot', 'moonshot')]
+slug deepseek [('deepseek', 'deepseek')]
+slug alibaba [('alibaba', 'alibaba')]
+slug mistral [('mistral', 'mistral')]
+slug xai [('xai', 'xai')]
+slug zhipu [('zhipu', 'zhipu')]
+slug ollama [('ollama', 'ollama')]
+slug meta [('meta', 'meta')]
+local_details {'excluded_repositories': 0, 'unrecognized_provider_values': ['SECRET_VENDOR_CANARY']}
+providers ['alibaba', 'amp', 'deepseek', 'meta', 'mistral', 'moonshot', 'ollama', 'replit', 'unrecognized', 'xai', 'zhipu']
+svg_more_line True
+canary_presence {'PRIVATE_REPO_CANARY': (False, False), 'C:/PRIVATE/PATH/CANARY': (False, False), 'SECRET_REPO_CANARY': (False, False), 'C:/SECRET/PATH/CANARY': (False, False), 'SECRET_VENDOR_CANARY': (False, False)}
+legend ((1, '1'), (4, '2-4'), (7, '5-7'), (8, '8+'))
+months ((4, 'Jun'), (8, 'Jul'))
 ```
 
-Independent renderer probe:
+Independent contrast recomputation:
 
 ```text
-github-light polygon_count 100 bounds (244, 432, 586, 611) viewbox (830, 813) animate False g_opacity False
-github-dark polygon_count 100 bounds (244, 432, 586, 611) viewbox (830, 813) animate False g_opacity False
-RENDER_PROBE_DONE
+mistral light 3.07 dark 4.13 fg/tint #F04805/#F6E6DF #FA520F/#472315
+replit light 3.15 dark 4.12 fg/tint #DE5A06/#F6E8DF #F26207/#472815
+moonshot light 17.62 dark 3.16 fg/tint #000000/#EBEBEB #7A7A7A/#2E2E2E
+deepseek light 3.16 dark 4.58 fg/tint #4377FE/#DFE6F6 #5786FE/#152347
 ```
-
-Independent privacy-builder probe:
-
-```text
-normal_build_daily (DayCell(date='2026-07-20', counts=(DayCount(provider='anthropic', attributed_commits=1),)),)
-string_full_rejected True
-lying_dict_direct_internal_dates ['2026-07-18', '2026-07-19', '2026-07-20']
-production_build_viz_daily (DayCell(date='2026-07-20', counts=(DayCount(provider='anthropic', attributed_commits=1),)),)
-PRIVACY_BUILDER_PROBE_DONE
-```
-
-The `LyingDict` result is not listed as a finding because it requires direct misuse of private `_build_daily`; the production path through `build_viz_stats` constructs `levels` via `resolve_publication_levels(cfg)` and preserved the publishable-only filter in the same probe.
 
 ## Verified areas without findings
 
-- `privacy._build_daily` is the production policy chokepoint for the new daily series. The live two-repo CLI probe proved an in-window aggregate-only date stayed out of all dist outputs while the publishable date appeared.
-- Daily rows remain an honest subset of provider rows: VizStats rejects daily providers without corresponding provider rows and rejects daily totals exceeding provider-row attributed commits.
-- The hard window is enforced at the contract layer: an 83-day span is accepted; an 84-day span is rejected, matching the `DAILY_WINDOW_DAYS=84` "span fewer than 84 days" implementation.
-- Daily record structure follows the prior sealed-contract posture: exact tuple containers, exact `DayCell`/`DayCount`, exact `str` and `int` leaves, `bool` rejection, date ordering, slug ordering, and duplicate rejection all held.
-- `compute_daily_provider_counts` is policy-free and groups by repository uid, verbatim `substr(author_date, 1, 10)`, provider, and distinct commit id. The SQLite probe independently confirmed that `date()` would shift a non-UTC-offset timestamp while `substr()` preserves the author-local date.
-- Same-commit multi-provider attribution is represented as one attributed commit in each provider row for that date.
-- ACE `0.1.0` stored events remain aggregatable; fabricated `0.3.0` events are rejected by both repo aggregation and daily aggregation.
-- The calendar renderer is fully static in the probed SVGs: no `<animate>` and no `<g opacity=...>` markup.
-- Calendar polygon coordinates for the capped fixture stayed inside the viewBox in both light and dark themes.
-- Snapshot/sample regeneration is byte-stable across two sanctioned runs.
+- Adding declaration-tier aliases did not expand auto-match: `match_coauthor`
+  only consults `COAUTHOR_IDENTITIES`, and the D3 intersection is exactly
+  `{'amp'}`.
+- `amp@ampcode.com` resolves to provider/tool `amp` / `amp`; fabricated
+  co-author emails for the nine declaration-tier-only providers produced no
+  specs.
+- Slug-form declarations (`AI-Provider: moonshot`, etc.) parse, build ACE
+  events, aggregate, enter `VizStats`, and serialize in public JSON.
+- Public SVG/JSON omitted repository-name, path, and raw unrecognized-provider
+  canaries; local-only details retained the raw unrecognized value.
+- Calendar legend bins are derived from `CAL_CAP_COMMITS=8` as `1`, `2-4`,
+  `5-7`, `8+`.
+- Month labels are data-anchored from `stats.daily`; no clock read was found in
+  the month-label path.
+- Empty-daily rendering remains byte-stable across the sanctioned snapshot
+  regeneration command.
+- `scripts/vendor_brand_icons.py` is manually run, deterministic in structure,
+  does not read environment secrets, and is outside pytest collection.
+- ADR-019's six-tool-slug accounting is accurate: `amp`, `replit-agent`,
+  `kimi-code`, `qwen-code`, `vibe-code`, and `ollama`.
 
 ## Severity summary
 
 - Critical: 0
-- High: 0
+- High: 1
 - Medium: 0
-- Low: 1
+- Low: 0
 
 ## Final recommendation
 
-READY AFTER MINOR FIXES
+NOT READY

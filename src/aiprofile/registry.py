@@ -51,6 +51,28 @@ PROVIDER_ALIASES: dict[str, str] = {
     "meta": "meta",
 }
 
+# Every schema-owned public display name resolves to its slug (gate-15
+# H-01): users declare the PRODUCT name they know - "AI-Provider: Kimi",
+# "Claude", "Gemini" - not the company slug. The gap was latent since
+# v0.1 (Claude/Gemini/Copilot were equally unresolved; the README's own
+# example happened to use the company form). Derived from
+# PROVIDER_DISPLAY so a future provider's display name can never be
+# forgotten here again.
+PROVIDER_ALIASES.update(
+    {display.lower(): slug for slug, display in PROVIDER_DISPLAY.items()}
+)
+# Common spacing/punctuation variants users plausibly type. Amazon Q
+# already arrives via the display derivation above.
+PROVIDER_ALIASES.update(
+    {
+        "mistral ai": "mistral",
+        "meta ai": "meta",
+        "x.ai": "xai",
+        "z.ai": "zhipu",
+        "moonshot ai": "moonshot",
+    }
+)
+
 # Display names live in the schema-owned public vocabulary
 # (schema.vocab.PROVIDER_DISPLAY, gate-7 H-01); the registry re-exports the
 # lookup below for its callers.

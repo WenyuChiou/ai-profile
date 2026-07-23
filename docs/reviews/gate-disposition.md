@@ -291,3 +291,22 @@ events aggregate; fabricated 0.3 refuses).
 | Finding | Disposition | Resolution |
 |---|---|---|
 | L-01 - new blank line at EOF (tests/unit/test_calendar_band.py:440; git diff --check fails) | **Accepted** | Trailing blank line removed; `git diff --check` clean; suite re-run green. |
+
+---
+
+## Gate-15 review round (gate-review.md, 2026-07-23; NOT READY)
+
+Independent verification of `ea5f37d..d2c1147` (round D3) via the
+headless handoff lane (brief 008). One High finding - and the probe
+that found it exposed a LATENT V0.1-ERA BUG, not just a D3 gap.
+
+| Finding | Disposition | Technical justification + resolution |
+|---|---|---|
+| H-01 - display-name trailer forms do not resolve (AI-Provider: Kimi/Qwen/Grok/GLM/Llama -> None) | **Accepted** | Reproduced, and widened on investigation: the alias table only ever carried company-slug spellings, so the D1-era display names failed identically (Claude/Gemini/Copilot -> None since v0.1 - masked because the README example uses the company form "Anthropic"). Users declare the PRODUCT name they know; this defeated the declaration tier's entire purpose for the most likely spellings. Fix: PROVIDER_ALIASES now derives an entry from EVERY schema-owned display name (PROVIDER_DISPLAY -> lowercased display -> slug), closing the class permanently for future providers, plus common spacing/punctuation variants (Mistral AI, Meta AI, x.ai, Z.ai, Moonshot AI; Amazon Q arrives via the derivation). Regressions proven red pre-fix: test_display_name_trailer_forms_resolve_to_canonical_slugs (iterates the whole display map) + test_common_provider_name_variants_resolve. |
+
+Also recorded from the review: the reviewer's sandbox could not reach
+raw.githubusercontent.com to byte-diff the 8 vendored icon paths (the
+same network limitation as gate-13); that diff was performed directly
+by the internal review round (8/8 identical) and independently
+reproduced via the vendoring script - one direct plus one
+corroborating check, per the gate-13 precedent.

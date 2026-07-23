@@ -213,3 +213,34 @@ def test_d3_vocab_and_tool_subset_asserts_still_hold():
     assert {
         i.tool for i in COAUTHOR_IDENTITIES.values() if i.tool
     } <= CANONICAL_TOOLS
+
+
+def test_display_name_trailer_forms_resolve_to_canonical_slugs():
+    """Gate-15 H-01 (and a latent v0.1-era gap the probe exposed): users
+    write the PRODUCT name they know - "AI-Provider: Kimi" / "Claude" /
+    "Gemini" - not the company slug. Every schema-owned display name
+    must normalize to its canonical slug, for the D1-era providers as
+    much as the D3 ones (Claude/Gemini/Copilot were equally unresolved
+    pre-fix; proven red before the alias derivation landed)."""
+    from aiprofile.registry import normalize_provider
+    from aiprofile.schema.vocab import PROVIDER_DISPLAY
+
+    for slug, display in PROVIDER_DISPLAY.items():
+        assert normalize_provider(display) == slug, (
+            f"display {display!r} must resolve to {slug!r}"
+        )
+
+
+def test_common_provider_name_variants_resolve():
+    """Spacing/punctuation variants users plausibly type."""
+    from aiprofile.registry import normalize_provider
+
+    for raw, slug in {
+        "Mistral AI": "mistral",
+        "Meta AI": "meta",
+        "x.ai": "xai",
+        "Z.ai": "zhipu",
+        "Amazon Q": "amazon",
+        "Moonshot AI": "moonshot",
+    }.items():
+        assert normalize_provider(raw) == slug, (raw, slug)
