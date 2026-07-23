@@ -25,7 +25,15 @@ below.
 
 ## [Unreleased]
 
-(nothing yet)
+### Changed
+
+- Heatmap aesthetic pass: day cells are larger (11px on the same
+  grid) with SOLID background-mixed hexes replacing fill-opacity —
+  low-volume days no longer wash out against the dark card and every
+  final pixel color is a flat deterministic hex; styled stat line
+  (counts emphasized, AI share in accent, window range right-aligned);
+  cleaner two-axis legend (numeric volume bins kept, AI-share strip
+  with end labels only).
 
 ## [0.3.0] — 2026-07-23
 

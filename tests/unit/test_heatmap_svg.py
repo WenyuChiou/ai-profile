@@ -36,7 +36,8 @@ from aiprofile.render.heatmap_svg import (
     HM_GRID_TOP,
     HM_GRID_X,
     HM_SHARE_BIN_COUNT,
-    HM_VOLUME_OPACITIES,
+    HM_VOLUME_MIX,
+    _cell_fill,
     _grid_columns,
     _lerp_hex,
     _share_bin,
@@ -229,32 +230,62 @@ def test_all_window_days_render_and_nothing_outside():
     ]
     # Exactly 365 day squares (legend swatches sit above HM_GRID_TOP? no —
     # legend is below; exclude by counting: 365 days + 9 legend swatches).
-    assert len(day_rects) == 365 + len(HM_VOLUME_OPACITIES) + HM_SHARE_BIN_COUNT
+    assert len(day_rects) == 365 + len(HM_VOLUME_MIX) + HM_SHARE_BIN_COUNT
 
 
 def test_human_only_day_gets_neutral_hue_full_row_alignment():
     theme = THEMES["github-light"]
     svg = render_heatmap(FIXTURE_HEATMAP, theme)
-    colors = _share_colors(theme)
     # 2026-06-20: hue bin 0 (neutral), volume bin 1 (2 commits) -> the
-    # neutral hex at the 2-4 opacity must appear as a day cell.
-    assert f'fill="{colors[0]}" fill-opacity="{HM_VOLUME_OPACITIES[1]}"' in svg
+    # solid bg-mixed neutral hex must appear as a day cell (aesthetic
+    # pass: no fill-opacity anywhere - every cell is a flat hex).
+    assert f'fill="{_cell_fill(theme, 0, 1)}"' in svg
+    assert "fill-opacity" not in svg
 
 
 def test_low_share_day_gets_bin1_hue():
     theme = THEMES["github-light"]
     svg = render_heatmap(FIXTURE_HEATMAP, theme)
-    colors = _share_colors(theme)
     # 2026-06-27: 1 AI of 5 -> hue bin 1, volume bin 2 (5 commits).
-    assert f'fill="{colors[1]}" fill-opacity="{HM_VOLUME_OPACITIES[2]}"' in svg
+    assert f'fill="{_cell_fill(theme, 1, 2)}"' in svg
+
+
+def _luminance(hex_color):
+    channels = [int(hex_color.lstrip("#")[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+    lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+
+def _contrast(a, b):
+    la, lb = sorted((_luminance(a), _luminance(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+def test_cell_palette_distinct_and_visible_in_both_themes():
+    # All 20 (share, volume) cell hexes per theme: pairwise distinct,
+    # and every one distinguishable from the card background (>= 1.1
+    # luminance ratio, the same bar the brand tints clear).
+    for theme in THEMES.values():
+        palette = {
+            (s_bin, v_bin): _cell_fill(theme, s_bin, v_bin)
+            for s_bin in range(HM_SHARE_BIN_COUNT)
+            for v_bin in range(len(HM_VOLUME_MIX))
+        }
+        assert len(set(palette.values())) == len(palette), theme.bg
+        for key, color in palette.items():
+            assert _contrast(color, theme.bg) >= 1.1, (theme.bg, key, color)
 
 
 def test_window_summary_line_is_window_scoped():
     svg = render_heatmap(FIXTURE_HEATMAP, THEMES["github-light"])
     total = sum(c.total_commits for c in _DAILY)
     ai = sum(c.ai_commits for c in _DAILY)
-    assert f"{total} commits · {ai} AI-assisted" in svg
-    assert "2025-07-15 to 2026-07-14" in svg
+    # Aesthetic pass: the stat line is tspan-styled (counts emphasized,
+    # AI share in accent) and the window moved to a right-aligned range.
+    assert f">{total}</tspan>" in svg
+    assert f">{ai}</tspan>" in svg
+    assert "AI-assisted" in svg
+    assert "2025-07-15 → 2026-07-14" in svg
 
 
 def test_month_labels_derive_from_series_dates():

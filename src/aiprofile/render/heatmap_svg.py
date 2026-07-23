@@ -39,6 +39,7 @@ from .summary_svg import (
     _pct_label,
     _rect,
     _text,
+    _tspan,
 )
 from .themes import Theme
 
@@ -56,8 +57,8 @@ HM_GLYPH_CY = 31
 
 HM_STAT_Y = 84  # window-summary line baseline
 
-HM_CELL = 10  # square side
-HM_GAP = 4
+HM_CELL = 11  # square side (aesthetic pass: more ink, same 14px step)
+HM_GAP = 3
 HM_STEP = HM_CELL + HM_GAP  # 14
 HM_ROWS = 7  # weekday rows, Mon(0) .. Sun(6)
 HM_MAX_COLS = 53  # bounded by the 365-day window (52 full weeks + partials)
@@ -82,9 +83,13 @@ HM_EMPTY_HEIGHT = HM_EMPTY_DIVIDER2_Y + 42
 HM_CUE_TEXT = "publishable repos only"
 
 #: Intensity (volume) bins over total_commits — same 1 / 2-4 / 5-7 / 8+
-#: bucketing the D2 band's legend derives from its cap, expressed as
-#: flat fill-opacity steps (never a runtime blend of two colors).
-HM_VOLUME_OPACITIES = (0.45, 0.65, 0.85, 1.0)
+#: bucketing the D2 band's legend derives from its cap. Expressed as
+#: SOLID bg-mix weights (aesthetic pass, gate-18 round): every final
+#: cell color is a flat precomputed hex — lerp(theme.bg, share_color,
+#: weight) — never a fill-opacity alpha, which washed low-volume cells
+#: out against the dark card and left the final pixel color to the
+#: compositor instead of this renderer.
+HM_VOLUME_MIX = (0.45, 0.65, 0.85, 1.0)
 HM_VOLUME_LABELS = ("1", "2-4", "5-7", "8+")
 HM_VOLUME_CAP = 8
 
@@ -92,7 +97,6 @@ HM_VOLUME_CAP = 8
 #: (pure accent). Bin selection is integer arithmetic (ceil(4*ai/total)),
 #: so no float-equality edge can flip a bin between platforms.
 HM_SHARE_BIN_COUNT = 5
-HM_SHARE_LABELS = ("0%", "≤25%", "≤50%", "≤75%", "100%")
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +143,13 @@ def _share_colors(theme: Theme) -> tuple[str, ...]:
     )
 
 
+def _cell_fill(theme: Theme, share_bin: int, volume_bin: int) -> str:
+    """The flat hex for one (share, volume) cell: the share-bin color
+    mixed toward the card background by the volume weight. 20 possible
+    values per theme, all deterministic."""
+    return _lerp_hex(theme.bg, _share_colors(theme)[share_bin], HM_VOLUME_MIX[volume_bin])
+
+
 def _monday_of(day: datetime.date) -> datetime.date:
     return day - datetime.timedelta(days=day.weekday())
 
@@ -173,15 +184,14 @@ def _cell_rects(daily: tuple[DayCell, ...], theme: Theme) -> str:
         y = HM_GRID_TOP + row * HM_STEP
         cell = by_date.get(day.isoformat())
         if cell is None:
-            parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=theme.bar_track, rx=2))
+            parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=theme.bar_track, rx=3))
         else:
-            fill = colors[_share_bin(cell.ai_commits, cell.total_commits)]
-            opacity = HM_VOLUME_OPACITIES[_volume_bin(cell.total_commits)]
-            opacity_attr = "" if opacity == 1.0 else f' fill-opacity="{opacity}"'
-            parts.append(
-                f'<rect x="{x}" y="{y}" width="{HM_CELL}" height="{HM_CELL}" rx="2"'
-                f' fill="{fill}"{opacity_attr}/>'
+            fill = _lerp_hex(
+                theme.bg,
+                colors[_share_bin(cell.ai_commits, cell.total_commits)],
+                HM_VOLUME_MIX[_volume_bin(cell.total_commits)],
             )
+            parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=fill, rx=3))
         day += datetime.timedelta(days=1)
     return "\n".join(parts)
 
@@ -228,38 +238,38 @@ def _weekday_labels(theme: Theme) -> str:
 
 
 def _legend(theme: Theme) -> str:
-    """Two-axis legend: volume (neutral swatches at the four opacities)
-    and AI share (the five bin hexes at full opacity)."""
+    """Two-axis legend (aesthetic pass): a volume ramp (the neutral
+    share-0 color at the four bg-mix weights, numeric bin labels kept -
+    they carry real information) and an AI-share strip with end labels
+    only (the quarter-bin thresholds live in <desc>, not as label
+    clutter). Every swatch is the exact hex a real day cell would use."""
     colors = _share_colors(theme)
     parts: list[str] = []
+    y_text = HM_LEGEND_Y + HM_LEGEND_TEXT_DY
     x = float(PADDING)
-    parts.append(_text(x, HM_LEGEND_Y + HM_LEGEND_TEXT_DY, "Volume:", size=10, fill=theme.muted))
+    parts.append(_text(x, y_text, "Volume", size=10, fill=theme.muted))
+    x += 46
+    for volume_bin, label in enumerate(HM_VOLUME_LABELS):
+        parts.append(
+            _rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=_cell_fill(theme, 0, volume_bin), rx=3)
+        )
+        x += HM_CELL + 4
+        parts.append(_text(x, y_text, label, size=10, fill=theme.muted))
+        x += 10 + 6 * len(label)
+    x += 26
+    parts.append(_text(x, y_text, "AI share", size=10, fill=theme.muted))
     x += 52
-    for opacity, label in zip(HM_VOLUME_OPACITIES, HM_VOLUME_LABELS, strict=True):
-        opacity_attr = "" if opacity == 1.0 else f' fill-opacity="{opacity}"'
-        parts.append(
-            f'<rect x="{x}" y="{HM_LEGEND_Y}" width="{HM_CELL}" height="{HM_CELL}" rx="2"'
-            f' fill="{colors[0]}"{opacity_attr}/>'
-        )
-        x += HM_CELL + 4
-        parts.append(
-            _text(x, HM_LEGEND_Y + HM_LEGEND_TEXT_DY, label, size=10, fill=theme.muted)
-        )
-        x += 8 + 6 * len(label)
-    x += 18
-    parts.append(_text(x, HM_LEGEND_Y + HM_LEGEND_TEXT_DY, "AI share:", size=10, fill=theme.muted))
-    x += 58
-    for color, label in zip(colors, HM_SHARE_LABELS, strict=True):
-        parts.append(_rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=color, rx=2))
-        x += HM_CELL + 4
-        parts.append(
-            _text(x, HM_LEGEND_Y + HM_LEGEND_TEXT_DY, label, size=10, fill=theme.muted)
-        )
-        x += 8 + 6 * len(label)
+    parts.append(_text(x, y_text, "0%", size=10, fill=theme.muted))
+    x += 20
+    for color in colors:
+        parts.append(_rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=color, rx=3))
+        x += HM_CELL + 3
+    x += 5
+    parts.append(_text(x, y_text, "100%", size=10, fill=theme.muted))
     parts.append(
         _text(
             WIDTH - PADDING,
-            HM_LEGEND_Y + HM_LEGEND_TEXT_DY,
+            y_text,
             HM_CUE_TEXT,
             size=10,
             fill=theme.muted,
@@ -344,11 +354,24 @@ def render_heatmap(stats: VizStats, theme: Theme) -> str:
         divider2_y = HM_EMPTY_DIVIDER2_Y
     else:
         total, ai, start, end = _window_summary(stats.daily)
-        stat_line = (
-            f"{total} commits · {ai} AI-assisted ({_pct_label(ai, total)})"
-            f" · {start} to {end}"
+        stat_body = (
+            _tspan(f"{total}", fill=theme.text, weight=700)
+            + _tspan(" commits", fill=theme.muted)
+            + _tspan("  ·  ", fill=theme.muted)
+            + _tspan(f"{ai}", fill=theme.accent, weight=700)
+            + _tspan(f" AI-assisted ({_pct_label(ai, total)})", fill=theme.accent)
         )
-        parts.append(_text(PADDING, HM_STAT_Y, stat_line, size=12, fill=theme.text))
+        parts.append(_text(PADDING, HM_STAT_Y, stat_body, size=13, fill=theme.text, escaped=True))
+        parts.append(
+            _text(
+                WIDTH - PADDING,
+                HM_STAT_Y,
+                f"{start} → {end}",
+                size=11,
+                fill=theme.muted,
+                anchor="end",
+            )
+        )
         parts.append(_month_labels(stats.daily, theme))
         parts.append(_weekday_labels(theme))
         parts.append(_cell_rects(stats.daily, theme))
