@@ -269,3 +269,25 @@ byte-level diff was independently performed against commit f7cc400 by
 the internal review during the round (all five identical), so the
 provenance claim is covered by one direct and one corroborating check.
 The review artifact is committed verbatim with this closure.
+
+---
+
+## Gate-14 review round (gate-review.md, 2026-07-22; READY AFTER MINOR FIXES)
+
+Independent verification of `383792f..5b01195` (Image 2.0 round D2, the
+publishable-only isometric calendar) via the headless handoff lane
+(brief 006). One Low finding, fixed in this closure.
+
+The reviewer independently: re-ran the suite (421 passed, 4 skipped),
+ruff, the calendar/render test set (53), and twice-clean snapshot
+regeneration; built a live two-repo CLI scenario (one full, one
+aggregate-only, IN-window canary date) and byte-swept dist/ - the
+aggregate-only date was absent from every output with the full repo's
+date as positive control; probed the VizStats daily battery, the
+substr-vs-date() SQL timezone behavior, the static-render claim (zero
+animate markup), and the schema-version compatibility pair (0.1 stored
+events aggregate; fabricated 0.3 refuses).
+
+| Finding | Disposition | Resolution |
+|---|---|---|
+| L-01 - new blank line at EOF (tests/unit/test_calendar_band.py:440; git diff --check fails) | **Accepted** | Trailing blank line removed; `git diff --check` clean; suite re-run green. |

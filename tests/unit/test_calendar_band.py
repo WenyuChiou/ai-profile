@@ -437,5 +437,3 @@ def test_daily_exceeding_provider_row_total_is_rejected_by_vizstats():
                 ),
             ),
         )
-
-

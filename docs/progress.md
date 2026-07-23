@@ -327,6 +327,18 @@ which is authoritative).
   commit: GitHub repo public + PyPI upload of `ai-profile 0.1.0`, tag
   `v0.1.0`.
 
+- **Image 2.0 rounds D1+D2 + gates 13-14** (2026-07-22, `08922b7` +
+  `5b01195` + closures): the card gains provider brand identity
+  (vendored CC0 simple-icons marks + per-theme brand bars, ADR-017)
+  and the publishable-only isometric daily calendar (ADR-018; ACE
+  schema 0.1.0 -> 0.2.0 per ADR-012's minor-bump rule). Gate-13: zero
+  findings. Gate-14: one Low (EOF blank line), fixed in the closure.
+  Notable process lessons recorded in the reviews: a from-nothing SMIL
+  entrance is invisible in static captures (two attempts removed; the
+  band is fully static with a pinning regression test), and the first
+  privacy canary test was confounded by the window trim (re-pinned
+  in-window and re-proven by sabotage).
+
 ## Open items
 
 - Pre-OSS-release items tracked in ROADMAP (sample profile, hardening
