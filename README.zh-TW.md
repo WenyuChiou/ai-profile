@@ -5,6 +5,7 @@
 
 # ai-profile
 
+[![PyPI](https://img.shields.io/pypi/v/ai-profile-cli.svg)](https://pypi.org/project/ai-profile-cli/)
 [![tests](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml/badge.svg)](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![python 3.11–3.14](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](pyproject.toml)
@@ -61,13 +62,18 @@ Code、Codex、Cursor、Copilot、Aider 等)——正規化為統一的事件格
 依賴。
 
 ```bash
-pip install git+https://github.com/WenyuChiou/ai-profile
+pip install ai-profile-cli
 ```
 
-PyPI 套件名將為 **`ai-profile-cli`**(上傳處理中;PyPI 的名稱相似度
-規則擋下了 `ai-profile`,因為一個無關的專案已持有 `aiprofile`——而
-`pip install aiprofile` 裝到的是那個別人的專案,不是這個)。上架後:
-`pip install ai-profile-cli`。
+(PyPI 套件名是 `ai-profile-cli` 而非 `ai-profile`:PyPI 的名稱
+相似度規則因無關專案 `aiprofile` 擋下了短名——注意
+`pip install aiprofile` 裝到的是那個別人的專案,不是這個。)
+
+從原始碼裝最新版:
+
+```bash
+pip install git+https://github.com/WenyuChiou/ai-profile
+```
 
 從 clone 安裝(開發用):
 

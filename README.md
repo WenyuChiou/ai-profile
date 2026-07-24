@@ -5,6 +5,7 @@
 
 # ai-profile
 
+[![PyPI](https://img.shields.io/pypi/v/ai-profile-cli.svg)](https://pypi.org/project/ai-profile-cli/)
 [![tests](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml/badge.svg)](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![python 3.11–3.14](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](pyproject.toml)
@@ -65,14 +66,19 @@ Compatibility: Python 3.11–3.14 · git ≥ 2.17 · SHA-1 repositories
 macOS, Linux. Zero runtime dependencies.
 
 ```bash
-pip install git+https://github.com/WenyuChiou/ai-profile
+pip install ai-profile-cli
 ```
 
-The PyPI package will be **`ai-profile-cli`** (upload in progress;
-PyPI's name-similarity rule blocks `ai-profile` because an unrelated
-project already holds `aiprofile` — and `pip install aiprofile` gets
-you that other project, not this one). Once live:
-`pip install ai-profile-cli`.
+(The PyPI name is `ai-profile-cli`, not `ai-profile`: PyPI's
+name-similarity rule reserves the shorter form against the unrelated
+`aiprofile` project — and `pip install aiprofile` gets you that other
+project, not this one.)
+
+Latest from source:
+
+```bash
+pip install git+https://github.com/WenyuChiou/ai-profile
+```
 
 From a clone (development):
 
