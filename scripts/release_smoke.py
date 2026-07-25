@@ -63,6 +63,7 @@ _FAIL = "FAIL"
 _EXPECTED_DIST_FILES = [
     "badge-dark.svg",
     "badge-light.svg",
+    "dashboard.html",
     "heatmap-dark.svg",
     "heatmap-light.svg",
     "profile.json",
@@ -276,6 +277,28 @@ def _check_svgs(out_dir: Path) -> None:
             raise SmokeFailure(f"{name} is not well-formed XML: {exc}") from exc
 
 
+def _check_dashboard(out_dir: Path) -> None:
+    path = out_dir / "dashboard.html"
+    if not path.exists():
+        raise SmokeFailure(f"missing {path}")
+    html = path.read_text(encoding="utf-8")
+    required = (
+        "<!doctype html>",
+        'id="profileData"',
+        "default-src 'none'",
+        "connect-src 'none'",
+        'aria-label="Filter dashboard by AI provider"',
+        "Unknown commits — never assumed human",
+    )
+    missing = [token for token in required if token not in html]
+    if missing:
+        raise SmokeFailure(f"dashboard.html missing contract token(s): {missing}")
+    forbidden = ("https://", "http://", "fetch(", "XMLHttpRequest", "WebSocket")
+    present = [token for token in forbidden if token in html]
+    if present:
+        raise SmokeFailure(f"dashboard.html contains external-network token(s): {present}")
+
+
 def _canary_sweep(out_dir: Path, home: Path, repo: Path) -> None:
     """Grep every published byte for values that must never appear there —
     the same class of check as test_privacy_leak / test_privacy_leak_
@@ -338,6 +361,7 @@ def main() -> int:
 
         step("profile.json structural sanity", lambda: _check_profile_json(out_dir))
         step("SVG well-formedness", lambda: _check_svgs(out_dir))
+        step("dashboard self-contained contract", lambda: _check_dashboard(out_dir))
         step(
             "canary byte-sweep of dist outputs",
             lambda: _canary_sweep(out_dir, home, repo),

@@ -1,4 +1,4 @@
-"""Asset export: VizStats (+ rendered SVGs) → dist/ (mvp.md section 5).
+"""Asset export: VizStats (+ rendered public assets) → dist/.
 
 Consumes only the viz contract and pre-rendered strings — never storage,
 git, or config (architecture.md section 2).
@@ -48,11 +48,12 @@ def _transaction_suffix(out_dir: Path, names: list[str]) -> str:
             return suffix
 
 
-#: Exact SVG filenames the bundle may publish (round D4 widened the set
-#: from the summary pair to the three-card family). A closed allowlist,
-#: not a pattern: the bundle writes into a user directory, so an
-#: unexpected name is a caller bug worth failing loudly on.
-_ALLOWED_SVG_NAMES = frozenset(
+#: Exact filenames the bundle may publish. A closed allowlist, not a
+#: pattern: the bundle writes into a user directory, so an unexpected
+#: name is a caller bug worth failing loudly on. ``dashboard.html`` is
+#: self-contained and receives only the same validated VizStats contract
+#: as the SVG family (ADR-021).
+_ALLOWED_ASSET_NAMES = frozenset(
     {
         "summary-light.svg",
         "summary-dark.svg",
@@ -60,13 +61,14 @@ _ALLOWED_SVG_NAMES = frozenset(
         "heatmap-dark.svg",
         "badge-light.svg",
         "badge-dark.svg",
+        "dashboard.html",
     }
 )
 
 
-def write_outputs(stats: VizStats, svgs: dict[str, str], out_dir: Path) -> list[Path]:
-    """Write the SVG assets in ``svgs`` (filename -> markup, names from
-    the closed ``_ALLOWED_SVG_NAMES`` set) plus profile.json as ONE
+def write_outputs(stats: VizStats, assets: dict[str, str], out_dir: Path) -> list[Path]:
+    """Write the rendered ``assets`` (filename -> markup, names from
+    the closed ``_ALLOWED_ASSET_NAMES`` set) plus profile.json as ONE
     bundle (gate M-07): every asset goes to a same-directory temp file
     first, and targets are replaced only after the whole bundle rendered.
 
@@ -101,14 +103,14 @@ def write_outputs(stats: VizStats, svgs: dict[str, str], out_dir: Path) -> list[
     tmp_paths: list[Path] = []
     backups: list[tuple[Path, Path]] = []  # (target, backup) of moved-aside olds
     completed: list[Path] = []  # targets already replaced with new content
-    unexpected = sorted(set(svgs) - _ALLOWED_SVG_NAMES)
+    unexpected = sorted(set(assets) - _ALLOWED_ASSET_NAMES)
     if unexpected:
         raise RenderError(
             f"refusing to publish unexpected asset name(s): {', '.join(unexpected)}"
         )
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
-        targets = [(out_dir / name, content) for name, content in sorted(svgs.items())]
+        targets = [(out_dir / name, content) for name, content in sorted(assets.items())]
         targets.append((out_dir / "profile.json", dumps_stats(stats)))
         suffix = _transaction_suffix(out_dir, [p.name for p, _ in targets])
         for path, content in targets:

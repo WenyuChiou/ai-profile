@@ -25,6 +25,7 @@ from .errors import AiProfileError
 from .export import write_outputs
 from .privacy import build_viz_stats, local_only_details
 from .render.badge_svg import render_badge
+from .render.dashboard_html import render_dashboard
 from .render.heatmap_svg import render_heatmap
 from .render.summary_svg import render_summary
 from .render.themes import THEMES
@@ -78,7 +79,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="aiprofile",
         description=(
             "Local-first, profile-level AI collaboration analytics:"
-            " explicit git provenance in, privacy-safe SVG/JSON out."
+            " explicit git provenance in, privacy-safe SVG/HTML/JSON out."
         ),
     )
     parser.add_argument("--version", action="version", version=f"aiprofile {__version__}")
@@ -111,10 +112,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p_render = sub.add_parser(
         "render",
-        help="write dist/ assets (SVG light/dark + JSON)",
+        help="write dist/ assets (SVG light/dark + interactive HTML + JSON)",
         description=(
-            "Write the summary/heatmap/badge SVG pairs and profile.json as one"
-            " bundle. Run ONE render at a time per output directory:"
+            "Write the summary/heatmap/badge SVG pairs, self-contained interactive"
+            " dashboard, and profile.json as one bundle. Run ONE render at a time"
+            " per output directory:"
             " concurrent renders into the same directory are unsupported and"
             " can publish a mixed generation."
         ),
@@ -205,15 +207,16 @@ def _cmd_aggregate(args: argparse.Namespace) -> int:
 def _cmd_render(args: argparse.Namespace) -> int:
     stats, _, _ = _compute(args)
     light, dark = THEMES["github-light"], THEMES["github-dark"]
-    svgs = {
+    assets = {
         "summary-light.svg": render_summary(stats, light),
         "summary-dark.svg": render_summary(stats, dark),
         "heatmap-light.svg": render_heatmap(stats, light),
         "heatmap-dark.svg": render_heatmap(stats, dark),
         "badge-light.svg": render_badge(stats, light),
         "badge-dark.svg": render_badge(stats, dark),
+        "dashboard.html": render_dashboard(stats),
     }
-    paths = write_outputs(stats, svgs, Path(args.out))
+    paths = write_outputs(stats, assets, Path(args.out))
     for p in paths:
         print(f"wrote {p}")
     return 0
