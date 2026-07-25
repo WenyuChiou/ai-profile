@@ -40,5 +40,5 @@ no network is used anywhere in the suite, ever.
 
 ## Reporting privacy/security issues
 
-Open an issue titled "privacy report" without including the sensitive
-details, and the maintainer will follow up privately.
+Follow [SECURITY.md](SECURITY.md) and use GitHub's private vulnerability
+reporting. Do not disclose sensitive details in a public issue.

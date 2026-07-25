@@ -1,110 +1,111 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
-  <img alt="ai-profile - 證明你的 AI 協作,同時保有隱私" src="docs/assets/banner-light.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/banner-dark.svg">
+  <img alt="ai-profile－在保護隱私的前提下呈現你的 AI 協作" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/banner-light.svg" width="100%">
 </picture>
 
 # ai-profile
 
 [![PyPI](https://img.shields.io/pypi/v/ai-profile-cli.svg)](https://pypi.org/project/ai-profile-cli/)
 [![tests](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml/badge.svg)](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![python 3.11–3.14](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](pyproject.toml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/WenyuChiou/ai-profile/blob/main/LICENSE)
+[![python 3.11–3.14](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](https://github.com/WenyuChiou/ai-profile/blob/main/pyproject.toml)
 
-[English](README.md) · 繁體中文
+[English](https://github.com/WenyuChiou/ai-profile/blob/main/README.md) · [繁體中文](https://github.com/WenyuChiou/ai-profile/blob/main/README.zh-TW.md)
 
-本機優先(local-first)的 **AI 協作分析**工具,為你的 GitHub 個人頁
-README 而生。`aiprofile` 掃描你本機的 Git repo,尋找*顯式的* AI 參與
-證據——`AI-*` commit trailer 與已知的 AI co-author trailer(Claude
-Code、Codex、Cursor、Copilot、Aider 等)——正規化為統一的事件格式
-(ACE),存入本機 SQLite 資料庫,並輸出隱私安全的 SVG 卡片與 JSON
-摘要,可直接嵌入 GitHub Profile README。
+呈現你如何與 AI 協作，而不只是你提交了多少 commit。`aiprofile`
+把本機 Git 歷史中的明示 AI 參與證據，轉成可放在 GitHub Profile
+README 的可信、隱私安全 SVG 卡片。
 
-## 長什麼樣子
+如果你想建立有證據的 AI 作品形象，又不想上傳原始碼、根據程式風格
+猜測 attribution，或暴露 repository 身分，就適合使用它。`aiprofile`
+會辨識 `AI-*` commit trailer 與經驗證的 AI co-author 身分，跨
+repository 彙整活動，並把資料庫保留在你的電腦上。
+
+它不是 AI 程式碼偵測器。沒有明示證據的 commit 會維持為
+`unknown`，不會被猜測為人類撰寫，也不會被推測成任何 provider。
+
+- **可信：**所有 AI attribution 都來自明示的 Git 證據。
+- **預設保護隱私：**repository 身分不會公開；每日日期只會在你明確選擇後
+  顯示。
+- **可直接展示：**一套本機流程即可產生亮色與深色的摘要、heatmap
+  與 badge。
+
+## 預覽
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/summary-sample-dark.svg">
-  <img alt="以合成資料渲染的 AI 協作摘要卡片範例" src="docs/assets/summary-sample-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
+  <img alt="以合成資料產生的 AI 協作摘要卡片" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg">
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/heatmap-sample-dark.svg">
-  <img alt="協作比例 heatmap 範例:深淺是當天總 commit 數(含你自己的),色相是當天的 AI 協作占比" src="docs/assets/heatmap-sample-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/heatmap-sample-dark.svg">
+  <img alt="AI 協作 heatmap：明暗代表總 commit 數，色相代表當日 AI 協作比例" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/heatmap-sample-light.svg">
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-sample-dark.svg">
-  <img alt="AI 協作占比徽章,由 git 溯源驗證" src="docs/assets/badge-sample-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-dark.svg">
+  <img alt="由 Git provenance 驗證的 AI 協作比例徽章" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-light.svg">
 </picture>
 
-範例由合成的展示用 fixture 渲染;不含任何真實 repo 資料。heatmap 是
-其他工具畫不出來的視角:深淺是你完整的 commit 節奏(包含你自己寫
-的),色相是每天有多少是 AI 協作。
-
-它**不是** AI 程式碼偵測器:絕不從程式碼風格推測任何事。沒有顯式
-證據的 commit 誠實地標為 `unknown`——不會被默默算成人寫的,也不會
-被猜成某個 provider。
-
-就我們所知,這是唯一免費、本機優先、跨 repo、顯式溯源的 profile
-彙總工具(行級歸因屬於 git-ai 這類工具;完整分析:
-[市場定位與差異化](docs/landscape.md))。
-
-狀態:**v0.3**——v0.1 的垂直切片(單一 repo → trailer → SQLite →
-彙總 → 摘要卡片)加上 provider 品牌識別(15 個 mark、雙圖標來源)、
-「僅明示可發布」的等距每日日曆,以及協作比例 heatmap 與徽章。設計文件在 [`docs/`](docs/):
-[架構](docs/architecture.md) · [ACE schema](docs/schema.md) ·
-[MVP 邊界](docs/mvp.md) · [市場定位與差異化](docs/landscape.md)
-· [決策記錄](docs/decisions/)。
+以上範例皆使用合成資料。
 
 ## 安裝
 
-相容性:Python 3.11–3.14 · git ≥ 2.17 · SHA-1 repo(SHA-256 物件
-格式在 v0.1 會得到明確的錯誤訊息)· Windows、macOS、Linux。零執行期
-依賴。
+需要 Python 3.11–3.14 與 Git 2.17 以上版本。支援 Windows、macOS
+與 Linux。Git repository 必須使用 SHA-1 object format。
 
 ```bash
 pip install ai-profile-cli
 ```
 
-(PyPI 套件名是 `ai-profile-cli` 而非 `ai-profile`:PyPI 的名稱
-相似度規則因無關專案 `aiprofile` 擋下了短名——注意
-`pip install aiprofile` 裝到的是那個別人的專案,不是這個。)
-
-從原始碼裝最新版:
-
-```bash
-pip install git+https://github.com/WenyuChiou/ai-profile
-```
-
-從 clone 安裝(開發用):
-
-```bash
-pip install -e ".[dev]"   # dev extras = pytest + ruff + hypothesis
-```
+PyPI 套件名稱是 `ai-profile-cli`；安裝後的指令是 `aiprofile`。
 
 ## 快速開始
 
+在其中一個 repository 的根目錄執行：
+
 ```bash
-aiprofile init            # 在你自己的 repo 裡面執行——身分種子取自
-                          #   該 repo 的 git config user.email
-aiprofile scan ~/my/repo  # 註冊並掃描(換成真實路徑;預設即隱私安全)
-aiprofile aggregate       # 印出將發布的統計 = 隱私預覽
-aiprofile render          # 寫出 dist/:summary + heatmap + badge 三組
-                          #   SVG(light/dark)+ profile.json
+aiprofile init
+aiprofile scan .
+aiprofile aggregate
+aiprofile render
 ```
 
-同一個輸出目錄**一次只跑一個 `render`**——並行渲染進同一目錄不受
-支援,可能發布出來自不同掃描的混合資產。
+- `init` 建立本機設定，並從 `git config user.email` 帶入你的身分。
+- `scan` 記錄由已設定身分所建立的 commit。
+- `aggregate` 顯示可以公開的完整隱私安全統計。
+- `render` 在 `dist/` 產生六個 SVG 檔案與 `profile.json`。
 
-只有你設定的身分所寫的 commit 才會被計算(init 時從
-`git config user.email` 讀取;要加更多 email 就編輯
-`~/.aiprofile/config.json`)。
+只有 `~/.aiprofile/config.json` 內身分所建立的 commit 會被計算。請檢查
+`init` 帶入的 email，並加入其他曾用來 commit 的地址。
 
-請**在你自己的 repo 裡面**執行 `aiprofile init`:身分種子讀的是
-執行當下目錄的 `git config user.email`,在不相關的資料夾執行可能
-種到你的全域 email(而非你實際 commit 用的那個),或什麼都種不到。
-init 之後檢查一下 `~/.aiprofile/config.json` 裡的身分。
+之後可以隨時掃描其他 repository：
 
-嵌入你的個人頁 README:
+```bash
+aiprofile scan /path/to/another/repository
+```
+
+Repository 預設為 `aggregate_only`：數字會計入摘要，但 repository
+身分與每日日期不會公開。`--full` 會把該 repository 的彙總活動明確標記
+為可發布，讓其日期出現在日期型視圖。這是發布政策選擇，不代表該
+repository 在 GitHub 上公開：
+
+```bash
+aiprofile scan --full /path/to/repository
+```
+
+這項選擇會持續保留；之後不用 `--full` 重新掃描，也不會自動降級。
+若要停止發布日期，請在 `~/.aiprofile/config.json` 把該 repository 的
+`publication_level` 改為 `aggregate_only`（保留隱去 repository 身分的
+彙總數字）或 `excluded`（完全排除），再重新執行 `aggregate` 與
+`render`。
+
+同一個輸出目錄一次只能執行一個 `render`。
+
+## 加到 GitHub Profile
+
+在你的 GitHub Profile repository（`USERNAME/USERNAME`）中產生卡片，
+接著 commit 產生的 `dist/` 目錄，並把以下內容加入 README：
 
 ```html
 <picture>
@@ -113,16 +114,13 @@ init 之後檢查一下 `~/.aiprofile/config.json` 裡的身分。
 </picture>
 ```
 
-## 宣告 AI 參與(trailer)
+`heatmap-{light,dark}.svg` 與 `badge-{light,dark}.svg` 也使用相同格式。
+需要更新卡片時，重新執行 `scan` 與 `render`，再 commit 更新後的檔案。
 
-**如果你是透過 Claude Code、Codex、Cursor、Copilot、Aider 或 Amp
-commit,多半什麼都不用做**:會自帶 co-author trailer 的工具(例如
-Claude Code 的 `Co-Authored-By: Claude <noreply@anthropic.com>`)
-透過已驗證的身分 registry 自動辨識。
+## 宣告 AI 參與
 
-其他情況——或想要更豐富的細節(model、角色、審查狀態)——就用
-`AI-*` trailer 顯式宣告;產品名如 `Kimi`、`Claude`、`Gemini` 也能
-解析:
+已知的 AI co-author 身分會被自動辨識。其他工具或更完整的 attribution，
+可以在 commit message 加入 `AI-*` trailer block：
 
 ```text
 feat: add aggregation service
@@ -135,50 +133,45 @@ AI-Mode: AI-Assisted
 AI-Reviewed-By: Human
 ```
 
-一個 commit 可以帶多個 **AI actor presence**
-(「Claude 實作、Codex 審查」= 1 個 unique commit、2 個 presence——
-這兩種指標永不混淆;presence 的意思是「這個 provider/tool 出現在
-這個 commit」,所以 Claude 同時實作又審查同一個 commit 只誠實地算
-一次)。完全由你自己寫的 commit:`AI-Mode: Human-Only`。
+在同一個 commit 重複 `AI-Provider:`，即可宣告另一個 AI actor。因此，
+一個 commit 可以同時是 1 個 unique AI-attributed commit 與多個 actor
+presence。只有明確由人類單獨完成時，才使用 `AI-Mode: Human-Only`。
 
-## 隱私模型(預設即安全)
+## 隱私
 
-- 一切留在你的機器上;無網路呼叫、無遙測。
-- 每個被掃描的 repo 預設為 `aggregate_only`:它貢獻數字,永不露名。
-  `scan --full` 是顯式的選擇加入,把該 repo 的數字標為「明示可發布」
-  (這是你做的政策決定——**不是**對 GitHub 可見性的宣稱);
-  `excluded` 則把 repo 完全移除。
-- 發布政策只住在 `config.json`——改了它,下一次
-  `aggregate`/`render` 就生效,不用重掃。
-- 公開輸出只含:數量、provider 名稱、證據總數、一個 UTC 日期。
-  永不包含:repo 名稱/路徑、組織名、分支、commit SHA 或訊息、原始
-  trailer 字串、email、比日期更細的時間。未被辨識的 provider 拼法
-  在公開資產中歸入「Unrecognized」桶(本機用 `aggregate -v` 可看
-  原始值)。
-- `aiprofile aggregate` 印出的就是會被發布的全部內容——它*就是*
-  隱私預覽。
-- 誠實的限制:aggregate-only 發布是**身分遮蔽,不是匿名**。repo
-  名稱永不出現,但反覆發布精確數字,觀察者仍可推斷你的
-  aggregate-only 活動*何時*變化、哪個 provider 出現過。完整威脅
-  模型:[`docs/PRIVACY.md`](docs/PRIVACY.md)。輸出標籤是政策性的
-  (「明示可發布」/「僅彙總」),永不是對 GitHub 可見性的宣稱。
-- 不要把 `~/.aiprofile` 同步進公開的 dotfiles(裡面有 salt 和私有
-  repo 路徑)。刪掉該目錄即刪除所有本機資料;產生的 `dist/` 檔案
-  另行自行移除。POSIX 上目錄與檔案為僅擁有者可讀寫(0700/0600);
-  Windows 沒有對應的權限位元,`os.chmod` 在該平台是文件化的
-  no-op——資料無論如何都不離開你的機器。
+- Repository 資料不會被上傳。CLI 不會發出網路請求，也沒有 telemetry。
+- 新 repository 預設為 `aggregate_only`。`scan --full` 是明確的發布
+  決定；也可以在 `~/.aiprofile/config.json` 將 repository 設為
+  `excluded`。
+- 公開資產只包含彙整數字、公開 provider 名稱、證據統計與日期；不包含
+  repository 名稱或路徑、organization 名稱、branch、commit SHA 或
+  message、原始 trailer、email。
+- `aiprofile aggregate` 就是發布預覽。Commit 產生的資產前請先檢查。
+- Aggregate-only 是身分遮蔽，不是匿名。持續發布仍可能透露統計何時改變。
+  詳見完整的[隱私模型](https://github.com/WenyuChiou/ai-profile/blob/main/docs/PRIVACY.md)。
+- 不要公開或同步 `~/.aiprofile`；其中包含私人 repository 路徑、身分與
+  本機 salt。
 
-## 誠實標示的指標
+## 指標
 
-- **AI 參與的 commit 數**——帶有 ≥1 個顯式 AI actor presence 的
-  unique commit。各 provider 的計數加總可能超過此數(多 AI 協作的
-  commit),且一律標為 provider-attributed commits,永不冒充
-  unique 總數。證據徽章標明其母體;百分比標明其分母;活躍天數以
-  commit 作者日期計。
-- **證據品質**是一級公民:`verified > declared > imported >
-  inferred > unknown`。v0.1 產出 `declared`(trailer)與 `unknown`。
+- **AI-attributed commits** 是至少包含一個明示 AI actor presence 的
+  unique commit。
+- **Actor presences** 計算一個 commit 中不同 provider/tool 的參與；
+  provider 總數因此可能高於 unique commit 總數。
+- **Unknown** 永遠與 human 分開。
+- 證據品質標示為
+  `verified > declared > imported > inferred > unknown`。
 
-## 授權
+## 說明與支援
 
-MIT——見 [LICENSE](LICENSE)。歡迎依
-[CONTRIBUTING.md](CONTRIBUTING.md) 貢獻。
+執行 `aiprofile --help` 或 `aiprofile COMMAND --help` 查看指令選項。
+Bug 與功能建議請使用
+[GitHub Issues](https://github.com/WenyuChiou/ai-profile/issues)；
+漏洞請依照[安全政策](https://github.com/WenyuChiou/ai-profile/blob/main/SECURITY.md)回報。
+
+## 貢獻與授權
+
+歡迎參與，請見
+[CONTRIBUTING.md](https://github.com/WenyuChiou/ai-profile/blob/main/CONTRIBUTING.md)。
+本專案採用
+[MIT License](https://github.com/WenyuChiou/ai-profile/blob/main/LICENSE)。

@@ -25,8 +25,20 @@ below.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-07-25
+
+### Added
+
+- Public `SECURITY.md` with a private vulnerability-reporting path.
+- CI coverage for every documented Python version (3.11–3.14).
+
 ### Changed
 
+- Reworked the English and Traditional Chinese READMEs around the
+  end-user path: install, scan, privacy preview, render, commit `dist/`,
+  and refresh. Removed internal design history and development-only
+  setup from the public landing page.
+- Package maturity classifier advanced from Alpha to Beta.
 - Heatmap aesthetic pass: day cells are larger (11px on the same
   grid) with SOLID background-mixed hexes replacing fill-opacity —
   low-volume days no longer wash out against the dark card and every

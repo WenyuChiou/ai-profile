@@ -9,8 +9,9 @@ disagree, docs win and the code is the bug.
 ## Quality gates (must stay green after every change)
 
 - `python -m pytest tests -p no:cacheprovider` — full suite; state the
-  count you observe (as of 2026-07-21: 340 passed, 1 skipped — the skip
-  is a POSIX-only fixture on Windows; if your run differs, update this
+  count you observe (as of 2026-07-25: 493 passed, 4 skipped — three
+  skips are POSIX-only permission fixtures on Windows and one requires
+  a case-sensitive filesystem; if your run differs, update this
   line in the same commit).
 - `python -m ruff check src tests` — clean.
 - Privacy invariants are test-enforced; anything weakening `VizStats`
