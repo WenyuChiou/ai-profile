@@ -135,7 +135,9 @@ def test_dashboard_exposes_provider_filter_without_mixing_metric_units():
     assert "row ? row.actor_presences : data.totals.ai_actor_presences" in html
     assert "row ? row.active_days : data.totals.active_ai_days" in html
     assert "Provider totals may overlap" in html
-    assert "Unknown commits — never assumed human" in html
+    assert "Unknown commits · all records · never assumed human" in html
+    assert "published\n          all-provider record" in html
+    assert "unknown commits remain all-records" in html
     assert "All ACE records" in html
     assert "publishable activity only" in html
     assert "Headline aggregates combine publishable and aggregate-only activity" in html

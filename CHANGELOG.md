@@ -25,6 +25,14 @@ below.
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-07-25
+
+### Fixed
+
+- Clarified that provider filters operate within the published record
+  and that the unknown-commit count remains global in every provider
+  view.
+
 ## [0.4.0] — 2026-07-25
 
 ### Added

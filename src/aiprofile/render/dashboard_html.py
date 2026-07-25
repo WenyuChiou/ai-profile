@@ -890,8 +890,9 @@ _HTML_PREFIX = """<!doctype html>
         <p class="eyebrow">AI collaboration / evidence ledger</p>
         <h1 class="title">Collaboration you can inspect.</h1>
         <p class="lede">
-          Explicit Git provenance, aggregated locally. Switch between the complete
-          record and individual AI providers without turning unknown work into a guess.
+          Explicit Git provenance, aggregated locally. Switch between the published
+          all-provider record and individual AI providers without turning unknown
+          work into a guess.
         </p>
       </div>
       <div class="utility">
@@ -923,7 +924,8 @@ _HTML_PREFIX = """<!doctype html>
         </div>
       </article>
 
-      <aside class="panel ledger" aria-label="Selected provider metrics">
+      <aside class="panel ledger"
+             aria-label="Collaboration metrics; unknown commits remain all-records">
         <div class="ledger-item">
           <p class="ledger-value" id="presenceValue">0</p>
           <p class="ledger-label" id="presenceLabel">AI actor presences</p>
@@ -934,7 +936,7 @@ _HTML_PREFIX = """<!doctype html>
         </div>
         <div class="ledger-item">
           <p class="ledger-value" id="unknownValue">0</p>
-          <p class="ledger-label">Unknown commits — never assumed human</p>
+          <p class="ledger-label">Unknown commits · all records · never assumed human</p>
         </div>
       </aside>
     </section>
