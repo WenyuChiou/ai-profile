@@ -1,1 +1,1 @@
-"""Static SVG rendering (ADR-010). Consumes VizStats only — no storage, no git."""
+"""Privacy-safe SVG/HTML rendering. Consumes VizStats only — no storage, no git."""

@@ -14,7 +14,7 @@
 
 呈現你如何與 AI 協作，而不只是你提交了多少 commit。`aiprofile`
 把本機 Git 歷史中的明示 AI 參與證據，轉成可放在 GitHub Profile
-README 的可信、隱私安全 SVG 卡片。
+README 的可信、隱私安全 SVG 卡片與自包含互動 dashboard。
 
 如果你想建立有證據的 AI 作品形象，又不想上傳原始碼、根據程式風格
 猜測 attribution，或暴露 repository 身分，就適合使用它。`aiprofile`
@@ -28,7 +28,7 @@ repository 彙整活動，並把資料庫保留在你的電腦上。
 - **預設保護隱私：**repository 身分不會公開；每日日期只會在你明確選擇後
   顯示。
 - **可直接展示：**一套本機流程即可產生亮色與深色的摘要、heatmap
-  與 badge。
+  與 badge，並提供可依 provider 切換的互動 dashboard。
 
 ## 預覽
 
@@ -74,7 +74,8 @@ aiprofile render
 - `init` 建立本機設定，並從 `git config user.email` 帶入你的身分。
 - `scan` 記錄由已設定身分所建立的 commit。
 - `aggregate` 顯示可以公開的完整隱私安全統計。
-- `render` 在 `dist/` 產生六個 SVG 檔案與 `profile.json`。
+- `render` 在 `dist/` 產生六個 SVG 檔案、`dashboard.html` 與
+  `profile.json`。
 
 只有 `~/.aiprofile/config.json` 內身分所建立的 commit 會被計算。請檢查
 `init` 帶入的 email，並加入其他曾用來 commit 的地址。
@@ -116,6 +117,31 @@ aiprofile scan --full /path/to/repository
 
 `heatmap-{light,dark}.svg` 與 `badge-{light,dark}.svg` 也使用相同格式。
 需要更新卡片時，重新執行 `scan` 與 `render`，再 commit 更新後的檔案。
+
+## 互動 dashboard
+
+`dist/dashboard.html`
+是由與 SVG 卡片相同的已驗證 aggregate data
+產生的自包含 dashboard。
+直接用瀏覽器開啟後，可以：
+
+- 在 **All AI** 與單一 provider 之間切換；
+- 分別查看 provider-attributed commits、actor presences 與 active
+  days，不混用統計單位；
+- 查看可發布範圍內的每日 AI 協作紀錄；
+- 切換亮色、深色
+  與系統色彩主題。
+
+這個檔案不載入外部 script、font、tracker 或 API。
+它包含與 `profile.json` 相同的公開 aggregate fields，
+因此發布任一檔案前，都應先檢查
+`aiprofile aggregate`。
+
+GitHub README 不會執行 JavaScript。
+請繼續在 Profile README 放置 SVG，
+再將卡片連到 GitHub Pages 或其他 static host
+上的 `dashboard.html`。可參考
+[實際 Profile 範例](https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html)。
 
 ## 宣告 AI 參與
 

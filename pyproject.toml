@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-profile-cli"
-version = "0.3.1"
-description = "Evidence-backed, privacy-safe AI collaboration cards for GitHub profiles, generated locally from explicit Git provenance."
+version = "0.4.0"
+description = "Evidence-backed, privacy-safe AI collaboration cards and dashboards generated locally from explicit Git provenance."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = []
-keywords = ["git", "ai", "attribution", "provenance", "github-profile"]
+keywords = ["git", "ai", "attribution", "provenance", "github-profile", "dashboard"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",

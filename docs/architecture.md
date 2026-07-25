@@ -32,8 +32,9 @@ not paint them out.
  privacy     ──────  privacy.py: RepoAggregates + config policy → VizStats
         │            (THE redaction boundary — see §3)
         ▼
- render / export ──  render/: VizStats → summary SVGs (light/dark)
-                     export.py: VizStats → profile.json
+  render / export ──  render/: VizStats → summary, badge, heatmap SVGs
+                              + self-contained interactive dashboard HTML
+                     export.py: VizStats → SVG/HTML/profile.json artifact set
 ```
 
 ## 2. Module map and dependency direction
@@ -68,7 +69,11 @@ src/aiprofile/
                        (CC0 simple-icons subset; ADR-017; schema-free by
                        design - drift-tested mirror of the vocab set)
     summary_svg.py     deterministic summary card renderer
-  export.py            profile.json writer
+    heatmap_svg.py     deterministic collaboration-ratio heatmap
+    badge_svg.py       deterministic compact collaboration badge
+    dashboard_html.py  deterministic self-contained interactive dashboard
+                       (post-v0.1 additive renderer; ADR-021)
+  export.py            transactional public-asset + profile.json writer
   cli.py               argparse wiring: init / scan / aggregate / render
 ```
 
@@ -291,7 +296,7 @@ timestamp would disclose timezone/working hours in a published artifact —
 supersedes the proposal §24 example). No `manifest.json` in v0.1 (nothing
 consumes it until the GitHub Action lands).
 
-## 9. Static rendering
+## 9. Rendering
 
 - Pure functions: `render_summary(stats: VizStats, theme: Theme) -> str`.
 - Deterministic output: byte-identical SVG for identical inputs (snapshot
@@ -306,6 +311,17 @@ consumes it until the GitHub Action lands).
 - Text width handled with a conservative character-width table (no font
   dependencies); layout truncates provider names with an ellipsis rather
   than overflowing.
+
+Post-v0.1, ADR-021 adds
+`render_dashboard(stats: VizStats) -> str`. It obeys the same dependency
+and privacy boundary as the SVG renderers and embeds only the exact
+`profile.json`-equivalent aggregate payload. The resulting
+`dashboard.html` is self-contained: no external fonts, scripts, network
+requests, telemetry, storage access, or Git access. Its JavaScript selects
+existing all-provider or provider-scoped aggregate fields; it does not
+infer attribution or rebuild statistics. GitHub READMEs continue to use
+static SVG because GitHub does not execute arbitrary JavaScript; users may
+link those cards to the HTML file on a static host.
 
 ## 10. Error handling and diagnostics hygiene
 

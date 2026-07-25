@@ -139,7 +139,21 @@ appears (G2-15). An `aiprofile doctor`-style diagnostic listing
 stale/unresolvable alias config entries (gate-3 reviewer suggestion —
 improves the C-03 fail-closed UX without weakening it).
 
-## v0.4+ — GitHub integration
+## v0.4 — self-contained interactive dashboard
+
+- [x] Generate one deterministic `dashboard.html` from validated
+      `VizStats`, with no framework, external assets, network calls, or
+      telemetry (ADR-021).
+- [x] Switch between all-provider and one-provider views using existing
+      unique-commit, actor-presence, active-day, and daily aggregate units.
+- [x] Keep evidence visibly global (“All ACE records”) rather than
+      pretending provider-scoped evidence exists.
+- [x] Responsive light/dark presentation, keyboard-operable filters,
+      visible focus, reduced-motion support, and mobile overflow checks.
+- [x] Preserve the static SVG README strategy; link to the generated HTML
+      when users want interaction.
+
+## v0.5+ — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature
 client or `gh api`; never ad hoc auth/pagination/rate-limit code —
@@ -151,5 +165,5 @@ threshold justifies it (architecture §11).
 ## Explicit non-goals (any version)
 
 Line-level attribution (git-ai's domain), AI code detection / style
-inference, hosted dashboards, generic GitHub stats, prompt/transcript
-storage.
+inference, a hosted dashboard **service** or analytics backend, generic
+GitHub stats, prompt/transcript storage.

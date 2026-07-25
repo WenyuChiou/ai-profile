@@ -14,7 +14,7 @@
 
 Show how you collaborate with AI—not just how often you commit. `aiprofile`
 turns explicit AI provenance in your local Git history into evidence-backed,
-privacy-safe SVG cards for your GitHub Profile README.
+privacy-safe SVG cards and a self-contained interactive dashboard.
 
 Use it when you want a credible AI portfolio without uploading source code,
 guessing attribution from coding style, or exposing repository identities.
@@ -29,7 +29,7 @@ It is not an AI code detector. Commits without explicit evidence remain
 - **Private by default:** repository identities stay hidden, and daily dates
   appear only when you explicitly publish them.
 - **Profile-ready:** one local workflow produces light and dark summary,
-  heatmap, and badge assets.
+  heatmap, and badge assets plus an interactive provider view.
 
 ## Preview
 
@@ -77,7 +77,8 @@ aiprofile render
   `git config user.email`.
 - `scan` records commits authored by your configured identities.
 - `aggregate` shows the exact privacy-safe statistics that can be published.
-- `render` writes six SVG files and `profile.json` to `dist/`.
+- `render` writes six SVG files, `dashboard.html`, and `profile.json` to
+  `dist/`.
 
 Only commits authored by identities in `~/.aiprofile/config.json` count.
 Review the email seeded by `init` and add any other addresses you commit with.
@@ -121,6 +122,26 @@ commit the generated `dist/` directory. Add this to its README:
 Use `heatmap-{light,dark}.svg` or `badge-{light,dark}.svg` in the same
 pattern. To refresh your cards, run `scan` again, run `render`, and commit
 the updated files.
+
+## Interactive dashboard
+
+`dist/dashboard.html` is a self-contained dashboard generated from the same
+validated aggregate data as the SVG cards. Open it directly in a browser to:
+
+- switch between **All AI** and one provider;
+- inspect provider-attributed commits, actor presences, and active days
+  without mixing those units;
+- inspect the publishable daily collaboration window;
+- use light, dark, or system color themes.
+
+The file loads no external script, font, tracker, or API. It contains the
+same public aggregate fields as `profile.json`, so review `aiprofile
+aggregate` before publishing either file.
+
+GitHub READMEs do not execute JavaScript. Keep the SVGs in your Profile
+README and link them to `dashboard.html` on GitHub Pages or another static
+host. See the
+[live profile example](https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html).
 
 ## Declare AI participation
 

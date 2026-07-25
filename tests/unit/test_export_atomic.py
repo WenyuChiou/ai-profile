@@ -32,6 +32,24 @@ def _zero_stats():
     )
 
 
+def test_dashboard_is_allowlisted_but_arbitrary_html_is_rejected(tmp_path):
+    out = tmp_path / "dist"
+    paths = export_mod.write_outputs(
+        _zero_stats(),
+        {"dashboard.html": "<!doctype html><title>dashboard</title>"},
+        out,
+    )
+    assert [path.name for path in paths] == ["dashboard.html", "profile.json"]
+    assert (out / "dashboard.html").read_text(encoding="utf-8").startswith("<!doctype")
+
+    with pytest.raises(RenderError, match="unexpected asset"):
+        export_mod.write_outputs(
+            _zero_stats(),
+            {"arbitrary.html": "<script>not allowlisted</script>"},
+            out,
+        )
+
+
 def test_partial_failure_leaves_previous_generation_intact(tmp_path, monkeypatch):
     out = tmp_path / "dist"
     out.mkdir()

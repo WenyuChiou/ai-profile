@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _PROBE = """
 import sys
+import aiprofile.render.dashboard_html
 import aiprofile.render.summary_svg
 import aiprofile.render.themes
 import aiprofile.export

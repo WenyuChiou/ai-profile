@@ -363,6 +363,7 @@ def test_privacy_leak(tmp_path):
     assert [p.name for p in dist_files] == [
         "badge-dark.svg",
         "badge-light.svg",
+        "dashboard.html",
         "heatmap-dark.svg",
         "heatmap-light.svg",
         "profile.json",
@@ -560,7 +561,7 @@ def test_zero_state_render(tmp_path):
 
 def test_export_stability(tmp_path):
     """Rendering the same (unchanged) state twice on the same day must
-    produce byte-identical assets: all three files, both runs."""
+    produce byte-identical assets across the complete public bundle."""
     home = tmp_path / "home"
     repo_path = tmp_path / "repo"
     build_repo(repo_path, _standard_commits())
@@ -582,6 +583,7 @@ def test_export_stability(tmp_path):
         "heatmap-dark.svg",
         "badge-light.svg",
         "badge-dark.svg",
+        "dashboard.html",
         "profile.json",
     ):
         b1 = (out1 / name).read_bytes()

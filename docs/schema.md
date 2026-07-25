@@ -432,7 +432,8 @@ Nothing is ever guessed into a canonical slug.
 
 **Public-output rule for unrecognized values (privacy-critical):** raw
 strings are commit-message text and may contain anything, including
-private project names. In any public artifact (`profile.json`, SVGs),
+private project names. In any public artifact (`profile.json`, SVGs,
+or the self-contained `dashboard.html` from ADR-021),
 all canonical-`null` participations aggregate under the single reserved
 provider slug `unrecognized` (display name "Unrecognized"). Raw strings
 are visible only in local terminal output (`aggregate -v`). The reserved
