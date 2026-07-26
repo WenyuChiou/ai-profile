@@ -571,12 +571,17 @@ _HTML_PREFIX = """<!doctype html>
       display: grid;
       gap: var(--space-2);
       width: 100%;
-      padding: 0;
+      padding: 0 0 0 var(--space-3);
       border: 0;
+      border-left: 0.25rem solid transparent;
       background: transparent;
       color: inherit;
       cursor: pointer;
       text-align: left;
+    }
+
+    .provider-row[aria-current="true"] {
+      border-left-color: var(--provider-accent);
     }
 
     .provider-row-head {
@@ -590,6 +595,7 @@ _HTML_PREFIX = """<!doctype html>
       display: inline-flex;
       gap: var(--space-2);
       align-items: center;
+      color: var(--text);
       font-size: 0.88rem;
       font-weight: 700;
     }
@@ -625,10 +631,6 @@ _HTML_PREFIX = """<!doctype html>
       font-family: var(--mono);
       font-size: 0.75rem;
       line-height: 1.45;
-    }
-
-    .provider-row[aria-current="true"] .provider-name {
-      color: var(--provider-accent);
     }
 
     .evidence-track {
@@ -841,6 +843,17 @@ _HTML_PREFIX = """<!doctype html>
 
       .filter-label {
         padding-left: 0;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(5.25rem, 1fr));
+        overflow-x: visible;
+      }
+
+      .filter {
+        width: 100%;
+        padding-inline: var(--space-2);
       }
 
       .hero-panel {

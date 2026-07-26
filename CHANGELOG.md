@@ -25,6 +25,34 @@ below.
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-07-26
+
+### Fixed
+
+- Include `THIRD_PARTY_NOTICES.md` in both wheel and sdist artifacts. The
+  v0.4.1 sdist contained the notice, but its wheel did not; existing releases
+  remain available and unmodified.
+- Keep selected provider names in the dashboard's normal text color while
+  retaining provider accents on marks, borders, bars, and the hero value.
+- Wrap provider filters into an equal-width mobile grid so every control
+  remains visible without horizontal scrolling at 320 px.
+
+### Changed
+
+- Build, inspect, Twine-check, clean-install, privacy-sweep, and
+  determinism-test the exact wheel before uploading those same bytes.
+- Freeze the canonical Ubuntu build timestamp in the promotion manifest, and
+  fail release recovery unless PyPI serves exactly the retained wheel and
+  sdist filenames with matching SHA-256 digests. GitHub Release recovery also
+  rejects extra assets and re-downloads the authorized set for checksum
+  verification.
+- Add Python 3.12 wheel-onboarding smoke coverage on Ubuntu, Windows, and
+  macOS.
+- Rework English and Traditional Chinese onboarding around a real Profile
+  example, explicit product positioning, safe manual configuration, complete
+  GitHub Pages instructions, and honest current limitations.
+- Add a release runbook and GitHub issue/pull-request templates.
+
 ## [0.4.1] — 2026-07-25
 
 ### Fixed

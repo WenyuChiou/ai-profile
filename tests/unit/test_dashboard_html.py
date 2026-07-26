@@ -159,6 +159,18 @@ def test_provider_filter_reuses_controls_and_calendar_hides_other_providers():
     assert "if (selectedCount) {" in html
 
 
+def test_selected_provider_keeps_normal_text_color():
+    """Provider accents identify selection without becoming body text."""
+    html = render_dashboard(_stats())
+
+    assert '.provider-row[aria-current="true"] .provider-name' not in html
+    assert '.provider-row[aria-current="true"] {' in html
+    assert "border-left-color: var(--provider-accent)" in html
+    assert ".provider-name {" in html
+    assert "color: var(--text)" in html
+    assert "button.setAttribute(\"aria-current\"" in html
+
+
 def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     html = render_dashboard(_stats())
 
@@ -173,6 +185,16 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     rem_sizes = [float(value) for value in re.findall(r"font-size: ([0-9.]+)rem", html)]
     assert rem_sizes
     assert min(rem_sizes) >= 0.75
+
+
+def test_mobile_provider_filters_wrap_without_horizontal_scrolling():
+    html = render_dashboard(_stats())
+    mobile_css = html.split("@media (max-width: 38rem)", 1)[1]
+
+    assert "grid-template-columns: repeat(auto-fit, minmax(5.25rem, 1fr))" in mobile_css
+    assert "overflow-x: visible" in mobile_css
+    assert "width: 100%" in mobile_css
+    assert "padding-inline: var(--space-2)" in mobile_css
 
 
 def _relative_luminance(hex_color: str) -> float:
