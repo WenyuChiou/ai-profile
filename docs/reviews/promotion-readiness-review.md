@@ -1,48 +1,51 @@
-# v0.4.3 Public Beta promotion readiness review
+# v0.4.4 Public Beta promotion readiness review
 
 Date: 2026-07-26
-Release source: `bf9bb5ae741eeb3dba9efbcb79dcb0a24c84930e`
-Evaluation baseline:
-`773113562871a99da02d50056a118f993794baac`
+Release source:
+`03cfdf03b4f470761a6a0c6962b35d56452bac08`
+Dogfood baseline:
+`363fc615e3c4133551f99a881046b26d45b027ac`
+Profile source:
+`c0a599dc8e1f501fe9724cd3416fa3d623dbe9cb`
 
 Published artifacts:
 
-- wheel: `ai_profile_cli-0.4.3-py3-none-any.whl`
+- wheel: `ai_profile_cli-0.4.4-py3-none-any.whl`
 - wheel SHA-256:
-  `b3baebac895927897ef39ae86227d3ed89455ed1d925be74cc6cc385468781a8`
-- sdist: `ai_profile_cli-0.4.3.tar.gz`
+  `668cf226cd9f292681427ccc2dbc3305d6e886e9a4aa03650f2c160f7074ca3d`
+- sdist: `ai_profile_cli-0.4.4.tar.gz`
 - sdist SHA-256:
-  `1707195748c2f989c594016be4215c0a4a40411cd4d6a2bebf991d12be580a49`
+  `94f2decb07efe2d2c6179bf673b09216c0d9746326d33622e6fceb10ead823b0`
 
 ## Reviewer posture
 
-This is a release and promotion verification, not a redesign. The review
-tests the frozen v0.4.3 gate without changing ACE schema, aggregation
-semantics, provider vocabulary, privacy boundaries, SVG contracts, or CLI
-behavior.
+This is a post-publication promotion verification, not a redesign. It reviews
+the v0.4.4 renderer, package, README onboarding, privacy boundary, published
+artifacts, and live maintainer Profile. ACE schema, aggregation semantics,
+provider vocabulary, privacy levels, and CLI behavior remain unchanged.
 
 ## Executive summary
 
-v0.4.3 satisfies the frozen Public Beta promotion gate:
+v0.4.4 satisfies the Public Beta promotion gate:
 
 - PyPI and GitHub Release serve the exact retained wheel and sdist;
-- the live PyPI wheel clean-installs and passes the release smoke contract;
-- all eight protected CI checks and the release workflow are green;
-- four README-only dogfood roles complete with zero external hints;
-- the exact-wheel browser matrix passes responsive, interaction,
-  accessibility, contrast, and network-closure checks;
-- the maintainer's real GitHub Profile was regenerated only from live PyPI,
-  passed a 52,392-comparison privacy sweep, and was merged through PR #7;
-- GitHub's rendered Profile preserves the responsive `<picture>` contract at
-  every required width and theme;
-- GitHub Pages serves all eight generated assets as exact bytes from Profile
-  `main`;
-- all 31 non-placeholder README and canonical promotion URLs return HTTP 200;
-- independent architecture, privacy, packaging, visual, and completion
-  integrity reviews have no unresolved Critical or High finding.
+- the live PyPI wheel clean-installs and passes the complete release smoke;
+- the tag workflow built once, smoked the same wheel on Ubuntu, Windows, and
+  macOS, verified PyPI digests, and byte-checked GitHub Release assets;
+- four README-only roles completed against the native-Linux wheel with zero
+  external product hints;
+- privacy, commit/presence separation, unknown/human separation, dashboard
+  filters, and the eight-output contract passed independently;
+- the visual system now uses a technical-editorial evidence-ledger direction
+  rather than generic AI gradients, oversized pills, or remote web fonts;
+- the maintainer Profile was regenerated from live PyPI, passed 52,808 private
+  canary comparisons, merged through PR #8, and deployed through Pages;
+- all eight live Pages assets are byte-identical to Profile `main`;
+- 30 canonical README, package, release, support, and demo URLs return 200;
+- there are no unresolved Critical or High findings.
 
-The approved positioning remains **Public Beta** under `0.x`. This review
-does not claim Stable or GA status.
+The approved positioning remains **Public Beta** under `0.x`; this report does
+not claim Stable or GA status.
 
 ## Verification evidence
 
@@ -50,7 +53,7 @@ does not claim Stable or GA status.
 
 ```text
 python -m pytest tests -p no:cacheprovider
-549 passed, 4 skipped
+551 passed, 4 skipped
 
 python -m ruff check src tests scripts
 All checks passed!
@@ -64,159 +67,153 @@ git diff --exit-code -- tests/snapshots docs/assets
 PASS: sanctioned regeneration completed with zero drift
 ```
 
-The four skips are declared platform/fixture cases; no required promotion
-check was silently omitted.
+The four skips are declared platform/fixture cases. No promotion requirement
+was silently omitted.
 
 ### Published artifact identity
 
 GitHub Actions publish run
-[`30204355152`](https://github.com/WenyuChiou/ai-profile/actions/runs/30204355152)
-completed successfully. It tested, built, retained, smoked on Ubuntu,
-Windows, and macOS, published through PyPI trusted publishing, verified
-digests, and created the GitHub Release from the same bytes.
-
-Live verification:
+[`30210402462`](https://github.com/WenyuChiou/ai-profile/actions/runs/30210402462)
+completed successfully:
 
 ```text
-PyPI wheel SHA-256
-b3baebac895927897ef39ae86227d3ed89455ed1d925be74cc6cc385468781a8
-
-PyPI sdist SHA-256
-1707195748c2f989c594016be4215c0a4a40411cd4d6a2bebf991d12be580a49
-
-python scripts/check_release_artifacts.py --artifact-only ...
-PASS
-
-clean venv: python -m pip install ai-profile-cli==0.4.3
-aiprofile version: 0.4.3
-release smoke: PASS
+Build verified release bundle: PASS
+Ubuntu Python 3.12 onboarding: PASS
+Windows Python 3.12 onboarding: PASS
+macOS Python 3.12 onboarding: PASS
+PyPI trusted publishing and digest readback: PASS
+GitHub Release asset verification: PASS
 ```
 
-The wheel and sdist both contain `LICENSE` and
-`THIRD_PARTY_NOTICES.md`. GitHub Release contains exactly the wheel, sdist,
-and `SHA256SUMS`.
-
-### Dogfood and aggregation correctness
-
-Raw role evidence and the reconciled report are retained under
-`.artifact/promotion/dogfood-v043/` and summarized in
-`docs/reviews/promotion-dogfood.md`.
+Independent public-source verification downloaded both PyPI packages and the
+GitHub Release `SHA256SUMS`:
 
 ```text
-README-only roles: 4/4 PASS
+wheel SHA-256 = 668cf226...ca3d
+sdist SHA-256 = 94f2decb...23b0
+artifact contract = PASS
+LICENSE and THIRD_PARTY_NOTICES.md = present
+clean PyPI install version = aiprofile 0.4.4
+release smoke = PASS
+```
+
+The GitHub Release contains exactly the wheel, sdist, and `SHA256SUMS`.
+
+### README-only dogfood and aggregation semantics
+
+Final raw evidence is retained under `.artifact/v044-dogfood-r2/` and
+summarized in `docs/reviews/promotion-dogfood.md`.
+
+```text
+roles: 4/4 PASS
+candidate digest matches: 4/4
 README-external hints: 0
 installation/configuration dead ends: 0
-privacy dogfood: 20 canaries * 8 outputs * 3 modes = 480, hits 0
-multi-provider fixture:
-  unique commits = 4
-  unique AI-attributed commits = 2
-  AI actor presences = 3
-  provider commit counts = 3
-  human commits = 1
-  unknown commits = 1
-  evidence records = 5
+outputs: 8/8 for every role
+privacy: 38 patterns * 9 public outputs = 342 pattern/file checks, hits 0
+dashboard filter mismatches: 0
 ```
 
-One commit with two AI actors remains one unique commit and two actor
-presences. Human and unknown remain disjoint.
-
-### Exact-wheel browser and accessibility matrix
-
-Canonical evidence:
-`.artifact/promotion/browser-v043/exact-wheel-browser/browser-gate.json`.
+The multi-provider oracle and observed output matched:
 
 ```text
-viewport/theme states: 12
-provider states: 36
+commits scanned = 3
+unique AI-attributed commits = 1
+AI actor presences = 2
+human-declared commits = 1
+unknown commits = 1
+evidence records = 4 (declared 3, unknown 1)
+```
+
+One commit with OpenAI and Anthropic participation remains one unique commit
+and two actor presences. Unknown remains separate from human.
+
+### Visual, responsive, and accessibility verification
+
+The v0.4.4 direction is a technical editorial record:
+
+- condensed local display faces such as Bahnschrift, DIN Alternate, and
+  Franklin Gothic provide character without downloading fonts;
+- Trebuchet, Corbel, Avenir, Ubuntu, and DejaVu form a readable cross-platform
+  body stack;
+- tabular numerals, structural rules, a restrained GitHub Primer palette, and
+  an evidence grid create hierarchy without decorative AI styling;
+- accent color remains concentrated in hero values, marks, borders, and data
+  bars instead of normal labels.
+
+The full browser matrix passed:
+
+```text
 widths: 320 / 390 / 768 / 1440
 themes: light / dark / system
+viewport/theme states: 12
+provider states: 36
 maximum document overflow: 0
 minimum meaningful-mark contrast: 5.011:1
-minimum normal metadata contrast: 5.010:1
-accessible dates: all 294 rendered dates per state
-200% rendering: tooltip remains in viewport; calendar scrolls locally
+minimum normal metadata contrast: 4.704:1
+accessible date cells per state: 295
+200% rendering: document overflow 0; calendar scrolls locally
 keyboard / focus / hover / touch / reduced motion: PASS
 console errors / external requests: 0 / 0
 ```
 
-The selected-provider label uses normal text color; selection remains
-visible through a mark, border, and state text rather than color alone.
+The complete matrix ran against the final maintainer dashboard generated by
+the live PyPI v0.4.4 wheel. The exercised Windows checkout file normalizes to
+the canonical Profile Git blob, which was byte-identical to the deployed
+Pages asset. Evidence is retained at
+`.artifact/v044-profile/browser-final/browser-gate.json`, with screenshots at
+the narrow, wide, and 200% rendering gates.
 
-### Real GitHub Profile
+### Real GitHub Profile and privacy
 
-Profile source commit:
-`605b186dafbbdae9008d334b6d13aceabf99f338` (PR #7).
-The assets were generated in an isolated home by a clean environment
-installed from live PyPI v0.4.3.
+The Profile was generated in a clean environment installed from live PyPI
+v0.4.4, then merged through
+[Profile PR #8](https://github.com/WenyuChiou/WenyuChiou/pull/8).
 
 ```text
 repositories scanned: 11
-commits scanned: 1673
-unique AI-attributed commits: 1125
-AI actor presences: 1144
-human commits: 0
-unknown commits: 548
+commits scanned: 1686
+unique AI-attributed commits: 1130
+AI actor presences: 1149
+human-declared commits: 0
+unknown commits: 556
 active AI days: 89
 providers: 2
-evidence records: 1692
+evidence records: 1705
 
-identity checks:
-1673 = 1125 AI + 0 human + 548 unknown
-1144 = 1098 Anthropic + 46 OpenAI presences
-1692 = 1144 declared presences + 548 unknown records
+1686 = 1130 AI + 0 human + 556 unknown
+1149 = 1098 Anthropic + 51 OpenAI presences
+1705 = 1149 declared presences + 556 unknown records
 ```
 
-The retained real-output privacy runner derives 6,549 unique canaries from
-the private salt and paths, repository names and UIDs, organization and
-remote values, identities and author emails, all database full/short SHAs,
-and every exact commit subject and full commit message:
+The retained sweep derived 6,601 unique canaries from the private salt,
+identities, paths, repository names and UIDs, remotes and owner names, author
+emails, every database full/short SHA, and every exact commit subject/message:
 
 ```text
-6549 unique canaries * 8 canonical public outputs = 52,392 comparisons
-privacy hits: 0
-deterministic double-render differences: 0 of 8 files
+6601 unique canaries * 8 public outputs = 52,808 comparisons
+privacy hits = 0
+deterministic second-render differences = 0/8
 ```
 
-Canonical evidence:
-`.artifact/promotion/profile-v043/privacy-sweep.json`; reproducible runner:
-`.artifact/promotion/profile-v043/run-privacy-sweep.py`. An earlier
-5,304/42,432 summary had no retained raw manifest and is superseded by this
-computed result. The runner reads canonical Profile Git blobs, whose digests
-match live Pages, rather than the CRLF-normalized Windows checkout.
-
-GitHub-rendered Profile evidence:
-`.artifact/promotion/profile-v043/github-live/github-profile-gate.json`.
-Across 320, 390, 768, and 1440 pixels in light and dark themes, GitHub
-preserves all three ordered `<source>` elements and selects:
-
-- mobile light -> `badge-light.svg`;
-- mobile dark -> `badge-dark.svg`;
-- desktop light -> `summary-light.svg`;
-- desktop dark -> `summary-dark.svg`.
-
-The card anchor resolves to the live dashboard, document overflow is zero,
-and the smallest compact rendered text is 13.7068 px.
-
-### Pages, links, and repository controls
-
 Pages run
-[`30204801474`](https://github.com/WenyuChiou/WenyuChiou/actions/runs/30204801474)
-completed successfully for Profile commit
-`605b186dafbbdae9008d334b6d13aceabf99f338`. Pages is public, HTTPS-only,
-and sourced from `main` at `/`.
+[`30210910412`](https://github.com/WenyuChiou/WenyuChiou/actions/runs/30210910412)
+completed successfully. All eight live assets returned HTTP 200 and were
+byte-identical to Profile `main`.
 
-The live responses for all eight generated outputs return HTTP 200 and are
-byte-identical to their canonical Git blobs. Evidence:
-`.artifact/promotion/profile-v043/pages-live.json`.
+### README, OSS readiness, and public links
 
-All 31 real README and promotion endpoints return HTTP 200. Placeholder
-`USERNAME` examples are intentionally excluded. Evidence:
-`.artifact/promotion/public-links-v043.json` and
+The English README remains canonical and Traditional Chinese preserves the
+same headings, CTAs, commands, output contract, privacy claims, and limits.
+The first screen leads with the evidence-backed value proposition, live demo,
+quickstart, trust signals, and real Profile example. It states that large
+unknown totals are honest rather than a failed scan.
+
+The package contains notices; the repository exposes contribution, security,
+release, issue, and pull-request guidance; `main` requires the release and
+onboarding checks. Thirty non-placeholder README and release URLs returned
+HTTP 200. Evidence is retained in
 `docs/reviews/promotion-public-link-evidence.json`.
-
-The project homepage is the live dashboard. `main` requires a pull request,
-strict current status checks, the eight release/onboarding checks, and
-administrator enforcement.
 
 ## Independent review synthesis
 
@@ -224,76 +221,68 @@ administrator enforcement.
 |---|---|---:|---:|---:|---:|
 | Architecture and maintainability | APPROVE | 0 | 0 | 0 | 0 |
 | Security and privacy | APPROVE | 0 | 0 | 0 | 0 |
-| Packaging, release, onboarding | APPROVE | 0 | 0 | 0 | 0 |
-| Visual, accessibility, README accuracy | APPROVE | 0 | 0 | 0 | 0 |
+| Packaging and release | APPROVE | 0 | 0 | 0 | 0 |
+| README-only onboarding | APPROVE | 0 | 0 | 0 | 0 |
+| Visual and accessibility | APPROVE | 0 | 0 | 0 | 0 |
 | Completion integrity | APPROVE | 0 | 0 | 0 | 0 |
 
 ## Findings and dispositions
 
-### High — Candidate evidence must bind to one wheel
+### High — Initial candidate did not represent native-Linux release bytes
 
-- **Impact:** Checks on a different wheel cannot authorize published bytes.
-- **Recommendation:** Retain one Linux-built wheel, pin its digest, fan out
-  that wheel to every platform and role, and upload only those bytes.
-- **Disposition:** Fixed. All release and dogfood evidence binds to
-  `b3baebac...781a8`; PyPI and GitHub Release match.
+- **Impact:** Dogfood against a different wheel cannot authorize the package
+  that CI publishes.
+- **Evidence:** WSL over the Windows checkout built `ff7ad454...7a99`; the
+  first PR release job's native Linux checkout built `668cf226...ca3d`.
+- **Recommendation:** Export Git blobs to a native Linux filesystem, freeze
+  the resulting digest, and invalidate every prior role result.
+- **Disposition:** Fixed. Native Linux reproduced CI's digest, all four roles
+  reran against it, PR CI passed, and public PyPI/GitHub bytes match it.
 
-### High — Exact-wheel browser evidence was initially incomplete
+### Low — Anthropic trailers display under the Claude product label
 
-- **Impact:** Static tests cannot prove browser layout, accessibility tree,
-  interaction, or composited contrast.
-- **Recommendation:** Exercise the exact wheel in a headed browser across
-  the frozen viewport, theme, provider, zoom, and input matrix.
-- **Disposition:** Fixed. The retained 12-state/36-provider matrix passes.
+- **Impact:** A new user may need one moment to understand provider alias
+  canonicalization.
+- **Recommendation:** Clarify provider display aliases in a later
+  documentation-only release.
+- **Disposition:** Accepted for v0.4.4. Provider identity and all metric units
+  remain correct in `profile.json`.
 
-### High — Real Profile sanitizer and Pages behavior was unverified
+### Low — GitHub Actions reports Node 20 action deprecations
 
-- **Impact:** GitHub could alter responsive sources or Pages could publish
-  stale/private output.
-- **Recommendation:** Generate from live PyPI, merge through the Profile PR,
-  inspect GitHub `currentSrc`, sweep privacy, and compare Pages to Git blobs.
-- **Disposition:** Fixed. The eight live Profile states and all eight Pages
-  assets pass.
-
-### Medium — Fixed tooltip center could clip under zoom
-
-- **Impact:** Edge calendar evidence could become unreadable.
-- **Recommendation:** Clamp with measured tooltip width and a 16 px margin.
-- **Disposition:** Fixed, regression-tested, and browser-verified.
-
-### Low — Isolated dogfood homes trigger a conservative warning
-
-- **Impact:** Evaluators see an accurate warning because ignored test homes
-  sit inside an outer worktree.
-- **Recommendation:** Keep the warning; do not weaken path protection for a
-  cosmetic dogfood environment.
-- **Disposition:** Accepted. It caused no privacy or onboarding dead end.
+- **Impact:** The pinned upload/download actions currently run successfully
+  under GitHub's Node 24 override but should be refreshed before enforcement
+  changes.
+- **Recommendation:** Upgrade the pinned action revisions in a future
+  maintenance PR and rerun release recovery tests.
+- **Disposition:** Accepted as non-blocking maintenance debt; every required
+  workflow and publication step passed.
 
 ## Verified areas without findings
 
-- Renderers consume sealed, validated aggregate data and do not scan Git,
+- Renderers consume sealed validated aggregate data; they do not scan Git,
   access SQLite, infer attribution, or recalculate statistics.
-- Unique commits, actor presences, provider commits, active days, and
-  evidence records remain separate.
+- Unique commits, actor presences, provider commits, active days, and evidence
+  records remain distinct.
 - Unknown remains separate from human; no source-style inference exists.
-- Aggregate-only and excluded modes emit no repository, organization, path,
-  prompt, message, email, URL, or SHA canary.
-- README English and Traditional Chinese maintain command, CTA, link,
-  privacy, limitation, and claim parity.
-- The package adds no configuration CLI or other feature outside the frozen
-  v0.4.3 scope.
+- Public outputs contain no repository, organization, path, prompt, message,
+  email, URL, salt, UID, or SHA canary.
+- Static SVG Profile assets and the self-contained filterable dashboard are
+  realistic for GitHub README and Pages constraints.
+- v0.4.4 adds no configuration CLI, schema change, remote font, dependency, or
+  other feature outside the frozen Public Beta scope.
 
 ## Severity summary
 
 | Severity | Fixed | Accepted | Pending |
 |---|---:|---:|---:|
 | Critical | 0 | 0 | 0 |
-| High | 3 | 0 | 0 |
-| Medium | 1 | 0 | 0 |
-| Low | 0 | 1 | 0 |
+| High | 1 | 0 | 0 |
+| Medium | 0 | 0 | 0 |
+| Low | 0 | 2 | 0 |
 
-There are no unresolved Critical or High findings. The accepted Low is
-documented behavior and is not a promotion blocker.
+There are no unresolved Critical or High findings. The two accepted Low items
+are documented maintenance/onboarding friction and are not promotion blockers.
 
 ## Final verdict
 
