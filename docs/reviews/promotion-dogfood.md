@@ -2,16 +2,16 @@
 
 Date: 2026-07-26
 Evaluation baseline:
-`c543663d29e8fb7a05e7349242ff0b9b5167253e`
+`363fc615e3c4133551f99a881046b26d45b027ac`
 
 ## Executive result
 
-The sealed-box dogfood gate passed. Four roles used only the canonical
-`README.md` and the same candidate wheel:
+The final sealed-box dogfood gate passed. Four roles used only the canonical
+`README.md` and the same native-Linux candidate wheel:
 
 ```text
 ai_profile_cli-0.4.4-py3-none-any.whl
-SHA-256 ff7ad454ab4a06ebc21b4dc82e284e718bce8f3e01446213e63b9cc4c5267a99
+SHA-256 668cf226cd9f292681427ccc2dbc3305d6e886e9a4aa03650f2c160f7074ca3d
 ```
 
 | Role | Result | README-external hints | Blocking friction |
@@ -26,15 +26,17 @@ Gate totals:
 - roles completed: 4/4;
 - exact candidate-digest matches: 4/4;
 - installation or configuration dead ends: 0;
-- public-output privacy-canary hits: 0/648 exact comparisons;
+- privacy-canary hits: 0/342 pattern/file checks;
 - hand-derived aggregation mismatches: 0;
 - dashboard filter mismatches: 0;
 - local Profile/Pages-preparation dead ends: 0.
 
-Raw reports and command ledgers are retained outside Git under:
+All results against the earlier Windows-worktree wheel
+`ff7ad454...7a99` are invalidated and excluded from this verdict. Raw final
+reports and command ledgers are retained outside Git under:
 
 ```text
-.artifact/v044-dogfood/
+.artifact/v044-dogfood-r2/
 ```
 
 ## Role evidence
@@ -42,8 +44,8 @@ Raw reports and command ledgers are retained outside Git under:
 ### New user
 
 The role installed the exact wheel, verified `aiprofile 0.4.4`, and completed
-`init -> scan -> aggregate -> render` without product guidance beyond the
-README. A single commit without explicit provenance remained unknown:
+`init -> scan -> aggregate -> render` without external product guidance. A
+single commit without explicit provenance remained unknown:
 
 ```text
 commits scanned = 1
@@ -57,27 +59,26 @@ outputs = 8
 
 Three repositories exercised `aggregate_only`, `full`, and `excluded`.
 Aggregate output contained one full and one aggregate-only commit; the
-excluded repository was omitted and refused rescan.
+excluded repository was omitted.
 
-The role created private canaries in repository and organization names,
-absolute and relative paths, branches, file contents, prompts, commit
-messages, emails, URLs, trailers, models, tools, and roles. The sweep searched
-72 exact original/lowercase UTF-8 tokens across the aggregate publication
-preview and all eight assets:
+Thirty-eight private patterns covered repository and organization names,
+paths, branches, file content, prompts, commit messages, email, URL, trailer
+values, and each actual full/short commit SHA. Every pattern was searched
+case-insensitively as UTF-8, UTF-16LE, and UTF-16BE across the aggregate
+publication preview and all eight public assets:
 
 ```text
-72 tokens * 9 public outputs = 648 comparisons
+38 patterns * 9 public outputs = 342 pattern/file checks
 hits = 0
-broader fragment hits = 0
 ```
 
 Distinct dates independently verified the publication boundary:
 
-| Publication level | Synthetic date | Public matches |
-|---|---|---:|
-| `aggregate_only` | 2011-01-11 | 0 |
-| `full` | 2012-02-22 | 8 |
-| `excluded` | 2013-03-03 | 0 |
+| Publication level | Synthetic date | Public result |
+|---|---|---|
+| `aggregate_only` | 2024-01-11 | absent |
+| `full` | 2024-02-22 | date-bearing assets only |
+| `excluded` | 2024-03-23 | absent |
 
 ### Multiple-provider user
 
@@ -89,15 +90,15 @@ commit with contiguous OpenAI and Anthropic actor groups.
 | Commits scanned | 3 | 3 |
 | Unique AI-attributed commits | 1 | 1 |
 | AI actor presences | 2 | 2 |
-| Claude commits / presences | 1 / 1 | 1 / 1 |
-| OpenAI commits / presences | 1 / 1 | 1 / 1 |
+| Claude commits / presences / active days | 1 / 1 / 1 | 1 / 1 / 1 |
+| OpenAI commits / presences / active days | 1 / 1 / 1 | 1 / 1 / 1 |
 | Human-declared commits | 1 | 1 |
 | Unknown commits | 1 | 1 |
 | Evidence declared / unknown / total | 3 / 1 / 4 | 3 / 1 / 4 |
 
 The shared commit remained one unique AI commit and two actor presences.
-Browser assertions for All AI, Claude, and OpenAI preserved those units and
-the selected state.
+Visible-browser assertions for All AI, Claude, and OpenAI preserved those
+units, active days, evidence totals, and the selected state.
 
 ### Profile publisher
 
@@ -109,38 +110,35 @@ dashboard URL, and deployment-delay recovery. No remote mutation occurred.
 
 ## Root reconciliation
 
-The root reviewer recomputed the candidate digest, inventories, public JSON
-totals, and privacy sweep from raw artifacts:
+The root reviewer recomputed the digest, four inventories, public JSON totals,
+and privacy sweep directly from the retained artifacts:
 
 ```text
-wheel digest = ff7ad454...7a99
+wheel digest = 668cf226...ca3d
 output inventories = 8 / 8 / 8 / 8
 new user = scanned 1, AI 0, presences 0, unknown 1
 privacy = scanned 2, AI 2, presences 2, excluded omitted
 multi-provider = scanned 3, AI 1, presences 2, human 1, unknown 1
 publisher = scanned 1, AI 1, presences 1, unknown 0
-privacy = 72 tokens * 9 outputs, hits 0
-date matches = aggregate-only 0, full 8, excluded 0
+privacy = 38 patterns * 9 outputs, hits 0
+date boundary = aggregate-only absent, full present, excluded absent
 ```
 
 ## Findings and dispositions
 
-### Medium — Dogfood harnesses touched state outside their intended scope
+### High — The first candidate was not built from a native-Linux checkout
 
-- **Impact:** Two role runs could not claim a pristine, never-touched
-  evaluation workspace even though the candidate behavior was unaffected.
-- **Evidence:** One PowerShell `$home` collision initialized two new files in
-  the user home. Another setup loop harmlessly reinitialized the existing
-  workspace Git directory three times with its alternate initial-branch
-  request ignored, then briefly set workspace-local Git `user.name` and
-  `user.email`; its `git add`, commit, and remote changes failed.
-- **Recommendation:** Treat these as harness incidents, preserve the raw
-  evidence, remediate exact paths only, and independently verify final
-  workspace state before accepting product results.
-- **Disposition:** Fixed. The two new home files were moved into the isolated
-  evidence directory. The workspace index, tracked files, branch, commit,
-  remotes, and local identity keys were independently verified clean. Every
-  role subsequently completed a clean candidate run.
+- **Impact:** A wheel validated from a WSL process over a Windows worktree had
+  different line-ending bytes from the release workflow's Linux checkout and
+  could not authorize the bytes CI would publish.
+- **Evidence:** The first PR release-candidate job rebuilt
+  `668cf226...ca3d` while the manifest expected `ff7ad454...7a99`.
+- **Recommendation:** Build from Git blobs exported into a native-Linux
+  filesystem, freeze that digest, and invalidate every role result after any
+  artifact-byte change.
+- **Disposition:** Fixed. A Git-archive source exported to Linux `/tmp`
+  reproduced CI's `668cf226...ca3d`. The candidate was replaced and all four
+  README-only roles reran from fresh environments against that exact digest.
 
 ### Low — Isolated homes trigger a conservative warning
 
@@ -161,7 +159,7 @@ date matches = aggregate-only 0, full 8, excluded 0
 
 ## Dogfood verdict
 
-The exact v0.4.4 candidate passes the promotion dogfood gate: 4/4 roles, one
-digest, zero external hints, zero privacy leaks, exact aggregation semantics,
-exact output sets, and no installation, configuration, dashboard, or Profile
-or Pages-preparation blocker.
+The native-Linux v0.4.4 candidate passes the promotion dogfood gate: 4/4
+roles, one digest, zero external hints, zero privacy leaks, exact aggregation
+semantics, exact output sets, and no installation, configuration, dashboard,
+or local Profile/Pages-preparation blocker.
