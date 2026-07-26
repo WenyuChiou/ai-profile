@@ -193,14 +193,17 @@ jobs:
         run: |
           WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
           SDIST="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.tar.gz")); assert len(paths)==1, paths; print(paths[0])')"
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "$WHEEL" "$SDIST" SHA256SUMS --clobber
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$WHEEL" "$SDIST" SHA256SUMS \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
           else
             gh release create \
               "$GITHUB_REF_NAME" \
               "$WHEEL" \
               "$SDIST" \
               SHA256SUMS \
+              --repo "$GITHUB_REPOSITORY" \
               --generate-notes
           fi
           RETAINED_MANIFEST="$GITHUB_WORKSPACE/SHA256SUMS"
@@ -209,7 +212,10 @@ jobs:
               sort
           )"
           OBSERVED_ASSETS="$(
-            gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' |
+            gh release view "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json assets \
+              --jq '.assets[].name' |
               sort
           )"
           if [ "$OBSERVED_ASSETS" != "$EXPECTED_ASSETS" ]; then
@@ -222,10 +228,12 @@ jobs:
           VERIFY_DIR="$RUNNER_TEMP/github-release-verify"
           mkdir -p "$VERIFY_DIR/dist"
           gh release download "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
             --dir "$VERIFY_DIR/dist" \
             --pattern "$(basename "$WHEEL")" \
             --pattern "$(basename "$SDIST")"
           gh release download "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
             --dir "$VERIFY_DIR" \
             --pattern SHA256SUMS
           cmp "$RETAINED_MANIFEST" "$VERIFY_DIR/SHA256SUMS"
