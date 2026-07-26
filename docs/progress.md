@@ -346,6 +346,12 @@ which is authoritative).
 - The release closes the v0.4.1 wheel notice omission, validates exact
   release artifacts, adds three-platform wheel onboarding, and refreshes
   public onboarding and release documentation.
+- The canonical release bundle is built from a clean Ubuntu checkout with a
+  manifest-frozen `SOURCE_DATE_EPOCH`; Windows and macOS smoke those retained
+  bytes rather than rebuilding platform-specific ZIP metadata.
+- Final sealed-box dogfood found and closed a 320 px provider-filter overflow;
+  the replacement candidate passed 4/4 roles, 696 privacy comparisons, and an
+  822-check browser matrix. External CI and publication gates remain pending.
 - Future import, reconciliation, richer views, GitHub API integration, and
   any configuration CLI remain deferred in ROADMAP. They are not part of
   the v0.4.2 product boundary.

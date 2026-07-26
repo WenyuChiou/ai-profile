@@ -845,6 +845,17 @@ _HTML_PREFIX = """<!doctype html>
         padding-left: 0;
       }
 
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(5.25rem, 1fr));
+        overflow-x: visible;
+      }
+
+      .filter {
+        width: 100%;
+        padding-inline: var(--space-2);
+      }
+
       .hero-panel {
         min-height: 20rem;
       }

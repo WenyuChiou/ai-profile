@@ -187,6 +187,16 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     assert min(rem_sizes) >= 0.75
 
 
+def test_mobile_provider_filters_wrap_without_horizontal_scrolling():
+    html = render_dashboard(_stats())
+    mobile_css = html.split("@media (max-width: 38rem)", 1)[1]
+
+    assert "grid-template-columns: repeat(auto-fit, minmax(5.25rem, 1fr))" in mobile_css
+    assert "overflow-x: visible" in mobile_css
+    assert "width: 100%" in mobile_css
+    assert "padding-inline: var(--space-2)" in mobile_css
+
+
 def _relative_luminance(hex_color: str) -> float:
     channels = [int(hex_color[index : index + 2], 16) / 255 for index in (1, 3, 5)]
     linear = [

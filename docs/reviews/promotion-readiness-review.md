@@ -6,47 +6,49 @@ Frozen evaluation baseline:
 Candidate wheel:
 `ai_profile_cli-0.4.2-py3-none-any.whl`
 Candidate wheel SHA-256:
-`51f9646f64e32889ff6909360928265e841a5c28cc228062fd9c0469cf872149`
+`8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e`
 
 ## Reviewer posture
 
 This is an evidence-based release gate, not a design approval. Product scope
-remains frozen: no ACE schema, aggregation, attribution, or CLI change is
-included. A gate is marked complete only from a command result, retained
-artifact, independent review, or live external-state verification.
-
-This report is intentionally updated as the release moves through its
-irreversible stages. The current verdict remains blocking until
-GitHub-hosted cross-platform checks and the post-publication gates complete.
+remains frozen: no ACE schema, aggregation, attribution, or CLI contract
+change is included. A gate is complete only when supported by a retained
+artifact, command output, independent review, or verified external state.
 
 ## Executive summary
 
-The v0.4.1 wheel-notice defect is fixed and regression-tested. The v0.4.2
-candidate contains both required notices in its wheel and sdist, reports one
-version across project/runtime/artifact metadata, passes Twine, installs from
-the exact wheel, renders deterministically, retains the privacy boundary, and
-preserves aggregation semantics.
+The v0.4.1 wheel-notice defect is fixed and regression-tested. The current
+v0.4.2 wheel contains `LICENSE` and `THIRD_PARTY_NOTICES.md`, reports one
+version across package/runtime metadata, passes Twine and exact-wheel smoke,
+renders deterministically, retains the privacy boundary, and preserves
+aggregation semantics.
 
-The initial release workflow did not promote one immutable artifact through
-all operating systems and exposed repository-write permission to build code.
-Independent review rejected that design. The workflow now builds once,
-records an exact two-file manifest, fans the same bundle to Ubuntu, Windows,
-and macOS, and separates read-only build, PyPI OIDC, and GitHub Release
-authority. The dogfooded wheel digest is a checked release input.
+Independent browser verification found a real 320 px overflow after the first
+dogfood pass. The provider controls now wrap into an equal-width mobile grid;
+the final Chrome matrix passed 822/822 checks. Because that source change
+altered the wheel, all four sealed-box roles were invalidated and rerun on the
+new digest. The final role set passed 4/4, with 696 privacy comparisons and
+zero hits.
 
-The exact wheel completed all four sealed-box roles without external hints,
-privacy leaks, metric mismatches, or onboarding dead ends. Promotion is not
-yet authorized in this revision because CI must execute the shared artifact
-on all three operating systems, and post-publication/Profile/governance gates
-cannot precede their external mutations.
+The first GitHub Actions candidate job also proved that a Windows-built wheel
+was not byte-reproducible on Ubuntu. The corrected contract freezes
+`SOURCE_DATE_EPOCH`, uses Ubuntu as the only canonical builder, and fans those
+retained bytes to Windows and macOS. Three clean-Linux build paths now produce
+the same candidate wheel, including a Linux-side patch path that excludes
+Windows checkout-line-ending effects.
+
+Promotion is still blocked. Corrected GitHub-hosted three-platform execution,
+the final release-commit wheel/sdist pair, PyPI/GitHub Release digest parity,
+real Profile refresh, Pages, homepage, and branch protection remain external
+gates. The current verdict therefore remains `NO-GO`.
 
 ## Verification evidence
 
-### Local quality and artifact gates
+### Local quality gates
 
 ```text
 python -m pytest tests -p no:cacheprovider
-540 passed, 4 skipped
+544 passed, 4 skipped
 
 python -m ruff check src tests scripts
 All checks passed!
@@ -59,251 +61,271 @@ python tests/unit/test_heatmap_svg.py
 git diff --exit-code -- tests/snapshots docs/assets
 PASS: sanctioned regeneration completed with zero snapshot/sample drift
 
-python -m build --outdir .artifact/promotion/candidate-v042-final8
-python -m twine check .artifact/promotion/candidate-v042-final8/*
-python scripts/check_release_artifacts.py ...
-PASS: wheel and sdist; LICENSE and THIRD_PARTY_NOTICES.md present
-
-python scripts/release_smoke.py --wheel <candidate> --expected-version 0.4.2
-RESULT: PASS - all steps green
+PyYAML parse: .github/workflows/ci.yml
+PyYAML parse: .github/workflows/publish.yml
+PASS
 ```
 
-Candidate bundle at the pre-review-report checkpoint:
+### Candidate artifact gates
 
 ```text
-wheel  51f9646f64e32889ff6909360928265e841a5c28cc228062fd9c0469cf872149
-sdist  2dfaa1ca07c0a33ce68496db5d2ef15f2132b30c9c67e715ef55fb78ec7f7264
+clean Linux build A wheel SHA-256
+8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e
+
+clean Linux build B wheel SHA-256
+8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e
+
+clean Linux clone + Linux-side git apply wheel SHA-256
+8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e
+
+cmp build-A.whl build-B.whl
+BYTE_IDENTICAL
+
+cmp build-A.whl linux-git-apply.whl
+PASS_CRLF_INDEPENDENT
+
+clean Linux Python 3.12 wheel SHA-256
+8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e
+
+cmp python-3.11.whl python-3.12.whl
+PASS_PYTHON_312_IDENTICAL
+
+python -m twine check <candidate-wheel>
+PASSED
+
+python scripts/release_smoke.py --wheel <candidate-wheel>
+  --expected-version 0.4.2
+RESULT: PASS - all steps green
+
+wheel notice inspection
+PASS: LICENSE
+PASS: THIRD_PARTY_NOTICES.md
+PASS: 34 unique archive members
 ```
 
-The sdist digest is informational and predates this report's final text; the
-publish workflow records and promotes the exact pair built from the frozen
-release commit. The wheel digest is frozen because it authorizes dogfood and
-is enforced by CI and the
-tag workflow through `docs/reviews/promotion-candidate.json`.
+The final sdist digest is intentionally not recorded yet: documentation and
+review evidence still change the sdist. The tag workflow must build the final
+wheel/sdist pair from the release commit, verify the frozen wheel digest, and
+record both exact filenames and digests before either upload.
 
-### Independent review
+### Sealed-box dogfood
 
-The hard-complexity comprehensive review used two static reviewers for each
-of architecture, security, performance, code quality, requirements, and bug
-correctness. Reviewers did not run tests and independently converged on the
-release-artifact identity and permission-isolation defects. A separate
-pre-commit reviewer also rejected the earlier mixed-wheel dogfood evidence.
+The release-authorizing role set is complete for the candidate digest above:
 
-The four-role evidence is complete for wheel SHA-256
-`51f9646f...872149`: 4/4 roles completed with zero external hints, the root
-recomputation matched every metric, 360 privacy comparisons had zero hits,
-the browser/accessibility matrix passed 46/46 checks, and 26/26 public links
-returned HTTP 200. The public-link matrix and GitHub Markdown render counts
-are retained in
-`docs/reviews/promotion-public-link-evidence.json` and statically checked
-against both current READMEs.
+- 4/4 roles completed with zero external hints;
+- root recomputation matched every metric;
+- 29 canaries × 8 files × 3 modes = 696 comparisons, zero hits;
+- browser/accessibility passed 822/822 checks over 36 standard and nine
+  200%-equivalent states;
+- current maintainer public family returned 8/8 HTTP 200;
+- no role configured or mutated a real remote.
 
-The final completion-integrity review independently re-derived the wheel
-identity, dogfood metrics, privacy matrix, visual matrix, retained citations,
-checksum portability, and release-recovery ordering. It found no unresolved
-Critical or High issue.
+The full record is
+`docs/reviews/promotion-dogfood.md`. Public-link evidence remains in
+`docs/reviews/promotion-public-link-evidence.json`.
 
-The following evidence remains pending before the verdict can change:
+### Pending external gates
 
-- GitHub Actions Ubuntu/Windows/macOS results for the shared bundle;
-- PyPI/GitHub Release digest parity and clean live install;
-- real Profile refresh, CI/Pages verification, homepage, and branch
-  protection.
+- corrected PR candidate build and Python 3.11–3.14 suite;
+- Ubuntu/Windows/macOS Python 3.12 onboarding of the same wheel;
+- final release-commit wheel/sdist, Twine, notice, version, tag, and digest
+  parity;
+- PyPI and GitHub Release exact-byte verification and clean live install;
+- real Profile regeneration, privacy sweep, CI, and Pages verification;
+- repository homepage and `main` branch protection.
 
 ## Findings and dispositions
 
 ### High — Release gates and publication consumed different builds
 
-- **Impact:** Dogfood and operating-system evidence could apply to bytes that
-  were never uploaded.
-- **Evidence:** Both architecture reviewers, both security reviewers,
-  performance reviewers, requirements reviewers, and bug reviewers
-  independently identified separate builds in the original CI and publish
-  workflows.
-- **Recommendation:** Build one bundle, retain it, fan it out, and upload only
-  that bundle. Bind the wheel to the frozen dogfood digest.
-- **Disposition:** Fixed in code. CI and tag-workflow execution remain
-  required before closure.
+- **Impact:** Dogfood or OS evidence could apply to bytes that were never
+  uploaded.
+- **Evidence:** Independent architecture, security, requirements, and bug
+  reviewers traced separate build paths.
+- **Recommendation:** Build once, retain one pair, fan it out, and upload only
+  the verified pair.
+- **Disposition:** Fixed in workflow code; corrected CI and tag execution
+  remain required before closure.
 
 ### High — Build code shared repository-write release authority
 
 - **Impact:** Executed project or dependency code could influence a later
-  `gh` invocation holding a contents-write token.
-- **Evidence:** Both security reviewers and architecture reviewers reproduced
-  the job-level permission scope.
-- **Recommendation:** Use fresh jobs with least privilege and digest-verified
-  artifact handoff.
-- **Disposition:** Fixed in code. Build uses contents-read; PyPI and GitHub
-  publication use separate runners and distinct permissions.
+  repository-write operation.
+- **Evidence:** Security review reproduced job-level permission sharing.
+- **Recommendation:** Separate read-only build, PyPI OIDC, and GitHub Release
+  jobs with digest-verified handoff.
+- **Disposition:** Fixed in workflow code.
 
-### High — Initial dogfood mixed candidate wheel bytes
+### High — Earlier dogfood mixed or cited superseded candidate evidence
 
-- **Impact:** A 4/4 result did not authorize one identifiable release wheel.
-- **Evidence:** Mandatory pre-commit review found different digests across the
-  first role packets.
-- **Recommendation:** Invalidate those results and rerun all roles with a
-  first-command full-digest gate.
-- **Disposition:** Earlier evidence is invalidated. A second exact-byte run
-  closed the immediate finding, then renderer/release remediation changed the
-  wheel. The release-authorizing rerun completed all four roles on
-  `51f9646f...872149`; every role calculated and matched the digest before
-  product use.
+- **Impact:** A nominal 4/4 result did not identify one releasable product.
+- **Evidence:** Review found different wheel digests and stale publisher
+  citations in earlier role sets.
+- **Recommendation:** Invalidate every superseded set, enforce a first-action
+  SHA-256 gate, and retain resolvable v2 citations.
+- **Disposition:** Fixed. Only the four roles on
+  `8B6E28BB...BFF332E` are counted.
 
-### High — Final dogfood report cited superseded publisher evidence
+### High — Publisher evidence and public-link claims were not reproducible
 
-- **Impact:** The checked-in promotion conclusion was not reproducible from
-  the paths it named, despite the final evidence existing locally.
-- **Evidence:** Completion-integrity and onboarding reviewers independently
-  resolved every citation and found that the publisher section still used
-  old log numbers. They also found that the 26-link result lacked a retained
-  matrix.
-- **Recommendation:** Point only to the release-authorizing 15/18/19 logs and
-  screenshots 21/23, retain the public-link matrix, and statically bind that
-  matrix to both current READMEs.
-- **Disposition:** Fixed. Every publisher citation now resolves under the
-  final `publisher-release` tree, and
-  `promotion-public-link-evidence.json` records all 26 HTTP results plus both
-  GitHub Markdown render results.
+- **Impact:** The report could not independently support its live-publication
+  claims.
+- **Evidence:** Completion-integrity review found stale log numbers and no
+  retained 26-link matrix.
+- **Recommendation:** Retain link-level evidence and bind it statically to
+  both READMEs.
+- **Disposition:** Fixed in
+  `promotion-public-link-evidence.json` and the current v2 publisher evidence.
 
-### Medium — Required commit-SHA privacy canary was absent
+### High — Candidate wheel was not byte-reproducible on Ubuntu
 
-- **Impact:** The previous 312 comparisons did not establish the frozen SHA
-  leakage requirement.
+- **Impact:** GitHub Actions rejected the dogfooded Windows wheel, blocking
+  exact-byte promotion.
+- **Evidence:** Run `30197407962` produced a different Ubuntu digest. ZIP
+  platform metadata and timestamps were not canonical.
+- **Recommendation:** Freeze `SOURCE_DATE_EPOCH`, build only on Ubuntu, and
+  smoke the retained universal wheel on all target operating systems.
+- **Disposition:** Fixed locally and covered by workflow regressions. External
+  corrected CI is still pending, so one High gate remains open.
+
+### Medium — Required commit-SHA privacy canaries were absent
+
+- **Impact:** The prior sweep did not prove that full or short commit IDs were
+  excluded.
 - **Evidence:** Requirements review compared the canary catalog with the
-  evaluation specification and found neither full nor short commit SHA.
-- **Recommendation:** Add actual fixture SHAs and rerun every mode/output
-  comparison.
-- **Disposition:** Fixed. The final privacy role included the fixture's actual
-  full and seven-character SHAs among 15 canaries. Its raw CSV and independent
-  root recomputation confirm 360 comparisons and zero hits.
+  frozen evaluation specification.
+- **Recommendation:** Include actual fixture SHAs in every mode/output sweep.
+- **Disposition:** Fixed. The final 29-canary, 696-comparison sweep had zero
+  hits.
 
-### Medium — Provider selection lost a persistent visible row cue
+### Medium — Provider selection lacked a persistent non-color row cue
 
-- **Impact:** After focus moved, selected and unselected provider rows could
-  appear identical.
-- **Evidence:** Bug review traced `aria-current` to a deleted selected-state
-  selector.
-- **Recommendation:** Keep provider-name text at the normal text color and use
-  a non-text accent border for state.
-- **Disposition:** Fixed with a four-pixel selected-row border, explicit
-  normal provider-name color, regression assertions, and computed-style
-  browser evidence across the accessibility matrix.
+- **Impact:** Selected and unselected provider rows could look identical after
+  focus moved.
+- **Evidence:** Bug review traced `aria-current` to a missing selected-state
+  visual.
+- **Recommendation:** Keep provider text at normal text color and use a
+  persistent accent border/mark.
+- **Disposition:** Fixed and verified across the browser matrix.
+
+### Medium — Provider filters overflowed at 320 px
+
+- **Impact:** The Claude control was clipped behind a visible horizontal
+  scrollbar in nine mobile states.
+- **Evidence:** Independent Chrome reproduction measured
+  `clientWidth=278`, `scrollWidth=288`.
+- **Recommendation:** Use a wrapping equal-width mobile grid and pin the
+  responsive contract.
+- **Disposition:** Fixed with a regression test; final browser result is
+  822/822 with zero 320 px overflow.
 
 ### Medium — Release smoke could fail at UTC midnight
 
-- **Impact:** Two correct renders spanning a UTC date boundary looked
+- **Impact:** Correct renders spanning a date boundary could appear
   nondeterministic.
-- **Evidence:** Both bug reviewers traced independent `generated_on` values.
-- **Recommendation:** Detect a date boundary and rerun the pair before byte
-  comparison.
-- **Disposition:** Fixed with bounded same-date retry and a simulated rollover
-  regression.
+- **Evidence:** Bug review traced independent `generated_on` values.
+- **Recommendation:** Detect the boundary and retry a bounded same-date pair.
+- **Disposition:** Fixed with a simulated rollover regression.
 
-### Medium — Artifact validation admitted weak or confusing failure paths
+### Medium — Artifact validation admitted weak failure paths
 
-- **Impact:** An unrelated `.dist-info` notice, extra distribution entry, or
-  missing `PKG-INFO` could bypass the intended release contract or diagnostic.
-- **Evidence:** Security and code-quality reviewers provided concrete archive
-  constructions.
-- **Recommendation:** Tie notices to the metadata directory, require exactly
-  two canonical regular files, verify checksums, and translate missing
-  metadata to a controlled failure.
-- **Disposition:** Fixed with additive regressions. Artifact-only mode also
-  separates historical bundle inspection from mutable source parity.
+- **Impact:** An unrelated notice, extra file, missing metadata, or invalid
+  checksum could bypass or obscure the release contract.
+- **Evidence:** Security and code-quality reviewers supplied concrete archive
+  counterexamples.
+- **Recommendation:** Bind notices to the distribution metadata, require the
+  canonical two-file set, validate metadata and checksums, and fail clearly.
+- **Disposition:** Fixed with additive regressions.
 
 ### Medium — Bilingual parity enforcement was structural but not semantic
 
-- **Impact:** CTA, feature, or privacy prose could drift while global tokens
-  remained.
-- **Evidence:** Both requirements reviewers and code-quality review supplied
-  passing counterexamples.
-- **Recommendation:** Enforce ordered heading pairs, block-level command
-  contracts, link multiplicity, CTA targets, and paired feature/privacy
-  claims.
-- **Disposition:** Fixed with negative CTA, feature, and privacy drift tests.
+- **Impact:** CTA, feature, privacy, or setup promises could drift while
+  headings still matched.
+- **Evidence:** Requirements and code-quality reviewers supplied passing
+  counterexamples.
+- **Recommendation:** Enforce ordered headings, command blocks, CTA targets,
+  link multiplicity, and paired claims.
+- **Disposition:** Fixed with positive and negative parity tests.
 
-### Medium — Checksum manifest was bound to the local directory name
+### Medium — Checksum manifests depended on the local directory name
 
-- **Impact:** Exact artifacts copied from `dist/` into a verification
-  directory failed against their correct manifest, contradicting the live
-  release runbook.
-- **Evidence:** The final pre-commit reviewer relocated the wheel and sdist
-  and reproduced a mismatch because the checker derived paths from
-  `path.parent.name`.
-- **Recommendation:** Canonicalize manifest entries as `dist/<filename>`,
-  document the parent/`dist` layout, and add a relocation regression.
-- **Disposition:** Fixed and reproduced green with the same bytes under a
-  differently named download directory.
+- **Impact:** Correct downloaded bytes could fail verification outside a
+  directory literally named `dist`.
+- **Evidence:** Pre-commit review reproduced the relocation failure.
+- **Recommendation:** Canonicalize entries as `dist/<filename>` independent of
+  the local verification directory.
+- **Disposition:** Fixed and regression-tested.
 
-### Medium — Recovery could skip PyPI files without proving byte identity
+### Medium — PyPI recovery could skip files without proving identity
 
-- **Impact:** A retry could report a successful PyPI step for an existing
-  immutable filename without proving that its wheel and sdist matched the
-  retained release bundle.
-- **Evidence:** Final release review traced `skip-existing: true` without a
-  subsequent PyPI digest comparison.
-- **Recommendation:** Verify both served PyPI digests after publication and
-  require the exact retained filename set, then prevent GitHub Release
-  publication until that comparison succeeds.
-- **Disposition:** Fixed. The PyPI job queries the version-specific API with
-  bounded cache-bypassing retries, rejects missing or additional
-  distributions, compares both SHA-256 digests, and gates the GitHub Release
-  job.
+- **Impact:** A retry could accept immutable filenames without proving that
+  their bytes matched the retained release pair.
+- **Evidence:** Release review traced `skip-existing` without post-upload
+  digest verification.
+- **Recommendation:** Query the version-specific PyPI API, require the exact
+  filename set, compare both digests, and gate GitHub Release.
+- **Disposition:** Fixed in workflow code; live tag execution remains pending.
 
-### Low — README wording reversed the unknown-attribution promise
+### Medium — GitHub Release recovery admitted extra assets
 
-- **Impact:** “No evidence stays unknown” could be read as the opposite of the
-  product behavior.
-- **Evidence:** Code-quality review compared the English line with the
-  adjacent explanation and Traditional Chinese version.
-- **Recommendation:** State that commits without explicit evidence stay
-  unknown.
-- **Disposition:** Fixed in the canonical README.
+- **Impact:** Correct wheel, sdist, and checksum files could coexist with an
+  unrelated stale or manually added public asset.
+- **Evidence:** Final release review traced the recovery path through
+  `gh release upload --clobber` without an exact asset-set check.
+- **Recommendation:** Require exactly the three authorized asset names,
+  re-download them, and verify package bytes against `SHA256SUMS`.
+- **Disposition:** Fixed with post-upload name-set verification, a byte
+  comparison between public and retained manifests, package verification
+  against the retained manifest, and static workflow regressions.
+
+### Low — README unknown-attribution wording was ambiguous
+
+- **Impact:** Users could read the copy as reversing the product's honest
+  `unknown` behavior.
+- **Evidence:** Code-quality review compared English and Traditional Chinese
+  wording with runtime behavior.
+- **Recommendation:** State directly that commits without explicit evidence
+  stay unknown.
+- **Disposition:** Fixed in both READMEs.
 
 ### Low — Release diagnostics and documentation lagged automation
 
-- **Impact:** Determinism errors named unchanged files and the smoke header
-  described only the old source-tree/manual mode.
-- **Evidence:** Both code-quality reviewers identified the exact lines.
-- **Recommendation:** Report only changed artifacts and document candidate
-  wheel CI/publish use.
+- **Impact:** Failure messages and operator steps could point at the wrong
+  artifact or workflow.
+- **Evidence:** Code-quality review found stale smoke and determinism wording.
+- **Recommendation:** Name only changed artifacts and document the exact
+  candidate path.
 - **Disposition:** Fixed and regression-tested.
 
 ### Low — Fresh disposable Pages deployment was not performed
 
-- **Impact:** The publisher role validated instructions and existing live
-  routes rather than mutating a new remote repository.
-- **Evidence:** The role explicitly recorded no remote and no push.
-- **Recommendation:** Do not expand a sealed-box documentation role into an
-  undeclared public mutation. Require the planned real maintainer Profile
-  deployment as the post-release end-to-end Pages gate.
-- **Disposition:** Accepted for pre-release dogfood with owner: maintainer;
-  rationale: the frozen role required embeds, URL construction, and dead-end
-  recording, while the approved final plan separately requires a real Profile
-  push and live Pages verification. Promotion remains blocked until that
-  post-release gate completes.
+- **Impact:** The sealed-box publisher validated instructions and current live
+  routes, not a newly mutated public repository.
+- **Evidence:** The role correctly recorded zero remotes and zero pushes.
+- **Recommendation:** Preserve the sealed-box no-mutation boundary and require
+  the planned real maintainer Profile deployment after PyPI publication.
+- **Disposition:** Accepted pre-release with maintainer ownership. Promotion
+  remains blocked until the real Profile and Pages gate completes.
 
 ## Verified areas without findings
 
-- No ACE schema, event identity, controlled vocabulary, normalization, or
-  version contract changed.
-- No aggregation implementation changed. Unique commits, actor presences,
-  provider commits, active days, evidence records, unknown, and human remain
-  distinct.
-- Renderers still consume validated `VizStats`; no Git, SQLite, attribution,
-  or statistics logic moved into rendering.
-- The dashboard remains self-contained and CSP-bound.
-- The package remains dependency-free at runtime and Beta-classified.
-- v0.4.1 and earlier releases remain immutable; the corrective disclosure is
-  in the changelog.
+- No ACE schema, event identity, vocabulary, normalization, or version
+  contract changed.
+- Unique commits, actor presences, provider commits, active days, evidence,
+  unknown, and human remain separate.
+- Renderers still consume validated `VizStats`; they do not scan Git, access
+  SQLite, infer attribution, or recalculate aggregation.
+- Dashboard output remains self-contained and CSP-bound.
+- Runtime remains dependency-free and Beta-classified.
+- v0.4.1 remains immutable; the corrective disclosure is in the changelog.
 
 ## Severity summary
 
 | Severity | Total | Fixed | Accepted | Pending |
 |---|---:|---:|---:|---:|
 | Critical | 0 | 0 | 0 | 0 |
-| High | 4 | 3 | 0 | 1 |
-| Medium | 7 | 7 | 0 | 0 |
+| High | 5 | 4 | 0 | 1 |
+| Medium | 9 | 9 | 0 | 0 |
 | Low | 3 | 2 | 1 | 0 |
 
 ## Final verdict

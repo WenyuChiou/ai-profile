@@ -34,11 +34,18 @@ below.
   remain available and unmodified.
 - Keep selected provider names in the dashboard's normal text color while
   retaining provider accents on marks, borders, bars, and the hero value.
+- Wrap provider filters into an equal-width mobile grid so every control
+  remains visible without horizontal scrolling at 320 px.
 
 ### Changed
 
 - Build, inspect, Twine-check, clean-install, privacy-sweep, and
   determinism-test the exact wheel before uploading those same bytes.
+- Freeze the canonical Ubuntu build timestamp in the promotion manifest, and
+  fail release recovery unless PyPI serves exactly the retained wheel and
+  sdist filenames with matching SHA-256 digests. GitHub Release recovery also
+  rejects extra assets and re-downloads the authorized set for checksum
+  verification.
 - Add Python 3.12 wheel-onboarding smoke coverage on Ubuntu, Windows, and
   macOS.
 - Rework English and Traditional Chinese onboarding around a real Profile

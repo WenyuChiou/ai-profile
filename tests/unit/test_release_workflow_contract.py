@@ -41,7 +41,9 @@ def test_candidate_manifest_matches_project_version_and_is_a_sha256():
 
     assert version is not None
     assert manifest["version"] == version.group(1)
+    assert manifest["wheel"] == f"ai_profile_cli-{version.group(1)}-py3-none-any.whl"
     assert re.fullmatch(r"[0-9a-f]{64}", manifest["wheel_sha256"])
+    assert manifest["source_date_epoch"] == 1785024000
 
 
 def test_publish_workflow_builds_once_fans_out_and_splits_authority():
@@ -51,6 +53,9 @@ def test_publish_workflow_builds_once_fans_out_and_splits_authority():
     publication_jobs = f"{pypi_job}\n  publish-github:{github_job}"
 
     assert workflow.count("python -m build") == 1
+    assert '["source_date_epoch"]' in build_job
+    assert "export SOURCE_DATE_EPOCH" in build_job
+    assert build_job.index('["source_date_epoch"]') < build_job.index("python -m build")
     assert "expected-wheel-sha256" in build_job
     assert "contents: write" not in build_job
     assert "id-token: write" not in build_job
@@ -64,6 +69,11 @@ def test_publish_workflow_builds_once_fans_out_and_splits_authority():
     assert "contents: write" in github_job
     assert "id-token: write" not in github_job
     assert "needs: [build, onboarding, publish-pypi]" in github_job
+    assert "GitHub Release asset set differs from the retained bundle" in github_job
+    assert "gh release download" in github_job
+    assert 'cmp "$RETAINED_MANIFEST" "$VERIFY_DIR/SHA256SUMS"' in github_job
+    assert 'sha256sum --check "$RETAINED_MANIFEST"' in github_job
+    assert "GitHub Release assets match the exact retained bundle" in github_job
     assert "python -m build" not in publication_jobs
     assert "find dist -maxdepth" not in workflow
 
@@ -114,3 +124,63 @@ def test_pypi_recovery_verifier_rejects_an_unretained_distribution(
             ),
             {},
         )
+
+
+@pytest.mark.parametrize("mismatch", [False, True])
+def test_pypi_recovery_verifier_accepts_only_matching_digests(
+    tmp_path,
+    monkeypatch,
+    mismatch,
+):
+    _, _, _, pypi_job, _ = _publish_workflow_sections()
+    expected = {
+        "ai_profile_cli-0.4.2-py3-none-any.whl": "a" * 64,
+        "ai_profile_cli-0.4.2.tar.gz": "b" * 64,
+    }
+    (tmp_path / "SHA256SUMS").write_text(
+        "".join(f"{digest}  dist/{name}\n" for name, digest in expected.items()),
+        encoding="ascii",
+    )
+    observed = dict(expected)
+    if mismatch:
+        observed["ai_profile_cli-0.4.2-py3-none-any.whl"] = "c" * 64
+    payload = {
+        "urls": [
+            {"filename": name, "digests": {"sha256": digest}}
+            for name, digest in observed.items()
+        ]
+    }
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RELEASE_VERSION", "v0.4.2")
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: io.StringIO(json.dumps(payload)),
+    )
+    monkeypatch.setattr(time, "sleep", lambda seconds: None)
+
+    script = compile(
+        _pypi_verifier_script(pypi_job),
+        "publish-pypi-verifier",
+        "exec",
+    )
+    if mismatch:
+        with pytest.raises(
+            SystemExit,
+            match="did not serve the exact retained bundle",
+        ):
+            exec(script, {})
+    else:
+        exec(script, {})
+
+
+def test_ci_candidate_build_uses_the_frozen_source_date_epoch():
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    candidate_job = workflow.split("\n  candidate:", 1)[1].split("\n  tests:", 1)[0]
+
+    assert '["source_date_epoch"]' in candidate_job
+    assert "export SOURCE_DATE_EPOCH" in candidate_job
+    assert candidate_job.index('["source_date_epoch"]') < candidate_job.index(
+        "python -m build"
+    )

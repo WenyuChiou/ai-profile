@@ -28,10 +28,14 @@ The two regeneration commands must produce no unexplained diff.
 
 ## 2. Build and validate artifacts
 
-Build from a clean checkout of the release commit:
+Build from a clean Linux checkout of the release commit. The canonical
+release environment is Ubuntu; Windows and macOS consume and smoke the
+resulting universal wheel rather than rebuilding it. Set the frozen ZIP
+timestamp from the candidate manifest before building:
 
 ```bash
 python -m pip install --upgrade build==1.4.3 twine==6.2.0
+export SOURCE_DATE_EPOCH="$(python -c 'import json; print(json.load(open("docs/reviews/promotion-candidate.json", encoding="utf-8"))["source_date_epoch"])')"
 python -m build
 python -m twine check dist/*
 python scripts/check_release_artifacts.py \
@@ -63,8 +67,10 @@ python scripts/check_release_artifacts.py \
 ```
 
 The candidate manifest is a release authorization, not a floating
-`latest` pointer. Any package or public README change requires a rebuild,
-new digest, and affected dogfood rerun.
+`latest` pointer. It freezes both the authorized wheel digest and
+`SOURCE_DATE_EPOCH`. Any package or public README change requires a rebuild,
+new digest, and affected dogfood rerun. Do not substitute a Windows-built
+wheel: ZIP platform metadata differs even when every file byte is identical.
 
 ## 3. Merge and tag
 
@@ -95,9 +101,13 @@ executes project dependencies.
 The PyPI action skips an already published immutable filename only for
 recovery, then the workflow queries PyPI and requires both served digests to
 match the retained manifest. The GitHub Release job cannot run until that
-check passes. Its path is idempotent, so a retry can repair a partial
-multi-service release without accepting different PyPI bytes. Never rebuild
-or substitute artifacts between validation and upload.
+check passes. After create/repair, the workflow requires the GitHub Release
+asset-name set to equal the wheel, sdist, and `SHA256SUMS`, downloads all
+three, byte-compares the public checksum file with the retained checksum
+file, and verifies both downloaded packages against that retained manifest.
+Its path is idempotent, so a retry can repair a partial multi-service release
+without accepting different or additional public assets. Never rebuild or
+substitute artifacts between validation and upload.
 
 ## 4. Verify the live release
 
