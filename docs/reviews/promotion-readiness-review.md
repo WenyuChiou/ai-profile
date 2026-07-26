@@ -1,46 +1,44 @@
-# v0.4.2 Public Beta promotion readiness review
+# v0.4.3 Public Beta promotion readiness review
 
 Date: 2026-07-26
-Frozen evaluation baseline:
-`02068ba5cf7a1ce6a194b18f70f6245603081916`
+Review head: `bd2a20b`
+Evaluation baseline:
+`773113562871a99da02d50056a118f993794baac`
 Candidate wheel:
-`ai_profile_cli-0.4.2-py3-none-any.whl`
-Candidate wheel SHA-256:
-`8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e`
+`ai_profile_cli-0.4.3-py3-none-any.whl`
+Candidate SHA-256:
+`b3baebac895927897ef39ae86227d3ed89455ed1d925be74cc6cc385468781a8`
 
 ## Reviewer posture
 
-This is an evidence-based release gate, not a design approval. Product scope
-remains frozen: no ACE schema, aggregation, attribution, or CLI contract
-change is included. A gate is complete only when supported by a retained
-artifact, command output, independent review, or verified external state.
+This is a release verification, not a redesign. v0.4.3 changes dashboard
+accessibility, responsive Profile presentation, release metadata, and
+regression evidence only. ACE schema, aggregation semantics, provider
+vocabulary, privacy boundary, SVG contract, and CLI remain unchanged.
 
 ## Executive summary
 
-The v0.4.1 wheel-notice defect is fixed and regression-tested. The current
-v0.4.2 wheel contains `LICENSE` and `THIRD_PARTY_NOTICES.md`, reports one
-version across package/runtime metadata, passes Twine and exact-wheel smoke,
-renders deterministically, retains the privacy boundary, and preserves
-aggregation semantics.
+The v0.4.3 candidate is code-complete and passes its pre-publication gates:
 
-Independent browser verification found a real 320 px overflow after the first
-dogfood pass. The provider controls now wrap into an equal-width mobile grid;
-the final Chrome matrix passed 822/822 checks. Because that source change
-altered the wheel, all four sealed-box roles were invalidated and rerun on the
-new digest. The final role set passed 4/4, with 696 privacy comparisons and
-zero hits.
+- full suite and Ruff are green;
+- the clean-Linux wheel is reproducible and pinned by SHA-256;
+- Twine, artifact notice/metadata contract, clean-wheel smoke, CSP,
+  determinism, and privacy checks pass;
+- Ubuntu, Windows, and macOS consume the same retained wheel;
+- four README-only dogfood roles pass with zero external hints;
+- 480 privacy-canary comparisons have zero hits;
+- hand-derived unique commits, actor presences, provider commits, active
+  days, human, unknown, and evidence records match exactly;
+- the exact-wheel headed-browser matrix passes responsive, keyboard, touch,
+  accessibility-tree, contrast, reduced-motion, and overflow gates;
+- independent architecture, security/privacy, and packaging reviewers report
+  no unresolved Critical, High, Medium, or Low code findings.
 
-The first GitHub Actions candidate job also proved that a Windows-built wheel
-was not byte-reproducible on Ubuntu. The corrected contract freezes
-`SOURCE_DATE_EPOCH`, uses Ubuntu as the only canonical builder, and fans those
-retained bytes to Windows and macOS. Three clean-Linux build paths now produce
-the same candidate wheel, including a Linux-side patch path that excludes
-Windows checkout-line-ending effects.
-
-Corrected GitHub-hosted three-platform execution is now green. Promotion is
-still blocked by the final release-commit wheel/sdist pair, PyPI/GitHub
-Release digest parity, real Profile refresh, Pages, homepage, and branch
-protection. The current verdict therefore remains `NO-GO`.
+Promotion remains blocked until the tag workflow publishes the exact retained
+bytes and the released PyPI wheel regenerates the real maintainer Profile.
+The real GitHub-rendered `<picture>` sanitizer behavior, responsive source
+selection, Profile privacy sweep, PR/Pages deployment, and final live install
+therefore remain mandatory external gates. The current verdict is `NO-GO`.
 
 ## Verification evidence
 
@@ -48,7 +46,7 @@ protection. The current verdict therefore remains `NO-GO`.
 
 ```text
 python -m pytest tests -p no:cacheprovider
-544 passed, 4 skipped
+549 passed, 4 skipped
 
 python -m ruff check src tests scripts
 All checks passed!
@@ -59,281 +57,187 @@ PASS: README English/Traditional Chinese structure and contract parity
 python tests/unit/test_render_summary.py
 python tests/unit/test_heatmap_svg.py
 git diff --exit-code -- tests/snapshots docs/assets
-PASS: sanctioned regeneration completed with zero snapshot/sample drift
-
-PyYAML parse: .github/workflows/ci.yml
-PyYAML parse: .github/workflows/publish.yml
-PASS
+PASS: sanctioned regeneration completed with zero drift
 ```
 
-### Candidate artifact gates
+### Candidate artifact
 
 ```text
-clean Linux build A wheel SHA-256
-8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e
+clean Linux wheel SHA-256
+b3baebac895927897ef39ae86227d3ed89455ed1d925be74cc6cc385468781a8
 
-clean Linux build B wheel SHA-256
-8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e
-
-clean Linux clone + Linux-side git apply wheel SHA-256
-8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e
-
-cmp build-A.whl build-B.whl
-BYTE_IDENTICAL
-
-cmp build-A.whl linux-git-apply.whl
-PASS_CRLF_INDEPENDENT
-
-clean Linux Python 3.12 wheel SHA-256
-8b6e28bb2172a63ac4cd37e14023ecee079e4ceb6e8148acb3b3d0438bff332e
-
-cmp python-3.11.whl python-3.12.whl
-PASS_PYTHON_312_IDENTICAL
-
-python -m twine check <candidate-wheel>
+python -m twine check <wheel> <sdist>
 PASSED
 
-python scripts/release_smoke.py --wheel <candidate-wheel>
-  --expected-version 0.4.2
-RESULT: PASS - all steps green
+python scripts/check_release_artifacts.py --dist-dir <candidate>
+  --expected-wheel-sha256 b3baebac...781a8
+PASS
 
-wheel notice inspection
-PASS: LICENSE
-PASS: THIRD_PARTY_NOTICES.md
-PASS: 34 unique archive members
+python scripts/release_smoke.py --wheel <candidate-wheel>
+  --expected-version 0.4.3
+RESULT: PASS - all steps green
 ```
 
-The final sdist digest is intentionally not recorded yet: documentation and
-review evidence still change the sdist. The tag workflow must build the final
-wheel/sdist pair from the release commit, verify the frozen wheel digest, and
-record both exact filenames and digests before either upload.
+The wheel contains both `LICENSE` and `THIRD_PARTY_NOTICES.md`. The sdist
+contains both notices at archive root. Runtime, project metadata, candidate
+manifest, and artifact filenames all report `0.4.3`.
 
-### Sealed-box dogfood
+### GitHub-hosted matrix
 
-The release-authorizing role set is complete for the candidate digest above:
+PR #5 run `30203764991` passes eight required checks:
 
-- 4/4 roles completed with zero external hints;
-- root recomputation matched every metric;
-- 29 canaries × 8 files × 3 modes = 696 comparisons, zero hits;
-- browser/accessibility passed 822/822 checks over 36 standard and nine
-  200%-equivalent states;
-- current maintainer public family returned 8/8 HTTP 200;
-- no role configured or mutated a real remote.
+- Python 3.11, 3.12, 3.13, and 3.14;
+- Release candidate build;
+- wheel onboarding on Ubuntu, Windows, and macOS with Python 3.12.
 
-The full record is
-`docs/reviews/promotion-dogfood.md`. Public-link evidence remains in
-`docs/reviews/promotion-public-link-evidence.json`.
+The CI release bundle uses the manifest-pinned wheel digest. Windows and
+macOS consume the retained Ubuntu-built universal wheel rather than
+rebuilding platform-specific ZIP metadata.
 
-### GitHub-hosted candidate gates
+### Dogfood and privacy
 
-GitHub Actions run `30199892110` passed:
+The final role set is documented in
+`docs/reviews/promotion-dogfood.md`.
 
-- `Release candidate build`;
-- Python 3.11, 3.12, 3.13, and 3.14 full suite plus lint;
-- Ubuntu, Windows, and macOS Python 3.12 onboarding of the same retained
-  wheel.
+```text
+roles: 4/4 PASS
+candidate hash matches: 4/4
+README-external hints: 0
+installation/configuration dead ends: 0
+privacy: 20 canaries * 8 outputs * 3 modes = 480, hits 0
+aggregation/dashboard mismatches: 0
+local Pages configuration dead ends: 0
+```
 
-### Pending external gates
+### Exact-wheel browser matrix
 
-- final release-commit wheel/sdist, Twine, notice, version, tag, and digest
-  parity;
-- PyPI and GitHub Release exact-byte verification and clean live install;
-- real Profile regeneration, privacy sweep, CI, and Pages verification;
-- repository homepage and `main` branch protection.
+```text
+viewport/theme states: 12
+provider states: 36
+widths: 320 / 390 / 768 / 1440
+themes: light / dark / system
+maximum document overflow: 0
+minimum meaningful-mark contrast: 5.011:1
+minimum normal metadata contrast: 5.010:1
+accessibility dates present: all 294 rendered dates per state
+200% rendering: PASS; tooltip in viewport; calendar locally scrollable
+keyboard / focus / hover / touch / reduced motion: PASS
+console errors / external requests: 0 / 0
+```
+
+Evidence is retained under
+`.artifact/promotion/browser-v043/exact-wheel-browser/`.
+
+## Independent reviews
+
+### Architecture and maintainability
+
+**APPROVE — Critical 0, High 0, Medium 0, Low 0.**
+
+The renderer still accepts exact sealed `VizStats`; embedded dashboard data
+remains `profile.json`-equivalent; no schema, aggregation, CLI, vocabulary,
+or privacy contract changed. Accessibility logic remains inside the
+self-contained renderer.
+
+### Security and privacy
+
+**APPROVE — Critical 0, High 0, Medium 0, Low 0.**
+
+The reviewer independently recomputed the 480-byte sweep, verified all three
+publication modes, checked embedded JSON equality, CSP/network closure, and
+unknown/human plus commit/presence separation.
+
+### Packaging, release, and onboarding
+
+**APPROVE — Critical 0, High 0, Medium 0, Low 0.**
+
+The reviewer independently inspected the retained CI bundle, notices,
+metadata, checksums, Twine results, exact-wheel smoke, version parity,
+three-platform onboarding, and checkout-free GitHub Release commands.
+
+### Visual, accessibility, and README accuracy
+
+**APPROVE — Critical 0, High 0, Medium 0, Low 0 code findings.**
+
+The first pass found missing runtime evidence and a zoomed-tooltip risk.
+Re-review confirmed the measured-width clamp and exact-wheel headed-browser
+matrix close both code findings. The real Profile/GitHub sanitizer gate
+remains intentionally pending until the package is published.
 
 ## Findings and dispositions
 
-### High — Release gates and publication consumed different builds
+### High — Candidate evidence must bind to one wheel
 
-- **Impact:** Dogfood or OS evidence could apply to bytes that were never
-  uploaded.
-- **Evidence:** Independent architecture, security, requirements, and bug
-  reviewers traced separate build paths.
-- **Recommendation:** Build once, retain one pair, fan it out, and upload only
-  the verified pair.
-- **Disposition:** Fixed in workflow code; corrected CI and tag execution
-  remain required before closure.
+- **Impact:** Passing checks on a different wheel would not authorize the
+  uploaded bytes.
+- **Evidence:** Windows CRLF and the subsequent tooltip patch each changed
+  the wheel digest.
+- **Recommendation:** Build in a clean Linux checkout, pin SHA-256, fan out
+  the retained wheel, and invalidate all role evidence after byte changes.
+- **Disposition:** Fixed. CI and all four final roles use
+  `b3baebac...781a8`.
 
-### High — Build code shared repository-write release authority
+### High — Exact-wheel browser evidence was initially incomplete
 
-- **Impact:** Executed project or dependency code could influence a later
-  repository-write operation.
-- **Evidence:** Security review reproduced job-level permission sharing.
-- **Recommendation:** Separate read-only build, PyPI OIDC, and GitHub Release
-  jobs with digest-verified handoff.
-- **Disposition:** Fixed in workflow code.
+- **Impact:** String-level tests could not prove responsive, interaction,
+  accessibility-tree, or composited-contrast behavior.
+- **Recommendation:** Retain a headed-browser matrix generated by the exact
+  candidate wheel.
+- **Disposition:** Fixed. The final matrix covers 12 viewport/theme and 36
+  provider states plus zoom, touch, keyboard, focus, hover, and screenshots.
 
-### High — Earlier dogfood mixed or cited superseded candidate evidence
+### High — Real Profile sanitizer and Pages behavior is unverified
 
-- **Impact:** A nominal 4/4 result did not identify one releasable product.
-- **Evidence:** Review found different wheel digests and stale publisher
-  citations in earlier role sets.
-- **Recommendation:** Invalidate every superseded set, enforce a first-action
-  SHA-256 gate, and retain resolvable v2 citations.
-- **Disposition:** Fixed. Only the four roles on
-  `8B6E28BB...BFF332E` are counted.
+- **Impact:** GitHub could reject or alter responsive `<picture>` behavior,
+  or the published Profile could fail its mobile/readability/privacy gate.
+- **Recommendation:** Regenerate from the released PyPI wheel, merge through
+  the Profile PR path, verify GitHub-rendered `currentSrc` at all required
+  widths/themes, then wait for Pages and public HTTP checks.
+- **Disposition:** Pending external gate; promotion blocker.
 
-### High — Publisher evidence and public-link claims were not reproducible
+### Medium — Fixed tooltip center could clip under zoom
 
-- **Impact:** The report could not independently support its live-publication
-  claims.
-- **Evidence:** Completion-integrity review found stale log numbers and no
-  retained 26-link matrix.
-- **Recommendation:** Retain link-level evidence and bind it statically to
-  both READMEs.
-- **Disposition:** Fixed in
-  `promotion-public-link-evidence.json` and the current v2 publisher evidence.
+- **Impact:** Calendar evidence could become unreadable at a viewport edge.
+- **Recommendation:** Clamp by measured half-width plus a 16 px margin.
+- **Disposition:** Fixed, regression-tested, and runtime-verified.
 
-### High — Candidate wheel was not byte-reproducible on Ubuntu
+### Low — Isolated dogfood homes trigger a conservative warning
 
-- **Impact:** GitHub Actions rejected the dogfooded Windows wheel, blocking
-  exact-byte promotion.
-- **Evidence:** Run `30197407962` produced a different Ubuntu digest. ZIP
-  platform metadata and timestamps were not canonical.
-- **Recommendation:** Freeze `SOURCE_DATE_EPOCH`, build only on Ubuntu, and
-  smoke the retained universal wheel on all target operating systems.
-- **Disposition:** Fixed. GitHub Actions run `30199892110` reproduced the
-  candidate digest and passed Ubuntu/Windows/macOS onboarding.
-
-### Medium — Required commit-SHA privacy canaries were absent
-
-- **Impact:** The prior sweep did not prove that full or short commit IDs were
-  excluded.
-- **Evidence:** Requirements review compared the canary catalog with the
-  frozen evaluation specification.
-- **Recommendation:** Include actual fixture SHAs in every mode/output sweep.
-- **Disposition:** Fixed. The final 29-canary, 696-comparison sweep had zero
-  hits.
-
-### Medium — Provider selection lacked a persistent non-color row cue
-
-- **Impact:** Selected and unselected provider rows could look identical after
-  focus moved.
-- **Evidence:** Bug review traced `aria-current` to a missing selected-state
-  visual.
-- **Recommendation:** Keep provider text at normal text color and use a
-  persistent accent border/mark.
-- **Disposition:** Fixed and verified across the browser matrix.
-
-### Medium — Provider filters overflowed at 320 px
-
-- **Impact:** The Claude control was clipped behind a visible horizontal
-  scrollbar in nine mobile states.
-- **Evidence:** Independent Chrome reproduction measured
-  `clientWidth=278`, `scrollWidth=288`.
-- **Recommendation:** Use a wrapping equal-width mobile grid and pin the
-  responsive contract.
-- **Disposition:** Fixed with a regression test; final browser result is
-  822/822 with zero 320 px overflow.
-
-### Medium — Release smoke could fail at UTC midnight
-
-- **Impact:** Correct renders spanning a date boundary could appear
-  nondeterministic.
-- **Evidence:** Bug review traced independent `generated_on` values.
-- **Recommendation:** Detect the boundary and retry a bounded same-date pair.
-- **Disposition:** Fixed with a simulated rollover regression.
-
-### Medium — Artifact validation admitted weak failure paths
-
-- **Impact:** An unrelated notice, extra file, missing metadata, or invalid
-  checksum could bypass or obscure the release contract.
-- **Evidence:** Security and code-quality reviewers supplied concrete archive
-  counterexamples.
-- **Recommendation:** Bind notices to the distribution metadata, require the
-  canonical two-file set, validate metadata and checksums, and fail clearly.
-- **Disposition:** Fixed with additive regressions.
-
-### Medium — Bilingual parity enforcement was structural but not semantic
-
-- **Impact:** CTA, feature, privacy, or setup promises could drift while
-  headings still matched.
-- **Evidence:** Requirements and code-quality reviewers supplied passing
-  counterexamples.
-- **Recommendation:** Enforce ordered headings, command blocks, CTA targets,
-  link multiplicity, and paired claims.
-- **Disposition:** Fixed with positive and negative parity tests.
-
-### Medium — Checksum manifests depended on the local directory name
-
-- **Impact:** Correct downloaded bytes could fail verification outside a
-  directory literally named `dist`.
-- **Evidence:** Pre-commit review reproduced the relocation failure.
-- **Recommendation:** Canonicalize entries as `dist/<filename>` independent of
-  the local verification directory.
-- **Disposition:** Fixed and regression-tested.
-
-### Medium — PyPI recovery could skip files without proving identity
-
-- **Impact:** A retry could accept immutable filenames without proving that
-  their bytes matched the retained release pair.
-- **Evidence:** Release review traced `skip-existing` without post-upload
-  digest verification.
-- **Recommendation:** Query the version-specific PyPI API, require the exact
-  filename set, compare both digests, and gate GitHub Release.
-- **Disposition:** Fixed in workflow code; live tag execution remains pending.
-
-### Medium — GitHub Release recovery admitted extra assets
-
-- **Impact:** Correct wheel, sdist, and checksum files could coexist with an
-  unrelated stale or manually added public asset.
-- **Evidence:** Final release review traced the recovery path through
-  `gh release upload --clobber` without an exact asset-set check.
-- **Recommendation:** Require exactly the three authorized asset names,
-  re-download them, and verify package bytes against `SHA256SUMS`.
-- **Disposition:** Fixed with post-upload name-set verification, a byte
-  comparison between public and retained manifests, package verification
-  against the retained manifest, and static workflow regressions.
-
-### Low — README unknown-attribution wording was ambiguous
-
-- **Impact:** Users could read the copy as reversing the product's honest
-  `unknown` behavior.
-- **Evidence:** Code-quality review compared English and Traditional Chinese
-  wording with runtime behavior.
-- **Recommendation:** State directly that commits without explicit evidence
-  stay unknown.
-- **Disposition:** Fixed in both READMEs.
-
-### Low — Release diagnostics and documentation lagged automation
-
-- **Impact:** Failure messages and operator steps could point at the wrong
-  artifact or workflow.
-- **Evidence:** Code-quality review found stale smoke and determinism wording.
-- **Recommendation:** Name only changed artifacts and document the exact
-  candidate path.
-- **Disposition:** Fixed and regression-tested.
-
-### Low — Fresh disposable Pages deployment was not performed
-
-- **Impact:** The sealed-box publisher validated instructions and current live
-  routes, not a newly mutated public repository.
-- **Evidence:** The role correctly recorded zero remotes and zero pushes.
-- **Recommendation:** Preserve the sealed-box no-mutation boundary and require
-  the planned real maintainer Profile deployment after PyPI publication.
-- **Disposition:** Accepted pre-release with maintainer ownership. Promotion
-  remains blocked until the real Profile and Pages gate completes.
+- **Impact:** Evaluators see an accurate warning because ignored test homes
+  sit inside the outer worktree.
+- **Disposition:** Accepted; the warning is privacy-conservative and caused
+  no workflow dead end.
 
 ## Verified areas without findings
 
-- No ACE schema, event identity, vocabulary, normalization, or version
-  contract changed.
-- Unique commits, actor presences, provider commits, active days, evidence,
-  unknown, and human remain separate.
-- Renderers still consume validated `VizStats`; they do not scan Git, access
+- Unknown remains separate from human; no source-style inference exists.
+- Unique commits, actor presences, provider commits, active days, and
+  evidence records remain distinct.
+- Renderers consume validated aggregate data only and never scan Git, read
   SQLite, infer attribution, or recalculate aggregation.
-- Dashboard output remains self-contained and CSP-bound.
-- Runtime remains dependency-free and Beta-classified.
-- v0.4.1 remains immutable; the corrective disclosure is in the changelog.
+- Public assets contain no repository names, organizations, paths, prompts,
+  commit messages, emails, URLs, or SHAs from privacy fixtures.
+- README English and Traditional Chinese retain setup, command, CTA, link,
+  privacy, limitation, and claim parity.
+- The package remains `0.x` Public Beta; no Stable/GA claim was introduced.
 
 ## Severity summary
 
-| Severity | Total | Fixed | Accepted | Pending |
-|---|---:|---:|---:|---:|
-| Critical | 0 | 0 | 0 | 0 |
-| High | 5 | 5 | 0 | 0 |
-| Medium | 9 | 9 | 0 | 0 |
-| Low | 3 | 2 | 1 | 0 |
+| Severity | Fixed | Accepted | Pending |
+|---|---:|---:|---:|
+| Critical | 0 | 0 | 0 |
+| High | 2 | 0 | 1 |
+| Medium | 1 | 0 | 0 |
+| Low | 0 | 1 | 0 |
+
+## Pending external gates
+
+- merge PR #5 and tag `v0.4.3`;
+- verify PyPI and GitHub Release serve the retained wheel and final sdist;
+- clean-install from live PyPI and repeat package smoke;
+- regenerate the maintainer Profile only from the released wheel;
+- verify GitHub sanitizer, responsive asset selection, Profile privacy,
+  Profile PR/CI, Pages, public links, homepage, and branch protection.
 
 ## Final verdict
 

@@ -341,20 +341,25 @@ which is authoritative).
 
 ## Open items
 
-- v0.4.2 Public Beta promotion is in progress under the frozen evaluation
-  baseline in `docs/reviews/promotion-eval-spec.md`.
-- The release closes the v0.4.1 wheel notice omission, validates exact
-  release artifacts, adds three-platform wheel onboarding, and refreshes
-  public onboarding and release documentation.
+- v0.4.2 was published as the immutable wheel-notice correction. Its package
+  artifacts and tag remain unchanged.
+- v0.4.3 Public Beta promotion is in progress under the additive frozen
+  baseline in `docs/reviews/promotion-eval-spec-v043.md`.
+- v0.4.3 closes the classic-scrollbar overflow, calendar
+  keyboard/touch/accessibility-tree and contrast gates, zoom-safe tooltip
+  positioning, and compact mobile Profile source selection.
 - The canonical release bundle is built from a clean Ubuntu checkout with a
   manifest-frozen `SOURCE_DATE_EPOCH`; Windows and macOS smoke those retained
   bytes rather than rebuilding platform-specific ZIP metadata.
-- Final sealed-box dogfood found and closed a 320 px provider-filter overflow;
-  the replacement candidate passed 4/4 roles, 696 privacy comparisons, and an
-  822-check browser matrix. External CI and publication gates remain pending.
+- The final candidate wheel digest is
+  `b3baebac895927897ef39ae86227d3ed89455ed1d925be74cc6cc385468781a8`.
+  It passed 4/4 README-only roles, 480 privacy comparisons, a 12-state
+  exact-wheel browser matrix, and all eight PR checks including
+  Ubuntu/Windows/macOS onboarding. Publication and the real Profile/Pages
+  gate remain pending.
 - Future import, reconciliation, richer views, GitHub API integration, and
   any configuration CLI remain deferred in ROADMAP. They are not part of
-  the v0.4.2 product boundary.
+  the v0.4.3 product boundary.
 
 ## Pointers
 
