@@ -159,6 +159,28 @@ def test_provider_filter_reuses_controls_and_calendar_hides_other_providers():
     assert "if (selectedCount) {" in html
 
 
+def test_calendar_uses_roving_keyboard_and_touch_accessible_days():
+    html = render_dashboard(_stats())
+
+    assert 'id="activityCalendar" role="group"' in html
+    assert 'document.createElement("button")' in html
+    assert 'cell.tabIndex = index === 0 ? 0 : -1' in html
+    assert re.search(r'cell\.addEventListener\(\s*"focus"', html)
+    assert 'cell.addEventListener("click"' in html
+    assert 'cell.addEventListener("keydown", handleCalendarKeydown)' in html
+    assert 'ArrowRight: 7' in html
+    assert 'ArrowDown: 1' in html
+    assert 'event.key === "Escape"' in html
+    assert "tooltipSuppressed = event.currentTarget" in html
+    assert "tooltipHoverPaused = true" in html
+    assert "event.movementX || event.movementY" in html
+    assert "tooltipSuppressed !== cell" in html
+    assert 'cell.setAttribute("aria-describedby", "tooltip")' in html
+    assert "tooltip.getBoundingClientRect().width / 2" in html
+    assert "innerWidth - halfWidth - margin" in html
+    assert "% share" in html
+
+
 def test_selected_provider_keeps_normal_text_color():
     """Provider accents identify selection without becoming body text."""
     html = render_dashboard(_stats())
@@ -185,6 +207,9 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     rem_sizes = [float(value) for value in re.findall(r"font-size: ([0-9.]+)rem", html)]
     assert rem_sizes
     assert min(rem_sizes) >= 0.75
+    assert "min-width: 20rem" not in html
+    assert "html {\n      min-width: 0;" in html
+    assert ".generated {\n      color: var(--muted);" in html
 
 
 def test_mobile_provider_filters_wrap_without_horizontal_scrolling():
@@ -248,6 +273,26 @@ def test_provider_and_evidence_accents_clear_three_to_one_in_both_themes(accent)
 )
 def test_primary_and_muted_text_clear_wcag_aa(foreground, background):
     assert _contrast(foreground, background) >= 4.5
+
+
+@pytest.mark.parametrize(
+    ("active_border", "empty_cell"),
+    [
+        ("#57606a", "#eaeef2"),
+        ("#8c959f", "#21262d"),
+    ],
+)
+def test_active_calendar_boundaries_clear_three_to_one(active_border, empty_cell):
+    assert _contrast(active_border, empty_cell) >= 3
+
+
+def test_calendar_marks_use_contrasting_boundaries_not_translucent_borders():
+    html = render_dashboard(_stats())
+
+    assert "--calendar-active-border: #57606a" in html
+    assert "--calendar-active-border: #8c959f" in html
+    assert "border-color: var(--calendar-active-border)" in html
+    assert "cell.style.borderColor = rgba" not in html
 
 
 def test_dashboard_zero_state_is_valid_and_keeps_the_empty_daily_series():
