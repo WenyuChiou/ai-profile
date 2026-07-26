@@ -25,6 +25,21 @@ below.
 
 ## [Unreleased]
 
+## [0.4.3] — 2026-07-26
+
+### Fixed
+
+- Allow the dashboard root to shrink below 320 CSS pixels so classic
+  scrollbars do not create page-level horizontal overflow.
+- Expose every rendered calendar date through one roving keyboard entry,
+  arrow-key navigation, focus/touch detail, repeat-to-close, and Escape,
+  instead of hiding mouse-only cells behind a single image role.
+- Give active calendar and legend marks a theme-specific high-contrast
+  boundary, and raise generated metadata to the normal muted-text token.
+- Pass explicit repository context to every checkout-free GitHub Release
+  recovery command. The v0.4.2 PyPI files and recovered GitHub Release remain
+  immutable.
+
 ## [0.4.2] — 2026-07-26
 
 ### Fixed

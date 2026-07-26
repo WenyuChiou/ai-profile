@@ -20,6 +20,21 @@ def test_public_readmes_have_structural_and_contract_parity():
     parity.validate_readme_parity()
 
 
+def test_profile_cards_use_compact_mobile_sources_in_both_readmes():
+    for path in (parity.ENGLISH, parity.TRADITIONAL_CHINESE):
+        text = path.read_text(encoding="utf-8")
+
+        assert (
+            text.count(
+                'media="(max-width: 600px) and (prefers-color-scheme: dark)"'
+            )
+            == 2
+        )
+        assert text.count('media="(max-width: 600px)"') == 2
+        assert text.count("dist/badge-dark.svg") >= 2
+        assert text.count("dist/badge-light.svg") >= 2
+
+
 def test_retained_public_link_evidence_matches_current_readmes():
     evidence = json.loads(
         (ROOT / "docs" / "reviews" / "promotion-public-link-evidence.json").read_text(

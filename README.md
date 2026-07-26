@@ -40,6 +40,8 @@ open the provider-filterable dashboard.
 
 <a href="https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html">
   <picture>
+    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/badge-dark.svg">
+    <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/badge-light.svg">
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-dark.svg">
     <img alt="Open Wenyu Chiou's interactive AI collaboration dashboard" src="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-light.svg">
   </picture>
@@ -198,6 +200,8 @@ repository, commit `dist/`, and place this clickable card in its README:
 ```html
 <a href="https://USERNAME.github.io/USERNAME/dist/dashboard.html">
   <picture>
+    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="dist/badge-dark.svg">
+    <source media="(max-width: 600px)" srcset="dist/badge-light.svg">
     <source media="(prefers-color-scheme: dark)" srcset="dist/summary-dark.svg">
     <img alt="Open my interactive AI collaboration dashboard"
          src="dist/summary-light.svg">

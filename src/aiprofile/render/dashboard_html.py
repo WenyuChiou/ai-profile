@@ -42,6 +42,7 @@ _HTML_PREFIX = """<!doctype html>
       --warning: #9a6700;
       --shadow: 0 18px 48px rgba(31, 35, 40, 0.10);
       --grid-empty: #eaeef2;
+      --calendar-active-border: #57606a;
       --focus: #0969da;
       --display: ui-serif, "Iowan Old Style", "Palatino Linotype",
         "Book Antiqua", Georgia, serif;
@@ -80,6 +81,7 @@ _HTML_PREFIX = """<!doctype html>
         --warning: #d29922;
         --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
         --grid-empty: #21262d;
+        --calendar-active-border: #8c959f;
         --focus: #58a6ff;
       }
     }
@@ -102,6 +104,7 @@ _HTML_PREFIX = """<!doctype html>
       --warning: #d29922;
       --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
       --grid-empty: #21262d;
+      --calendar-active-border: #8c959f;
       --focus: #58a6ff;
     }
 
@@ -110,7 +113,7 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     html {
-      min-width: 20rem;
+      min-width: 0;
       background: var(--canvas);
       font-family: var(--body);
       color: var(--text);
@@ -222,7 +225,7 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .generated {
-      color: var(--faint);
+      color: var(--muted);
       font-family: var(--mono);
       font-size: 0.75rem;
       line-height: 1.5;
@@ -510,17 +513,21 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .day-cell {
+      appearance: none;
+      padding: 0;
       border: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
       border-radius: 0.19rem;
       background: var(--grid-empty);
+      cursor: help;
       transition: transform 120ms ease, border-color 120ms ease;
     }
 
     .day-cell[data-active="true"] {
-      cursor: help;
+      border-color: var(--calendar-active-border);
     }
 
-    .day-cell[data-active="true"]:hover {
+    .day-cell:hover,
+    .day-cell:focus-visible {
       z-index: 2;
       border-color: var(--text);
       transform: scale(1.42);
@@ -560,6 +567,10 @@ _HTML_PREFIX = """<!doctype html>
       border: 1px solid var(--border);
       border-radius: 0.18rem;
       background: var(--grid-empty);
+    }
+
+    .legend-cell[data-level] {
+      border-color: var(--calendar-active-border);
     }
 
     .provider-list {
@@ -964,7 +975,7 @@ _HTML_PREFIX = """<!doctype html>
           <p class="panel-meta" id="activityMeta"></p>
         </div>
         <div class="calendar-scroll">
-          <div class="calendar" id="activityCalendar" role="img"
+          <div class="calendar" id="activityCalendar" role="group"
                aria-labelledby="activitySummary"></div>
         </div>
         <p class="sr-only" id="activitySummary"></p>
@@ -1073,6 +1084,10 @@ _HTML_SUFFIX = """</script>
       };
       let selected = "all";
       let theme = "auto";
+      let tooltipOwner = null;
+      let tooltipPinned = false;
+      let tooltipSuppressed = null;
+      let tooltipHoverPaused = false;
 
       function colorFor(slug) {
         if (providerColors[slug]) return providerColors[slug];
@@ -1226,24 +1241,62 @@ _HTML_SUFFIX = """</script>
           calendar.append(spacer);
         }
 
-        for (const day of series) {
+        for (const [index, day] of series.entries()) {
           const selectedCount = selectedDayCount(day);
           const volume = Math.log1p(selectedCount) / Math.log1p(maxSelected);
-          const cell = document.createElement("span");
+          const share = day.total_commits
+            ? (selectedCount / day.total_commits) * 100
+            : 0;
+          const cell = document.createElement("button");
+          cell.type = "button";
           cell.className = "day-cell";
+          cell.tabIndex = index === 0 ? 0 : -1;
+          cell.dataset.index = String(index);
           cell.dataset.active = String(selectedCount > 0);
           if (selectedCount) {
-            cell.style.background = rgba(accent, 0.2 + 0.8 * volume);
-            cell.style.borderColor = rgba(accent, 0.34 + 0.5 * volume);
+            cell.style.background = rgba(accent, 0.38 + 0.62 * volume);
           }
           const label = `${day.date}: ${day.total_commits} total commits; ` +
-            `${selectedCount} ${selectedName()} attributed commits`;
+            `${selectedCount} ${selectedName()} attributed commits; ` +
+            `${percent.format(share)}% share`;
           cell.setAttribute("aria-label", label);
-          if (selectedCount) {
-            cell.addEventListener("mouseenter", (event) => showTooltip(event, day, selectedCount));
-            cell.addEventListener("mousemove", moveTooltip);
-            cell.addEventListener("mouseleave", hideTooltip);
-          }
+          cell.addEventListener("mouseenter", (event) => {
+            if (!tooltipHoverPaused && tooltipSuppressed !== cell) {
+              showTooltip(cell, day, selectedCount, event);
+            }
+          });
+          cell.addEventListener("mousemove", (event) => {
+            if (tooltipHoverPaused && (event.movementX || event.movementY)) {
+              tooltipHoverPaused = false;
+              tooltipSuppressed = null;
+              showTooltip(cell, day, selectedCount, event);
+              return;
+            }
+            if (tooltipOwner === cell && !tooltipPinned) moveTooltip(event);
+          });
+          cell.addEventListener("mouseleave", () => {
+            if (tooltipSuppressed === cell) tooltipSuppressed = null;
+            if (!tooltipPinned && document.activeElement !== cell) hideTooltip();
+          });
+          cell.addEventListener("focus", () => {
+            tooltipHoverPaused = false;
+            tooltipSuppressed = null;
+            showTooltip(cell, day, selectedCount);
+          });
+          cell.addEventListener("blur", hideTooltip);
+          cell.addEventListener("click", () => {
+            if (tooltipOwner === cell && tooltipPinned) {
+              tooltipHoverPaused = true;
+              tooltipSuppressed = cell;
+              hideTooltip();
+            } else {
+              tooltipHoverPaused = false;
+              tooltipSuppressed = null;
+              showTooltip(cell, day, selectedCount);
+              tooltipPinned = true;
+            }
+          });
+          cell.addEventListener("keydown", handleCalendarKeydown);
           calendar.append(cell);
         }
 
@@ -1256,14 +1309,58 @@ _HTML_SUFFIX = """</script>
           "each cell uses the validated published daily aggregate.";
         const levels = document.querySelectorAll(".legend-cell[data-level]");
         levels.forEach((cell, index) => {
-          cell.style.background = rgba(accent, 0.28 + index * 0.3);
-          cell.style.borderColor = rgba(accent, 0.55);
+          cell.style.background = rgba(accent, 0.42 + index * 0.29);
         });
       }
 
-      function showTooltip(event, day, selectedCount) {
+      function calendarCells() {
+        return [...document.querySelectorAll(".day-cell")];
+      }
+
+      function focusCalendarCell(index) {
+        const cells = calendarCells();
+        const bounded = Math.max(0, Math.min(cells.length - 1, index));
+        cells.forEach((cell, cellIndex) => {
+          cell.tabIndex = cellIndex === bounded ? 0 : -1;
+        });
+        cells[bounded]?.focus();
+      }
+
+      function handleCalendarKeydown(event) {
+        const index = Number(event.currentTarget.dataset.index);
+        const offsets = {
+          ArrowDown: 1,
+          ArrowUp: -1,
+          ArrowRight: 7,
+          ArrowLeft: -7
+        };
+        if (event.key === "Escape") {
+          tooltipHoverPaused = true;
+          tooltipSuppressed = event.currentTarget;
+          hideTooltip();
+          return;
+        }
+        if (event.key === "Home" || event.key === "End" || offsets[event.key]) {
+          event.preventDefault();
+          const cells = calendarCells();
+          const target = event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? cells.length - 1
+              : index + offsets[event.key];
+          focusCalendarCell(target);
+        }
+      }
+
+      function showTooltip(cell, day, selectedCount, event = null) {
         const tooltip = $("tooltip");
         const share = day.total_commits ? (selectedCount / day.total_commits) * 100 : 0;
+        if (tooltipOwner !== cell) tooltipPinned = false;
+        if (tooltipOwner && tooltipOwner !== cell) {
+          tooltipOwner.removeAttribute("aria-describedby");
+        }
+        tooltipOwner = cell;
+        cell.setAttribute("aria-describedby", "tooltip");
         tooltip.replaceChildren();
         const date = document.createElement("span");
         date.className = "tooltip-date";
@@ -1273,7 +1370,15 @@ _HTML_SUFFIX = """</script>
           `${day.total_commits} total · ${percent.format(share)}% share`;
         tooltip.append(date, detail);
         tooltip.hidden = false;
-        moveTooltip(event);
+        if (event) {
+          moveTooltip(event);
+        } else {
+          const bounds = cell.getBoundingClientRect();
+          moveTooltip({
+            clientX: bounds.left + bounds.width / 2,
+            clientY: bounds.top
+          });
+        }
       }
 
       function moveTooltip(event) {
@@ -1284,6 +1389,9 @@ _HTML_SUFFIX = """</script>
 
       function hideTooltip() {
         $("tooltip").hidden = true;
+        tooltipOwner?.removeAttribute("aria-describedby");
+        tooltipOwner = null;
+        tooltipPinned = false;
       }
 
       function renderProviders() {

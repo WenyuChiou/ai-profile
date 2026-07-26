@@ -39,6 +39,8 @@
 
 <a href="https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html">
   <picture>
+    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/badge-dark.svg">
+    <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/badge-light.svg">
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-dark.svg">
     <img alt="開啟 Wenyu Chiou 的互動式 AI 協作 dashboard" src="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-light.svg">
   </picture>
@@ -192,6 +194,8 @@ README：
 ```html
 <a href="https://USERNAME.github.io/USERNAME/dist/dashboard.html">
   <picture>
+    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="dist/badge-dark.svg">
+    <source media="(max-width: 600px)" srcset="dist/badge-light.svg">
     <source media="(prefers-color-scheme: dark)" srcset="dist/summary-dark.svg">
     <img alt="開啟我的互動式 AI 協作 dashboard"
          src="dist/summary-light.svg">
