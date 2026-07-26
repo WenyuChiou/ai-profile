@@ -37,10 +37,10 @@ retained bytes to Windows and macOS. Three clean-Linux build paths now produce
 the same candidate wheel, including a Linux-side patch path that excludes
 Windows checkout-line-ending effects.
 
-Promotion is still blocked. Corrected GitHub-hosted three-platform execution,
-the final release-commit wheel/sdist pair, PyPI/GitHub Release digest parity,
-real Profile refresh, Pages, homepage, and branch protection remain external
-gates. The current verdict therefore remains `NO-GO`.
+Corrected GitHub-hosted three-platform execution is now green. Promotion is
+still blocked by the final release-commit wheel/sdist pair, PyPI/GitHub
+Release digest parity, real Profile refresh, Pages, homepage, and branch
+protection. The current verdict therefore remains `NO-GO`.
 
 ## Verification evidence
 
@@ -124,10 +124,17 @@ The full record is
 `docs/reviews/promotion-dogfood.md`. Public-link evidence remains in
 `docs/reviews/promotion-public-link-evidence.json`.
 
+### GitHub-hosted candidate gates
+
+GitHub Actions run `30199892110` passed:
+
+- `Release candidate build`;
+- Python 3.11, 3.12, 3.13, and 3.14 full suite plus lint;
+- Ubuntu, Windows, and macOS Python 3.12 onboarding of the same retained
+  wheel.
+
 ### Pending external gates
 
-- corrected PR candidate build and Python 3.11–3.14 suite;
-- Ubuntu/Windows/macOS Python 3.12 onboarding of the same wheel;
 - final release-commit wheel/sdist, Twine, notice, version, tag, and digest
   parity;
 - PyPI and GitHub Release exact-byte verification and clean live install;
@@ -185,8 +192,8 @@ The full record is
   platform metadata and timestamps were not canonical.
 - **Recommendation:** Freeze `SOURCE_DATE_EPOCH`, build only on Ubuntu, and
   smoke the retained universal wheel on all target operating systems.
-- **Disposition:** Fixed locally and covered by workflow regressions. External
-  corrected CI is still pending, so one High gate remains open.
+- **Disposition:** Fixed. GitHub Actions run `30199892110` reproduced the
+  candidate digest and passed Ubuntu/Windows/macOS onboarding.
 
 ### Medium — Required commit-SHA privacy canaries were absent
 
@@ -324,7 +331,7 @@ The full record is
 | Severity | Total | Fixed | Accepted | Pending |
 |---|---:|---:|---:|---:|
 | Critical | 0 | 0 | 0 | 0 |
-| High | 5 | 4 | 0 | 1 |
+| High | 5 | 5 | 0 | 0 |
 | Medium | 9 | 9 | 0 | 0 |
 | Low | 3 | 2 | 1 | 0 |
 
