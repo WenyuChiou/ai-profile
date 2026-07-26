@@ -41,7 +41,7 @@ WIDTH = 830
 PADDING = 24
 RADIUS = 8
 
-FONT_STACK = "-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif"
+FONT_STACK = "'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif"
 
 TITLE_TEXT = "AI Collaboration Summary"
 MAX_PROVIDER_ROWS = 6

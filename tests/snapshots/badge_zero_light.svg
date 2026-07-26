@@ -7,6 +7,6 @@
 <rect x="74" y="0" width="52" height="24" fill="#0969da"/>
 </g>
 <rect x="0.5" y="0.5" width="125" height="23" rx="4" fill="none" stroke="#d1d9e0" stroke-width="1"/>
-<text x="37" y="16" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="600" fill="#1f2328" text-anchor="middle">AI-assisted</text>
-<text x="100" y="16" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">no data</text>
+<text x="37" y="16" font-family="'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif" font-size="11" font-weight="600" fill="#1f2328" text-anchor="middle">AI-assisted</text>
+<text x="100" y="16" font-family="'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">no data</text>
 </svg>

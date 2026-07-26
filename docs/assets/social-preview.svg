@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
 <rect width="1280" height="640" fill="#ffffff"/>
 <rect x="0" y="632" width="1280" height="8" fill="#B74C2A"/>
-<text x="640" y="130" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="#1f2328">ai-profile</text>
-<text x="640" y="182" text-anchor="middle" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="28" fill="#59636e">Prove your AI collaboration. Privately.</text>
+<text x="640" y="130" text-anchor="middle" font-family="Bahnschrift, 'DIN Alternate', 'Franklin Gothic Medium', 'DejaVu Sans Condensed', 'Liberation Sans Narrow', 'Trebuchet MS', sans-serif" font-size="72" font-weight="700" fill="#1f2328">ai-profile</text>
+<text x="640" y="182" text-anchor="middle" font-family="'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif" font-size="28" fill="#59636e">Prove your AI collaboration. Privately.</text>
 <polygon points="555,283 589,300 555,317 521,300" fill="#eff2f5"/>
 <polygon points="521,300 555,317 521,334 487,317" fill="#eff2f5"/>
 <polygon points="589,300 623,317 589,334 555,317" fill="#eff2f5"/>
@@ -56,5 +56,5 @@
 <rect x="480" y="556" width="10" height="10" rx="2" fill="#B74C2A"/>
 <rect x="498" y="556" width="10" height="10" rx="2" fill="#8E75B2"/>
 <rect x="516" y="556" width="10" height="10" rx="2" fill="#0969da"/>
-<text x="538" y="566" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="19" fill="#59636e">explicit git provenance - local-first - never inferred</text>
+<text x="538" y="566" font-family="'Cascadia Mono', 'SFMono-Regular', 'Ubuntu Mono', 'DejaVu Sans Mono', Consolas, monospace" font-size="19" fill="#59636e">explicit git provenance - local-first - never inferred</text>
 </svg>

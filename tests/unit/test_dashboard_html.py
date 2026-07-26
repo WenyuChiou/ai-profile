@@ -212,11 +212,33 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     assert ".generated {\n      color: var(--muted);" in html
 
 
+def test_dashboard_uses_a_distinctive_local_typography_system():
+    """The visual voice stays technical-editorial without network fonts."""
+    html = render_dashboard(_stats())
+
+    assert (
+        '--display: Bahnschrift, "DIN Alternate", "Franklin Gothic Medium",'
+        in html
+    )
+    assert '--body: "Trebuchet MS", Corbel, "Avenir Next", Avenir, Ubuntu,' in html
+    assert (
+        '--mono: "Cascadia Mono", "SFMono-Regular", "Ubuntu Mono",'
+        in html
+    )
+    assert "font-variant-numeric: lining-nums tabular-nums;" in html
+    assert "Inter" not in html
+    assert "Space Grotesk" not in html
+    assert "radial-gradient(" not in html
+    assert "background-size: 2rem 2rem;" in html
+    assert "font-src 'none'" in html
+
+
 def test_mobile_provider_filters_wrap_without_horizontal_scrolling():
     html = render_dashboard(_stats())
     mobile_css = html.split("@media (max-width: 38rem)", 1)[1]
 
     assert "grid-template-columns: repeat(auto-fit, minmax(5.25rem, 1fr))" in mobile_css
+    assert "grid-template-columns: minmax(0, 1fr)" in mobile_css
     assert "overflow-x: visible" in mobile_css
     assert "width: 100%" in mobile_css
     assert "padding-inline: var(--space-2)" in mobile_css

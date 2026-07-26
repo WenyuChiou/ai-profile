@@ -1,7 +1,7 @@
 {
-  "version": "0.4.3",
-  "wheel": "ai_profile_cli-0.4.3-py3-none-any.whl",
-  "wheel_sha256": "b3baebac895927897ef39ae86227d3ed89455ed1d925be74cc6cc385468781a8",
+  "version": "0.4.4",
+  "wheel": "ai_profile_cli-0.4.4-py3-none-any.whl",
+  "wheel_sha256": "ff7ad454ab4a06ebc21b4dc82e284e718bce8f3e01446213e63b9cc4c5267a99",
   "source_date_epoch": 1785024000,
   "evaluation_baseline": "773113562871a99da02d50056a118f993794baac"
 }
