@@ -4,10 +4,12 @@
 Implements the ROADMAP "v0.1 OSS release" exit criterion "clean-install/
 packaged smoke test" (docs/ROADMAP.md).
 
-WHEN TO RUN: manually, once, right before tagging a release. It is
-deliberately NOT part of `python -m pytest` and is NOT collected by pytest
-(it lives outside `tests/`, which is the sole pytest `testpaths` root per
-pyproject.toml, and its filename does not match pytest's `test_*` pattern).
+WHEN TO RUN: CI runs candidate-wheel mode on every supported onboarding
+platform and the publish workflow repeats it for the exact release bundle.
+Maintainers may also run it locally before tagging. It is deliberately NOT
+collected by pytest (it lives outside `tests/`, which is the sole pytest
+`testpaths` root per pyproject.toml, and its filename does not match pytest's
+`test_*` pattern).
 The default suite is network-free by contract (CONTRIBUTING.md) — but
 installing this project through its declared PEP 517 build backend
 (hatchling, pyproject.toml `[build-system]`) requires either fetching that
@@ -16,18 +18,20 @@ locally and skipping pip's own isolated build environment
 (`--no-build-isolation`). Either path is real, deliberate network use by
 RELEASE TOOLING ONLY — never by the test suite.
 
-WHAT IT DOES: creates a throwaway venv, installs the current working tree
-non-editably into it (exactly like an end user's `pip install ai-profile`
-would, not `pip install -e .`), then drives the INSTALLED `aiprofile`
-console script (not `python -m aiprofile`, so the packaging entry point
-itself is exercised) through init -> scan -> aggregate -> render against a
-synthetic git repository, and finally re-runs the same privacy canary
-byte-sweep the integration suite runs against every dist/ file (see
+WHAT IT DOES: creates a throwaway venv and installs either the exact
+`--wheel` candidate (the release path) or, when no wheel is supplied, a
+non-editable build of the current working tree for local convenience. It
+then drives the INSTALLED `aiprofile` console script (not
+`python -m aiprofile`, so the packaging entry point itself is exercised)
+through init -> scan -> aggregate -> render against a synthetic git
+repository, and finally re-runs the same privacy canary byte-sweep the
+integration suite runs against every dist/ file (see
 tests/integration/test_end_to_end.py's leak tests and docs/PRIVACY.md).
 
 Usage:
 
     python scripts/release_smoke.py
+    python scripts/release_smoke.py --wheel dist/ai_profile_cli-X.Y.Z-py3-none-any.whl
 
 Prints PASS/FAIL for each step as it runs. Exit code 0 only if every step
 passed; exit code 1 on the first failure (fail-fast: later steps depend on
@@ -37,6 +41,7 @@ fails).
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 import os
@@ -148,7 +153,16 @@ def _hatchling_importable_here() -> bool:
     return importlib.util.find_spec("hatchling") is not None
 
 
-def _install_repo(venv_python: Path) -> str:
+def _install_candidate(venv_python: Path, wheel: Path | None) -> str:
+    if wheel is not None:
+        resolved = wheel.resolve()
+        if not resolved.is_file() or resolved.suffix != ".whl":
+            raise SmokeFailure(f"candidate wheel not found: {resolved}")
+        _run(
+            [str(venv_python), "-m", "pip", "install", "-q", str(resolved)],
+            timeout=TIMEOUT_INSTALL,
+        )
+        return f"exact candidate wheel: {resolved}"
     if _hatchling_importable_here():
         try:
             _run(
@@ -174,6 +188,16 @@ def _install_repo(venv_python: Path) -> str:
         timeout=TIMEOUT_INSTALL,
     )
     return "plain pip install [NETWORK: PEP 517 isolated build env fetches hatchling]"
+
+
+def _check_installed_version(exe: Path, expected_version: str | None) -> None:
+    result = _run([str(exe), "--version"])
+    observed = result.stdout.strip()
+    if expected_version is not None and observed != f"aiprofile {expected_version}":
+        raise SmokeFailure(
+            f"installed version mismatch: {observed!r} != "
+            f"'aiprofile {expected_version}'"
+        )
 
 
 def _git(args: list[str], cwd: Path, *, env: dict | None = None) -> None:
@@ -315,6 +339,10 @@ def _canary_sweep(out_dir: Path, home: Path, repo: Path) -> None:
         "secret-smoke-repo",
         FIXTURE_AUTHOR_EMAIL,
         "Zzz-Custom-LLM-9000",  # raw unrecognized AI-Provider value
+        "plain commit, no trailers",
+        "Claude AI-* commit",
+        "Human-declared commit",
+        "Unrecognized-provider commit",
         salt,
     ]
 
@@ -330,24 +358,78 @@ def _canary_sweep(out_dir: Path, home: Path, repo: Path) -> None:
                 raise SmokeFailure(f"canary {needle!r} leaked into {path.name}")
 
 
+def _assert_deterministic(first: Path, second: Path) -> None:
+    first_files = {path.name: path.read_bytes() for path in first.iterdir() if path.is_file()}
+    second_files = {path.name: path.read_bytes() for path in second.iterdir() if path.is_file()}
+    if first_files != second_files:
+        names = first_files.keys() | second_files.keys()
+        changed = sorted(
+            name for name in names if first_files.get(name) != second_files.get(name)
+        )
+        raise SmokeFailure(f"repeat render was not byte-identical: {changed}")
+
+
+def _generated_on(out_dir: Path) -> str:
+    profile = json.loads((out_dir / "profile.json").read_text(encoding="utf-8"))
+    value = profile.get("generated_on")
+    if not isinstance(value, str):
+        raise SmokeFailure(f"{out_dir / 'profile.json'} has no generated_on string")
+    return value
+
+
+def _stabilize_render_dates(
+    first: Path,
+    second: Path,
+    render_first,
+    render_second,
+    *,
+    max_retries: int = 2,
+) -> None:
+    """Repeat both renders if the first pair crossed a UTC date boundary."""
+    for attempt in range(max_retries + 1):
+        if _generated_on(first) == _generated_on(second):
+            return
+        if attempt == max_retries:
+            break
+        print("    UTC date changed between renders; repeating the pair")
+        shutil.rmtree(first, ignore_errors=True)
+        shutil.rmtree(second, ignore_errors=True)
+        render_first()
+        render_second()
+    raise SmokeFailure("could not obtain two renders with the same UTC generation date")
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--wheel", type=Path)
+    parser.add_argument("--expected-version")
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = _parse_args()
     tmp_root = Path(tempfile.mkdtemp(prefix="aiprofile-release-smoke-"))
     print(f"[release_smoke] scratch directory: {tmp_root}")
     try:
         venv_dir = tmp_root / "venv"
         home = tmp_root / "home"
         out_dir = tmp_root / "dist"
+        repeat_dir = tmp_root / "dist-repeat"
 
         step("create throwaway venv", lambda: _create_venv(venv_dir))
         venv_python = _venv_python_path(venv_dir)
 
         mode = step(
             "pip-install ai-profile into venv (non-editable)",
-            lambda: _install_repo(venv_python),
+            lambda: _install_candidate(venv_python, args.wheel),
         )
         print(f"    install mode: {mode}")
 
         exe = step("locate installed console script", lambda: _console_script_path(venv_dir))
+        step(
+            "installed version parity",
+            lambda: _check_installed_version(exe, args.expected_version),
+        )
 
         repo = step("build synthetic trailer repo", lambda: build_synthetic_repo(tmp_root))
 
@@ -358,6 +440,34 @@ def main() -> int:
             "aiprofile render",
             lambda: _run_cli(exe, ["render", "--out", str(out_dir)], home=home, cwd=repo),
         )
+        step(
+            "aiprofile repeat render",
+            lambda: _run_cli(
+                exe,
+                ["render", "--out", str(repeat_dir)],
+                home=home,
+                cwd=repo,
+            ),
+        )
+        step(
+            "same-date render pair",
+            lambda: _stabilize_render_dates(
+                out_dir,
+                repeat_dir,
+                lambda: _run_cli(
+                    exe,
+                    ["render", "--out", str(out_dir)],
+                    home=home,
+                    cwd=repo,
+                ),
+                lambda: _run_cli(
+                    exe,
+                    ["render", "--out", str(repeat_dir)],
+                    home=home,
+                    cwd=repo,
+                ),
+            ),
+        )
 
         step("profile.json structural sanity", lambda: _check_profile_json(out_dir))
         step("SVG well-formedness", lambda: _check_svgs(out_dir))
@@ -365,6 +475,10 @@ def main() -> int:
         step(
             "canary byte-sweep of dist outputs",
             lambda: _canary_sweep(out_dir, home, repo),
+        )
+        step(
+            "deterministic repeated output",
+            lambda: _assert_deterministic(out_dir, repeat_dir),
         )
     except SmokeFailure:
         print("\nRESULT: FAIL - see the FAIL step above", flush=True)

@@ -1,8 +1,8 @@
 # Tag-triggered PyPI publish via Trusted Publishing (OIDC - no stored
 # secrets anywhere). Prerequisite (one-time, PyPI web UI): a publisher
 # for project `ai-profile-cli`, owner WenyuChiou, repository ai-profile,
-# workflow publish.yml. The suite + ruff gate the upload: a red test
-# means no release, ever.
+# workflow publish.yml. The exact bytes are built, validated, clean-installed,
+# smoke-tested, and only then uploaded.
 name: publish
 
 on:
@@ -13,13 +13,12 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  build:
+    name: Build verified release bundle
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: pypi
     permissions:
       contents: read
-      id-token: write   # OIDC token for PyPI Trusted Publishing
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -32,9 +31,173 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pytest tests -p no:cacheprovider
           python -m ruff check src tests scripts
+          python scripts/check_readme_parity.py
       - name: Build sdist + wheel
         run: |
-          python -m pip install build==1.4.3
+          python -m pip install build==1.4.3 twine==6.2.0
           python -m build
-      - name: Publish to PyPI (Trusted Publishing)
+      - name: Validate exact release artifacts
+        run: |
+          EXPECTED_WHEEL_SHA256="$(python -c 'import json; print(json.load(open("docs/reviews/promotion-candidate.json", encoding="utf-8"))["wheel_sha256"])')"
+          python -m twine check dist/*
+          python scripts/check_release_artifacts.py \
+            --dist-dir dist \
+            --tag "$GITHUB_REF_NAME" \
+            --expected-wheel-sha256 "$EXPECTED_WHEEL_SHA256" \
+            --write-checksums SHA256SUMS
+          WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
+          python scripts/release_smoke.py \
+            --wheel "$WHEEL" \
+            --expected-version "${GITHUB_REF_NAME#v}"
+      - name: Retain the exact release bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-bundle-${{ github.sha }}
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+            SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
+
+  onboarding:
+    name: Release onboarding (${{ matrix.os }} / Python 3.12)
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Download the verified release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-bundle-${{ github.sha }}
+          path: .
+      - name: Verify and smoke the exact wheel
+        shell: bash
+        run: |
+          python scripts/check_release_artifacts.py \
+            --dist-dir dist \
+            --artifact-only \
+            --expected-version "${GITHUB_REF_NAME#v}" \
+            --checksum-file SHA256SUMS
+          WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
+          python scripts/release_smoke.py \
+            --wheel "$WHEEL" \
+            --expected-version "${GITHUB_REF_NAME#v}"
+
+  publish-pypi:
+    name: Publish verified bundle to PyPI
+    needs: [build, onboarding]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download the verified release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-bundle-${{ github.sha }}
+          path: .
+      - name: Verify transferred bytes
+        run: sha256sum --check SHA256SUMS
+      - name: Publish to PyPI using Trusted Publishing
         uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # v1.14.1
+        with:
+          packages-dir: dist/
+          skip-existing: true
+      - name: Verify published PyPI digests
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"].removeprefix("v")
+          expected = {}
+          for line in Path("SHA256SUMS").read_text(encoding="ascii").splitlines():
+              digest, relative = line.split("  ", 1)
+              expected[Path(relative).name] = digest
+
+          endpoint = f"https://pypi.org/pypi/ai-profile-cli/{version}/json"
+          for attempt in range(7):
+              request = urllib.request.Request(
+                  f"{endpoint}?verify={time.time_ns()}",
+                  headers={
+                      "Cache-Control": "no-cache",
+                      "User-Agent": "ai-profile-release-verifier",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=20) as response:
+                      payload = json.load(response)
+              except Exception as exc:
+                  print(f"PyPI verification attempt {attempt + 1}/7 failed: {exc}")
+              else:
+                  observed = {
+                      item["filename"]: item["digests"]["sha256"]
+                      for item in payload.get("urls", [])
+                  }
+                  filename_delta = sorted(set(expected) ^ set(observed))
+                  mismatches = {
+                      name: (digest, observed.get(name))
+                      for name, digest in expected.items()
+                      if observed.get(name) != digest
+                  }
+                  if not filename_delta and not mismatches:
+                      print("PASS: PyPI serves the exact retained wheel and sdist")
+                      break
+                  print(
+                      f"PyPI verification attempt {attempt + 1}/7 "
+                      f"has filename delta {filename_delta} "
+                      f"and digest mismatches {mismatches}"
+                  )
+              if attempt == 6:
+                  raise SystemExit("PyPI did not serve the exact retained bundle")
+              time.sleep(5)
+          PY
+
+  publish-github:
+    name: Publish verified GitHub Release
+    needs: [build, onboarding, publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download the verified release bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-bundle-${{ github.sha }}
+          path: .
+      - name: Verify transferred bytes
+        run: sha256sum --check SHA256SUMS
+      - name: Create or repair the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
+          SDIST="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.tar.gz")); assert len(paths)==1, paths; print(paths[0])')"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$WHEEL" "$SDIST" SHA256SUMS --clobber
+          else
+            gh release create \
+              "$GITHUB_REF_NAME" \
+              "$WHEEL" \
+              "$SDIST" \
+              SHA256SUMS \
+              --generate-notes
+          fi

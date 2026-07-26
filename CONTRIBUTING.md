@@ -6,9 +6,10 @@ the bar is correctness and privacy, not feature count.
 ## Setup and verification
 
 ```bash
-pip install -e ".[dev]"        # Python >= 3.11, git >= 2.17 (SHA-1 repos)
-python -m pytest               # full suite must pass (states its count)
-python -m ruff check src tests
+python -m pip install -e ".[dev]"  # Python >= 3.11, git >= 2.17 (SHA-1 repos)
+python -m pytest tests -p no:cacheprovider
+python -m ruff check src tests scripts
+python scripts/check_readme_parity.py
 ```
 
 Integration tests build throwaway git repositories under pytest tmp dirs;
@@ -31,12 +32,13 @@ no network is used anywhere in the suite, ever.
 - Privacy invariants are test-enforced (leak tests, policy tests); a change
   that weakens `VizStats`' structural redaction needs its own ADR and a
   very good reason. Read `docs/PRIVACY.md` first.
-- Deterministic rendering: snapshot updates must be intentional; regenerate
-  via `python tests/unit/test_render_summary.py` and inspect the diff. That
-  one command regenerates BOTH the test snapshots and the committed README
-  sample assets (`docs/assets/summary-sample-{light,dark}.svg`) from their
-  authoritative synthetic fixture — never hand-edit or copy either set; a
-  byte-exact drift guard fails the suite if they fall out of sync.
+- Deterministic rendering: snapshot updates must be intentional. Regenerate
+  the summary family with `python tests/unit/test_render_summary.py` and the
+  heatmap/badge family with `python tests/unit/test_heatmap_svg.py`. These
+  sanctioned commands also update the corresponding committed samples in
+  `docs/assets/`; never hand-edit or copy snapshots or samples.
+- Packaging or release changes must also pass the artifact and clean-wheel
+  checks in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Reporting privacy/security issues
 

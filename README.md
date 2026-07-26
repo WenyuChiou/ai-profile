@@ -1,66 +1,83 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/banner-dark.svg">
-  <img alt="ai-profile - prove your AI collaboration, privately" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/banner-light.svg" width="100%">
+  <img alt="" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/banner-light.svg" width="100%">
 </picture>
 
 # ai-profile
+
+## Show the evidence behind your AI collaboration.
+
+`ai-profile` turns explicit Git provenance across your local repositories
+into privacy-safe GitHub Profile cards and a filterable provider
+dashboard—without uploading source code or guessing attribution.
+
+**[Explore the live dashboard →](https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html)**
+· **[Generate yours in four commands](#quickstart)**
 
 [![PyPI](https://img.shields.io/pypi/v/ai-profile-cli.svg)](https://pypi.org/project/ai-profile-cli/)
 [![tests](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml/badge.svg)](https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/WenyuChiou/ai-profile/blob/main/LICENSE)
 [![python 3.11–3.14](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg)](https://github.com/WenyuChiou/ai-profile/blob/main/pyproject.toml)
 
-[English](https://github.com/WenyuChiou/ai-profile/blob/main/README.md) · [繁體中文](https://github.com/WenyuChiou/ai-profile/blob/main/README.zh-TW.md)
+[English](https://github.com/WenyuChiou/ai-profile/blob/main/README.md) ·
+[繁體中文](https://github.com/WenyuChiou/ai-profile/blob/main/README.zh-TW.md)
 
-Show how you collaborate with AI—not just how often you commit. `aiprofile`
-turns explicit AI provenance in your local Git history into evidence-backed,
-privacy-safe SVG cards and a self-contained interactive dashboard.
+- **Explicit evidence:** attribution comes from `AI-*` trailers and
+  verified AI co-author identities—not source-code style.
+- **Local-first privacy:** scanning, aggregation, and rendering happen on
+  your machine; repository identities stay out of public assets.
+- **Profile-ready:** one render produces theme-aware SVG cards, a
+  self-contained dashboard, and a machine-readable public summary.
 
-Use it when you want a credible AI portfolio without uploading source code,
-guessing attribution from coding style, or exposing repository identities.
-It recognizes `AI-*` commit trailers and verified AI co-author identities,
-aggregates activity across repositories, and keeps its database on your
-machine.
+`ai-profile` is not an AI code detector. Commits with no explicit evidence
+stay `unknown`; they are never silently counted as human or assigned to a
+provider.
 
-It is not an AI code detector. Commits without explicit evidence remain
-`unknown`; they are never guessed to be human or assigned to a provider.
+## A real GitHub Profile example
 
-- **Credible:** every AI attribution comes from explicit Git evidence.
-- **Private by default:** repository identities stay hidden, and daily dates
-  appear only when you explicitly publish them.
-- **Profile-ready:** one local workflow produces light and dark summary,
-  heatmap, and badge assets plus an interactive provider view.
+This card contains the maintainer's real public aggregate data. Select it to
+open the provider-filterable dashboard.
 
-## Preview
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
-  <img alt="Sample AI collaboration summary card rendered from synthetic data" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg">
-</picture>
+<a href="https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-dark.svg">
+    <img alt="Open Wenyu Chiou's interactive AI collaboration dashboard" src="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-light.svg">
+  </picture>
+</a>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/heatmap-sample-dark.svg">
-  <img alt="Sample collaboration heatmap: intensity is total commits and hue is the day's AI share" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/heatmap-sample-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/heatmap-dark.svg">
+  <img alt="Wenyu Chiou's AI collaboration heatmap; intensity is commit volume and hue is AI share" src="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/heatmap-light.svg">
 </picture>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-dark.svg">
-  <img alt="AI-assisted share badge verified from Git provenance" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-light.svg">
-</picture>
+## Why ai-profile?
 
-These samples use synthetic data.
+- Generic GitHub statistics answer **how active** a developer is.
+- Line-level attribution tools answer **which lines** a tool changed.
+- `ai-profile` answers **how AI participated and what evidence supports
+  that claim across repositories**, while keeping the analysis local.
+
+It complements those tools; it does not replace them or infer historical AI
+use when Git evidence is absent.
 
 ## Install
 
-Requires Python 3.11–3.14 and Git 2.17 or newer. Windows, macOS, and
-Linux are supported. Git repositories must use the SHA-1 object format.
+Requires Python 3.11 or newer and Git 2.17 or newer. The wheel-onboarding
+workflow tests Ubuntu, Windows, and macOS on Python 3.12; the full suite also
+tests Python 3.11–3.14 on Ubuntu. Repositories must use Git's SHA-1 object
+format.
 
 ```bash
-pip install ai-profile-cli
+python -m pip install --upgrade ai-profile-cli
+aiprofile --version
 ```
 
-The package name is `ai-profile-cli`; the installed command is
-`aiprofile`.
+The package name is `ai-profile-cli`; the installed command is `aiprofile`.
+If your shell has not refreshed its script path, use:
+
+```bash
+python -m aiprofile --version
+```
 
 ## Quickstart
 
@@ -73,81 +90,163 @@ aiprofile aggregate
 aiprofile render
 ```
 
+Use `python -m aiprofile` in place of `aiprofile` for any command if needed.
+
 - `init` creates the local configuration and seeds your identity from
   `git config user.email`.
-- `scan` records commits authored by your configured identities.
-- `aggregate` shows the exact privacy-safe statistics that can be published.
-- `render` writes six SVG files, `dashboard.html`, and `profile.json` to
-  `dist/`.
+- `scan` reads commits reachable from the repository's current `HEAD` and
+  records commits authored by your configured identities.
+- `aggregate` prints the exact privacy-safe statistics eligible for
+  publication.
+- `render` writes exactly eight files to `dist/`:
 
-Only commits authored by identities in `~/.aiprofile/config.json` count.
-Review the email seeded by `init` and add any other addresses you commit with.
-
-Scan additional repositories at any time:
-
-```bash
-aiprofile scan /path/to/another/repository
+```text
+badge-dark.svg       heatmap-light.svg   summary-dark.svg
+badge-light.svg      profile.json        summary-light.svg
+dashboard.html       heatmap-dark.svg
 ```
 
-Repositories default to `aggregate_only`: their counts contribute to the
-summary, but their identity and daily dates stay private. `--full` marks that
-repository's aggregate activity as explicitly publishable so its dates can
-appear in date-based views. This is a policy choice, not a claim about the
-repository's GitHub visibility:
+Existing commits without explicit AI evidence will appear as `unknown`.
+Large unknown counts are an honest result, not a failed scan. Add trailers to
+future commits when you want their AI participation credited.
 
-```bash
-aiprofile scan --full /path/to/repository
+## Configure identities and repository privacy
+
+The configuration file is:
+
+- macOS/Linux: `~/.aiprofile/config.json`
+- Windows: `%USERPROFILE%\.aiprofile\config.json`
+  (`$HOME\.aiprofile\config.json` in PowerShell)
+- custom automation: `$AIPROFILE_HOME/config.json`
+
+Only commits authored by an address in `identities` count. After `init`,
+close other `aiprofile` processes, open the file as UTF-8 JSON, and add every
+address you use—including GitHub noreply addresses:
+
+```json
+{
+  "identities": [
+    "you@example.com",
+    "12345678+username@users.noreply.github.com"
+  ],
+  "repositories": [],
+  "salt": "keep-the-existing-generated-value"
+}
 ```
 
-That choice persists. Scanning the same repository later without `--full`
-does not downgrade it. To stop publishing its dates, change its
-`publication_level` in `~/.aiprofile/config.json` to `aggregate_only` (keep
-identity-redacted aggregate totals) or `excluded` (omit it), then run
-`aggregate` and `render` again.
+Keep the generated `salt` unchanged. After a scan, each repository entry also
+contains `path`, `repository_uid`, and `publication_level`. Change only
+`publication_level` when adjusting privacy:
 
-Only run one `render` at a time for a given output directory.
+On Windows, save with an editor's **UTF-8 (no BOM)** option. Windows
+PowerShell 5.1's `Set-Content -Encoding utf8` adds a BOM that strict JSON
+readers, including this Public Beta, reject. VS Code's default `UTF-8`
+encoding is suitable; confirm the file still parses before replacing your
+backup.
 
-## Add the cards to your GitHub profile
+```json
+{
+  "path": "/local/path/created-by-scan",
+  "repository_uid": "keep-the-existing-generated-value",
+  "publication_level": "aggregate_only"
+}
+```
 
-Render inside your GitHub profile repository (`USERNAME/USERNAME`), then
-commit the generated `dist/` directory. Add this to its README:
+The allowed values are:
+
+- `aggregate_only` — default; include totals but withhold repository identity
+  and daily dates.
+- `full` — include identity-redacted daily aggregate activity in date views.
+- `excluded` — omit that repository entirely.
+
+`aiprofile scan --full /path/to/repository` is the supported opt-in from
+`aggregate_only` to `full`. It does not mean the repository is public on
+GitHub, and a later scan without `--full` does not downgrade it. To reduce
+publication, edit only the existing entry's `publication_level`, save valid
+UTF-8 JSON, then run:
+
+```bash
+aiprofile aggregate
+aiprofile render
+```
+
+If configuration parsing fails, restore the previous valid JSON; do not
+delete or regenerate the `salt`, `path`, or `repository_uid`. Always review
+`aggregate` before publishing.
+
+## Scan and refresh multiple repositories
+
+Scan each repository once, then aggregate their local records together:
+
+```bash
+aiprofile scan /path/to/repository-one
+aiprofile scan /path/to/repository-two
+aiprofile aggregate
+aiprofile render
+```
+
+There is no batch refresh command in this Public Beta. To update a
+multi-repository profile, rerun `scan` separately in every repository whose
+history changed, then rerun `aggregate` and `render`. Run only one `render`
+at a time for a given output directory.
+
+## Publish to your GitHub Profile
+
+Run `aiprofile render --out dist` inside your `USERNAME/USERNAME` Profile
+repository, commit `dist/`, and place this clickable card in its README:
 
 ```html
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="dist/summary-dark.svg">
-  <img alt="AI collaboration summary" src="dist/summary-light.svg">
-</picture>
+<a href="https://USERNAME.github.io/USERNAME/dist/dashboard.html">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="dist/summary-dark.svg">
+    <img alt="Open my interactive AI collaboration dashboard"
+         src="dist/summary-light.svg">
+  </picture>
+</a>
 ```
 
-Use `heatmap-{light,dark}.svg` or `badge-{light,dark}.svg` in the same
-pattern. To refresh your cards, run `scan` again, run `render`, and commit
-the updated files.
+Add the heatmap with the same `<picture>` pattern using
+`heatmap-{light,dark}.svg`. GitHub READMEs do not execute JavaScript, so the
+SVG remains the Profile view and the link opens `dashboard.html`.
 
-## Interactive dashboard
+To host the dashboard with GitHub Pages:
 
-`dist/dashboard.html` is a self-contained dashboard generated from the same
-validated aggregate data as the SVG cards. Open it directly in a browser to:
+1. Push `README.md` and `dist/` to the Profile repository's `main` branch.
+2. Open **Settings → Pages**.
+3. Under **Build and deployment**, choose **Deploy from a branch**.
+4. Select **main**, **/ (root)**, then **Save**.
+5. Open
+   `https://USERNAME.github.io/USERNAME/dist/dashboard.html`.
 
-- switch between **All AI** and one provider;
-- inspect provider-attributed commits, actor presences, and active days
-  without mixing those units;
-- inspect the publishable daily collaboration window;
-- use light, dark, or system color themes.
+A new Pages deployment can return 404 for a few minutes. Wait for the Pages
+workflow to finish, then reload the exact case-sensitive URL. If it still
+returns 404, confirm that Pages uses `main` and `/ (root)` and that
+`dist/dashboard.html` exists in the pushed commit.
 
-The file loads no external script, font, tracker, or API. It contains the
-same public aggregate fields as `profile.json`, so review `aiprofile
-aggregate` before publishing either file.
+## What gets generated
 
-GitHub READMEs do not execute JavaScript. Keep the SVGs in your Profile
-README and link them to `dashboard.html` on GitHub Pages or another static
-host. See the
-[live profile example](https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html).
+The static, synthetic previews below demonstrate the complete output family:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
+  <img alt="Synthetic AI collaboration summary card" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-dark.svg">
+  <img alt="Synthetic AI-assisted share badge verified from Git provenance" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-light.svg">
+</picture>
+
+The six SVGs are static and GitHub-ready. `dashboard.html` is a self-contained
+provider-filterable view with light, dark, and system themes. It loads no
+external script, font, tracker, or API. `profile.json` contains the same
+validated public aggregate contract used by every renderer.
 
 ## Declare AI participation
 
-Known AI co-author identities are recognized automatically. For other
-tools, or when you want richer attribution, add an `AI-*` trailer block
-to the commit message:
+Known AI co-author identities are recognized automatically. For other tools,
+or richer attribution, add one contiguous `AI-*` trailer block after a blank
+line in the commit message:
 
 ```text
 feat: add aggregation service
@@ -160,50 +259,58 @@ AI-Mode: AI-Assisted
 AI-Reviewed-By: Human
 ```
 
-Repeat the `AI-Provider:` key to declare another AI actor in the same
-commit. One commit can therefore equal one unique AI-attributed commit
-and multiple actor presences. Use `AI-Mode: Human-Only` only for an
-explicitly human-only commit.
+Repeat `AI-Provider:` without a blank line between actor groups to declare
+another AI actor in the same commit. One commit can therefore equal one
+unique AI-attributed commit and multiple actor presences. Use
+`AI-Mode: Human-Only` only for an explicitly human-only commit.
 
 ## Privacy
 
-- No repository data is uploaded. The CLI makes no network calls and
-  sends no telemetry.
-- New repositories default to `aggregate_only`. Use `scan --full` as an
-  explicit publication decision, or set a repository to `excluded` in
-  `~/.aiprofile/config.json`.
-- Public assets contain aggregate counts, public provider names, evidence
-  totals, and dates. They never contain repository names or paths,
-  organization names, branches, commit SHAs or messages, raw trailers,
-  or email addresses.
-- `aiprofile aggregate` is the publication preview. Review it before
-  committing generated assets.
+- The CLI makes no network calls, uploads no repository data, and sends no
+  telemetry.
+- Public assets contain the UTC generation date. They may also contain
+  aggregate counts, public provider names, and evidence totals; repository
+  activity dates appear only for `full` repositories.
+- Public assets never contain repository names or paths, organization names,
+  branches, commit SHAs or messages, raw trailers, prompts, or email
+  addresses.
+- `aggregate` is the publication preview. Review it before committing any
+  generated asset.
 - Aggregate-only output is identity redaction, not anonymity. Repeated
-  publication can reveal when totals changed. See the full
-  [privacy model](https://github.com/WenyuChiou/ai-profile/blob/main/docs/PRIVACY.md).
-- Do not publish or sync `~/.aiprofile`; it contains private repository
-  paths, identities, and a local salt.
+  publication can reveal when totals changed.
+- Never publish or sync `.aiprofile`; it contains private paths, identities,
+  repository identifiers, and a local salt.
 
-## Metrics
+Read the complete
+[privacy model](https://github.com/WenyuChiou/ai-profile/blob/main/docs/PRIVACY.md).
 
-- **AI-attributed commits** are unique commits with at least one explicit
-  AI actor presence.
-- **Actor presences** count distinct provider/tool participation within a
-  commit. Provider totals can therefore exceed unique commit totals.
-- **Unknown** stays separate from human.
-- Evidence quality is reported as
+## Metrics and current limitations
+
+- **AI-attributed commits** are unique commits with at least one explicit AI
+  actor presence.
+- **Actor presences** count distinct provider/tool participation inside a
+  commit. Provider totals can exceed unique commit totals.
+- **Unknown** remains separate from human.
+- Evidence quality is
   `verified > declared > imported > inferred > unknown`.
+- Scans cover commits reachable from the current `HEAD`, not every branch.
+- Git repositories using SHA-256 object format are not supported yet.
+- Bot-authored commits are outside the author-identity scan unless the bot
+  address is deliberately configured; some bot-plus-human co-author
+  histories may therefore be absent.
+- Historical AI use without explicit Git evidence stays unknown. Source-code
+  style is never used to reconstruct attribution.
 
-## Help and support
+## Help, contributing, and license
 
-Run `aiprofile --help` or `aiprofile COMMAND --help` for command options.
-Use [GitHub Issues](https://github.com/WenyuChiou/ai-profile/issues) for
-bugs and feature requests. Report vulnerabilities through the
+Run `aiprofile --help` or `aiprofile COMMAND --help`. Use
+[GitHub Issues](https://github.com/WenyuChiou/ai-profile/issues) for bugs and
+feature requests; report vulnerabilities through the
 [security policy](https://github.com/WenyuChiou/ai-profile/blob/main/SECURITY.md).
-
-## Contributing and license
 
 Contributions are welcome; see
 [CONTRIBUTING.md](https://github.com/WenyuChiou/ai-profile/blob/main/CONTRIBUTING.md).
 Licensed under the
-[MIT License](https://github.com/WenyuChiou/ai-profile/blob/main/LICENSE).
+[MIT License](https://github.com/WenyuChiou/ai-profile/blob/main/LICENSE);
+vendored icon notices are in
+[THIRD_PARTY_NOTICES.md](https://github.com/WenyuChiou/ai-profile/blob/main/THIRD_PARTY_NOTICES.md).

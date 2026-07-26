@@ -1,0 +1,44 @@
+{
+  "checked_on": "2026-07-26",
+  "method": "HTTP GET with redirects, 20-second timeout, and a release-verifier user agent",
+  "github_markdown": {
+    "README.md": {
+      "status": 200,
+      "h2": 13,
+      "code_blocks": 10
+    },
+    "README.zh-TW.md": {
+      "status": 200,
+      "h2": 13,
+      "code_blocks": 10
+    }
+  },
+  "urls": {
+    "https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml": 200,
+    "https://github.com/WenyuChiou/ai-profile/actions/workflows/ci.yml/badge.svg": 200,
+    "https://github.com/WenyuChiou/ai-profile/blob/main/CONTRIBUTING.md": 200,
+    "https://github.com/WenyuChiou/ai-profile/blob/main/LICENSE": 200,
+    "https://github.com/WenyuChiou/ai-profile/blob/main/README.md": 200,
+    "https://github.com/WenyuChiou/ai-profile/blob/main/README.zh-TW.md": 200,
+    "https://github.com/WenyuChiou/ai-profile/blob/main/SECURITY.md": 200,
+    "https://github.com/WenyuChiou/ai-profile/blob/main/THIRD_PARTY_NOTICES.md": 200,
+    "https://github.com/WenyuChiou/ai-profile/blob/main/docs/PRIVACY.md": 200,
+    "https://github.com/WenyuChiou/ai-profile/blob/main/pyproject.toml": 200,
+    "https://github.com/WenyuChiou/ai-profile/issues": 200,
+    "https://img.shields.io/badge/license-MIT-blue.svg": 200,
+    "https://img.shields.io/badge/python-3.11%E2%80%933.14-blue.svg": 200,
+    "https://img.shields.io/pypi/v/ai-profile-cli.svg": 200,
+    "https://pypi.org/project/ai-profile-cli/": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/heatmap-dark.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/heatmap-light.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-dark.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-light.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-dark.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-light.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/banner-dark.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/banner-light.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg": 200,
+    "https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html": 200
+  }
+}

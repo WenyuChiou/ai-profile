@@ -1,14 +1,14 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [project]
 name = "ai-profile-cli"
-version = "0.4.1"
+version = "0.4.2"
 description = "Evidence-backed, privacy-safe AI collaboration cards and dashboards generated locally from explicit Git provenance."
 readme = "README.md"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 requires-python = ">=3.11"
 dependencies = []
 keywords = ["git", "ai", "attribution", "provenance", "github-profile", "dashboard"]
@@ -30,6 +30,8 @@ Homepage = "https://github.com/WenyuChiou/ai-profile"
 Repository = "https://github.com/WenyuChiou/ai-profile"
 Issues = "https://github.com/WenyuChiou/ai-profile/issues"
 Changelog = "https://github.com/WenyuChiou/ai-profile/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/WenyuChiou/ai-profile#readme"
+Demo = "https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html"
 
 [project.scripts]
 aiprofile = "aiprofile.cli:main"
@@ -48,7 +50,7 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
+src = ["src", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]

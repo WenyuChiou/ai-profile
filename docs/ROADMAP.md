@@ -92,11 +92,10 @@ Exit criteria:
 - [x] clean-install/packaged smoke test — `scripts/release_smoke.py`
       (standalone release-time tooling, deliberately outside the
       network-free pytest suite; run green 2026-07-21).
-- Pre-release hardening tests from Gate 2 §14 not landed in the
-  conformance pass:
-  - [ ] property-based unit-invariant fuzzing (next hardening pass).
-  - [ ] canary sweeps over stdout/stderr/logs, not only dist/ (next
-        hardening pass).
+- Pre-release hardening tests from Gate 2 §14:
+  - [x] property-based unit-invariant fuzzing (Round B, 2026-07-22).
+  - [x] canary sweeps over stdout/stderr/logs and published artifacts
+        (Round B, expanded by the packaged smoke).
   - [x] cherry-pick cross-repository counting documented+tested
         (schema.md §8.4 + `tests/integration/test_cherry_pick.py`,
         2026-07-21).
@@ -105,15 +104,11 @@ Exit criteria:
         2026-07-21).
   - [x] warn when `AIPROFILE_HOME` is inside a git worktree
         (2026-07-21).
-- [x] Packaged release (not editable-install-only) + upgrade policy
-      note — CHANGELOG.md upgrade policy (2026-07-22); non-editable
-      install available via `pip install git+https://...` (README);
-      wheel/sdist built and twine-verified. PyPI listing renamed to
-      `ai-profile-cli` after a name-similarity rejection vs the
-      unrelated existing `aiprofile`; upload still pending an
-      account-scoped credential fix — not yet live on PyPI.
+- [x] Packaged release + upgrade policy — `ai-profile-cli` is live on
+      PyPI. v0.4.2 adds an exact-artifact contract, clean-wheel smoke,
+      third-party-notice regression, and three-platform onboarding CI.
 
-## v0.2 — import and reconciliation
+## Future capability milestone — import and reconciliation
 
 Preconditions before any importer ships:
 
@@ -128,16 +123,17 @@ manual events — schema.md §14); bot-authored/human-co-authored identity
 inclusion (spoofing fixtures required); v0.2 schema review revisits the
 G2-11 field set and `repository_anonymous`.
 
-## v0.3 — views and periods
+## Future capability milestone — richer views and periods
 
 Provider breakdown / evidence / publication cards and calendars (reusing
 the summary card's token system); period filters (author-local-date
 boundary rule, schema.md §15); dedicated `privacy-preview` with per-repo
 views; optional coarse aggregation mode (rounding/thresholds — G2-09);
 `purge` helper; policy-resolver extraction when the second consumer
-appears (G2-15). An `aiprofile doctor`-style diagnostic listing
-stale/unresolvable alias config entries (gate-3 reviewer suggestion —
-improves the C-03 fail-closed UX without weakening it).
+appears (G2-15). An `aiprofile doctor`-style diagnostic remains deferred.
+Public Beta promotion does not add configuration or policy CLI commands;
+README-only dogfood determines whether that work becomes a separately
+designed v0.5.0 plan.
 
 ## v0.4 — self-contained interactive dashboard
 
@@ -153,7 +149,7 @@ improves the C-03 fail-closed UX without weakening it).
 - [x] Preserve the static SVG README strategy; link to the generated HTML
       when users want interaction.
 
-## v0.5+ — GitHub integration
+## Future capability milestone — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature
 client or `gh api`; never ad hoc auth/pagination/rate-limit code —

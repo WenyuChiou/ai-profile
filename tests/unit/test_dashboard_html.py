@@ -159,6 +159,18 @@ def test_provider_filter_reuses_controls_and_calendar_hides_other_providers():
     assert "if (selectedCount) {" in html
 
 
+def test_selected_provider_keeps_normal_text_color():
+    """Provider accents identify selection without becoming body text."""
+    html = render_dashboard(_stats())
+
+    assert '.provider-row[aria-current="true"] .provider-name' not in html
+    assert '.provider-row[aria-current="true"] {' in html
+    assert "border-left-color: var(--provider-accent)" in html
+    assert ".provider-name {" in html
+    assert "color: var(--text)" in html
+    assert "button.setAttribute(\"aria-current\"" in html
+
+
 def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     html = render_dashboard(_stats())
 
