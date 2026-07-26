@@ -1383,7 +1383,11 @@ _HTML_SUFFIX = """</script>
 
       function moveTooltip(event) {
         const tooltip = $("tooltip");
-        tooltip.style.left = `${Math.max(140, Math.min(innerWidth - 140, event.clientX))}px`;
+        const margin = 16;
+        const halfWidth = tooltip.getBoundingClientRect().width / 2;
+        const minX = halfWidth + margin;
+        const maxX = innerWidth - halfWidth - margin;
+        tooltip.style.left = `${Math.max(minX, Math.min(maxX, event.clientX))}px`;
         tooltip.style.top = `${Math.max(90, event.clientY)}px`;
       }
 

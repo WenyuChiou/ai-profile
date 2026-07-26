@@ -176,6 +176,8 @@ def test_calendar_uses_roving_keyboard_and_touch_accessible_days():
     assert "event.movementX || event.movementY" in html
     assert "tooltipSuppressed !== cell" in html
     assert 'cell.setAttribute("aria-describedby", "tooltip")' in html
+    assert "tooltip.getBoundingClientRect().width / 2" in html
+    assert "innerWidth - halfWidth - margin" in html
     assert "% share" in html
 
 
