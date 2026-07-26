@@ -1,6 +1,6 @@
 {
   "checked_on": "2026-07-26",
-  "method": "HTTP GET with redirects, 20-second timeout, and a release-verifier user agent",
+  "method": "HTTP GET with redirects, 45-second timeout, and a release-verifier user agent",
   "github_markdown": {
     "README.md": {
       "status": 200,
@@ -42,5 +42,16 @@
     "https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg": 200,
     "https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg": 200,
     "https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html": 200
+  },
+  "summary": {
+    "non_placeholder_readme_urls_checked": 28,
+    "http_200": 28,
+    "failed": 0
+  },
+  "pages": {
+    "profile_head": "605b186dafbbdae9008d334b6d13aceabf99f338",
+    "outputs_checked": 8,
+    "http_200": 8,
+    "byte_identical_to_git_blobs": 8
   }
 }
