@@ -343,20 +343,28 @@ which is authoritative).
 
 - v0.4.2 was published as the immutable wheel-notice correction. Its package
   artifacts and tag remain unchanged.
-- v0.4.3 Public Beta promotion is in progress under the additive frozen
-  baseline in `docs/reviews/promotion-eval-spec-v043.md`.
-- v0.4.3 closes the classic-scrollbar overflow, calendar
+- **v0.4.3 Public Beta is released and promotion-verified** under the
+  additive frozen baseline in
+  `docs/reviews/promotion-eval-spec-v043.md`.
+- v0.4.3 closed the classic-scrollbar overflow, calendar
   keyboard/touch/accessibility-tree and contrast gates, zoom-safe tooltip
   positioning, and compact mobile Profile source selection.
 - The canonical release bundle is built from a clean Ubuntu checkout with a
   manifest-frozen `SOURCE_DATE_EPOCH`; Windows and macOS smoke those retained
   bytes rather than rebuilding platform-specific ZIP metadata.
-- The final candidate wheel digest is
+- The published wheel digest is
   `b3baebac895927897ef39ae86227d3ed89455ed1d925be74cc6cc385468781a8`.
-  It passed 4/4 README-only roles, 480 privacy comparisons, a 12-state
-  exact-wheel browser matrix, and all eight PR checks including
-  Ubuntu/Windows/macOS onboarding. Publication and the real Profile/Pages
-  gate remain pending.
+  PyPI and GitHub Release serve the verified bytes. The release passed 4/4
+  README-only roles, 480 dogfood privacy comparisons, a 12-state exact-wheel
+  browser matrix, and all eight protected checks including
+  Ubuntu/Windows/macOS onboarding.
+- The maintainer Profile was regenerated from live PyPI v0.4.3 and merged at
+  `605b186`. GitHub sanitizer/current-source checks pass at four widths in
+  both themes; the 52,392-comparison real-output privacy sweep has zero hits;
+  Pages serves all eight canonical Git blobs byte-for-byte.
+- Final promotion verdict:
+  `docs/reviews/promotion-readiness-review.md` records
+  **GO — PUBLIC BETA** with no unresolved Critical or High findings.
 - Future import, reconciliation, richer views, GitHub API integration, and
   any configuration CLI remain deferred in ROADMAP. They are not part of
   the v0.4.3 product boundary.
