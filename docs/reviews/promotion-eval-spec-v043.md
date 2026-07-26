@@ -1,6 +1,7 @@
 # v0.4.3 Public Beta remediation evaluation specification
 
-Status: draft — not frozen  
+Status: frozen
+Draft commit: `7b32242a3490c9f59c8d91c815a364847bc967d0`
 Target: `ai-profile-cli` 0.4.3 Public Beta
 
 The immutable baseline is
