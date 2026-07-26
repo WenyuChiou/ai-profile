@@ -68,8 +68,9 @@ The dashboard uses an editorial evidence-ledger direction:
 
 - a restrained GitHub Primer-derived palette with one active-provider
   accent at a time;
-- a local serif display stack, readable UI stack, and monospaced numeric
-  stack, with no external font request;
+- a technical-editorial local type system: condensed industrial display,
+  humanist UI, and monospaced numeric stacks with Windows, macOS, and Linux
+  fallbacks and no external font request;
 - responsive type via `clamp()`, minimum 12px supporting text, strong
   number alignment, and generous negative space;
 - native buttons, visible focus states, `aria-pressed` filter state,

@@ -852,3 +852,12 @@ def test_evidence_unknown_mark_meets_graphical_contrast():
         la, lb = sorted((lum(theme.evidence_unknown), lum(theme.chip_bg)), reverse=True)
         ratio = (la + 0.05) / (lb + 0.05)
         assert ratio >= 3.0, (theme.name, round(ratio, 2))
+
+
+def test_svg_family_uses_the_humanist_profile_font_stack():
+    """GitHub assets avoid the generic system/AI-dashboard font stack."""
+    from aiprofile.render.summary_svg import FONT_STACK
+
+    assert FONT_STACK == (
+        "'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif"
+    )

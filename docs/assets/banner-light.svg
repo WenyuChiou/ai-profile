@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="830" height="180" viewBox="0 0 830 180" role="img" aria-label="ai-profile: privacy-first AI collaboration analytics from your git history">
 <rect x="0.5" y="0.5" width="829" height="179" rx="10" fill="#ffffff" stroke="#d1d9e0"/>
-<text x="52" y="84" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="38" font-weight="700" fill="#1f2328">ai-profile</text>
-<text x="54" y="114" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="15" fill="#59636e">Prove your AI collaboration. Privately.</text>
+<text x="52" y="84" font-family="Bahnschrift, 'DIN Alternate', 'Franklin Gothic Medium', 'DejaVu Sans Condensed', 'Liberation Sans Narrow', 'Trebuchet MS', sans-serif" font-size="38" font-weight="700" fill="#1f2328">ai-profile</text>
+<text x="54" y="114" font-family="'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif" font-size="15" fill="#59636e">Prove your AI collaboration. Privately.</text>
 <rect x="54" y="130" width="8" height="8" rx="2" fill="#B74C2A"/>
 <rect x="66" y="130" width="8" height="8" rx="2" fill="#8E75B2"/>
 <rect x="78" y="130" width="8" height="8" rx="2" fill="#0969da"/>
-<text x="94" y="138" font-family="-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif" font-size="11" fill="#59636e">explicit git provenance - local - never inferred</text>
+<text x="94" y="138" font-family="'Cascadia Mono', 'SFMono-Regular', 'Ubuntu Mono', 'DejaVu Sans Mono', Consolas, monospace" font-size="11" fill="#59636e">explicit git provenance - local - never inferred</text>
 <polygon points="560,50.5 575,58 560,65.5 545,58" fill="#eff2f5"/>
 <polygon points="545,58 560,65.5 545,73 530,65.5" fill="#eff2f5"/>
 <polygon points="575,58 590,65.5 575,73 560,65.5" fill="#eff2f5"/>

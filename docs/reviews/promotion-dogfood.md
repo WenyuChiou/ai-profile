@@ -1,17 +1,17 @@
-# v0.4.3 Public Beta promotion dogfood
+# v0.4.4 Public Beta promotion dogfood
 
 Date: 2026-07-26
 Evaluation baseline:
-`773113562871a99da02d50056a118f993794baac`
+`363fc615e3c4133551f99a881046b26d45b027ac`
 
 ## Executive result
 
-The final sealed-box dogfood gate passed. All four roles used only the
-canonical `README.md` and the same clean-Linux candidate wheel:
+The final sealed-box dogfood gate passed. Four roles used only the canonical
+`README.md` and the same native-Linux candidate wheel:
 
 ```text
-ai_profile_cli-0.4.3-py3-none-any.whl
-SHA-256 b3baebac895927897ef39ae86227d3ed89455ed1d925be74cc6cc385468781a8
+ai_profile_cli-0.4.4-py3-none-any.whl
+SHA-256 668cf226cd9f292681427ccc2dbc3305d6e886e9a4aa03650f2c160f7074ca3d
 ```
 
 | Role | Result | README-external hints | Blocking friction |
@@ -25,187 +25,141 @@ Gate totals:
 
 - roles completed: 4/4;
 - exact candidate-digest matches: 4/4;
-- installation failures: 0;
-- configuration dead ends: 0;
-- privacy-canary hits: 0/480 comparisons;
+- installation or configuration dead ends: 0;
+- privacy-canary hits: 0/342 pattern/file checks;
 - hand-derived aggregation mismatches: 0;
-- dashboard filter mismatches/errors/external requests: 0;
-- local GitHub Pages configuration dead ends: 0.
+- dashboard filter mismatches: 0;
+- local Profile/Pages-preparation dead ends: 0.
 
-Earlier runs against `c0e34bd4...` and `29e76e3f...` were invalidated when
-canonical line endings and then the zoom-safe tooltip patch changed the
-wheel bytes. No result from either superseded set is counted.
-
-## Isolation and method
-
-Every role used a fresh temporary Git repository, virtual environment, and
-`AIPROFILE_HOME`. Product source, tests, other project documents, other-role
-artifacts, and orchestrator workflow hints were prohibited. Raw commands,
-exit codes, stderr, timings, outputs, screenshots, and reports are retained
-outside Git under:
+All results against the earlier Windows-worktree wheel
+`ff7ad454...7a99` are invalidated and excluded from this verdict. Raw final
+reports and command ledgers are retained outside Git under:
 
 ```text
-.artifact/promotion/dogfood-v043/
+.artifact/v044-dogfood-r2/
 ```
-
-The no-product-context synthesizer read only the four natural-language
-reports and found no contradiction. The root reviewer then independently
-recomputed the following values from raw JSON, command ledgers, output
-inventories, and sweep records rather than trusting the synthesis.
 
 ## Role evidence
 
 ### New user
 
-The role installed the exact wheel offline, verified `aiprofile 0.4.3`, and
-completed `init -> scan -> aggregate -> render` on the first valid run.
+The role installed the exact wheel, verified `aiprofile 0.4.4`, and completed
+`init -> scan -> aggregate -> render` without external product guidance. A
+single commit without explicit provenance remained unknown:
 
-Observed:
-
-- commits scanned: 2;
-- unique AI-attributed commits: 1;
-- actor presences: 1;
-- human declarations: 0;
-- unknown commits: 1;
-- outputs: exactly 8.
-
-Evidence:
-`.artifact/promotion/dogfood-v043/new-user/report.md`.
+```text
+commits scanned = 1
+AI-attributed commits = 0
+actor presences = 0
+unknown commits = 1
+outputs = 8
+```
 
 ### Privacy-sensitive user
 
-The role exercised all three publication levels:
+Three repositories exercised `aggregate_only`, `full`, and `excluded`.
+Aggregate output contained one full and one aggregate-only commit; the
+excluded repository was omitted.
 
-| Mode | Scanned | AI commits | Presences | Daily rows | Result |
-|---|---:|---:|---:|---:|---|
-| `aggregate_only` | 1 | 1 | 1 | 0 | Totals retained; dates withheld |
-| `full` | 1 | 1 | 1 | 1 | Publishable date retained |
-| `excluded` | 0 | 0 | 0 | 0 | Repository omitted |
-
-Twenty unique canaries covered repository and organization identities,
-absolute and relative paths, prompt, commit subject/body, emails, URL,
-branch, source content, raw trailer, full and short SHA, salt, and repository
-UID. Each canary was searched as raw UTF-8 bytes across all eight public
-outputs in all three modes:
+Thirty-eight private patterns covered repository and organization names,
+paths, branches, file content, prompts, commit messages, email, URL, trailer
+values, and each actual full/short commit SHA. Every pattern was searched
+case-insensitively as UTF-8, UTF-16LE, and UTF-16BE across the aggregate
+publication preview and all eight public assets:
 
 ```text
-20 canaries * 8 outputs * 3 modes = 480 comparisons
+38 patterns * 9 public outputs = 342 pattern/file checks
 hits = 0
 ```
 
-An intentional UTF-8 BOM produced a controlled parse failure; restoring the
-exact configuration bytes recovered without changing the salt or repository
-UID. Evidence:
-`.artifact/promotion/dogfood-v043/privacy-user/report.md` and
-`evidence/result.json`.
+Distinct dates independently verified the publication boundary:
+
+| Publication level | Synthetic date | Public result |
+|---|---|---|
+| `aggregate_only` | 2024-01-11 | absent |
+| `full` | 2024-02-22 | date-bearing assets only |
+| `excluded` | 2024-03-23 | absent |
 
 ### Multiple-provider user
 
-The fixture contained four commits: one unknown, one `Human-Only`, one with
-Anthropic and OpenAI actor groups, and one Anthropic-only declaration.
+The fixture contained one unknown commit, one `Human-Only` commit, and one
+commit with contiguous OpenAI and Anthropic actor groups.
 
 | Metric | Hand-derived | Observed |
 |---|---:|---:|
-| Commits scanned | 4 | 4 |
-| Unique AI-attributed commits | 2 | 2 |
-| AI actor presences | 3 | 3 |
-| Claude commits / presences / active days | 2 / 2 / 2 | 2 / 2 / 2 |
+| Commits scanned | 3 | 3 |
+| Unique AI-attributed commits | 1 | 1 |
+| AI actor presences | 2 | 2 |
+| Claude commits / presences / active days | 1 / 1 / 1 | 1 / 1 / 1 |
 | OpenAI commits / presences / active days | 1 / 1 / 1 | 1 / 1 / 1 |
 | Human-declared commits | 1 | 1 |
 | Unknown commits | 1 | 1 |
-| Evidence declared / unknown / total | 4 / 1 / 5 | 4 / 1 / 5 |
+| Evidence declared / unknown / total | 3 / 1 / 4 | 3 / 1 / 4 |
 
 The shared commit remained one unique AI commit and two actor presences.
-All AI, Claude, and OpenAI dashboard filters matched the same unit
-separation. Browser mismatches, console errors, page errors, and external
-requests were all zero. Evidence:
-`.artifact/promotion/dogfood-v043/multi-provider/report.md`,
-`observed-profile.json`, and `dashboard-check.json`.
+Visible-browser assertions for All AI, Claude, and OpenAI preserved those
+units, active days, evidence totals, and the selected state.
 
 ### Profile publisher
 
-The role built a disposable `USERNAME/USERNAME` repository on `main`,
-generated all eight assets, and validated:
-
-- compact and full light/dark Profile sources;
-- clickable dashboard link and equivalent alt purpose;
-- all relative asset targets;
-- GitHub Pages `main` plus `/ (root)` mapping;
-- strict UTF-8, SVG parsing, self-contained dashboard, and zero remotes.
-
-There was no local Pages or configuration dead end. A real push and Pages
-deployment were intentionally reserved for the maintainer Profile gate after
-PyPI publication. Evidence:
-`.artifact/promotion/dogfood-v043/profile-publisher/report.md`.
-
-## Exact-wheel browser evidence
-
-The final wheel rendered the headed-browser fixture used by the accessibility
-gate. Retained results:
-
-```text
-viewport/theme states: 12
-provider states: 36
-widths: 320, 390, 768, 1440
-themes: light, dark, system
-accessibility dates visible per state: 294
-maximum document overflow: 0
-minimum active/legend contrast: 5.011:1
-minimum metadata contrast: 5.010:1
-200% rendering: document overflow 0; calendar locally scrollable
-keyboard/focus/hover/touch/reduced-motion: PASS
-console errors / external requests: 0 / 0
-```
-
-The contrast check sampled the browser-composited background beneath the
-metadata rather than comparing raw tokens. The 200% rendering probe also
-confirmed the focused tooltip remained within the viewport.
-
-Evidence:
-`.artifact/promotion/browser-v043/exact-wheel-browser/browser-gate.json` and
-its retained screenshots.
+The role generated a disposable Profile repository with exactly eight assets,
+parsed all six SVGs, loaded the self-contained dashboard in Chrome, and copied
+the responsive clickable card plus light/dark heatmap from the README. The
+Pages instructions identified `main`, `/ (root)`, the case-sensitive
+dashboard URL, and deployment-delay recovery. No remote mutation occurred.
 
 ## Root reconciliation
 
+The root reviewer recomputed the digest, four inventories, public JSON totals,
+and privacy sweep directly from the retained artifacts:
+
 ```text
-candidate digest: b3baebac...781a8
-new user: commits=2 ai=1 presences=1 unknown=1 outputs=8
-privacy: modes=3 comparisons=480 hits=0 outputs-per-mode=8
-multi-provider: commits=4 ai=2 presences=3 human=1 unknown=1 evidence=5
-dashboard: mismatches=0 errors=0 external-requests=0
-publisher: outputs=8 references=valid Pages-local-preconditions=valid
+wheel digest = 668cf226...ca3d
+output inventories = 8 / 8 / 8 / 8
+new user = scanned 1, AI 0, presences 0, unknown 1
+privacy = scanned 2, AI 2, presences 2, excluded omitted
+multi-provider = scanned 3, AI 1, presences 2, human 1, unknown 1
+publisher = scanned 1, AI 1, presences 1, unknown 0
+privacy = 38 patterns * 9 outputs, hits 0
+date boundary = aggregate-only absent, full present, excluded absent
 ```
 
 ## Findings and dispositions
 
-### High — Dogfood must identify the exact published byte sequence
+### High — The first candidate was not built from a native-Linux checkout
 
-- **Impact:** A role pass on a superseded wheel cannot authorize release.
-- **Evidence:** Windows-worktree CRLF and a later tooltip patch each changed
-  the wheel digest.
-- **Recommendation:** Invalidate the complete role set after any production
-  byte change and require a first-action SHA-256 match.
-- **Disposition:** Fixed. Only the four final-wheel reports above count.
+- **Impact:** A wheel validated from a WSL process over a Windows worktree had
+  different line-ending bytes from the release workflow's Linux checkout and
+  could not authorize the bytes CI would publish.
+- **Evidence:** The first PR release-candidate job rebuilt
+  `668cf226...ca3d` while the manifest expected `ff7ad454...7a99`.
+- **Recommendation:** Build from Git blobs exported into a native-Linux
+  filesystem, freeze that digest, and invalidate every role result after any
+  artifact-byte change.
+- **Disposition:** Fixed. A Git-archive source exported to Linux `/tmp`
+  reproduced CI's `668cf226...ca3d`. The candidate was replaced and all four
+  README-only roles reran from fresh environments against that exact digest.
 
-### Medium — Fixed tooltip clamp could clip at narrow zoomed widths
+### Low — Isolated homes trigger a conservative warning
 
-- **Impact:** Focused or tapped date evidence could be partially unreadable.
-- **Evidence:** Independent visual review traced the fixed 140 px center
-  clamp.
-- **Recommendation:** Clamp using the measured tooltip half-width and a
-  viewport margin; retain exact-wheel runtime evidence.
-- **Disposition:** Fixed and verified at the 200% rendering gate.
+- **Impact:** Evaluators see a warning because retained private test homes sit
+  beneath an ignored outer worktree.
+- **Recommendation:** Keep the warning; real users should store private state
+  outside published repositories.
+- **Disposition:** Accepted as accurate, non-blocking privacy guidance.
 
-### Low — Isolated evaluation homes trigger a conservative warning
+### Low — Anthropic evidence is displayed as Claude
 
-- **Impact:** Roles see a warning because their private test homes live
-  beneath the enclosing ignored worktree.
-- **Recommendation:** Keep the warning; it accurately discourages real users
-  from publishing private state.
-- **Disposition:** Accepted as privacy-conservative, non-blocking friction.
+- **Impact:** A first-time user may not immediately recognize provider
+  canonicalization from the trailer example alone.
+- **Recommendation:** Clarify provider display aliases in a future
+  documentation-only release without changing the frozen candidate bytes.
+- **Disposition:** Accepted for v0.4.4. Cardinality and attribution remain
+  correct, and `profile.json` preserves the canonical provider identifier.
 
 ## Dogfood verdict
 
-The final candidate passes the dogfood gate: 4/4 roles, one exact digest,
-zero external hints, zero privacy leaks, exact aggregation semantics, exact
-output sets, and no local configuration or Pages dead end.
+The native-Linux v0.4.4 candidate passes the promotion dogfood gate: 4/4
+roles, one digest, zero external hints, zero privacy leaks, exact aggregation
+semantics, exact output sets, and no installation, configuration, dashboard,
+or local Profile/Pages-preparation blocker.

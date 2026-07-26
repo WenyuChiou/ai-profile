@@ -40,14 +40,16 @@ _HTML_PREFIX = """<!doctype html>
       --accent-soft: #ddf4ff;
       --success: #1a7f37;
       --warning: #9a6700;
-      --shadow: 0 18px 48px rgba(31, 35, 40, 0.10);
+      --shadow: 0 10px 28px rgba(31, 35, 40, 0.08);
       --grid-empty: #eaeef2;
       --calendar-active-border: #57606a;
       --focus: #0969da;
-      --display: ui-serif, "Iowan Old Style", "Palatino Linotype",
-        "Book Antiqua", Georgia, serif;
-      --body: Aptos, "Segoe UI Variable", "Segoe UI", sans-serif;
-      --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      --display: Bahnschrift, "DIN Alternate", "Franklin Gothic Medium",
+        "DejaVu Sans Condensed", "Liberation Sans Narrow", "Trebuchet MS", sans-serif;
+      --body: "Trebuchet MS", Corbel, "Avenir Next", Avenir, Ubuntu,
+        "DejaVu Sans", sans-serif;
+      --mono: "Cascadia Mono", "SFMono-Regular", "Ubuntu Mono",
+        "DejaVu Sans Mono", Consolas, monospace;
       --space-1: 0.25rem;
       --space-2: 0.5rem;
       --space-3: 0.75rem;
@@ -57,9 +59,9 @@ _HTML_PREFIX = """<!doctype html>
       --space-8: 2rem;
       --space-10: 2.5rem;
       --space-12: 3rem;
-      --radius-sm: 0.5rem;
-      --radius-md: 0.875rem;
-      --radius-lg: 1.25rem;
+      --radius-sm: 0.25rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -79,7 +81,7 @@ _HTML_PREFIX = """<!doctype html>
         --accent-soft: #0c2d6b;
         --success: #3fb950;
         --warning: #d29922;
-        --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+        --shadow: 0 12px 34px rgba(0, 0, 0, 0.30);
         --grid-empty: #21262d;
         --calendar-active-border: #8c959f;
         --focus: #58a6ff;
@@ -102,7 +104,7 @@ _HTML_PREFIX = """<!doctype html>
       --accent-soft: #0c2d6b;
       --success: #3fb950;
       --warning: #d29922;
-      --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+      --shadow: 0 12px 34px rgba(0, 0, 0, 0.30);
       --grid-empty: #21262d;
       --calendar-active-border: #8c959f;
       --focus: #58a6ff;
@@ -116,24 +118,29 @@ _HTML_PREFIX = """<!doctype html>
       min-width: 0;
       background: var(--canvas);
       font-family: var(--body);
+      font-kerning: normal;
+      font-variant-numeric: lining-nums tabular-nums;
       color: var(--text);
+      text-rendering: optimizeLegibility;
     }
 
     body {
       min-height: 100vh;
       margin: 0;
       overflow-x: clip;
-      background:
-        radial-gradient(
-          circle at 12% -8%,
-          color-mix(in srgb, var(--accent) 12%, transparent),
-          transparent 34rem
+      background-color: var(--canvas);
+      background-image:
+        linear-gradient(
+          to right,
+          color-mix(in srgb, var(--border) 22%, transparent) 1px,
+          transparent 1px
         ),
         linear-gradient(
-          180deg,
-          var(--canvas),
-          color-mix(in srgb, var(--surface) 58%, var(--canvas))
+          to bottom,
+          color-mix(in srgb, var(--border) 22%, transparent) 1px,
+          transparent 1px
         );
+      background-size: 2rem 2rem;
     }
 
     button {
@@ -159,6 +166,8 @@ _HTML_PREFIX = """<!doctype html>
       gap: var(--space-8);
       align-items: start;
       margin-bottom: var(--space-10);
+      padding-top: var(--space-4);
+      border-top: 0.25rem solid var(--text);
     }
 
     .masthead > *,
@@ -180,13 +189,14 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .title {
-      max-width: 18ch;
+      max-width: 17ch;
       margin: 0;
       font-family: var(--display);
-      font-size: clamp(2.7rem, 7vw, 5.8rem);
-      font-weight: 600;
-      letter-spacing: -0.045em;
-      line-height: 0.94;
+      font-size: clamp(2.65rem, 6.4vw, 5.35rem);
+      font-stretch: condensed;
+      font-weight: 680;
+      letter-spacing: -0.035em;
+      line-height: 0.92;
       text-wrap: balance;
     }
 
@@ -226,6 +236,8 @@ _HTML_PREFIX = """<!doctype html>
 
     .generated {
       color: var(--muted);
+      padding-left: var(--space-4);
+      border-left: 1px solid var(--border);
       font-family: var(--mono);
       font-size: 0.75rem;
       line-height: 1.5;
@@ -242,11 +254,11 @@ _HTML_PREFIX = """<!doctype html>
       justify-content: space-between;
       margin-bottom: var(--space-6);
       padding: var(--space-3);
-      border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+      border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--surface) 88%, transparent);
-      box-shadow: 0 8px 24px rgba(31, 35, 40, 0.06);
-      backdrop-filter: blur(1rem);
+      background: color-mix(in srgb, var(--surface) 97%, transparent);
+      box-shadow: 0 4px 12px rgba(31, 35, 40, 0.05);
+      backdrop-filter: blur(0.5rem);
     }
 
     .filter-label {
@@ -273,20 +285,18 @@ _HTML_PREFIX = """<!doctype html>
       min-height: 2.4rem;
       padding: 0 var(--space-4);
       border: 1px solid var(--border);
-      border-radius: 999px;
+      border-radius: var(--radius-sm);
       background: var(--surface);
       color: var(--muted);
       cursor: pointer;
       font-size: 0.82rem;
       font-weight: 650;
-      transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
-        transform 160ms ease;
+      transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
     }
 
     .filter:hover {
       border-color: var(--provider-accent, var(--accent));
       color: var(--text);
-      transform: translateY(-1px);
     }
 
     .filter[aria-pressed="true"] {
@@ -327,19 +337,32 @@ _HTML_PREFIX = """<!doctype html>
       min-height: 23rem;
       overflow: hidden;
       padding: clamp(1.5rem, 4vw, 3rem);
+      border-top: 0.25rem solid var(--active-accent, var(--accent));
     }
 
     .hero-panel::after {
       position: absolute;
-      right: -8rem;
-      bottom: -10rem;
-      width: 24rem;
-      height: 24rem;
-      border: 1px solid color-mix(in srgb, var(--active-accent, var(--accent)) 25%, transparent);
-      border-radius: 50%;
-      box-shadow:
-        0 0 0 3rem color-mix(in srgb, var(--active-accent, var(--accent)) 4%, transparent),
-        0 0 0 7rem color-mix(in srgb, var(--active-accent, var(--accent)) 3%, transparent);
+      right: 2rem;
+      bottom: 2rem;
+      width: 11rem;
+      height: 8rem;
+      border-right: 1px solid
+        color-mix(in srgb, var(--active-accent, var(--accent)) 35%, transparent);
+      border-bottom: 1px solid
+        color-mix(in srgb, var(--active-accent, var(--accent)) 35%, transparent);
+      background:
+        repeating-linear-gradient(
+          90deg,
+          color-mix(in srgb, var(--active-accent, var(--accent)) 18%, transparent)
+            0 1px,
+          transparent 1px 1rem
+        ),
+        repeating-linear-gradient(
+          0deg,
+          color-mix(in srgb, var(--active-accent, var(--accent)) 14%, transparent)
+            0 1px,
+          transparent 1px 1rem
+        );
       content: "";
       pointer-events: none;
     }
@@ -360,10 +383,11 @@ _HTML_PREFIX = """<!doctype html>
       margin: var(--space-4) 0 0;
       color: var(--active-accent, var(--accent));
       font-family: var(--display);
-      font-size: clamp(4.8rem, 14vw, 9.5rem);
-      font-weight: 600;
-      letter-spacing: -0.07em;
-      line-height: 0.82;
+      font-size: clamp(4.8rem, 13vw, 8.8rem);
+      font-stretch: condensed;
+      font-weight: 720;
+      letter-spacing: -0.055em;
+      line-height: 0.84;
     }
 
     .hero-context {
@@ -383,7 +407,7 @@ _HTML_PREFIX = """<!doctype html>
       height: 0.55rem;
       margin-top: var(--space-6);
       overflow: hidden;
-      border-radius: 999px;
+      border-radius: 0.125rem;
       background: var(--grid-empty);
     }
 
@@ -433,6 +457,7 @@ _HTML_PREFIX = """<!doctype html>
       font-weight: 720;
       letter-spacing: -0.045em;
       line-height: 1;
+      font-variant-numeric: tabular-nums;
     }
 
     .ledger-label {
@@ -472,9 +497,10 @@ _HTML_PREFIX = """<!doctype html>
       margin: 0;
       font-family: var(--display);
       font-size: clamp(1.55rem, 3vw, 2.15rem);
-      font-weight: 600;
-      letter-spacing: -0.025em;
-      line-height: 1.05;
+      font-stretch: condensed;
+      font-weight: 680;
+      letter-spacing: -0.015em;
+      line-height: 1;
     }
 
     .panel-meta {
@@ -627,7 +653,7 @@ _HTML_PREFIX = """<!doctype html>
     .provider-track {
       height: 0.38rem;
       overflow: hidden;
-      border-radius: 999px;
+      border-radius: 0.125rem;
       background: var(--grid-empty);
     }
 
@@ -649,7 +675,7 @@ _HTML_PREFIX = """<!doctype html>
       height: 0.72rem;
       margin: var(--space-5) 0;
       overflow: hidden;
-      border-radius: 999px;
+      border-radius: 0.125rem;
       background: var(--grid-empty);
     }
 
@@ -713,6 +739,7 @@ _HTML_PREFIX = """<!doctype html>
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: var(--space-8);
       margin-top: var(--space-4);
+      border-top: 0.25rem solid var(--text);
       box-shadow: none;
     }
 
@@ -850,6 +877,8 @@ _HTML_PREFIX = """<!doctype html>
       .control-deck {
         position: static;
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
       }
 
       .filter-label {

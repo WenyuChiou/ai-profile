@@ -25,6 +25,23 @@ below.
 
 ## [Unreleased]
 
+## [0.4.4] — 2026-07-26
+
+### Changed
+
+- Give the dashboard, GitHub SVGs, README banner, and social preview one
+  technical-editorial type system with local Windows, macOS, and Linux
+  fallbacks; no font is downloaded or embedded.
+- Replace the dashboard's decorative glow, oversized serif voice, pill
+  controls, and heavily rounded surfaces with a restrained evidence-ledger
+  grid, condensed industrial headings, humanist body text, tabular numerals,
+  and explicit structural selection marks.
+
+### Fixed
+
+- Keep the mobile provider-filter grid at full available width so its
+  equal-width controls do not collapse into a narrow single column.
+
 ## [0.4.3] — 2026-07-26
 
 ### Fixed

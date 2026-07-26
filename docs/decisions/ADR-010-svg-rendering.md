@@ -35,10 +35,11 @@ at GitHub README width, zero runtime deps. Candidates: a template engine
   not hard-coded inline).
 - Two output assets (`summary-light.svg`, `summary-dark.svg`) embedded via
   `<picture>` — reliable GitHub-native theme switching (mvp.md §5).
-- Text sizing: system font stack
-  (`-apple-system, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif`),
-  conservative character-width table for layout, ellipsis truncation for
-  long provider names.
+- Text sizing: a local humanist stack
+  (`'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif`)
+  chosen to avoid generic AI-dashboard typography without adding a font
+  request; conservative character-width table for layout and ellipsis
+  truncation for long provider names.
 - Accessibility: `<title>` + `<desc>`, `role="img"`, labels ≥ 11px, metric
   names spelled out, no color-only distinctions (counts always printed).
 
