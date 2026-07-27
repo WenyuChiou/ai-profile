@@ -269,6 +269,11 @@ another AI actor in the same commit. One commit can therefore equal one
 unique AI-attributed commit and multiple actor presences. Use
 `AI-Mode: Human-Only` only for an explicitly human-only commit.
 
+Provider declarations are normalized to a canonical provider identity
+(typically company-oriented). The dashboard may show the more recognizable
+product display name instead: `AI-Provider: Anthropic` is shown as **Claude**.
+This is a label-only mapping; it does not change aggregation or counts.
+
 ## Privacy
 
 - The CLI makes no network calls, uploads no repository data, and sends no

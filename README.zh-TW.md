@@ -262,6 +262,11 @@ group 之間不要留空白行。因此一個 commit 可以同時是 1 個 uniqu
 AI-attributed commit 與多個 actor presences。只有明確的人類獨立 commit
 才使用 `AI-Mode: Human-Only`。
 
+`AI-Provider` 宣告會正規化為 canonical provider identity（通常以 company 為
+導向）。dashboard 可能改以更容易辨識的 product display name 顯示：
+`AI-Provider: Anthropic` 會顯示為 **Claude**。這只是標籤對應，不會改變
+aggregation 或 counts。
+
 ## 隱私
 
 - CLI 不會進行網路呼叫、不上傳 repository data，也不傳送 telemetry。
