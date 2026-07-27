@@ -41,7 +41,7 @@ WIDTH = 830
 PADDING = 24
 RADIUS = 8
 
-FONT_STACK = "'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif"
+FONT_STACK = "Candara, Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif"
 
 TITLE_TEXT = "AI Collaboration Summary"
 MAX_PROVIDER_ROWS = 6
@@ -98,8 +98,8 @@ BAR_X = 184
 COUNT_X = WIDTH - PADDING  # right anchor for "count · pct%"
 BAR_MAX_WIDTH = 500  # COUNT_X - reserved count column (110) - gap (12) - BAR_X
 BAR_HEIGHT = 7
-NAME_FONT_SIZE = 13
-COUNT_FONT_SIZE = 13
+NAME_FONT_SIZE = 14
+COUNT_FONT_SIZE = 14
 
 MORE_LINE_EXTRA = 24  # vertical room for the "+N providers not shown" line when present
 
@@ -109,7 +109,7 @@ PANEL_PAD_X = 16
 PANEL_PAD_Y = 16
 PANEL_HEIGHT = 104
 PANEL_RADIUS = 6
-EVIDENCE_FONT_SIZE = 11
+EVIDENCE_FONT_SIZE = 12
 EVIDENCE_LABEL_SIZE = 12
 EVIDENCE_PREFIX_TEMPLATE = "Evidence (all records: {n})"
 EVIDENCE_BAR_Y_OFFSET = 36
@@ -240,9 +240,9 @@ CAL_HEIGHT = CAL_LEGEND_BASELINE_Y + CAL_LEGEND_BOTTOM_PAD
 #: column, distinguished only by fill-opacity (never a computed/blended
 #: hex): top face full strength, the two side "walls" progressively
 #: dimmer, giving a 3D cube read without introducing any new color value.
-CAL_FACE_OPACITY_TOP = 1
-CAL_FACE_OPACITY_LEFT = 0.72
-CAL_FACE_OPACITY_RIGHT = 0.5
+CAL_FACE_OPACITY_TOP = 0.88
+CAL_FACE_OPACITY_LEFT = 0.62
+CAL_FACE_OPACITY_RIGHT = 0.42
 
 #: SMIL entrance (spec: "grow-in ... only if deterministic + byte-stable").
 #: Fixed literal dur/begin, one-shot (SMIL's default repeatCount is 1 --

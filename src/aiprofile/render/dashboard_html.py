@@ -26,27 +26,30 @@ _HTML_PREFIX = """<!doctype html>
   <style>
     :root {
       color-scheme: light;
-      --canvas: #f6f8fa;
-      --surface: #ffffff;
+      --canvas: #f6f9fc;
+      --surface: #fbfdff;
       --surface-raised: #ffffff;
-      --surface-subtle: #f6f8fa;
-      --border: #d0d7de;
-      --border-strong: #afb8c1;
-      --text: #1f2328;
-      --muted: #636c76;
-      --faint: #8c959f;
+      --surface-subtle: #eef7ff;
+      --surface-blue: #ddf4ff;
+      --surface-yellow: #fff8c5;
+      --border: #c7d7e8;
+      --border-strong: #8ea8c1;
+      --text: #24292f;
+      --muted: #57606a;
+      --faint: #6e7781;
       --accent: #0969da;
       --accent-strong: #0550ae;
       --accent-soft: #ddf4ff;
       --success: #1a7f37;
       --warning: #9a6700;
-      --shadow: 0 10px 28px rgba(31, 35, 40, 0.08);
-      --grid-empty: #eaeef2;
+      --warning-strong: #7d4e00;
+      --shadow: 0 16px 40px rgba(42, 76, 102, 0.10);
+      --grid-empty: #e7f0f8;
       --calendar-active-border: #57606a;
       --focus: #0969da;
       --display: Bahnschrift, "DIN Alternate", "Franklin Gothic Medium",
         "DejaVu Sans Condensed", "Liberation Sans Narrow", "Trebuchet MS", sans-serif;
-      --body: "Trebuchet MS", Corbel, "Avenir Next", Avenir, Ubuntu,
+      --body: Candara, Corbel, "Avenir Next", Avenir, Ubuntu,
         "DejaVu Sans", sans-serif;
       --mono: "Cascadia Mono", "SFMono-Regular", "Ubuntu Mono",
         "DejaVu Sans Mono", Consolas, monospace;
@@ -67,47 +70,53 @@ _HTML_PREFIX = """<!doctype html>
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
         color-scheme: dark;
-        --canvas: #010409;
-        --surface: #0d1117;
-        --surface-raised: #161b22;
-        --surface-subtle: #161b22;
-        --border: #30363d;
-        --border-strong: #484f58;
+        --canvas: #0b1118;
+        --surface: #111923;
+        --surface-raised: #18212c;
+        --surface-subtle: #162330;
+        --surface-blue: #172b3d;
+        --surface-yellow: #302b1c;
+        --border: #34485c;
+        --border-strong: #58728a;
         --text: #f0f6fc;
-        --muted: #8b949e;
-        --faint: #6e7681;
-        --accent: #58a6ff;
-        --accent-strong: #79c0ff;
-        --accent-soft: #0c2d6b;
+        --muted: #a3b3c2;
+        --faint: #8ea0b2;
+        --accent: #79c0ff;
+        --accent-strong: #a5d6ff;
+        --accent-soft: #173a5e;
         --success: #3fb950;
-        --warning: #d29922;
-        --shadow: 0 12px 34px rgba(0, 0, 0, 0.30);
-        --grid-empty: #21262d;
-        --calendar-active-border: #8c959f;
-        --focus: #58a6ff;
+        --warning: #eac54f;
+        --warning-strong: #fae17d;
+        --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+        --grid-empty: #22303d;
+        --calendar-active-border: #a5d6ff;
+        --focus: #79c0ff;
       }
     }
 
     :root[data-theme="dark"] {
       color-scheme: dark;
-      --canvas: #010409;
-      --surface: #0d1117;
-      --surface-raised: #161b22;
-      --surface-subtle: #161b22;
-      --border: #30363d;
-      --border-strong: #484f58;
+      --canvas: #0b1118;
+      --surface: #111923;
+      --surface-raised: #18212c;
+      --surface-subtle: #162330;
+      --surface-blue: #172b3d;
+      --surface-yellow: #302b1c;
+      --border: #34485c;
+      --border-strong: #58728a;
       --text: #f0f6fc;
-      --muted: #8b949e;
-      --faint: #6e7681;
-      --accent: #58a6ff;
-      --accent-strong: #79c0ff;
-      --accent-soft: #0c2d6b;
+      --muted: #a3b3c2;
+      --faint: #8ea0b2;
+      --accent: #79c0ff;
+      --accent-strong: #a5d6ff;
+      --accent-soft: #173a5e;
       --success: #3fb950;
-      --warning: #d29922;
-      --shadow: 0 12px 34px rgba(0, 0, 0, 0.30);
-      --grid-empty: #21262d;
-      --calendar-active-border: #8c959f;
-      --focus: #58a6ff;
+      --warning: #eac54f;
+      --warning-strong: #fae17d;
+      --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+      --grid-empty: #22303d;
+      --calendar-active-border: #a5d6ff;
+      --focus: #79c0ff;
     }
 
     * {
@@ -140,11 +149,18 @@ _HTML_PREFIX = """<!doctype html>
           color-mix(in srgb, var(--border) 22%, transparent) 1px,
           transparent 1px
         );
-      background-size: 2rem 2rem;
+      background-size: 2.5rem 2.5rem;
     }
 
     button {
       font: inherit;
+    }
+
+    .theme-toggle,
+    .filter,
+    .provider-row {
+      appearance: none;
+      -webkit-appearance: none;
     }
 
     button:focus-visible,
@@ -154,20 +170,20 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .shell {
-      width: min(100% - 2rem, 74rem);
+      width: min(100% - 2rem, 76rem);
       min-width: 0;
       margin: 0 auto;
-      padding: clamp(1.5rem, 5vw, 4.5rem) 0 4rem;
+      padding: clamp(2rem, 6vw, 5rem) 0 5rem;
     }
 
     .masthead {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: var(--space-8);
+      gap: var(--space-12);
       align-items: start;
-      margin-bottom: var(--space-10);
-      padding-top: var(--space-4);
-      border-top: 0.25rem solid var(--text);
+      margin-bottom: var(--space-12);
+      padding-top: var(--space-5);
+      border-top: 1px solid var(--border-strong);
     }
 
     .masthead > *,
@@ -181,7 +197,7 @@ _HTML_PREFIX = """<!doctype html>
       margin: 0 0 var(--space-3);
       color: var(--accent-strong);
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 700;
       letter-spacing: 0.12em;
       line-height: 1.4;
@@ -192,11 +208,11 @@ _HTML_PREFIX = """<!doctype html>
       max-width: 17ch;
       margin: 0;
       font-family: var(--display);
-      font-size: clamp(2.65rem, 6.4vw, 5.35rem);
+      font-size: clamp(2.6rem, 5.8vw, 4.85rem);
       font-stretch: condensed;
       font-weight: 680;
       letter-spacing: -0.035em;
-      line-height: 0.92;
+      line-height: 0.98;
       text-wrap: balance;
     }
 
@@ -204,8 +220,8 @@ _HTML_PREFIX = """<!doctype html>
       max-width: 44rem;
       margin: var(--space-5) 0 0;
       color: var(--muted);
-      font-size: clamp(0.98rem, 1.8vw, 1.12rem);
-      line-height: 1.65;
+      font-size: clamp(1rem, 1.8vw, 1.125rem);
+      line-height: 1.68;
     }
 
     .utility {
@@ -216,15 +232,15 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .theme-toggle {
-      min-height: 2.5rem;
+      min-height: 2.75rem;
       padding: 0 var(--space-4);
       border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--surface);
+      border-radius: var(--radius-md);
+      background: var(--surface-blue);
       color: var(--text);
       cursor: pointer;
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 650;
       letter-spacing: 0.03em;
     }
@@ -239,7 +255,7 @@ _HTML_PREFIX = """<!doctype html>
       padding-left: var(--space-4);
       border-left: 1px solid var(--border);
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       line-height: 1.5;
       text-align: right;
     }
@@ -252,12 +268,12 @@ _HTML_PREFIX = """<!doctype html>
       gap: var(--space-4);
       align-items: center;
       justify-content: space-between;
-      margin-bottom: var(--space-6);
-      padding: var(--space-3);
+      margin-bottom: var(--space-8);
+      padding: var(--space-4);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--surface) 97%, transparent);
-      box-shadow: 0 4px 12px rgba(31, 35, 40, 0.05);
+      background: color-mix(in srgb, var(--surface-blue) 76%, var(--surface));
+      box-shadow: 0 8px 24px rgba(42, 76, 102, 0.08);
       backdrop-filter: blur(0.5rem);
     }
 
@@ -266,7 +282,7 @@ _HTML_PREFIX = """<!doctype html>
       padding-left: var(--space-2);
       color: var(--muted);
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -282,14 +298,14 @@ _HTML_PREFIX = """<!doctype html>
 
     .filter {
       flex: 0 0 auto;
-      min-height: 2.4rem;
+      min-height: 2.75rem;
       padding: 0 var(--space-4);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       background: var(--surface);
       color: var(--muted);
       cursor: pointer;
-      font-size: 0.82rem;
+      font-size: 0.875rem;
       font-weight: 650;
       transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
     }
@@ -321,23 +337,29 @@ _HTML_PREFIX = """<!doctype html>
     .hero-grid {
       display: grid;
       grid-template-columns: minmax(0, 1.7fr) minmax(17rem, 0.75fr);
-      gap: var(--space-4);
-      margin-bottom: var(--space-4);
+      gap: var(--space-6);
+      margin-bottom: var(--space-6);
     }
 
     .panel {
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       background: var(--surface);
-      box-shadow: var(--shadow);
     }
 
     .hero-panel {
       position: relative;
-      min-height: 23rem;
+      min-height: 22rem;
       overflow: hidden;
-      padding: clamp(1.5rem, 4vw, 3rem);
+      padding: clamp(2rem, 4vw, 3rem);
       border-top: 0.25rem solid var(--active-accent, var(--accent));
+      background:
+        linear-gradient(
+          125deg,
+          color-mix(in srgb, var(--surface-blue) 76%, var(--surface)),
+          var(--surface) 58%,
+          color-mix(in srgb, var(--surface-yellow) 48%, var(--surface))
+        );
     }
 
     .hero-panel::after {
@@ -347,19 +369,19 @@ _HTML_PREFIX = """<!doctype html>
       width: 11rem;
       height: 8rem;
       border-right: 1px solid
-        color-mix(in srgb, var(--active-accent, var(--accent)) 35%, transparent);
+        color-mix(in srgb, var(--warning) 40%, transparent);
       border-bottom: 1px solid
-        color-mix(in srgb, var(--active-accent, var(--accent)) 35%, transparent);
+        color-mix(in srgb, var(--warning) 40%, transparent);
       background:
         repeating-linear-gradient(
           90deg,
-          color-mix(in srgb, var(--active-accent, var(--accent)) 18%, transparent)
+          color-mix(in srgb, var(--warning) 16%, transparent)
             0 1px,
           transparent 1px 1rem
         ),
         repeating-linear-gradient(
           0deg,
-          color-mix(in srgb, var(--active-accent, var(--accent)) 14%, transparent)
+          color-mix(in srgb, var(--warning) 12%, transparent)
             0 1px,
           transparent 1px 1rem
         );
@@ -372,7 +394,7 @@ _HTML_PREFIX = """<!doctype html>
       z-index: 1;
       margin: 0;
       color: var(--muted);
-      font-size: 0.88rem;
+      font-size: 1rem;
       font-weight: 650;
       letter-spacing: 0.01em;
     }
@@ -383,11 +405,11 @@ _HTML_PREFIX = """<!doctype html>
       margin: var(--space-4) 0 0;
       color: var(--active-accent, var(--accent));
       font-family: var(--display);
-      font-size: clamp(4.8rem, 13vw, 8.8rem);
+      font-size: clamp(4.5rem, 11vw, 7.6rem);
       font-stretch: condensed;
       font-weight: 720;
       letter-spacing: -0.055em;
-      line-height: 0.84;
+      line-height: 0.9;
     }
 
     .hero-context {
@@ -396,8 +418,8 @@ _HTML_PREFIX = """<!doctype html>
       max-width: 34rem;
       margin: var(--space-6) 0 0;
       color: var(--muted);
-      font-size: 0.94rem;
-      line-height: 1.55;
+      font-size: 1rem;
+      line-height: 1.62;
     }
 
     .share-track {
@@ -428,7 +450,7 @@ _HTML_PREFIX = """<!doctype html>
       margin-top: var(--space-2);
       color: var(--faint);
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
     }
 
     .ledger {
@@ -444,6 +466,14 @@ _HTML_PREFIX = """<!doctype html>
       min-height: 7rem;
       padding: var(--space-5) var(--space-6);
       border-bottom: 1px solid var(--border);
+    }
+
+    .ledger-item:first-child {
+      background: color-mix(in srgb, var(--surface-blue) 44%, var(--surface));
+    }
+
+    .ledger-item:last-child {
+      background: color-mix(in srgb, var(--surface-yellow) 58%, var(--surface));
     }
 
     .ledger-item:last-child {
@@ -463,14 +493,14 @@ _HTML_PREFIX = """<!doctype html>
     .ledger-label {
       margin: var(--space-2) 0 0;
       color: var(--muted);
-      font-size: 0.8rem;
-      line-height: 1.4;
+      font-size: 0.875rem;
+      line-height: 1.5;
     }
 
     .dashboard-grid {
       display: grid;
       grid-template-columns: minmax(0, 1.55fr) minmax(19rem, 0.8fr);
-      gap: var(--space-4);
+      gap: var(--space-6);
       align-items: start;
     }
 
@@ -478,11 +508,12 @@ _HTML_PREFIX = """<!doctype html>
     .providers-panel,
     .evidence-panel,
     .notes-panel {
-      padding: clamp(1.25rem, 3vw, 2rem);
+      padding: clamp(1.5rem, 3vw, 2.25rem);
     }
 
     .activity-panel {
       min-width: 0;
+      background: color-mix(in srgb, var(--surface-blue) 24%, var(--surface));
     }
 
     .panel-heading {
@@ -496,18 +527,18 @@ _HTML_PREFIX = """<!doctype html>
     .panel-title {
       margin: 0;
       font-family: var(--display);
-      font-size: clamp(1.55rem, 3vw, 2.15rem);
+      font-size: clamp(1.65rem, 3vw, 2.25rem);
       font-stretch: condensed;
       font-weight: 680;
       letter-spacing: -0.015em;
-      line-height: 1;
+      line-height: 1.08;
     }
 
     .panel-meta {
       margin: 0;
       color: var(--muted);
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       line-height: 1.5;
       text-align: right;
     }
@@ -577,7 +608,7 @@ _HTML_PREFIX = """<!doctype html>
       justify-content: space-between;
       margin-top: var(--space-4);
       color: var(--muted);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       line-height: 1.45;
     }
 
@@ -601,16 +632,21 @@ _HTML_PREFIX = """<!doctype html>
 
     .provider-list {
       display: grid;
-      gap: var(--space-4);
+      gap: var(--space-3);
+    }
+
+    .providers-panel .panel-title {
+      font-size: clamp(1.55rem, 2.5vw, 2rem);
     }
 
     .provider-row {
       display: grid;
       gap: var(--space-2);
       width: 100%;
-      padding: 0 0 0 var(--space-3);
-      border: 0;
-      border-left: 0.25rem solid transparent;
+      min-height: 4rem;
+      padding: var(--space-3);
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
       background: transparent;
       color: inherit;
       cursor: pointer;
@@ -618,7 +654,12 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .provider-row[aria-current="true"] {
-      border-left-color: var(--provider-accent);
+      border-color: var(--provider-accent);
+      background: color-mix(in srgb, var(--provider-accent) 10%, var(--surface));
+    }
+
+    .provider-row:hover {
+      background: color-mix(in srgb, var(--provider-accent) 6%, var(--surface));
     }
 
     .provider-row-head {
@@ -633,7 +674,7 @@ _HTML_PREFIX = """<!doctype html>
       gap: var(--space-2);
       align-items: center;
       color: var(--text);
-      font-size: 0.88rem;
+      font-size: 0.9375rem;
       font-weight: 700;
     }
 
@@ -646,7 +687,7 @@ _HTML_PREFIX = """<!doctype html>
 
     .provider-count {
       font-family: var(--mono);
-      font-size: 0.78rem;
+      font-size: 0.875rem;
       font-weight: 700;
     }
 
@@ -666,8 +707,8 @@ _HTML_PREFIX = """<!doctype html>
     .provider-detail {
       color: var(--muted);
       font-family: var(--mono);
-      font-size: 0.75rem;
-      line-height: 1.45;
+      font-size: 0.8125rem;
+      line-height: 1.5;
     }
 
     .evidence-track {
@@ -685,6 +726,7 @@ _HTML_PREFIX = """<!doctype html>
       grid-template-columns: minmax(15rem, 0.62fr) minmax(0, 1.38fr);
       gap: var(--space-4) var(--space-8);
       align-items: center;
+      background: color-mix(in srgb, var(--surface-yellow) 36%, var(--surface));
     }
 
     .evidence-panel .panel-heading {
@@ -718,7 +760,7 @@ _HTML_PREFIX = """<!doctype html>
       align-items: center;
       min-width: 0;
       color: var(--muted);
-      font-size: 0.76rem;
+      font-size: 0.8125rem;
     }
 
     .evidence-swatch {
@@ -739,14 +781,14 @@ _HTML_PREFIX = """<!doctype html>
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: var(--space-8);
       margin-top: var(--space-4);
-      border-top: 0.25rem solid var(--text);
+      border-top: 0.1875rem solid var(--accent-strong);
       box-shadow: none;
     }
 
     .note-title {
       margin: 0 0 var(--space-2);
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 750;
       letter-spacing: 0.06em;
       text-transform: uppercase;
@@ -755,8 +797,8 @@ _HTML_PREFIX = """<!doctype html>
     .note-copy {
       margin: 0;
       color: var(--muted);
-      font-size: 0.78rem;
-      line-height: 1.62;
+      font-size: 0.875rem;
+      line-height: 1.68;
     }
 
     .tooltip {
@@ -770,7 +812,7 @@ _HTML_PREFIX = """<!doctype html>
       background: var(--surface-raised);
       box-shadow: var(--shadow);
       color: var(--text);
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       line-height: 1.5;
       pointer-events: none;
       transform: translate(-50%, calc(-100% - 0.75rem));
@@ -796,6 +838,12 @@ _HTML_PREFIX = """<!doctype html>
       clip: rect(0, 0, 0, 0);
       white-space: nowrap;
       border: 0;
+    }
+
+    @media (min-width: 38.01rem) {
+      .provider-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
 
     @media (max-width: 54rem) {
@@ -857,6 +905,7 @@ _HTML_PREFIX = """<!doctype html>
 
       .masthead {
         gap: var(--space-5);
+        margin-bottom: var(--space-8);
       }
 
       .title {
@@ -900,6 +949,10 @@ _HTML_PREFIX = """<!doctype html>
         min-height: 20rem;
       }
 
+      .hero-panel::after {
+        display: none;
+      }
+
       .ledger {
         grid-template-columns: 1fr;
       }
@@ -921,6 +974,26 @@ _HTML_PREFIX = """<!doctype html>
       .evidence-grid,
       .notes-panel {
         grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 22rem) {
+      .filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (pointer: coarse) {
+      .calendar {
+        grid-template-rows: repeat(7, 1rem);
+        grid-auto-columns: 1rem;
+        gap: 0.5rem;
+      }
+
+      .day-cell,
+      .day-spacer {
+        width: 1rem;
+        height: 1rem;
       }
     }
 
@@ -1010,16 +1083,18 @@ _HTML_PREFIX = """<!doctype html>
         <p class="sr-only" id="activitySummary"></p>
         <div class="legend">
           <span>
-            Color intensity = selected attributed-commit volume; empty = no selected activity.
+            Fixed bins: 1 / 2-4 / 5-7 / 8+ selected commits.
+            Newest activity is shown; scroll for earlier days.
           </span>
           <span class="legend-scale"
-                aria-label="Selected attributed-commit volume from none to high">
+                aria-label="Selected attributed-commit volume: none, 1, 2 to 4, 5 to 7, 8 or more">
             none
             <span class="legend-cell"></span>
             <span class="legend-cell" data-level="1"></span>
             <span class="legend-cell" data-level="2"></span>
             <span class="legend-cell" data-level="3"></span>
-            high
+            <span class="legend-cell" data-level="4"></span>
+            8+
           </span>
         </div>
       </article>
@@ -1083,7 +1158,7 @@ _HTML_SUFFIX = """</script>
       const number = new Intl.NumberFormat("en-US");
       const percent = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
       const providerColors = {
-        anthropic: "#bf8700",
+        anthropic: "#9a6700",
         openai: "#1a7f37",
         github_copilot: "#0969da",
         google: "#8250df",
@@ -1102,7 +1177,7 @@ _HTML_SUFFIX = """</script>
         unrecognized: "#6e7781"
       };
       const fallbackColors = [
-        "#0969da", "#1a7f37", "#bf8700", "#8250df", "#cf222e", "#1f6feb"
+        "#0969da", "#1a7f37", "#9a6700", "#8250df", "#cf222e", "#1f6feb"
       ];
       const evidenceColors = {
         verified: "#1a7f37",
@@ -1113,6 +1188,7 @@ _HTML_SUFFIX = """</script>
       };
       let selected = "all";
       let theme = "auto";
+      let calendarFocusIndex = null;
       let tooltipOwner = null;
       let tooltipPinned = false;
       let tooltipSuppressed = null;
@@ -1153,7 +1229,10 @@ _HTML_SUFFIX = """</script>
       }
 
       function selectedAccent() {
-        return selected === "all" ? "#0969da" : colorFor(selected);
+        if (selected !== "all") return colorFor(selected);
+        return getComputedStyle(document.documentElement)
+          .getPropertyValue("--accent")
+          .trim();
       }
 
       function selectedDayCount(day) {
@@ -1248,8 +1327,17 @@ _HTML_SUFFIX = """</script>
       function renderCalendar() {
         const series = fillDailySeries();
         const calendar = $("activityCalendar");
+        const scroller = document.querySelector(".calendar-scroll");
+        const previousMaxScroll = Math.max(
+          0,
+          scroller.scrollWidth - scroller.clientWidth
+        );
+        const previousScrollLeft = scroller.scrollLeft;
+        const followNewest =
+          previousMaxScroll <= 1 || previousMaxScroll - previousScrollLeft <= 2;
         calendar.replaceChildren();
         if (!series.length) {
+          calendarFocusIndex = null;
           const empty = document.createElement("div");
           empty.className = "calendar-empty";
           empty.textContent = "No publishable daily activity in this profile.";
@@ -1261,7 +1349,11 @@ _HTML_SUFFIX = """</script>
         }
         calendar.className = "calendar";
         const accent = selectedAccent();
-        const maxSelected = Math.max(...series.map(selectedDayCount), 1);
+        const binOpacity = [0.42, 0.62, 0.81, 1];
+        const rovingIndex = calendarFocusIndex === null
+          ? series.length - 1
+          : Math.max(0, Math.min(series.length - 1, calendarFocusIndex));
+        if (calendarFocusIndex !== null) calendarFocusIndex = rovingIndex;
         const firstWeekday = dateAtUtc(series[0].date).getUTCDay();
         for (let index = 0; index < firstWeekday; index += 1) {
           const spacer = document.createElement("span");
@@ -1272,18 +1364,27 @@ _HTML_SUFFIX = """</script>
 
         for (const [index, day] of series.entries()) {
           const selectedCount = selectedDayCount(day);
-          const volume = Math.log1p(selectedCount) / Math.log1p(maxSelected);
+          const level = selectedCount === 0
+            ? 0
+            : selectedCount === 1
+              ? 1
+              : selectedCount <= 4
+                ? 2
+                : selectedCount <= 7
+                  ? 3
+                  : 4;
           const share = day.total_commits
             ? (selectedCount / day.total_commits) * 100
             : 0;
           const cell = document.createElement("button");
           cell.type = "button";
           cell.className = "day-cell";
-          cell.tabIndex = index === 0 ? 0 : -1;
+          cell.tabIndex = index === rovingIndex ? 0 : -1;
           cell.dataset.index = String(index);
           cell.dataset.active = String(selectedCount > 0);
+          cell.dataset.level = String(level);
           if (selectedCount) {
-            cell.style.background = rgba(accent, 0.38 + 0.62 * volume);
+            cell.style.background = rgba(accent, binOpacity[level - 1]);
           }
           const label = `${day.date}: ${day.total_commits} total commits; ` +
             `${selectedCount} ${selectedName()} attributed commits; ` +
@@ -1308,6 +1409,7 @@ _HTML_SUFFIX = """</script>
             if (!tooltipPinned && document.activeElement !== cell) hideTooltip();
           });
           cell.addEventListener("focus", () => {
+            calendarFocusIndex = index;
             tooltipHoverPaused = false;
             tooltipSuppressed = null;
             showTooltip(cell, day, selectedCount);
@@ -1338,7 +1440,16 @@ _HTML_SUFFIX = """</script>
           "each cell uses the validated published daily aggregate.";
         const levels = document.querySelectorAll(".legend-cell[data-level]");
         levels.forEach((cell, index) => {
-          cell.style.background = rgba(accent, 0.42 + index * 0.29);
+          cell.style.background = rgba(accent, binOpacity[index]);
+        });
+        requestAnimationFrame(() => {
+          const nextMaxScroll = Math.max(
+            0,
+            scroller.scrollWidth - scroller.clientWidth
+          );
+          scroller.scrollLeft = followNewest
+            ? nextMaxScroll
+            : Math.min(previousScrollLeft, nextMaxScroll);
         });
       }
 
@@ -1349,6 +1460,7 @@ _HTML_SUFFIX = """</script>
       function focusCalendarCell(index) {
         const cells = calendarCells();
         const bounded = Math.max(0, Math.min(cells.length - 1, index));
+        calendarFocusIndex = bounded;
         cells.forEach((cell, cellIndex) => {
           cell.tabIndex = cellIndex === bounded ? 0 : -1;
         });
@@ -1529,6 +1641,9 @@ _HTML_SUFFIX = """</script>
         renderCalendar();
         document.querySelectorAll(".filter").forEach((button) => {
           button.setAttribute("aria-pressed", String(button.dataset.provider === selected));
+          if (button.dataset.provider === "all") {
+            button.style.setProperty("--provider-accent", selectedAccent());
+          }
         });
         document.querySelectorAll(".provider-row").forEach((button) => {
           button.setAttribute("aria-current", String(button.dataset.provider === selected));
@@ -1544,6 +1659,7 @@ _HTML_SUFFIX = """</script>
 
       $("themeToggle").addEventListener("click", () => {
         setTheme(theme === "auto" ? "light" : theme === "light" ? "dark" : "auto");
+        render();
       });
 
       $("generatedMeta").textContent =

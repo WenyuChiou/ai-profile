@@ -164,7 +164,11 @@ def test_calendar_uses_roving_keyboard_and_touch_accessible_days():
 
     assert 'id="activityCalendar" role="group"' in html
     assert 'document.createElement("button")' in html
-    assert 'cell.tabIndex = index === 0 ? 0 : -1' in html
+    assert "let calendarFocusIndex = null" in html
+    assert "? series.length - 1" in html
+    assert "cell.tabIndex = index === rovingIndex ? 0 : -1" in html
+    assert "calendarFocusIndex = index" in html
+    assert "calendarFocusIndex = bounded" in html
     assert re.search(r'cell\.addEventListener\(\s*"focus"', html)
     assert 'cell.addEventListener("click"' in html
     assert 'cell.addEventListener("keydown", handleCalendarKeydown)' in html
@@ -179,6 +183,11 @@ def test_calendar_uses_roving_keyboard_and_touch_accessible_days():
     assert "tooltip.getBoundingClientRect().width / 2" in html
     assert "innerWidth - halfWidth - margin" in html
     assert "% share" in html
+    assert "const binOpacity = [0.42, 0.62, 0.81, 1]" in html
+    assert "Math.log1p" not in html
+    assert "cell.dataset.level = String(level)" in html
+    assert "scroller.scrollLeft = followNewest" in html
+    assert "Fixed bins: 1 / 2-4 / 5-7 / 8+ selected commits." in html
 
 
 def test_selected_provider_keeps_normal_text_color():
@@ -187,7 +196,8 @@ def test_selected_provider_keeps_normal_text_color():
 
     assert '.provider-row[aria-current="true"] .provider-name' not in html
     assert '.provider-row[aria-current="true"] {' in html
-    assert "border-left-color: var(--provider-accent)" in html
+    assert "border-color: var(--provider-accent)" in html
+    assert "background: color-mix(in srgb, var(--provider-accent) 10%, var(--surface))" in html
     assert ".provider-name {" in html
     assert "color: var(--text)" in html
     assert "button.setAttribute(\"aria-current\"" in html
@@ -206,7 +216,7 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     assert "color-mix(" in html
     rem_sizes = [float(value) for value in re.findall(r"font-size: ([0-9.]+)rem", html)]
     assert rem_sizes
-    assert min(rem_sizes) >= 0.75
+    assert min(rem_sizes) >= 0.8125
     assert "min-width: 20rem" not in html
     assert "html {\n      min-width: 0;" in html
     assert ".generated {\n      color: var(--muted);" in html
@@ -220,7 +230,7 @@ def test_dashboard_uses_a_distinctive_local_typography_system():
         '--display: Bahnschrift, "DIN Alternate", "Franklin Gothic Medium",'
         in html
     )
-    assert '--body: "Trebuchet MS", Corbel, "Avenir Next", Avenir, Ubuntu,' in html
+    assert '--body: Candara, Corbel, "Avenir Next", Avenir, Ubuntu,' in html
     assert (
         '--mono: "Cascadia Mono", "SFMono-Regular", "Ubuntu Mono",'
         in html
@@ -229,7 +239,7 @@ def test_dashboard_uses_a_distinctive_local_typography_system():
     assert "Inter" not in html
     assert "Space Grotesk" not in html
     assert "radial-gradient(" not in html
-    assert "background-size: 2rem 2rem;" in html
+    assert "background-size: 2.5rem 2.5rem;" in html
     assert "font-src 'none'" in html
 
 
@@ -280,17 +290,21 @@ def _contrast(first: str, second: str) -> float:
     ],
 )
 def test_provider_and_evidence_accents_clear_three_to_one_in_both_themes(accent):
-    assert _contrast(accent, "#ffffff") >= 3
-    assert _contrast(accent, "#0d1117") >= 3
+    assert _contrast(accent, "#fbfdff") >= 3
+    assert _contrast(accent, "#111923") >= 3
+    if accent not in {"#bf8700", "#6e7781"}:
+        # Provider accents can become the large hero value, so validate the
+        # lightest rendered pastel-gradient pixel rather than only a flat token.
+        assert _contrast(accent, "#edf9ff") >= 3
 
 
 @pytest.mark.parametrize(
     ("foreground", "background"),
     [
-        ("#1f2328", "#ffffff"),
-        ("#636c76", "#ffffff"),
-        ("#f0f6fc", "#0d1117"),
-        ("#8b949e", "#0d1117"),
+        ("#24292f", "#fbfdff"),
+        ("#57606a", "#fbfdff"),
+        ("#f0f6fc", "#111923"),
+        ("#a3b3c2", "#111923"),
     ],
 )
 def test_primary_and_muted_text_clear_wcag_aa(foreground, background):
@@ -300,8 +314,8 @@ def test_primary_and_muted_text_clear_wcag_aa(foreground, background):
 @pytest.mark.parametrize(
     ("active_border", "empty_cell"),
     [
-        ("#57606a", "#eaeef2"),
-        ("#8c959f", "#21262d"),
+        ("#57606a", "#e7f0f8"),
+        ("#a5d6ff", "#22303d"),
     ],
 )
 def test_active_calendar_boundaries_clear_three_to_one(active_border, empty_cell):
@@ -312,7 +326,7 @@ def test_calendar_marks_use_contrasting_boundaries_not_translucent_borders():
     html = render_dashboard(_stats())
 
     assert "--calendar-active-border: #57606a" in html
-    assert "--calendar-active-border: #8c959f" in html
+    assert "--calendar-active-border: #a5d6ff" in html
     assert "border-color: var(--calendar-active-border)" in html
     assert "cell.style.borderColor = rgba" not in html
 

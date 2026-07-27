@@ -25,6 +25,30 @@ below.
 
 ## [Unreleased]
 
+## [0.4.5] — 2026-07-26
+
+### Changed
+
+- Introduce a soft editorial palette that uses pale blue for participation
+  and interaction, pale yellow for evidence and attribution context, and
+  high-contrast ink colors for labels, data marks, and selection boundaries.
+- Increase dashboard reading sizes and touch targets, improve mobile and
+  provider-heavy layouts, and use the Candara/Corbel/Avenir humanist stack
+  without downloading or embedding fonts.
+- Use fixed daily-volume bins (`1`, `2–4`, `5–7`, `8+`) across provider
+  filters so identical commit counts retain the same visual intensity.
+- Open the horizontally scrollable activity calendar at the newest dates
+  while preserving an intentionally selected earlier position.
+- Soften the summary card's isometric calendar faces and enlarge provider,
+  evidence, and count typography for Profile-scale readability.
+
+### Fixed
+
+- Remove the decorative hero grid on narrow screens so it cannot overlap
+  metric context, progress, or ratio labels.
+- Use complete provider-row borders and tinted surfaces instead of a
+  side-stripe selection treatment.
+
 ## [0.4.4] — 2026-07-26
 
 ### Changed
