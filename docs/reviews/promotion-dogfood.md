@@ -1,165 +1,61 @@
-# v0.4.5 Public Beta promotion dogfood
+# v0.4.6 candidate dogfood evidence
 
-Date: 2026-07-26
+Date: 2026-07-27
+Candidate wheel: ai_profile_cli-0.4.6-py3-none-any.whl
+SHA-256: 26227c0435d2d6a80ff8a46ad878270509b2cadeeb6d0dd78555019884239d8a
 
-Evaluation baseline:
-`05c55e7ee4f743e5e4844eb67c2e8182f1a25e0e`
+## Scope and posture
 
-## Executive result
+This is sealed-candidate, README-only usability evidence. Four isolated roles
+received the same wheel and the canonical README. Each role was instructed not
+to read source, tests, or non-README documentation, and to report commands,
+exit status, stderr, time, friction, and outcome. The root reviewer reconciled
+the reports and independently rechecked the candidate artifact contract and
+clean-wheel smoke. Negative-access claims are necessarily role attestations;
+they are not mechanically observable from a report alone.
 
-The sealed-box dogfood gate passed. Four independent user roles used only the
-canonical `README.md` and the same native-Linux candidate wheel:
+## Gate result
 
-```text
-ai_profile_cli-0.4.5-py3-none-any.whl
-SHA-256 c03cbf694737bcf53ee44e88b0ddd4feb6ef4d68226a3ff372b03bb5051cff8b
-```
+| Role | Candidate digest | Outcome | Reconciled result |
+| --- | --- | --- | --- |
+| New user | Match | init → scan → aggregate → render completed; eight named files | PASS |
+| Privacy-sensitive user | Match | aggregate_only, full, and excluded rendered to separate directories; eight files per mode; zero byte-level hits for five harmless canaries | PASS |
+| Multiple-provider user | Match | One unique AI commit, two actor presences; Claude/Anthropic 1, OpenAI 1, Human-Only 1, unknown 1 | PASS |
+| Profile publisher | Match | Eight files, clickable-card markup, Pages main/root and first-deploy 404 guidance understood | PASS |
 
-| Role | Result | README-external hints | Blocking friction |
-|---|---|---:|---:|
-| New user | PASS | 0 | 0 |
-| Privacy-sensitive user | PASS | 0 | 0 |
-| Multiple-provider user | PASS | 0 | 0 |
-| Profile publisher | PASS | 0 | 0 |
+All roles confirmed C:\.git was absent before creating their C-rooted
+sandbox. No role reported an installation failure, configuration dead end,
+privacy leak, aggregation mismatch, or Pages-preparation dead end.
 
-Gate totals:
+## Reconciled checks
 
-- roles completed: 4/4;
-- exact candidate-digest matches: 4/4;
-- exact eight-file output inventories: 4/4;
-- installation or configuration dead ends: 0;
-- privacy-canary hits: 0/816 cross-file/cross-encoding checks;
-- hand-derived aggregation mismatches: 0;
-- executed dashboard-filter mismatches: 0;
-- local Profile/Pages-preparation dead ends: 0.
-
-Raw reports and command ledgers are retained outside Git under:
-
-```text
-.artifact/v045-dogfood-final/
-```
-
-## Role evidence
-
-### New user
-
-The role installed the exact wheel, verified `aiprofile 0.4.5`, and completed
-`init -> scan -> aggregate -> render` without external product guidance:
-
-```text
-commits scanned = 2
-AI-attributed commits = 1
-actor presences = 1
-unknown commits = 1
-outputs = 8
-```
-
-The plain commit remained unknown. The explicit Anthropic trailer produced
-one Claude presence and one unique AI-attributed commit.
-
-### Privacy-sensitive user
-
-Three isolated repositories exercised `aggregate_only`, `full`, and
-`excluded`. The aggregate contained the full and aggregate-only commits; the
-excluded repository contributed nothing.
-
-Thirty-four private canaries covered repository and organization names,
-paths, prompts, commit subjects and messages, emails, URLs, full and short
-SHAs, repository UIDs, and the private salt. Each canary was checked
-case-insensitively across all eight public assets as UTF-8, UTF-16LE, and
-UTF-16BE:
-
-```text
-34 canaries * 8 outputs * 3 encodings = 816 checks
-hits = 0
-```
-
-Distinct dates independently verified the publication boundary:
-
-| Publication level | Synthetic date | Public result |
-|---|---|---|
-| `aggregate_only` | 2026-02-11 | absent |
-| `full` | 2026-02-12 | present in all six date-bearing outputs (8 occurrences) |
-| `excluded` | 2026-02-13 | absent |
-
-### Multiple-provider user
-
-The fixture contained one unknown commit, one `Human-Only` commit, and one
-commit with contiguous Anthropic and OpenAI actor groups.
-
-| Metric | Hand-derived | Observed |
-|---|---:|---:|
-| Commits scanned | 3 | 3 |
-| Unique AI-attributed commits | 1 | 1 |
-| AI actor presences | 2 | 2 |
-| Claude commits / presences / active days | 1 / 1 / 1 | 1 / 1 / 1 |
-| OpenAI commits / presences / active days | 1 / 1 / 1 | 1 / 1 / 1 |
-| Human-declared commits | 1 | 1 |
-| Unknown commits | 1 | 1 |
-| Evidence declared / unknown / total | 3 / 1 / 4 | 3 / 1 / 4 |
-
-Executed Chromium checks for All AI, Claude, and OpenAI preserved the
-commit/presence distinction, the one-commit active-day denominator, the 100%
-share, and the selected state. At 390 pixels, the calendar opened at its
-newest edge; its sole roving tab stop was the newest date, keyboard focus did
-not scroll back to the oldest date, and the selected focus index survived
-filter and theme rerenders. No browser console or page error occurred.
-
-### Profile publisher
-
-The role produced exactly eight assets, parsed all six SVGs, verified the
-self-contained CSP dashboard, and copied the responsive clickable summary
-card plus light/dark heatmap from the README into a disposable Profile
-repository.
-
-The local publication payload used `main`, `/ (root)`, and the exact-case
-`dist/dashboard.html` path. No remote existed or was mutated, and no
-README-external hint was needed.
-
-## Root reconciliation
-
-The root reviewer independently recomputed the digest, all four inventories,
-all four public JSON structures, and the privacy sweep:
-
-```text
-wheel digest = c03cbf694737bcf53ee44e88b0ddd4feb6ef4d68226a3ff372b03bb5051cff8b
-output inventories = 8 / 8 / 8 / 8
-new user = scanned 2, AI 1, presences 1, unknown 1
-privacy = scanned 2, AI 2, presences 2, excluded omitted
-multi-provider = scanned 3, AI 1, presences 2, human 1, unknown 1
-publisher = scanned 3, AI 2, presences 2, unknown 1
-privacy = 34 canaries * 8 outputs * 3 encodings, hits 0
-date boundary = aggregate-only absent, full present, excluded absent
-```
+- **Onboarding:** a clean virtual environment installed the exact wheel and
+  reported runtime version 0.4.6; the documented flow generated exactly
+  badge-light.svg, badge-dark.svg, heatmap-light.svg, heatmap-dark.svg,
+  summary-light.svg, summary-dark.svg, dashboard.html, and profile.json.
+- **Privacy:** the three public-output directories were distinct. Across each
+  mode's eight public files, the repository/path/message/name/email canaries
+  had zero raw byte matches. The reported publication previews were
+  aggregate-only 0 explicitly publishable / 1 aggregate-only, full 1 / 0,
+  and excluded 0 / 0.
+- **Aggregation:** one commit with two explicit actor blocks remained one
+  unique AI-attributed commit and two presences. Human-Only and absent
+  evidence remained distinct. Anthropic displays as Claude in the UI as a
+  label-only mapping; it does not change the provider count.
+- **Publishing:** the documented card markup had all five expected references;
+  the profile role could derive the expected Pages URL and recovery steps from
+  the README without a publication attempt.
 
 ## Findings and dispositions
 
-### Low — Isolated homes trigger a conservative warning
+| Severity | Description and evidence | Impact | Recommendation | Disposition |
+| --- | --- | --- | --- | --- |
+| Low | README-only/non-source compliance is an execution attestation in the four role reports rather than a runtime-enforceable control. | It limits the strength of the usability-evidence provenance, not the observed product outcomes. | Keep future role briefs scope-limited and retain raw command ledgers; do not represent the assertion as mechanically enforced. | Accepted for this evidence model. |
+| Low | Two roles saw the documented warning when AIPROFILE_HOME was placed inside their temporary Git worktree; neither flow failed. | A user who chooses that layout receives avoidable noise. | Keep the README's outside-worktree guidance visible; treat a future repeated confusion report as an onboarding issue. | Accepted; no dead end reproduced. |
 
-- **Impact:** Evaluators see a warning because private test homes sit beneath
-  the ignored outer worktree.
-- **Recommendation:** Keep the warning; real users should store private state
-  outside published repositories.
-- **Disposition:** Accepted as accurate, useful, and non-blocking.
+## Result
 
-### Low — Windows harnesses require careful stderr and HOME handling
-
-- **Impact:** PowerShell can promote native warnings to
-  `NativeCommandError`, and `HOME` is a protected variable name. One
-  multi-provider setup attempt briefly created two new files at the user-home
-  root before any scan or render.
-- **Recommendation:** Treat this as harness friction, not product failure;
-  assert every mutable path before product execution and retain raw command
-  exit codes and native stderr separately.
-- **Disposition:** Resolved. The two newly created files were identified,
-  removed, and independently confirmed absent; no pre-existing or tracked
-  file was affected. The role restarted with a literal, scope-checked
-  `AIPROFILE_HOME`. All final product commands exited zero.
-
-## Dogfood verdict
-
-The native-Linux v0.4.5 candidate passes the promotion dogfood gate: four
-independent roles, one digest, zero external hints, zero privacy leaks, exact
-aggregation semantics, exact output sets, executed provider filters, and no
-installation, configuration, dashboard, keyboard-navigation, or
-Profile/Pages-preparation blocker.
+The four-role dogfood gate is **PASS**. It is evidence for the frozen wheel,
+not authorization to tag, publish, or update the maintainer Profile. The
+remaining release decision is in
+[promotion-readiness-review.md](promotion-readiness-review.md).
