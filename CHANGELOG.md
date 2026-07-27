@@ -25,6 +25,25 @@ below.
 
 ## [Unreleased]
 
+## [0.4.6] — 2026-07-26
+
+### Changed
+
+- Establish the Product Studio visual system across the self-contained
+  dashboard, generated SVG family, README banner, and repository social
+  preview: ice-blue interaction surfaces, a restrained warm-yellow evidence
+  surface, dark-indigo contrast, and the commercially usable IBM Plex
+  fallback stack without downloading or embedding fonts.
+- Add local, vendored provider glyphs beside visible provider names in the
+  dashboard filters and provider ledger. Selection remains available by
+  keyboard and is conveyed by text, border, and state as well as color.
+- Present evidence-less commits as **Unattributed** in public UI copy, with
+  an honest explanation and a future-facing `AI-*` trailer suggestion;
+  `unknown` remains distinct from human-declared activity in the schema and
+  every aggregate.
+- Refresh the public README banner and synthetic output previews, plus the
+  1280×640 repository social-preview artwork.
+
 ## [0.4.5] — 2026-07-26
 
 ### Changed

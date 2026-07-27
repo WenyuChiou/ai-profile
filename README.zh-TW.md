@@ -30,7 +30,8 @@
   self-contained dashboard 與可供機器讀取的公開摘要。
 
 `ai-profile` 不是 AI code detector。沒有證據的 commit 會維持
-`unknown`，不會被偷偷算成人類完成，也不會被指派給任何 provider。
+`unknown`（介面會顯示為**未歸屬**），不會被偷偷算成人類完成，也不會被指派給
+任何 provider。若希望記錄未來 commit 的 AI 參與，請加入 `AI-*` trailers。
 
 ## 真實 GitHub Profile 範例
 

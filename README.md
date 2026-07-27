@@ -30,8 +30,9 @@ dashboard—without uploading source code or guessing attribution.
   self-contained dashboard, and a machine-readable public summary.
 
 `ai-profile` is not an AI code detector. Commits with no explicit evidence
-stay `unknown`; they are never silently counted as human or assigned to a
-provider.
+stay `unknown` (shown as **Unattributed** in the UI); they are never silently
+counted as human or assigned to a provider. Add `AI-*` trailers to future
+commits when you want their AI participation recorded.
 
 ## A real GitHub Profile example
 

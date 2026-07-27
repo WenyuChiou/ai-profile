@@ -35,42 +35,40 @@ THEMES: dict[str, Theme] = {
     "github-light": Theme(
         name="github-light",
         bg="#fbfdff",
-        border="#b6d6f2",
-        title="#1f2328",
-        text="#1f2328",
-        muted="#59636e",
-        accent="#0969da",
-        bar_fill="#0969da",
-        bar_track="#ddf4ff",
-        chip_bg="#fff8c5",
-        # Ordinal evidence ramp, validator-passed (dataviz skill,
-        # --ordinal vs the #f6f8fa panel): monotone L, gaps >= 0.06,
-        # light end 3.18:1 (the previous #80ccff end sat at 1.64:1).
+        border="#c2d3e5",
+        title="#172033",
+        text="#172033",
+        muted="#52647a",
+        accent="#005cc5",
+        bar_fill="#005cc5",
+        bar_track="#d9eaff",
+        chip_bg="#fff0bd",
+        # Ordinal evidence ramp validated against the #fff0bd provenance
+        # panel: monotone luminance, light end 3.14:1.
         evidence_verified="#033d8b",
         evidence_declared="#0550ae",
         evidence_imported="#0969da",
-        evidence_inferred="#218bff",
-        # Primer fg-muted gray: 4.27:1 on the #f6f8fa panel (gate-7 L-01 —
-        # #8c959f sat at 2.85:1, under the 3:1 graphical threshold).
+        evidence_inferred="#1f87f8",
+        # Neutral unknown mark: 3.99:1 on the #fff0bd provenance panel.
         evidence_unknown="#6e7781",
     ),
     "github-dark": Theme(
         name="github-dark",
-        bg="#0d1117",
-        border="#34485c",
-        title="#f0f6fc",
-        text="#f0f6fc",
-        muted="#a3b3c2",
-        accent="#79c0ff",
-        bar_fill="#79c0ff",
-        bar_track="#22303d",
-        chip_bg="#302b1c",
-        # Validator-passed vs the #161b22 panel: light end 3.73:1
-        # (the previous #0d419d end sat at 1.86:1).
+        bg="#091321",
+        border="#34526f",
+        title="#eff6ff",
+        text="#eff6ff",
+        muted="#b5c7da",
+        accent="#8bc8ff",
+        bar_fill="#8bc8ff",
+        bar_track="#1e3852",
+        chip_bg="#3b331e",
+        # Ordinal evidence ramp validated against the #3b331e provenance
+        # panel: light end 3.34:1.
         evidence_verified="#a5d6ff",
         evidence_declared="#58a6ff",
         evidence_imported="#388bfd",
-        evidence_inferred="#1f6feb",
-        evidence_unknown="#6e7681",
+        evidence_inferred="#2f81f7",
+        evidence_unknown="#8d9baa",
     ),
 }

@@ -11,6 +11,14 @@ from __future__ import annotations
 import json
 
 from ..viz import VizStats, to_json_dict
+from .brand import BRAND
+
+_PROVIDER_GLYPHS_JSON = json.dumps(
+    {slug: spec.path for slug, spec in sorted(BRAND.items())},
+    ensure_ascii=True,
+    separators=(",", ":"),
+    sort_keys=True,
+)
 
 _HTML_PREFIX = """<!doctype html>
 <html lang="en" data-theme="auto">
@@ -26,32 +34,32 @@ _HTML_PREFIX = """<!doctype html>
   <style>
     :root {
       color-scheme: light;
-      --canvas: #f6f9fc;
+      --canvas: #f3f7fb;
       --surface: #fbfdff;
       --surface-raised: #ffffff;
-      --surface-subtle: #eef7ff;
-      --surface-blue: #ddf4ff;
-      --surface-yellow: #fff8c5;
-      --border: #c7d7e8;
-      --border-strong: #8ea8c1;
-      --text: #24292f;
-      --muted: #57606a;
-      --faint: #6e7781;
-      --accent: #0969da;
-      --accent-strong: #0550ae;
-      --accent-soft: #ddf4ff;
+      --surface-subtle: #edf4fb;
+      --surface-blue: #d9eaff;
+      --surface-yellow: #fff0bd;
+      --border: #c2d3e5;
+      --border-strong: #7590aa;
+      --text: #172033;
+      --muted: #52647a;
+      --faint: #65758a;
+      --accent: #005cc5;
+      --accent-strong: #004a99;
+      --accent-soft: #d9eaff;
       --success: #1a7f37;
       --warning: #9a6700;
       --warning-strong: #7d4e00;
       --shadow: 0 16px 40px rgba(42, 76, 102, 0.10);
-      --grid-empty: #e7f0f8;
-      --calendar-active-border: #57606a;
-      --focus: #0969da;
-      --display: Bahnschrift, "DIN Alternate", "Franklin Gothic Medium",
-        "DejaVu Sans Condensed", "Liberation Sans Narrow", "Trebuchet MS", sans-serif;
-      --body: Candara, Corbel, "Avenir Next", Avenir, Ubuntu,
+      --grid-empty: #e5eef7;
+      --calendar-active-border: #52647a;
+      --focus: #005cc5;
+      --display: "IBM Plex Sans Condensed", "Aptos Display", "Segoe UI",
+        "DejaVu Sans Condensed", "Liberation Sans Narrow", sans-serif;
+      --body: "IBM Plex Sans", "Aptos", "Segoe UI", "Noto Sans",
         "DejaVu Sans", sans-serif;
-      --mono: "Cascadia Mono", "SFMono-Regular", "Ubuntu Mono",
+      --mono: "IBM Plex Mono", "Cascadia Mono", "SFMono-Regular",
         "DejaVu Sans Mono", Consolas, monospace;
       --space-1: 0.25rem;
       --space-2: 0.5rem;
@@ -70,53 +78,53 @@ _HTML_PREFIX = """<!doctype html>
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
         color-scheme: dark;
-        --canvas: #0b1118;
-        --surface: #111923;
-        --surface-raised: #18212c;
-        --surface-subtle: #162330;
-        --surface-blue: #172b3d;
-        --surface-yellow: #302b1c;
-        --border: #34485c;
-        --border-strong: #58728a;
-        --text: #f0f6fc;
-        --muted: #a3b3c2;
-        --faint: #8ea0b2;
-        --accent: #79c0ff;
-        --accent-strong: #a5d6ff;
-        --accent-soft: #173a5e;
+        --canvas: #0b1625;
+        --surface: #102237;
+        --surface-raised: #142b45;
+        --surface-subtle: #122a43;
+        --surface-blue: #153756;
+        --surface-yellow: #3b331e;
+        --border: #34526f;
+        --border-strong: #6683a0;
+        --text: #eff6ff;
+        --muted: #b5c7da;
+        --faint: #9fb2c6;
+        --accent: #8bc8ff;
+        --accent-strong: #b5ddff;
+        --accent-soft: #19476e;
         --success: #3fb950;
         --warning: #eac54f;
         --warning-strong: #fae17d;
         --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
-        --grid-empty: #22303d;
-        --calendar-active-border: #a5d6ff;
-        --focus: #79c0ff;
+        --grid-empty: #1e3852;
+        --calendar-active-border: #b5ddff;
+        --focus: #8bc8ff;
       }
     }
 
     :root[data-theme="dark"] {
       color-scheme: dark;
-      --canvas: #0b1118;
-      --surface: #111923;
-      --surface-raised: #18212c;
-      --surface-subtle: #162330;
-      --surface-blue: #172b3d;
-      --surface-yellow: #302b1c;
-      --border: #34485c;
-      --border-strong: #58728a;
-      --text: #f0f6fc;
-      --muted: #a3b3c2;
-      --faint: #8ea0b2;
-      --accent: #79c0ff;
-      --accent-strong: #a5d6ff;
-      --accent-soft: #173a5e;
+      --canvas: #0b1625;
+      --surface: #102237;
+      --surface-raised: #142b45;
+      --surface-subtle: #122a43;
+      --surface-blue: #153756;
+      --surface-yellow: #3b331e;
+      --border: #34526f;
+      --border-strong: #6683a0;
+      --text: #eff6ff;
+      --muted: #b5c7da;
+      --faint: #9fb2c6;
+      --accent: #8bc8ff;
+      --accent-strong: #b5ddff;
+      --accent-soft: #19476e;
       --success: #3fb950;
       --warning: #eac54f;
       --warning-strong: #fae17d;
       --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
-      --grid-empty: #22303d;
-      --calendar-active-border: #a5d6ff;
-      --focus: #79c0ff;
+      --grid-empty: #1e3852;
+      --calendar-active-border: #b5ddff;
+      --focus: #8bc8ff;
     }
 
     * {
@@ -324,14 +332,26 @@ _HTML_PREFIX = """<!doctype html>
         color-mix(in srgb, var(--provider-accent, var(--accent)) 18%, transparent);
     }
 
-    .filter-dot {
+    .provider-icon {
       display: inline-block;
-      width: 0.5rem;
-      height: 0.5rem;
+      flex: 0 0 auto;
+      width: 1rem;
+      height: 1rem;
+      color: var(--provider-accent, var(--accent));
+      vertical-align: -0.14rem;
+    }
+
+    .filter .provider-icon {
       margin-right: var(--space-2);
-      border-radius: 50%;
-      background: var(--provider-accent, var(--accent));
-      vertical-align: 0.04rem;
+    }
+
+    .provider-icon--row {
+      width: 1.25rem;
+      height: 1.25rem;
+      padding: 0.18rem;
+      border: 1px solid color-mix(in srgb, var(--provider-accent) 38%, var(--border));
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--provider-accent) 10%, var(--surface));
     }
 
     .hero-grid {
@@ -495,6 +515,13 @@ _HTML_PREFIX = """<!doctype html>
       color: var(--muted);
       font-size: 0.875rem;
       line-height: 1.5;
+    }
+
+    .ledger-detail {
+      margin: var(--space-1) 0 0;
+      color: var(--faint);
+      font-size: 0.8125rem;
+      line-height: 1.45;
     }
 
     .dashboard-grid {
@@ -676,13 +703,6 @@ _HTML_PREFIX = """<!doctype html>
       color: var(--text);
       font-size: 0.9375rem;
       font-weight: 700;
-    }
-
-    .provider-mark {
-      width: 0.58rem;
-      height: 0.58rem;
-      border-radius: 50%;
-      background: var(--provider-accent);
     }
 
     .provider-count {
@@ -1014,11 +1034,11 @@ _HTML_PREFIX = """<!doctype html>
     <header class="masthead">
       <div>
         <p class="eyebrow">AI collaboration / evidence ledger</p>
-        <h1 class="title">Collaboration you can inspect.</h1>
+        <h1 class="title">Show the work behind the numbers.</h1>
         <p class="lede">
-          Explicit Git provenance, aggregated locally. Switch between the published
-          all-provider record and individual AI providers without turning unknown
-          work into a guess.
+          Explicit Git provenance, aggregated locally. Review the published
+          all-provider record or one participating AI provider without turning
+          unrecorded history into a guess.
         </p>
       </div>
       <div class="utility">
@@ -1029,7 +1049,7 @@ _HTML_PREFIX = """<!doctype html>
     </header>
 
     <section class="control-deck" aria-label="Dashboard filters">
-      <span class="filter-label">View</span>
+      <span class="filter-label">Provider view</span>
       <div class="filters" id="providerFilters" role="group"
            aria-label="Filter dashboard by AI provider"></div>
     </section>
@@ -1051,7 +1071,7 @@ _HTML_PREFIX = """<!doctype html>
       </article>
 
       <aside class="panel ledger"
-             aria-label="Collaboration metrics; unknown commits remain all-records">
+             aria-label="Collaboration metrics; unattributed commits remain all records">
         <div class="ledger-item">
           <p class="ledger-value" id="presenceValue">0</p>
           <p class="ledger-label" id="presenceLabel">AI actor presences</p>
@@ -1062,7 +1082,8 @@ _HTML_PREFIX = """<!doctype html>
         </div>
         <div class="ledger-item">
           <p class="ledger-value" id="unknownValue">0</p>
-          <p class="ledger-label">Unknown commits · all records · never assumed human</p>
+          <p class="ledger-label">Unattributed commits</p>
+          <p class="ledger-detail">No explicit AI or human declaration recorded.</p>
         </div>
       </aside>
     </section>
@@ -1132,10 +1153,10 @@ _HTML_PREFIX = """<!doctype html>
         </p>
       </div>
       <div>
-        <h2 class="note-title">Unknown stays unknown</h2>
+        <h2 class="note-title">Improve future attribution</h2>
         <p class="note-copy">
-          Missing evidence is not converted into human authorship and attribution is
-          never inferred from source-code style.
+          Add an <code>AI-*</code> trailer to future commits. Historical commits without
+          explicit evidence remain unattributed; they are never inferred from source-code style.
         </p>
       </div>
       <div>
@@ -1154,6 +1175,8 @@ _HTML_SUFFIX = """</script>
       "use strict";
 
       const data = JSON.parse(document.getElementById("profileData").textContent);
+      const providerGlyphs = __PROVIDER_GLYPHS__;
+      const SVG_NS = "http:" + "//www.w3.org/2000/svg";
       const $ = (id) => document.getElementById(id);
       const number = new Intl.NumberFormat("en-US");
       const percent = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
@@ -1199,6 +1222,37 @@ _HTML_SUFFIX = """</script>
         let hash = 0;
         for (const char of slug) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
         return fallbackColors[Math.abs(hash) % fallbackColors.length];
+      }
+
+      function providerIcon(slug, label, variant) {
+        const icon = document.createElementNS(SVG_NS, "svg");
+        icon.classList.add("provider-icon", `provider-icon--${variant}`);
+        icon.setAttribute("viewBox", "0 0 24 24");
+        icon.setAttribute("aria-hidden", "true");
+        icon.setAttribute("focusable", "false");
+        const glyph = providerGlyphs[slug];
+        if (glyph) {
+          const path = document.createElementNS(SVG_NS, "path");
+          path.setAttribute("d", glyph);
+          path.setAttribute("fill", "currentColor");
+          icon.append(path);
+        } else if (slug === "all") {
+          const path = document.createElementNS(SVG_NS, "path");
+          path.setAttribute("d", "M6 6h4v4H6V6Zm8 0h4v4h-4V6ZM6 14h4v4H6v-4Zm8 0h4v4h-4v-4Z");
+          path.setAttribute("fill", "currentColor");
+          icon.append(path);
+        } else {
+          const text = document.createElementNS(SVG_NS, "text");
+          text.setAttribute("x", "12");
+          text.setAttribute("y", "17");
+          text.setAttribute("fill", "currentColor");
+          text.setAttribute("font-size", "14");
+          text.setAttribute("font-weight", "700");
+          text.setAttribute("text-anchor", "middle");
+          text.textContent = label.slice(0, 1).toUpperCase();
+          icon.append(text);
+        }
+        return icon;
       }
 
       function hexToRgb(hex) {
@@ -1282,10 +1336,10 @@ _HTML_SUFFIX = """</script>
           button.dataset.provider = row.provider;
           button.setAttribute("aria-pressed", String(selected === row.provider));
           button.style.setProperty("--provider-accent", accent);
-          const dot = document.createElement("span");
-          dot.className = "filter-dot";
-          dot.setAttribute("aria-hidden", "true");
-          button.append(dot, document.createTextNode(row.display_name));
+          button.append(
+            providerIcon(row.provider, row.display_name, "filter"),
+            document.createTextNode(row.display_name)
+          );
           button.addEventListener("click", () => {
             selected = row.provider;
             render();
@@ -1555,10 +1609,10 @@ _HTML_SUFFIX = """</script>
           head.className = "provider-row-head";
           const name = document.createElement("span");
           name.className = "provider-name";
-          const mark = document.createElement("span");
-          mark.className = "provider-mark";
-          mark.setAttribute("aria-hidden", "true");
-          name.append(mark, document.createTextNode(row.display_name));
+          name.append(
+            providerIcon(row.provider, row.display_name, "row"),
+            document.createTextNode(row.display_name)
+          );
           const count = document.createElement("span");
           count.className = "provider-count";
           count.textContent = number.format(row.attributed_commits);
@@ -1695,4 +1749,6 @@ def render_dashboard(stats: VizStats) -> str:
         .replace("<", "\\u003c")
         .replace(">", "\\u003e")
     )
-    return _HTML_PREFIX + payload + _HTML_SUFFIX
+    return _HTML_PREFIX + payload + _HTML_SUFFIX.replace(
+        "__PROVIDER_GLYPHS__", _PROVIDER_GLYPHS_JSON
+    )

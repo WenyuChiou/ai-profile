@@ -312,7 +312,8 @@ def _check_dashboard(out_dir: Path) -> None:
         "default-src 'none'",
         "connect-src 'none'",
         'aria-label="Filter dashboard by AI provider"',
-        "Unknown commits · all records · never assumed human",
+        "Unattributed commits",
+        "No explicit AI or human declaration recorded.",
     )
     missing = [token for token in required if token not in html]
     if missing:

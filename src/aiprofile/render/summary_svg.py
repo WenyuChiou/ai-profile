@@ -41,7 +41,7 @@ WIDTH = 830
 PADDING = 24
 RADIUS = 8
 
-FONT_STACK = "Candara, Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif"
+FONT_STACK = "'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif"
 
 TITLE_TEXT = "AI Collaboration Summary"
 MAX_PROVIDER_ROWS = 6
@@ -473,7 +473,7 @@ def _ledger_svg(stats: VizStats, theme: Theme) -> str:
         ("AI actor presences", stats.totals.ai_actor_presences),
         ("Active AI days (author dates)", stats.totals.active_ai_days),
         ("AI providers", stats.provider_count),
-        ("Unknown commits", stats.totals.unknown_commits),
+        ("Unattributed commits", stats.totals.unknown_commits),
     )
     parts = []
     for index, (label, value) in enumerate(rows):
