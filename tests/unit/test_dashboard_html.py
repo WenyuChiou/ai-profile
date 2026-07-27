@@ -242,7 +242,12 @@ def test_dashboard_uses_a_distinctive_local_typography_system():
     assert "Inter" not in html
     assert "Space Grotesk" not in html
     assert "radial-gradient(" not in html
-    assert "background-size: 2.5rem 2.5rem;" in html
+    assert "linear-gradient(" not in html
+    assert "repeating-linear-gradient(" not in html
+    assert ".hero-panel::after" not in html
+    assert "background: var(--canvas);" in html
+    assert ".hero-panel {" in html
+    assert "border-top: 0.25rem solid var(--active-accent, var(--accent));" in html
     assert "font-src 'none'" in html
 
 

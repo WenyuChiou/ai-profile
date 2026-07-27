@@ -145,19 +145,7 @@ _HTML_PREFIX = """<!doctype html>
       min-height: 100vh;
       margin: 0;
       overflow-x: clip;
-      background-color: var(--canvas);
-      background-image:
-        linear-gradient(
-          to right,
-          color-mix(in srgb, var(--border) 22%, transparent) 1px,
-          transparent 1px
-        ),
-        linear-gradient(
-          to bottom,
-          color-mix(in srgb, var(--border) 22%, transparent) 1px,
-          transparent 1px
-        );
-      background-size: 2.5rem 2.5rem;
+      background: var(--canvas);
     }
 
     button {
@@ -280,9 +268,8 @@ _HTML_PREFIX = """<!doctype html>
       padding: var(--space-4);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      background: color-mix(in srgb, var(--surface-blue) 76%, var(--surface));
-      box-shadow: 0 8px 24px rgba(42, 76, 102, 0.08);
-      backdrop-filter: blur(0.5rem);
+      background: var(--surface);
+      box-shadow: var(--shadow);
     }
 
     .filter-label {
@@ -368,50 +355,13 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .hero-panel {
-      position: relative;
       min-height: 22rem;
-      overflow: hidden;
       padding: clamp(2rem, 4vw, 3rem);
       border-top: 0.25rem solid var(--active-accent, var(--accent));
-      background:
-        linear-gradient(
-          125deg,
-          color-mix(in srgb, var(--surface-blue) 76%, var(--surface)),
-          var(--surface) 58%,
-          color-mix(in srgb, var(--surface-yellow) 48%, var(--surface))
-        );
-    }
-
-    .hero-panel::after {
-      position: absolute;
-      right: 2rem;
-      bottom: 2rem;
-      width: 11rem;
-      height: 8rem;
-      border-right: 1px solid
-        color-mix(in srgb, var(--warning) 40%, transparent);
-      border-bottom: 1px solid
-        color-mix(in srgb, var(--warning) 40%, transparent);
-      background:
-        repeating-linear-gradient(
-          90deg,
-          color-mix(in srgb, var(--warning) 16%, transparent)
-            0 1px,
-          transparent 1px 1rem
-        ),
-        repeating-linear-gradient(
-          0deg,
-          color-mix(in srgb, var(--warning) 12%, transparent)
-            0 1px,
-          transparent 1px 1rem
-        );
-      content: "";
-      pointer-events: none;
+      background: var(--surface);
     }
 
     .hero-label {
-      position: relative;
-      z-index: 1;
       margin: 0;
       color: var(--muted);
       font-size: 1rem;
@@ -420,8 +370,6 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .hero-value {
-      position: relative;
-      z-index: 1;
       margin: var(--space-4) 0 0;
       color: var(--active-accent, var(--accent));
       font-family: var(--display);
@@ -433,8 +381,6 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .hero-context {
-      position: relative;
-      z-index: 1;
       max-width: 34rem;
       margin: var(--space-6) 0 0;
       color: var(--muted);
@@ -443,8 +389,6 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     .share-track {
-      position: relative;
-      z-index: 1;
       width: min(100%, 34rem);
       height: 0.55rem;
       margin-top: var(--space-6);
@@ -540,7 +484,7 @@ _HTML_PREFIX = """<!doctype html>
 
     .activity-panel {
       min-width: 0;
-      background: color-mix(in srgb, var(--surface-blue) 24%, var(--surface));
+      background: var(--surface);
     }
 
     .panel-heading {
@@ -746,7 +690,8 @@ _HTML_PREFIX = """<!doctype html>
       grid-template-columns: minmax(15rem, 0.62fr) minmax(0, 1.38fr);
       gap: var(--space-4) var(--space-8);
       align-items: center;
-      background: color-mix(in srgb, var(--surface-yellow) 36%, var(--surface));
+      border-top: 0.25rem solid var(--warning);
+      background: var(--surface);
     }
 
     .evidence-panel .panel-heading {
@@ -967,10 +912,6 @@ _HTML_PREFIX = """<!doctype html>
 
       .hero-panel {
         min-height: 20rem;
-      }
-
-      .hero-panel::after {
-        display: none;
       }
 
       .ledger {

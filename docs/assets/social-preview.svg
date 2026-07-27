@@ -1,24 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="ai-profile: show the evidence behind your AI collaboration">
 <rect width="1280" height="640" fill="#0b1625"/>
 <rect x="0" y="0" width="1280" height="640" fill="none" stroke="#34526f" stroke-width="2"/>
-<rect x="74" y="96" width="326" height="424" rx="16" fill="#102237" stroke="#34526f"/>
-<rect x="98" y="122" width="278" height="164" rx="10" fill="#153756"/>
-<rect x="98" y="308" width="278" height="188" rx="10" fill="#122a43"/>
-<rect x="906" y="120" width="300" height="400" rx="16" fill="#102237" stroke="#34526f"/>
-<rect x="930" y="148" width="252" height="132" rx="10" fill="#153756"/>
-<rect x="930" y="304" width="252" height="192" rx="10" fill="#122a43"/>
-<line x1="136" y1="208" x2="1144" y2="430" stroke="#34526f" stroke-width="1" stroke-dasharray="5 9"/>
-<line x1="205" y1="135" x2="205" y2="510" stroke="#6683a0" stroke-width="1"/>
-<line x1="1070" y1="150" x2="1070" y2="505" stroke="#6683a0" stroke-width="1"/>
-<line x1="205" y1="170" x2="490" y2="322" stroke="#8bc8ff" stroke-width="3"/>
-<line x1="790" y1="322" x2="1070" y2="182" stroke="#8bc8ff" stroke-width="3"/>
-<rect x="192" y="156" width="26" height="26" rx="13" fill="#fff0bd"/>
-<rect x="477" y="309" width="26" height="26" rx="13" fill="#fff0bd"/>
-<rect x="777" y="309" width="26" height="26" rx="13" fill="#fff0bd"/>
-<rect x="1057" y="169" width="26" height="26" rx="13" fill="#fff0bd"/>
-<text x="640" y="224" text-anchor="middle" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="18" font-weight="600" letter-spacing="2.4" fill="#8bc8ff">AI COLLABORATION / EVIDENCE LEDGER</text>
-<text x="640" y="324" text-anchor="middle" font-family="'IBM Plex Sans Condensed', 'Aptos Display', 'Segoe UI', sans-serif" font-size="82" font-weight="700" letter-spacing="-2.6" fill="#eff6ff">ai-profile</text>
-<text x="640" y="374" text-anchor="middle" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', sans-serif" font-size="27" fill="#b5c7da">Show the evidence behind your AI collaboration.</text>
-<rect x="467" y="428" width="346" height="42" rx="8" fill="#3b331e"/>
-<text x="640" y="455" text-anchor="middle" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="15" font-weight="600" letter-spacing="1.1" fill="#eff6ff">EXPLICIT · LOCAL-FIRST · PRIVATE</text>
+<rect x="176" y="178" width="6" height="278" rx="3" fill="#8bc8ff"/>
+<text x="216" y="244" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="18" font-weight="600" letter-spacing="2.4" fill="#8bc8ff">AI COLLABORATION / EVIDENCE LEDGER</text>
+<text x="216" y="344" font-family="'IBM Plex Sans Condensed', 'Aptos Display', 'Segoe UI', sans-serif" font-size="82" font-weight="700" letter-spacing="-2.6" fill="#eff6ff">ai-profile</text>
+<text x="218" y="394" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', sans-serif" font-size="27" fill="#b5c7da">Show the evidence behind your AI collaboration.</text>
+<text x="218" y="452" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="15" font-weight="600" letter-spacing="1.1" fill="#fae17d">EXPLICIT · LOCAL-FIRST · PRIVATE</text>
 </svg>

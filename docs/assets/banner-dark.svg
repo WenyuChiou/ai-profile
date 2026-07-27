@@ -1,20 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="830" height="180" viewBox="0 0 830 180" role="img" aria-label="ai-profile: show the evidence behind your AI collaboration">
 <rect width="830" height="180" rx="10" fill="#0b1625"/>
 <rect x="0.5" y="0.5" width="829" height="179" rx="10" fill="none" stroke="#34526f"/>
-<rect x="504" y="18" width="294" height="144" rx="8" fill="#122a43"/>
-<rect x="542" y="42" width="220" height="92" rx="6" fill="#153756"/>
-<rect x="578" y="58" width="146" height="60" rx="4" fill="#102237" stroke="#34526f"/>
-<line x1="526" y1="142" x2="766" y2="142" stroke="#6683a0" stroke-width="1"/>
-<line x1="562" y1="36" x2="562" y2="151" stroke="#6683a0" stroke-width="1" stroke-dasharray="3 4"/>
-<line x1="704" y1="30" x2="704" y2="151" stroke="#6683a0" stroke-width="1" stroke-dasharray="3 4"/>
-<rect x="549" y="32" width="10" height="10" rx="5" fill="#fff0bd" stroke="#fae17d"/>
-<rect x="699" y="22" width="10" height="10" rx="5" fill="#fff0bd" stroke="#fae17d"/>
-<rect x="620" y="79" width="12" height="12" rx="6" fill="#fff0bd" stroke="#fae17d"/>
-<line x1="552" y1="37" x2="620" y2="85" stroke="#8bc8ff" stroke-width="2"/>
-<line x1="626" y1="85" x2="704" y2="27" stroke="#8bc8ff" stroke-width="2"/>
+<rect x="48" y="30" width="4" height="100" rx="2" fill="#8bc8ff"/>
 <text x="48" y="42" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="11" font-weight="600" letter-spacing="1.2" fill="#8bc8ff">AI COLLABORATION / LOCAL PROVENANCE</text>
 <text x="48" y="89" font-family="'IBM Plex Sans Condensed', 'Aptos Display', 'Segoe UI', sans-serif" font-size="42" font-weight="700" letter-spacing="-1.2" fill="#eff6ff">ai-profile</text>
 <text x="50" y="119" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', sans-serif" font-size="15" fill="#b5c7da">Show the evidence behind your AI collaboration.</text>
-<rect x="48" y="137" width="192" height="22" rx="4" fill="#3b331e"/>
-<text x="58" y="152" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="10" font-weight="600" letter-spacing="0.55" fill="#b5c7da">EXPLICIT · LOCAL · PRIVATE</text>
+<text x="50" y="151" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="10" font-weight="600" letter-spacing="0.55" fill="#fae17d">EXPLICIT · LOCAL · PRIVATE</text>
 </svg>
