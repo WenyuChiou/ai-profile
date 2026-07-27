@@ -164,7 +164,11 @@ def test_calendar_uses_roving_keyboard_and_touch_accessible_days():
 
     assert 'id="activityCalendar" role="group"' in html
     assert 'document.createElement("button")' in html
-    assert 'cell.tabIndex = index === 0 ? 0 : -1' in html
+    assert "let calendarFocusIndex = null" in html
+    assert "? series.length - 1" in html
+    assert "cell.tabIndex = index === rovingIndex ? 0 : -1" in html
+    assert "calendarFocusIndex = index" in html
+    assert "calendarFocusIndex = bounded" in html
     assert re.search(r'cell\.addEventListener\(\s*"focus"', html)
     assert 'cell.addEventListener("click"' in html
     assert 'cell.addEventListener("keydown", handleCalendarKeydown)' in html

@@ -1188,6 +1188,7 @@ _HTML_SUFFIX = """</script>
       };
       let selected = "all";
       let theme = "auto";
+      let calendarFocusIndex = null;
       let tooltipOwner = null;
       let tooltipPinned = false;
       let tooltipSuppressed = null;
@@ -1336,6 +1337,7 @@ _HTML_SUFFIX = """</script>
           previousMaxScroll <= 1 || previousMaxScroll - previousScrollLeft <= 2;
         calendar.replaceChildren();
         if (!series.length) {
+          calendarFocusIndex = null;
           const empty = document.createElement("div");
           empty.className = "calendar-empty";
           empty.textContent = "No publishable daily activity in this profile.";
@@ -1348,6 +1350,10 @@ _HTML_SUFFIX = """</script>
         calendar.className = "calendar";
         const accent = selectedAccent();
         const binOpacity = [0.42, 0.62, 0.81, 1];
+        const rovingIndex = calendarFocusIndex === null
+          ? series.length - 1
+          : Math.max(0, Math.min(series.length - 1, calendarFocusIndex));
+        if (calendarFocusIndex !== null) calendarFocusIndex = rovingIndex;
         const firstWeekday = dateAtUtc(series[0].date).getUTCDay();
         for (let index = 0; index < firstWeekday; index += 1) {
           const spacer = document.createElement("span");
@@ -1373,7 +1379,7 @@ _HTML_SUFFIX = """</script>
           const cell = document.createElement("button");
           cell.type = "button";
           cell.className = "day-cell";
-          cell.tabIndex = index === 0 ? 0 : -1;
+          cell.tabIndex = index === rovingIndex ? 0 : -1;
           cell.dataset.index = String(index);
           cell.dataset.active = String(selectedCount > 0);
           cell.dataset.level = String(level);
@@ -1403,6 +1409,7 @@ _HTML_SUFFIX = """</script>
             if (!tooltipPinned && document.activeElement !== cell) hideTooltip();
           });
           cell.addEventListener("focus", () => {
+            calendarFocusIndex = index;
             tooltipHoverPaused = false;
             tooltipSuppressed = null;
             showTooltip(cell, day, selectedCount);
@@ -1453,6 +1460,7 @@ _HTML_SUFFIX = """</script>
       function focusCalendarCell(index) {
         const cells = calendarCells();
         const bounded = Math.max(0, Math.min(cells.length - 1, index));
+        calendarFocusIndex = bounded;
         cells.forEach((cell, cellIndex) => {
           cell.tabIndex = cellIndex === bounded ? 0 : -1;
         });
