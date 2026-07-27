@@ -1,7 +1,8 @@
 # v0.4.6 Public Beta promotion-readiness review
 
 Date: 2026-07-27
-Candidate source reviewed: 25ea364b3ca7f6a7b8898a901fa6cda2c64cd373
+Candidate implementation source: 25ea364b3ca7f6a7b8898a901fa6cda2c64cd373
+Promotion-evidence documentation source: 73c133f6e397debc5126da685ce01fe34a906ef1
 Wheel SHA-256: 26227c0435d2d6a80ff8a46ad878270509b2cadeeb6d0dd78555019884239d8a
 
 ## Reviewer posture
@@ -50,10 +51,12 @@ checks.
 ### CI and portability
 
 PR [#11](https://github.com/WenyuChiou/ai-profile/pull/11) is still a draft.
-Its current head is the source commit recorded above. GitHub Actions run
-[30241738013](https://github.com/WenyuChiou/ai-profile/actions/runs/30241738013)
-passed release-candidate build; Python 3.11, 3.12, 3.13, and 3.14; and clean
-wheel onboarding on Ubuntu, Windows, and macOS with Python 3.12.
+The implementation candidate is the source commit recorded above; its
+documentation-only evidence commit rebuilt the same pinned wheel in GitHub
+Actions run
+[30243159885](https://github.com/WenyuChiou/ai-profile/actions/runs/30243159885).
+That run passed release-candidate build; Python 3.11, 3.12, 3.13, and 3.14;
+and clean wheel onboarding on Ubuntu, Windows, and macOS with Python 3.12.
 
 ### Dogfood and browser evidence
 
