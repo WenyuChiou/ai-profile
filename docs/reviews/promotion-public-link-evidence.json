@@ -44,8 +44,8 @@
     "https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html": 200
   },
   "release_urls": {
-    "https://pypi.org/project/ai-profile-cli/0.4.4/": 200,
-    "https://github.com/WenyuChiou/ai-profile/releases/tag/v0.4.4": 200
+    "https://pypi.org/project/ai-profile-cli/0.4.5/": 200,
+    "https://github.com/WenyuChiou/ai-profile/releases/tag/v0.4.5": 200
   },
   "summary": {
     "non_placeholder_readme_urls_checked": 28,
@@ -54,7 +54,7 @@
     "failed": 0
   },
   "pages": {
-    "profile_head": "c0a599dc8e1f501fe9724cd3416fa3d623dbe9cb",
+    "profile_head": "41a1ed92f2be54dc1a9beb09b4c1fdf16a902a95",
     "outputs_checked": 8,
     "http_200": 8,
     "byte_identical_to_git_blobs": 8
