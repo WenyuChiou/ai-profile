@@ -859,5 +859,5 @@ def test_svg_family_uses_the_humanist_profile_font_stack():
     from aiprofile.render.summary_svg import FONT_STACK
 
     assert FONT_STACK == (
-        "'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif"
+        "Candara, Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif"
     )

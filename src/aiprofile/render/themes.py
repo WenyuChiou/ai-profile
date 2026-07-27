@@ -34,15 +34,15 @@ class Theme:
 THEMES: dict[str, Theme] = {
     "github-light": Theme(
         name="github-light",
-        bg="#ffffff",
-        border="#d1d9e0",
+        bg="#fbfdff",
+        border="#b6d6f2",
         title="#1f2328",
         text="#1f2328",
         muted="#59636e",
         accent="#0969da",
         bar_fill="#0969da",
-        bar_track="#eff2f5",
-        chip_bg="#f6f8fa",
+        bar_track="#ddf4ff",
+        chip_bg="#fff8c5",
         # Ordinal evidence ramp, validator-passed (dataviz skill,
         # --ordinal vs the #f6f8fa panel): monotone L, gaps >= 0.06,
         # light end 3.18:1 (the previous #80ccff end sat at 1.64:1).
@@ -57,14 +57,14 @@ THEMES: dict[str, Theme] = {
     "github-dark": Theme(
         name="github-dark",
         bg="#0d1117",
-        border="#3d444d",
+        border="#34485c",
         title="#f0f6fc",
         text="#f0f6fc",
-        muted="#9198a1",
-        accent="#4493f8",
-        bar_fill="#4493f8",
-        bar_track="#21262d",
-        chip_bg="#161b22",
+        muted="#a3b3c2",
+        accent="#79c0ff",
+        bar_fill="#79c0ff",
+        bar_track="#22303d",
+        chip_bg="#302b1c",
         # Validator-passed vs the #161b22 panel: light end 3.73:1
         # (the previous #0d419d end sat at 1.86:1).
         evidence_verified="#a5d6ff",
