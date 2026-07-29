@@ -1,27 +1,86 @@
-# Default-branch bootstrap stub for the manual v0.4.6 staging preview.
-# GitHub only offers workflow_dispatch for a workflow whose file exists on
-# the default branch, so this stub registers the staging-preview path and
-# nothing more. It is deliberately inert: workflow_dispatch-only, no
-# checkout, no secret access, no Pages deployment, no artifact upload, no
-# third-party actions, no network or repository writes, and an empty
-# permissions block. Dispatch the workflow with the v0.4.6 candidate ref
-# instead — the candidate-owned .github/workflows/staging-preview.yml
-# verifies the pinned candidate wheel and deploys the safe synthetic
-# staging artifact.
+# Manual-only GitHub Pages staging preview for the pinned v0.4.6 release
+# candidate (docs/reviews/promotion-eval-spec-v046.md). Rebuilds the
+# candidate wheel with the frozen SOURCE_DATE_EPOCH, verifies the exact
+# pinned digest, installs that wheel into a fresh venv, renders the
+# synthetic public-only staging dashboard from the INSTALLED wheel, and
+# deploys only the staging directory so the R2 browser matrix can run at
+# https://wenyuchiou.github.io/ai-profile/v0.4.6/dashboard.html
+# Guardrails are pinned by tests/unit/test_staging_preview.py: never
+# triggered by push/pull_request/schedule, never from a fork, no token
+# authority beyond the Pages deployment itself.
 name: staging-preview
 
 on:
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-preview-pages
+  cancel-in-progress: false
 
 jobs:
-  refuse-default-branch-dispatch:
-    name: Refuse default-branch dispatch
+  stage:
+    name: Build, verify, and deploy the v0.4.6 staging preview
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
+    if: github.repository == 'WenyuChiou/ai-profile'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Fail with candidate-ref dispatch instructions
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Build and verify the exact pinned candidate wheel
         run: |
-          echo "::error title=staging-preview bootstrap::This run used the default-branch bootstrap stub, which deploys nothing. Re-dispatch .github/workflows/staging-preview.yml with the v0.4.6 candidate ref - the candidate-owned workflow verifies the pinned candidate wheel and deploys the safe synthetic staging artifact."
-          exit 1
+          python -m pip install build==1.4.3 twine==6.2.0
+          SOURCE_DATE_EPOCH="$(python -c 'import json; print(json.load(open("docs/reviews/promotion-candidate.json", encoding="utf-8"))["source_date_epoch"])')"
+          export SOURCE_DATE_EPOCH
+          python -m build
+          python -m twine check dist/*
+          python scripts/check_release_artifacts.py \
+            --dist-dir dist \
+            --expected-version 0.4.6 \
+            --expected-wheel-sha256 26227c0435d2d6a80ff8a46ad878270509b2cadeeb6d0dd78555019884239d8a
+      - name: Render the staging dashboard from the installed candidate wheel
+        run: |
+          WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
+          python -m venv "$RUNNER_TEMP/staging-venv"
+          "$RUNNER_TEMP/staging-venv/bin/python" -m pip install "$WHEEL"
+          "$RUNNER_TEMP/staging-venv/bin/python" scripts/render_staging_dashboard.py \
+            --wheel "$WHEEL" \
+            --out staging/v0.4.6
+      - name: Verify the staging manifest against the pinned candidate digest
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          staging = Path("staging/v0.4.6")
+          names = sorted(path.name for path in staging.iterdir())
+          assert names == ["dashboard.html", "staging-manifest.json"], names
+          manifest = json.loads(
+              (staging / "staging-manifest.json").read_text(encoding="utf-8")
+          )
+          assert manifest["package_version"] == "0.4.6", manifest
+          assert manifest["wheel_sha256"] == (
+              "26227c0435d2d6a80ff8a46ad878270509b2cadeeb6d0dd78555019884239d8a"
+          ), manifest
+          digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
+          assert manifest["dashboard_sha256"] == digest, (manifest, digest)
+          print("staging manifest verified against the pinned candidate digest")
+          PY
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: staging
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        id: deployment
