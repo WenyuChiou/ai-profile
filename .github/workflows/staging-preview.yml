@@ -1,0 +1,27 @@
+# Default-branch bootstrap stub for the manual v0.4.6 staging preview.
+# GitHub only offers workflow_dispatch for a workflow whose file exists on
+# the default branch, so this stub registers the staging-preview path and
+# nothing more. It is deliberately inert: workflow_dispatch-only, no
+# checkout, no secret access, no Pages deployment, no artifact upload, no
+# third-party actions, no network or repository writes, and an empty
+# permissions block. Dispatch the workflow with the v0.4.6 candidate ref
+# instead — the candidate-owned .github/workflows/staging-preview.yml
+# verifies the pinned candidate wheel and deploys the safe synthetic
+# staging artifact.
+name: staging-preview
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  refuse-default-branch-dispatch:
+    name: Refuse default-branch dispatch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail with candidate-ref dispatch instructions
+        run: |
+          echo "::error title=staging-preview bootstrap::This run used the default-branch bootstrap stub, which deploys nothing. Re-dispatch .github/workflows/staging-preview.yml with the v0.4.6 candidate ref - the candidate-owned workflow verifies the pinned candidate wheel and deploys the safe synthetic staging artifact."
+          exit 1
