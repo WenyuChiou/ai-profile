@@ -294,6 +294,9 @@ def _contrast(first: str, second: str) -> float:
     return (high + 0.05) / (low + 0.05)
 
 
+_DARK_MARK_SURFACE = "#111923"
+
+
 @pytest.mark.parametrize(
     "accent",
     [
@@ -312,11 +315,18 @@ def _contrast(first: str, second: str) -> float:
 )
 def test_provider_and_evidence_accents_clear_three_to_one_in_both_themes(accent):
     assert _contrast(accent, "#fbfdff") >= 3
-    assert _contrast(accent, "#111923") >= 3
+    assert _contrast(accent, _DARK_MARK_SURFACE) >= 3
     if accent not in {"#bf8700", "#6e7781"}:
         # Provider accents can become the large hero value, so validate the
         # lightest rendered pastel-gradient pixel rather than only a flat token.
         assert _contrast(accent, "#edf9ff") >= 3
+
+
+def test_dark_mark_surfaces_use_the_validated_contrast_background():
+    html = render_dashboard(_stats())
+
+    assert html.count(f"--surface: {_DARK_MARK_SURFACE};") == 2
+    assert html.count(f"--grid-empty: {_DARK_MARK_SURFACE};") == 2
 
 
 @pytest.mark.parametrize(
@@ -324,8 +334,8 @@ def test_provider_and_evidence_accents_clear_three_to_one_in_both_themes(accent)
     [
         ("#172033", "#fbfdff"),
         ("#52647a", "#fbfdff"),
-        ("#eff6ff", "#102237"),
-        ("#b5c7da", "#102237"),
+        ("#eff6ff", _DARK_MARK_SURFACE),
+        ("#b5c7da", _DARK_MARK_SURFACE),
     ],
 )
 def test_primary_and_muted_text_clear_wcag_aa(foreground, background):
@@ -336,7 +346,7 @@ def test_primary_and_muted_text_clear_wcag_aa(foreground, background):
     ("active_border", "empty_cell"),
     [
         ("#52647a", "#e5eef7"),
-        ("#b5ddff", "#1e3852"),
+        ("#b5ddff", _DARK_MARK_SURFACE),
     ],
 )
 def test_active_calendar_boundaries_clear_three_to_one(active_border, empty_cell):

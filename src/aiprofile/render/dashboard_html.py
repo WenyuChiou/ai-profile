@@ -79,7 +79,7 @@ _HTML_PREFIX = """<!doctype html>
       :root:not([data-theme="light"]) {
         color-scheme: dark;
         --canvas: #0b1625;
-        --surface: #102237;
+        --surface: #111923;
         --surface-raised: #142b45;
         --surface-subtle: #122a43;
         --surface-blue: #153756;
@@ -96,7 +96,7 @@ _HTML_PREFIX = """<!doctype html>
         --warning: #eac54f;
         --warning-strong: #fae17d;
         --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
-        --grid-empty: #1e3852;
+        --grid-empty: #111923;
         --calendar-active-border: #b5ddff;
         --focus: #8bc8ff;
       }
@@ -105,7 +105,7 @@ _HTML_PREFIX = """<!doctype html>
     :root[data-theme="dark"] {
       color-scheme: dark;
       --canvas: #0b1625;
-      --surface: #102237;
+      --surface: #111923;
       --surface-raised: #142b45;
       --surface-subtle: #122a43;
       --surface-blue: #153756;
@@ -122,7 +122,7 @@ _HTML_PREFIX = """<!doctype html>
       --warning: #eac54f;
       --warning-strong: #fae17d;
       --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
-      --grid-empty: #1e3852;
+      --grid-empty: #111923;
       --calendar-active-border: #b5ddff;
       --focus: #8bc8ff;
     }
