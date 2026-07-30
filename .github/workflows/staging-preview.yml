@@ -1,9 +1,9 @@
 # Manual-only GitHub Pages staging preview for the pinned v0.4.6 release
-# candidate (docs/reviews/promotion-eval-spec-v046-r3.md). Rebuilds the
+# candidate (docs/reviews/promotion-eval-spec-v046-r4.md). Rebuilds the
 # candidate wheel with the frozen SOURCE_DATE_EPOCH, verifies the exact
 # pinned digest, installs that wheel into a fresh venv, renders the
 # synthetic public-only staging dashboard from the INSTALLED wheel, and
-# deploys only the staging directory so the R3 browser matrix can run at
+# deploys only the staging directory so the R4 browser matrix can run at
 # https://wenyuchiou.github.io/ai-profile/v0.4.6/dashboard.html
 # Guardrails are pinned by tests/unit/test_staging_preview.py: never
 # triggered by push/pull_request/schedule, never from a fork, no token
@@ -48,7 +48,7 @@ jobs:
           python scripts/check_release_artifacts.py \
             --dist-dir dist \
             --expected-version 0.4.6 \
-            --expected-wheel-sha256 94fe21b9ed3a763dd3ca57ababf5a1ce2a045409343d09e996cf5756a346b2a0
+            --expected-wheel-sha256 206d842840ebe67331e45017aa85ad3e8dfcd716699d3e19c383a3db28d4f75e
       - name: Render the staging dashboard from the installed candidate wheel
         run: |
           WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
@@ -72,7 +72,7 @@ jobs:
           )
           assert manifest["package_version"] == "0.4.6", manifest
           assert manifest["wheel_sha256"] == (
-              "94fe21b9ed3a763dd3ca57ababf5a1ce2a045409343d09e996cf5756a346b2a0"
+              "206d842840ebe67331e45017aa85ad3e8dfcd716699d3e19c383a3db28d4f75e"
           ), manifest
           digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
           assert manifest["dashboard_sha256"] == digest, (manifest, digest)
