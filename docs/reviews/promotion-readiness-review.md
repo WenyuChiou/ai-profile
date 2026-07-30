@@ -11,9 +11,6 @@ Implementation source commit:
 Pinned wheel SHA-256:
 `84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb`
 
-Pinned sdist SHA-256:
-`9af25ed34c866376bf777e34458f876fb9b1c7160446638ee4966085fd702cc2`
-
 ## Reviewer posture
 
 Independent promotion verification against the frozen
@@ -76,13 +73,12 @@ regression. Repeated sanctioned regeneration remained byte-stable.
 
 ### Exact artifact gates
 
-The retained candidate bundle came from GitHub Actions run
+The retained R5 wheel came from GitHub Actions run
 [30530460205](https://github.com/WenyuChiou/ai-profile/actions/runs/30530460205).
-The local download reproduced `SHA256SUMS`:
+The local download reproduced its pinned digest:
 
 ```text
 84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb  dist/ai_profile_cli-0.4.6-py3-none-any.whl
-9af25ed34c866376bf777e34458f876fb9b1c7160446638ee4966085fd702cc2  dist/ai_profile_cli-0.4.6.tar.gz
 ```
 
 ```text
@@ -249,10 +245,16 @@ Beta.
 
 ## Release authorization
 
-This verdict authorizes Gate R only for the exact retained candidate bytes.
-The tag, PyPI files, GitHub Release assets, and checksums must reproduce the
-digests above. The maintainer Profile may be refreshed only after a clean
-install from live PyPI passes.
+This verdict authorizes Gate R only for the pinned wheel and the final
+retained sdist built from the otherwise unchanged release commit. The sdist
+contains these post-evaluation reports, so its digest is intentionally
+computed only after this report is committed; writing that digest back into
+the report would create an unstable self-reference. The publish workflow
+must retain, verify, and upload that one final wheel/sdist bundle without
+rebuilding between verification and upload. The tag, PyPI files, GitHub
+Release assets, and generated checksums must reproduce those retained bytes.
+The maintainer Profile may be refreshed only after a clean install from live
+PyPI passes.
 
 The final completion-integrity review initially rejected the browser claim
 because the keyboard evidence retained only the hero and live status. The
