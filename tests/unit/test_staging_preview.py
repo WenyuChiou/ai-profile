@@ -1,7 +1,7 @@
 """Staging preview helper + manual-only Pages workflow guardrails.
 
-Pins the v0.4.6 R2 pre-registration contract
-(docs/reviews/promotion-eval-spec-v046.md, Gate S): the helper is a
+Pins the v0.4.6 R3 pre-registration contract
+(docs/reviews/promotion-eval-spec-v046-r3.md, Gate S): the helper is a
 deterministic pure function of the wheel bytes and the installed renderer,
 writes exactly two files with computed digests, and the staging workflow
 stays manual-only, SHA-pinned, least-privilege, and digest-verified
@@ -30,7 +30,7 @@ staging = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(staging)
 
 #: The frozen v0.4.6 candidate digest (docs/reviews/promotion-candidate.json).
-PINNED_WHEEL_SHA256 = "26227c0435d2d6a80ff8a46ad878270509b2cadeeb6d0dd78555019884239d8a"
+PINNED_WHEEL_SHA256 = "94fe21b9ed3a763dd3ca57ababf5a1ce2a045409343d09e996cf5756a346b2a0"
 
 _FAKE_WHEEL_BYTES = b"deterministic fake wheel bytes for staging preview tests\n"
 
