@@ -29,8 +29,6 @@ jobs:
     if: github.repository == 'WenyuChiou/ai-profile'
     permissions:
       contents: read
-    env:
-      STAGING_ROOT: ${{ runner.temp }}/aiprofile-staging
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,6 +49,7 @@ jobs:
             --expected-wheel-sha256 84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb
       - name: Render the staging dashboard from the installed candidate wheel
         run: |
+          STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
           WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
           python -m venv "$RUNNER_TEMP/staging-venv"
           "$RUNNER_TEMP/staging-venv/bin/python" -m pip install "$WHEEL"
@@ -59,6 +58,8 @@ jobs:
             --out "$STAGING_ROOT/v0.4.6"
       - name: Verify the exact staging tree and pinned output digests
         run: |
+          STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
+          export STAGING_ROOT
           python - <<'PY'
           import hashlib
           import json
@@ -128,8 +129,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    env:
-      STAGING_ROOT: ${{ runner.temp }}/aiprofile-staging
     steps:
       - name: Download the verified staging root
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -138,6 +137,8 @@ jobs:
           path: ${{ runner.temp }}/aiprofile-staging
       - name: Re-verify transferred bytes without executing project code
         run: |
+          STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
+          export STAGING_ROOT
           python - <<'PY'
           import hashlib
           import json

@@ -227,6 +227,15 @@ def test_workflow_grants_only_the_minimal_pages_permissions():
     assert "actions/checkout" not in deploy
 
 
+def test_workflow_uses_runner_temp_only_inside_step_contexts():
+    text = _workflow_text()
+
+    # GitHub's `runner` expression context is unavailable while job-level
+    # `env` is parsed. Shell steps receive RUNNER_TEMP directly.
+    assert "STAGING_ROOT: ${{ runner.temp }}" not in text
+    assert text.count('STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"') == 3
+
+
 def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
     text = _workflow_text()
     manifest = json.loads(
