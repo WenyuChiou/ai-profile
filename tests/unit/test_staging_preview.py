@@ -159,6 +159,27 @@ def _workflow_text() -> str:
     return WORKFLOW.read_text(encoding="utf-8")
 
 
+def _job_block(text: str, name: str) -> str:
+    match = re.search(
+        rf"(?ms)^  {re.escape(name)}:\n(?P<body>.*?)(?=^  [a-z][a-z0-9_-]*:\n|\Z)",
+        text,
+    )
+    assert match is not None, name
+    return match.group("body")
+
+
+def _job_permissions(block: str) -> dict[str, str]:
+    match = re.search(
+        r"(?ms)^    permissions:\n(?P<body>(?:^      [a-z-]+: \S+\n)+)",
+        block,
+    )
+    assert match is not None
+    return dict(
+        line.strip().split(": ", 1)
+        for line in match.group("body").splitlines()
+    )
+
+
 def test_workflow_is_manual_only():
     text = _workflow_text()
     on_block = text.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
@@ -179,6 +200,8 @@ def test_workflow_uses_only_the_pinned_action_shas():
         [
             "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
             "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
             "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b",
             "actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa",
             "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
@@ -188,12 +211,19 @@ def test_workflow_uses_only_the_pinned_action_shas():
 
 def test_workflow_grants_only_the_minimal_pages_permissions():
     text = _workflow_text()
+    build = _job_block(text, "build")
+    deploy = _job_block(text, "deploy")
 
-    assert "permissions:\n  contents: read\n  pages: write\n  id-token: write\n" in text
-    assert text.count("permissions:") == 1
+    assert re.findall(r"(?m)^permissions: (.+)$", text) == ["{}"]
+    assert _job_permissions(build) == {"contents": "read"}
+    assert _job_permissions(deploy) == {"pages": "write", "id-token": "write"}
+    assert text.count("permissions:") == 3
     assert "contents: write" not in text
     assert "packages:" not in text
     assert "persist-credentials: false" in text
+    assert "pip install" not in deploy
+    assert "python -m build" not in deploy
+    assert "actions/checkout" not in deploy
 
 
 def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
@@ -207,23 +237,33 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
     # The workflow's hardcoded expectations must be the frozen candidate.
     assert manifest["wheel_sha256"] == PINNED_WHEEL_SHA256
     assert manifest["version"] == "0.4.6"
-    assert text.count(PINNED_WHEEL_SHA256) == 2  # artifact check + manifest check
+    assert text.count(PINNED_WHEEL_SHA256) == 3  # artifact check + both job boundaries
     assert "--expected-version 0.4.6" in text
     assert 'manifest["package_version"] == "0.4.6"' in text
 
     # Both digest verifications happen before anything is uploaded to Pages.
     upload_at = text.index("actions/upload-pages-artifact")
     assert text.rindex(PINNED_WHEEL_SHA256) < upload_at
+    assert text.count("17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192") == 2
     # The frozen ZIP timestamp is exported before the build it freezes.
     assert text.index('["source_date_epoch"]') < text.index("python -m build")
 
 
-def test_workflow_renders_from_a_fresh_venv_and_uploads_the_staging_directory():
+def test_workflow_renders_in_and_uploads_only_a_fresh_verified_staging_root():
     text = _workflow_text()
 
     assert "-m venv" in text
     assert 'pip install "$WHEEL"' in text
     assert "pip install -e" not in text
     assert 'scripts/render_staging_dashboard.py' in text
-    assert "--out staging/v0.4.6" in text
-    assert "path: staging\n" in text
+    assert '--out "$STAGING_ROOT/v0.4.6"' in text
+    assert "path: ${{ runner.temp }}/aiprofile-staging\n" in text
+    assert text.count("assert root.is_dir() and not root.is_symlink()") == 2
+    assert text.count('("v0.4.6", "dir")') == 2
+    assert text.count('("v0.4.6/dashboard.html", "file")') == 2
+    assert text.count('("v0.4.6/staging-manifest.json", "file")') == 2
+    assert "assert not any(path.is_symlink()" in text
+    assert text.count("json.dumps(manifest, indent=2, sort_keys=True)") == 2
+    assert text.count('"synthetic-two-provider-fixture-v1"') == 2
+    assert "actions/upload-artifact" in text
+    assert "actions/download-artifact" in text

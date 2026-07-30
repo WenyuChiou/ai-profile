@@ -33,7 +33,7 @@ canonical-slug -> simple-icons-icon-slug mapping, this script:
    otherwise a same-hue, lightness-adjusted shade is substituted (darkened
    for the light-theme pairing, lightened for the dark-theme pairing) until
    it clears 3:1. Both derived tints are also checked for distinguishability
-   against this project's two card backgrounds (`#ffffff` light / `#0d1117`
+   against this project's two card backgrounds (`#fbfdff` light / `#091321`
    dark, `src/aiprofile/render/themes.py`'s `THEMES["github-light"/"github-
    dark"].bg`) using the same >=1.1 luminance-ratio bar
    `tests/unit/test_brand.py` already enforces.
@@ -103,11 +103,10 @@ EXPECTED_VIEWBOX = "0 0 24 24"
 # THEMES["github-light"/"github-dark"].bg) — mirrored here by hand for the
 # same reason brand.py mirrors CANONICAL_PROVIDERS: this script lives
 # outside the render package's import graph on purpose (a vendoring tool has
-# no business importing the library it feeds), so drift would only ever be
-# caught by a human diffing this script's output against themes.py, which is
-# an acceptable bar for a manually-run, output-reviewed release tool.
-LIGHT_CARD_BG = "#ffffff"
-DARK_CARD_BG = "#0d1117"
+# no business importing the library it feeds). The AST parity regression in
+# tests/unit/test_brand.py keeps these intentional mirrors synchronized.
+LIGHT_CARD_BG = "#fbfdff"
+DARK_CARD_BG = "#091321"
 
 MIN_FG_TINT_CONTRAST = 3.0
 MIN_TINT_CARD_CONTRAST = 1.1

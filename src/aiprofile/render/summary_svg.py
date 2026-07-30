@@ -173,11 +173,12 @@ CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- the band's OWN newest-anchored
 
 CAL_TILE_HW = 18  # isometric tile half-width
 CAL_TILE_HH = 9  # isometric tile half-height (2:1 diamond ratio)
-CAL_MAX_STACK_PX = 32  # column height at CAL_CAP_COMMITS attributed commits
-#: A day with >= this many attributed commits (summed across providers)
+CAL_MAX_STACK_PX = 32  # column height at CAL_CAP_COMMITS provider-counted commits
+#: A day whose provider-attributed counts sum to at least this value
 #: renders at the full CAL_MAX_STACK_PX column height. Documented cap, not
 #: a silent clip: one outlier day cannot dwarf the rest of the 84-day
-#: window or blow out the card's fixed geometry budget.
+#: window or blow out the card's fixed geometry budget. Provider counts can
+#: overlap, so this intensity unit is not the all-provider unique-commit unit.
 CAL_CAP_COMMITS = 8
 
 #: Local (band-relative) y where the grid starts: high enough that even a
@@ -430,8 +431,10 @@ def card_height(stats: VizStats) -> int:
 def _calendar_desc_suffix(stats: VizStats) -> str:
     """One-line ASCII calendar summary appended to <desc> (round D2 spec
     item 5): the window span (anchored at the series' own newest date,
-    never "today") plus the peak day's total attributed commits. Empty
-    string when there is no daily series to summarize."""
+    never "today") plus the peak day's summed provider-attributed count.
+    The overlap caveat is part of the accessible text because this is not
+    the all-provider unique-commit unit. Empty string when there is no daily
+    series to summarize."""
     if not stats.daily:
         return ""
     newest = datetime.date.fromisoformat(stats.daily[-1].date)
@@ -439,14 +442,15 @@ def _calendar_desc_suffix(stats: VizStats) -> str:
     # Peak over the band's OWN 84-day slice only: since D4 widened the
     # series to 365 days, an out-of-window day must not leak into this
     # window-scoped claim.
-    peak = max(
+    peak_provider_count = max(
         sum(dc.attributed_commits for dc in cell.counts)
         for cell in stats.daily
         if cell.date >= window_start.isoformat()
     )
     return (
         f" Daily activity calendar {window_start.isoformat()} to {newest.isoformat()},"
-        f" peak day {peak} attributed commits."
+        f" peak day summed provider-attributed count {peak_provider_count};"
+        " provider counts may overlap."
     )
 
 
@@ -798,8 +802,10 @@ def _day_cell_svg(cell: DayCell | None, cx: int, cy: int, theme: Theme) -> str:
     """One grid cell: a flat base diamond (zero/no-data day) or a stacked
     isometric column — one prism "layer" per provider, bottom to top in
     the cell's own slug-ascending order (the VizStats-enforced order),
-    each layer's height proportional to its share of the day's (capped)
-    total. Segment heights use the same cumulative-prefix-rounding trick
+    each layer's height proportional to its share of the day's capped,
+    summed provider-attributed count. Provider counts may overlap, so this
+    intensity is deliberately not labeled as a unique-commit total. Segment
+    heights use the same cumulative-prefix-rounding trick
     as `_evidence_panel_svg` (gate-6 finding): independently rounding each
     segment can drift or go negative; rounding the running prefix keeps
     every layer >= 0px and the layers sum exactly to the column height.

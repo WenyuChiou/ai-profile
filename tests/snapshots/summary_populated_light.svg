@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="830" height="899" viewBox="0 0 830 899" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
 <title id="aiprofileSummaryTitle">AI Collaboration Summary — All time</title>
-<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI actor presences across 58 active AI days (author dates), 7 AI providers. Daily activity calendar 2026-04-22 to 2026-07-14, peak day 10 attributed commits. Generated 2026-07-14.</desc>
+<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI actor presences across 58 active AI days (author dates), 7 AI providers. Daily activity calendar 2026-04-22 to 2026-07-14, peak day summed provider-attributed count 10; provider counts may overlap. Generated 2026-07-14.</desc>
 <rect x="0.5" y="0.5" width="829" height="898" rx="8" fill="#fbfdff" stroke="#c2d3e5" stroke-width="1"/>
 <rect x="24" y="24" width="16" height="16" rx="3" fill="#fbfdff" stroke="#005cc5" stroke-width="1"/>
 <rect x="29" y="29" width="6" height="6" rx="1" fill="#005cc5"/>
