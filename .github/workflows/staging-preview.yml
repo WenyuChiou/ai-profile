@@ -1,5 +1,6 @@
 # Manual-only GitHub Pages staging preview for the pinned v0.4.6 release
-# candidate. An unprivileged build job rebuilds the candidate wheel with the
+# candidate (docs/reviews/promotion-eval-spec-v046-r5.md). An unprivileged
+# build job rebuilds the candidate wheel with the
 # frozen SOURCE_DATE_EPOCH, verifies the exact pinned digest, installs that
 # wheel into a fresh venv, renders the synthetic public-only dashboard, and
 # transfers only the recursively verified two-file staging root. A separate
@@ -47,7 +48,7 @@ jobs:
           python scripts/check_release_artifacts.py \
             --dist-dir dist \
             --expected-version 0.4.6 \
-            --expected-wheel-sha256 206d842840ebe67331e45017aa85ad3e8dfcd716699d3e19c383a3db28d4f75e
+            --expected-wheel-sha256 84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb
       - name: Render the staging dashboard from the installed candidate wheel
         run: |
           WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
@@ -94,7 +95,7 @@ jobs:
           assert manifest["fixture_id"] == "synthetic-two-provider-fixture-v1", manifest
           assert manifest["package_version"] == "0.4.6", manifest
           assert manifest["wheel_sha256"] == (
-              "206d842840ebe67331e45017aa85ad3e8dfcd716699d3e19c383a3db28d4f75e"
+              "84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb"
           ), manifest
           digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
           assert manifest["dashboard_sha256"] == digest, (manifest, digest)
@@ -173,7 +174,7 @@ jobs:
           assert manifest["fixture_id"] == "synthetic-two-provider-fixture-v1", manifest
           assert manifest["package_version"] == "0.4.6", manifest
           assert manifest["wheel_sha256"] == (
-              "206d842840ebe67331e45017aa85ad3e8dfcd716699d3e19c383a3db28d4f75e"
+              "84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb"
           ), manifest
           digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
           assert manifest["dashboard_sha256"] == digest, (manifest, digest)

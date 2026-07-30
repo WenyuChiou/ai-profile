@@ -1,7 +1,7 @@
 """Staging preview helper + manual-only Pages workflow guardrails.
 
-Pins the v0.4.6 R4 pre-registration contract
-(docs/reviews/promotion-eval-spec-v046-r4.md, Gate S): the helper is a
+Pins the v0.4.6 R5 pre-registration contract
+(docs/reviews/promotion-eval-spec-v046-r5.md, Gate S): the helper is a
 deterministic pure function of the wheel bytes and the installed renderer,
 writes exactly two files with computed digests, and the staging workflow
 stays manual-only, SHA-pinned, least-privilege, and digest-verified
@@ -30,7 +30,8 @@ staging = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(staging)
 
 #: The frozen v0.4.6 candidate digest (docs/reviews/promotion-candidate.json).
-PINNED_WHEEL_SHA256 = "206d842840ebe67331e45017aa85ad3e8dfcd716699d3e19c383a3db28d4f75e"
+PINNED_WHEEL_SHA256 = "84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb"
+PINNED_DASHBOARD_SHA256 = "17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192"
 
 _FAKE_WHEEL_BYTES = b"deterministic fake wheel bytes for staging preview tests\n"
 
@@ -236,6 +237,7 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
 
     # The workflow's hardcoded expectations must be the frozen candidate.
     assert manifest["wheel_sha256"] == PINNED_WHEEL_SHA256
+    assert manifest["dashboard_sha256"] == PINNED_DASHBOARD_SHA256
     assert manifest["version"] == "0.4.6"
     assert text.count(PINNED_WHEEL_SHA256) == 3  # artifact check + both job boundaries
     assert "--expected-version 0.4.6" in text
@@ -244,7 +246,7 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
     # Both digest verifications happen before anything is uploaded to Pages.
     upload_at = text.index("actions/upload-pages-artifact")
     assert text.rindex(PINNED_WHEEL_SHA256) < upload_at
-    assert text.count("17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192") == 2
+    assert text.count(PINNED_DASHBOARD_SHA256) == 2
     # The frozen ZIP timestamp is exported before the build it freezes.
     assert text.index('["source_date_epoch"]') < text.index("python -m build")
 
