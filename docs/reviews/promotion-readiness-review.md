@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 
-Candidate branch: `codex/v047-sdist-cleanup`
+Release source: protected `main`
 
 Application/package source commit:
 `4ce6af0d4e16da97c8f82546279e96d5c8c87327`
@@ -29,8 +29,8 @@ members.
 
 The full local suite passes at `603 passed, 4 skipped`; Ruff, README parity,
 sanctioned snapshot regeneration, Twine, the artifact contract, and
-clean-wheel release smoke pass. GitHub Actions run
-[30535142355](https://github.com/WenyuChiou/ai-profile/actions/runs/30535142355)
+clean-wheel release smoke pass. Protected-main GitHub Actions run
+[30538098102](https://github.com/WenyuChiou/ai-profile/actions/runs/30538098102)
 passed Python 3.11–3.14, the exact candidate build, and Ubuntu, Windows, and
 macOS onboarding against the same retained wheel.
 
@@ -42,11 +42,13 @@ passed responsiveness, 200% scaling, themes, pointer/keyboard filters,
 exact provider aggregates, focus, reduced motion, contrast, and non-color
 selection.
 
-The feature-branch Pages deployment was correctly rejected by the existing
-GitHub environment rule that permits deployment only from `main`; the
-unprivileged staging build itself passed. Therefore promotion remains
-conditional on a protected-main deployment and live browser replay before
-the release tag.
+The protected-main staging deployment is public, byte-identical to the
+pinned dashboard, and passed the complete 13/13 browser gate over HTTPS.
+All substantive product and public-staging gates are complete. The sole
+remaining pre-tag closure is mechanical: merge this docs-only authorization
+record, pass protected-main CI on that final tracked tree, and verify its
+rebuilt bundle. The product verdict is GO for Public Beta; tag authorization
+becomes effective only after that closure succeeds.
 
 ## Verification evidence
 
@@ -99,7 +101,7 @@ forbidden/private/generated/traversal members: 0
 
 The first Ubuntu candidate run failed closed against the deliberately stale
 v0.4.6 digest and revealed the canonical v0.4.7 wheel digest. After that
-digest was pinned consistently, run 30535142355 retained:
+digest was pinned consistently, preliminary branch run 30535142355 retained:
 
 ```text
 ai_profile_cli-0.4.7-py3-none-any.whl
@@ -110,9 +112,11 @@ SHA256SUMS
 Independent download verification confirmed the wheel digest, both license
 notices, metadata/version parity, checksum manifest, one archive root, and
 zero forbidden members. The preliminary retained sdist had 155 members.
-Because these promotion reports are themselves sdist members, that
-preliminary sdist is discarded after this report commit; the final CI run
-must retain and re-verify the rebuilt pair after the last tracked edit.
+Protected-main run 30538098102 rebuilt and re-verified the pair after the
+promotion evidence commit. Because this authorization record is also an
+sdist member, that candidate sdist is not the publishable final sdist. After
+this docs-only record merges, one last protected-main CI run must retain and
+re-verify the rebuilt pair; no tracked edit may follow before tagging.
 
 The wheel release smoke installed non-editably into a clean venv, confirmed
 version 0.4.7, completed `init`, `scan`, `aggregate`, and `render`, produced
@@ -121,7 +125,9 @@ hits, and reproduced every byte on a second render.
 
 ### CI and cross-platform onboarding
 
-Run 30535142355 passed:
+Protected-main run
+[30538098102](https://github.com/WenyuChiou/ai-profile/actions/runs/30538098102)
+passed:
 
 - release-candidate build and exact pinned wheel verification;
 - Python 3.11, 3.12, 3.13, and 3.14 full suites;
@@ -150,10 +156,12 @@ instruction.
 
 ### Staging, browser, and visual quality
 
-Staging workflow run
-[30535224447](https://github.com/WenyuChiou/ai-profile/actions/runs/30535224447)
-passed its unprivileged build and exact-byte transfer job. Its manifest
-contained:
+Protected-main staging workflow run
+[30538198622](https://github.com/WenyuChiou/ai-profile/actions/runs/30538198622)
+built, verified, transferred, and deployed the pinned candidate. The public
+[staging manifest](https://wenyuchiou.github.io/ai-profile/v0.4.7/staging-manifest.json)
+and [dashboard](https://wenyuchiou.github.io/ai-profile/v0.4.7/dashboard.html)
+both return HTTP 200. The manifest contains:
 
 ```text
 package_version     0.4.7
@@ -161,11 +169,10 @@ wheel_sha256        75b896c7a1bfa462d1caa6df7025bca79650e8ad48a006272e76eb9bfb56
 dashboard_sha256    17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192
 ```
 
-The deployment job executed no project code and was rejected before deploy
-because the `github-pages` environment allows only `main`. This protection
-remains unchanged.
-
-The exact transferred dashboard passed the local Playwright gate:
+The public dashboard bytes have SHA-256
+`17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192`,
+exactly matching the authorized manifest. The public HTTPS target passed the
+Playwright gate:
 
 ```text
 assertions: 13
@@ -211,21 +218,23 @@ Plex fallbacks, adjacent provider names/icons, and no downloaded fonts.
 
 ## Release authorization
 
-Before tag or publication, all of the following must complete:
+Completed substantive pre-tag gates:
 
-1. commit these final promotion reports;
-2. run final CI and independently verify the rebuilt retained sdist after
-   that last tracked edit;
-3. merge through protected `main`;
-4. deploy `/v0.4.7/` from `main` and replay the 13/13 browser gate against
-   the public URL;
-5. make no further tracked source edits before tagging.
+1. final promotion and dogfood reports committed and independently reviewed;
+2. protected-main CI passed Python 3.11–3.14 and three-platform onboarding;
+3. the retained protected-main candidate bundle passed checksums, Twine,
+   notice, version, and archive-member validation;
+4. `/v0.4.7/` deployed from protected `main`, with exact manifest and
+   dashboard digests;
+5. the public HTTPS dashboard passed all 13 browser assertions.
 
-The tag workflow must then build once, validate and retain one wheel/sdist
-pair, pass all three platform onboarding jobs, upload those exact bytes, and
-verify PyPI and GitHub Release digests. Any mismatch, cache/private member,
-privacy leak, or live failure cancels authorization.
+This authorization record is the final planned tracked edit before tagging.
+Its protected-main CI must pass and retain the same pinned wheel before the
+tag is created. The tag workflow must then build once, validate and retain
+one wheel/sdist pair, pass all three platform onboarding jobs, upload those
+exact bytes, and verify PyPI and GitHub Release digests. Any mismatch,
+cache/private member, privacy leak, or live failure cancels authorization.
 
 ## Final verdict
 
-**GO WITH CONDITIONS**
+**GO — PUBLIC BETA**
