@@ -14,9 +14,10 @@ and public visual design must remain unchanged from v0.4.6.
 - Version: `0.4.7`
 - Wheel: `ai_profile_cli-0.4.7-py3-none-any.whl`
 - Frozen `SOURCE_DATE_EPOCH`: `1785369600`
-- The canonical wheel SHA-256 is discovered by the first isolated Ubuntu
-  build, then pinned in `promotion-candidate.json`, CI, and staging before any
-  promotion evidence is accepted.
+- Canonical Ubuntu wheel SHA-256:
+  `75b896c7a1bfa462d1caa6df7025bca79650e8ad48a006272e76eb9bfb5667d8`
+  (discovered by the first isolated fail-closed candidate build, then pinned
+  before any promotion evidence was accepted).
 - The dashboard SHA-256 must remain
   `17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192`.
 
