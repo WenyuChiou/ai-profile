@@ -346,7 +346,7 @@ which is authoritative).
 - **v0.4.6 Public Beta is released and promotion-verified.** Its wheel and
   runtime are correct; its immutable sdist unintentionally contains
   non-sensitive Hypothesis cache data.
-- **v0.4.7 is the release candidate that corrects the v0.4.6 sdist.** It
+- **v0.4.7 Public Beta is released and live.** It corrects the v0.4.6 sdist,
   excludes generated/private working roots and makes the artifact contract
   reject unsafe paths, duplicate members, links, and special entries. Product
   behavior, ACE, aggregation, privacy modes, CLI, and renderers are unchanged.
@@ -360,8 +360,10 @@ which is authoritative).
   onboarding on Ubuntu, Windows, and macOS.
 - `docs/reviews/promotion-readiness-review.md` records
   **GO — PUBLIC BETA** after protected-main CI and Pages staging. The tag
-  workflow, live PyPI/GitHub Release verification, and maintainer Profile
-  refresh remain operational release steps, not unresolved product findings.
+  workflow, PyPI/GitHub Release byte verification, clean PyPI install, and
+  maintainer Profile refresh have completed successfully. The live Profile
+  dashboard passed its responsive, theme, provider-filter, and keyboard-focus
+  browser smoke after deployment.
 - Future import, reconciliation, richer views, GitHub API integration, and
   any configuration CLI remain deferred in ROADMAP. They are not part of
   the v0.4.7 product boundary.
