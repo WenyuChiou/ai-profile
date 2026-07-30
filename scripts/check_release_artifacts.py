@@ -7,17 +7,49 @@ import argparse
 import ast
 import hashlib
 import re
+import stat
 import tarfile
 import tomllib
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_LICENSE_FILES = ("LICENSE", "THIRD_PARTY_NOTICES.md")
+GENERATED_CACHE_DIRS = frozenset(
+    {
+        ".hypothesis",
+        ".mypy_cache",
+        ".nox",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".tox",
+        ".venv",
+        "__pycache__",
+    }
+)
+FORBIDDEN_ROOT_ENTRIES = frozenset({".ai", ".artifact", ".claude", "build", "dist"})
 
 
 class ArtifactContractError(RuntimeError):
     """A distribution artifact does not satisfy the release contract."""
+
+
+def _validated_member_path(name: str, *, label: str) -> PurePosixPath:
+    path = PurePosixPath(name)
+    canonical = path.as_posix()
+    if name.endswith("/") and canonical != ".":
+        canonical += "/"
+    if (
+        not path.parts
+        or path.is_absolute()
+        or "\x00" in name
+        or "\\" in name
+        or ".." in path.parts
+        or re.match(r"[A-Za-z]:", path.parts[0])
+        or name != canonical
+    ):
+        raise ArtifactContractError(f"{label} member path is unsafe: {name}")
+    return path
 
 
 def _metadata_version(text: str) -> str:
@@ -58,7 +90,26 @@ def _one_artifact(dist_dir: Path, pattern: str, label: str) -> Path:
 
 def _check_wheel(path: Path) -> str:
     with zipfile.ZipFile(path) as archive:
-        names = archive.namelist()
+        members = archive.infolist()
+        names = [member.filename for member in members]
+        raw_names = [member.orig_filename for member in members]
+        if len(names) != len(set(names)) or len(raw_names) != len(set(raw_names)):
+            raise ArtifactContractError(f"{path.name}: duplicate wheel member")
+        for member in members:
+            _validated_member_path(
+                member.orig_filename,
+                label=f"{path.name}: wheel",
+            )
+            mode = (member.external_attr >> 16) & 0xFFFF
+            file_type = stat.S_IFMT(mode)
+            if file_type not in {0, stat.S_IFDIR, stat.S_IFREG}:
+                raise ArtifactContractError(
+                    f"{path.name}: wheel member type is forbidden: {member.filename}"
+                )
+            if member.is_dir() != (file_type == stat.S_IFDIR) and file_type != 0:
+                raise ArtifactContractError(
+                    f"{path.name}: wheel member type is inconsistent: {member.filename}"
+                )
         metadata_names = [name for name in names if name.endswith(".dist-info/METADATA")]
         if len(metadata_names) != 1:
             raise ArtifactContractError(f"{path.name}: expected one METADATA file")
@@ -72,11 +123,44 @@ def _check_wheel(path: Path) -> str:
 
 def _check_sdist(path: Path) -> str:
     with tarfile.open(path, mode="r:gz") as archive:
-        names = archive.getnames()
+        members = archive.getmembers()
+        names = [member.name for member in members]
+        if len(names) != len(set(names)):
+            raise ArtifactContractError(f"{path.name}: duplicate sdist member")
+        for member in members:
+            _validated_member_path(member.name, label=f"{path.name}: sdist")
+            if member.type not in {tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE}:
+                raise ArtifactContractError(
+                    f"{path.name}: sdist member type is forbidden: {member.name}"
+                )
         roots = {name.split("/", 1)[0] for name in names if "/" in name}
         if len(roots) != 1:
             raise ArtifactContractError(f"{path.name}: expected one archive root")
         root = next(iter(roots))
+        for name in names:
+            try:
+                relative = PurePosixPath(name).relative_to(root)
+            except ValueError as exc:
+                raise ArtifactContractError(
+                    f"{path.name}: member is outside the archive root: {name}"
+                ) from exc
+            if ".." in relative.parts:
+                raise ArtifactContractError(
+                    f"{path.name}: member is outside the archive root: {name}"
+                )
+            if relative.parts and relative.parts[0] in FORBIDDEN_ROOT_ENTRIES:
+                raise ArtifactContractError(
+                    f"{path.name}: private or generated root member is forbidden: {relative}"
+                )
+            if (
+                GENERATED_CACHE_DIRS.intersection(relative.parts)
+                or relative.name == ".coverage"
+                or relative.name.startswith(".coverage.")
+                or relative.suffix in {".pyc", ".pyo"}
+            ):
+                raise ArtifactContractError(
+                    f"{path.name}: generated cache member is forbidden: {relative}"
+                )
         for required in REQUIRED_LICENSE_FILES:
             if f"{root}/{required}" not in names:
                 raise ArtifactContractError(f"{path.name}: missing {required}")
