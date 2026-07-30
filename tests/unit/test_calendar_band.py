@@ -381,18 +381,42 @@ def test_polygon_points_carry_no_float_noise():
 
 
 # ---------------------------------------------------------------------------
-# 6. <desc> summary (window span + peak day total) and ASCII sweep.
+# 6. <desc> summary (window span + peak summed provider count) and ASCII sweep.
 # ---------------------------------------------------------------------------
 
 
-def test_desc_suffix_states_window_span_and_peak_day_total():
+def test_desc_suffix_states_window_span_and_peak_provider_total():
     suffix = _calendar_desc_suffix(FIXTURE_MAIN)
     assert suffix != ""
     assert suffix.isascii()
     assert "2026-04-22 to 2026-07-14" in suffix
     peak = max(sum(dc.attributed_commits for dc in cell.counts) for cell in _MAIN_DAILY)
     assert peak == 10  # the 2026-07-04 anthropic=10 day
-    assert f"peak day {peak} attributed commits" in suffix
+    assert f"peak day summed provider-attributed count {peak}" in suffix
+    assert "provider counts may overlap" in suffix
+
+
+def test_desc_suffix_does_not_present_overlapping_provider_counts_as_unique_commits():
+    overlap = dataclasses.replace(
+        FIXTURE_MAIN,
+        daily=(
+            DayCell(
+                date="2026-07-14",
+                counts=(
+                    DayCount(provider="anthropic", attributed_commits=1),
+                    DayCount(provider="openai", attributed_commits=1),
+                ),
+                total_commits=1,
+                ai_commits=1,
+            ),
+        ),
+    )
+
+    suffix = _calendar_desc_suffix(overlap)
+
+    assert "peak day summed provider-attributed count 2" in suffix
+    assert "provider counts may overlap" in suffix
+    assert "peak day 2 attributed commits" not in suffix
 
 
 def test_desc_suffix_empty_when_no_daily_series():

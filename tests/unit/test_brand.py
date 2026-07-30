@@ -12,7 +12,9 @@ real schema constants) could silently go stale if the schema ever changes.
 
 from __future__ import annotations
 
+import ast
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.render import summary_svg
@@ -36,6 +38,7 @@ from aiprofile.viz import (
 )
 
 GENERATED_ON = "2026-07-22"
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _single_provider_stats(slug: str, display_name: str) -> VizStats:
@@ -66,6 +69,27 @@ def _single_provider_stats(slug: str, display_name: str) -> VizStats:
         ),
         generated_on=GENERATED_ON,
     )
+
+
+def test_vendor_tool_card_backgrounds_match_runtime_themes():
+    """The standalone vendoring tool intentionally mirrors theme values
+    without importing the render package, so this test owns the drift check."""
+    tree = ast.parse(
+        (ROOT / "scripts" / "vendor_brand_icons.py").read_text(encoding="utf-8")
+    )
+    assignments = {
+        node.targets[0].id: ast.literal_eval(node.value)
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+        and node.targets[0].id in {"LIGHT_CARD_BG", "DARK_CARD_BG"}
+    }
+
+    assert assignments == {
+        "LIGHT_CARD_BG": THEMES["github-light"].bg,
+        "DARK_CARD_BG": THEMES["github-dark"].bg,
+    }
 
 
 # ---------------------------------------------------------------------------

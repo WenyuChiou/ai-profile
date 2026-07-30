@@ -135,9 +135,10 @@ def test_dashboard_exposes_provider_filter_without_mixing_metric_units():
     assert "row ? row.actor_presences : data.totals.ai_actor_presences" in html
     assert "row ? row.active_days : data.totals.active_ai_days" in html
     assert "Provider totals may overlap" in html
-    assert "Unknown commits · all records · never assumed human" in html
+    assert "Unattributed commits" in html
+    assert "No explicit AI or human declaration recorded." in html
     assert "published\n          all-provider record" in html
-    assert "unknown commits remain all-records" in html
+    assert "unattributed commits remain all records" in html
     assert "All ACE records" in html
     assert "publishable activity only" in html
     assert "Headline aggregates combine publishable and aggregate-only activity" in html
@@ -222,25 +223,45 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     assert ".generated {\n      color: var(--muted);" in html
 
 
+def test_dashboard_stylesheet_has_balanced_rule_braces():
+    """A missing CSS close brace can silently swallow every following rule."""
+    html = render_dashboard(_stats())
+    stylesheet = html.split("<style>", 1)[1].split("</style>", 1)[0]
+
+    assert stylesheet.count("{") == stylesheet.count("}")
+
+
 def test_dashboard_uses_a_distinctive_local_typography_system():
     """The visual voice stays technical-editorial without network fonts."""
     html = render_dashboard(_stats())
 
-    assert (
-        '--display: Bahnschrift, "DIN Alternate", "Franklin Gothic Medium",'
-        in html
-    )
-    assert '--body: Candara, Corbel, "Avenir Next", Avenir, Ubuntu,' in html
-    assert (
-        '--mono: "Cascadia Mono", "SFMono-Regular", "Ubuntu Mono",'
-        in html
-    )
+    assert '--display: "IBM Plex Sans Condensed", "Aptos Display", "Segoe UI",' in html
+    assert '--body: "IBM Plex Sans", "Aptos", "Segoe UI", "Noto Sans",' in html
+    assert '--mono: "IBM Plex Mono", "Cascadia Mono", "SFMono-Regular",' in html
     assert "font-variant-numeric: lining-nums tabular-nums;" in html
     assert "Inter" not in html
     assert "Space Grotesk" not in html
     assert "radial-gradient(" not in html
-    assert "background-size: 2.5rem 2.5rem;" in html
+    assert "linear-gradient(" not in html
+    assert "repeating-linear-gradient(" not in html
+    assert ".hero-panel::after" not in html
+    assert "background: var(--canvas);" in html
+    assert ".hero-panel {" in html
+    assert "border-top: 0.25rem solid var(--active-accent, var(--accent));" in html
     assert "font-src 'none'" in html
+
+
+def test_provider_filters_use_local_glyphs_with_visible_text_labels():
+    """Provider choice is recognizable without making color carry the meaning."""
+    html = render_dashboard(_stats())
+
+    assert "const providerGlyphs = {" in html
+    assert "function providerIcon(slug, label, variant)" in html
+    assert 'providerIcon(row.provider, row.display_name, "filter")' in html
+    assert 'providerIcon(row.provider, row.display_name, "row")' in html
+    assert "document.createElementNS(SVG_NS, \"path\")" in html
+    assert "document.createTextNode(row.display_name)" in html
+    assert ".provider-icon--row {" in html
 
 
 def test_mobile_provider_filters_wrap_without_horizontal_scrolling():
@@ -273,6 +294,9 @@ def _contrast(first: str, second: str) -> float:
     return (high + 0.05) / (low + 0.05)
 
 
+_DARK_MARK_SURFACE = "#111923"
+
+
 @pytest.mark.parametrize(
     "accent",
     [
@@ -291,20 +315,27 @@ def _contrast(first: str, second: str) -> float:
 )
 def test_provider_and_evidence_accents_clear_three_to_one_in_both_themes(accent):
     assert _contrast(accent, "#fbfdff") >= 3
-    assert _contrast(accent, "#111923") >= 3
+    assert _contrast(accent, _DARK_MARK_SURFACE) >= 3
     if accent not in {"#bf8700", "#6e7781"}:
         # Provider accents can become the large hero value, so validate the
         # lightest rendered pastel-gradient pixel rather than only a flat token.
         assert _contrast(accent, "#edf9ff") >= 3
 
 
+def test_dark_mark_surfaces_use_the_validated_contrast_background():
+    html = render_dashboard(_stats())
+
+    assert html.count(f"--surface: {_DARK_MARK_SURFACE};") == 2
+    assert html.count(f"--grid-empty: {_DARK_MARK_SURFACE};") == 2
+
+
 @pytest.mark.parametrize(
     ("foreground", "background"),
     [
-        ("#24292f", "#fbfdff"),
-        ("#57606a", "#fbfdff"),
-        ("#f0f6fc", "#111923"),
-        ("#a3b3c2", "#111923"),
+        ("#172033", "#fbfdff"),
+        ("#52647a", "#fbfdff"),
+        ("#eff6ff", _DARK_MARK_SURFACE),
+        ("#b5c7da", _DARK_MARK_SURFACE),
     ],
 )
 def test_primary_and_muted_text_clear_wcag_aa(foreground, background):
@@ -314,8 +345,8 @@ def test_primary_and_muted_text_clear_wcag_aa(foreground, background):
 @pytest.mark.parametrize(
     ("active_border", "empty_cell"),
     [
-        ("#57606a", "#e7f0f8"),
-        ("#a5d6ff", "#22303d"),
+        ("#52647a", "#e5eef7"),
+        ("#b5ddff", _DARK_MARK_SURFACE),
     ],
 )
 def test_active_calendar_boundaries_clear_three_to_one(active_border, empty_cell):
@@ -325,8 +356,8 @@ def test_active_calendar_boundaries_clear_three_to_one(active_border, empty_cell
 def test_calendar_marks_use_contrasting_boundaries_not_translucent_borders():
     html = render_dashboard(_stats())
 
-    assert "--calendar-active-border: #57606a" in html
-    assert "--calendar-active-border: #a5d6ff" in html
+    assert "--calendar-active-border: #52647a" in html
+    assert "--calendar-active-border: #b5ddff" in html
     assert "border-color: var(--calendar-active-border)" in html
     assert "cell.style.borderColor = rgba" not in html
 

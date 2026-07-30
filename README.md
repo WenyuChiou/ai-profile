@@ -30,8 +30,9 @@ dashboard—without uploading source code or guessing attribution.
   self-contained dashboard, and a machine-readable public summary.
 
 `ai-profile` is not an AI code detector. Commits with no explicit evidence
-stay `unknown`; they are never silently counted as human or assigned to a
-provider.
+stay `unknown` (shown as **Unattributed** in the UI); they are never silently
+counted as human or assigned to a provider. Add `AI-*` trailers to future
+commits when you want their AI participation recorded.
 
 ## A real GitHub Profile example
 
@@ -267,6 +268,11 @@ Repeat `AI-Provider:` without a blank line between actor groups to declare
 another AI actor in the same commit. One commit can therefore equal one
 unique AI-attributed commit and multiple actor presences. Use
 `AI-Mode: Human-Only` only for an explicitly human-only commit.
+
+Provider declarations are normalized to a canonical provider identity
+(typically company-oriented). The dashboard may show the more recognizable
+product display name instead: `AI-Provider: Anthropic` is shown as **Claude**.
+This is a label-only mapping; it does not change aggregation or counts.
 
 ## Privacy
 

@@ -1,60 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
-<rect width="1280" height="640" fill="#ffffff"/>
-<rect x="0" y="632" width="1280" height="8" fill="#B74C2A"/>
-<text x="640" y="130" text-anchor="middle" font-family="Bahnschrift, 'DIN Alternate', 'Franklin Gothic Medium', 'DejaVu Sans Condensed', 'Liberation Sans Narrow', 'Trebuchet MS', sans-serif" font-size="72" font-weight="700" fill="#1f2328">ai-profile</text>
-<text x="640" y="182" text-anchor="middle" font-family="'Trebuchet MS', Corbel, 'Avenir Next', Avenir, Ubuntu, sans-serif" font-size="28" fill="#59636e">Prove your AI collaboration. Privately.</text>
-<polygon points="555,283 589,300 555,317 521,300" fill="#eff2f5"/>
-<polygon points="521,300 555,317 521,334 487,317" fill="#eff2f5"/>
-<polygon points="589,300 623,317 589,334 555,317" fill="#eff2f5"/>
-<polygon points="487,317 521,334 487,351 453,334" fill="#eff2f5"/>
-<polygon points="555,317 589,334 555,351 521,334" fill="#eff2f5"/>
-<polygon points="589,334 623,351 623,329 589,312" fill="#715d8e"/>
-<polygon points="657,334 623,351 623,329 657,312" fill="#8E75B2"/>
-<polygon points="623,295 657,312 623,329 589,312" fill="#B79FDB"/>
-<polygon points="453,334 487,351 453,368 419,351" fill="#eff2f5"/>
-<polygon points="487,351 521,368 521,338 487,321" fill="#0754ae"/>
-<polygon points="555,351 521,368 521,338 555,321" fill="#0969da"/>
-<polygon points="521,304 555,321 521,338 487,321" fill="#4493f8"/>
-<polygon points="589,334 623,351 589,368 555,351" fill="#eff2f5"/>
-<polygon points="657,334 691,351 657,368 623,351" fill="#eff2f5"/>
-<polygon points="487,351 521,368 487,385 453,368" fill="#eff2f5"/>
-<polygon points="555,351 589,368 555,385 521,368" fill="#eff2f5"/>
-<polygon points="589,368 623,385 623,319 589,302" fill="#923c21"/>
-<polygon points="657,368 623,385 623,319 657,302" fill="#B74C2A"/>
-<polygon points="623,285 657,302 623,319 589,302" fill="#D97757"/>
-<polygon points="691,351 725,368 691,385 657,368" fill="#eff2f5"/>
-<polygon points="521,368 555,385 521,402 487,385" fill="#eff2f5"/>
-<polygon points="589,368 623,385 589,402 555,385" fill="#eff2f5"/>
-<polygon points="657,368 691,385 657,402 623,385" fill="#eff2f5"/>
-<polygon points="691,385 725,402 725,354 691,337" fill="#923c21"/>
-<polygon points="759,385 725,402 725,354 759,337" fill="#B74C2A"/>
-<polygon points="725,320 759,337 725,354 691,337" fill="#D97757"/>
-<polygon points="555,385 589,402 555,419 521,402" fill="#eff2f5"/>
-<polygon points="623,385 657,402 623,419 589,402" fill="#eff2f5"/>
-<polygon points="691,385 725,402 691,419 657,402" fill="#eff2f5"/>
-<polygon points="759,385 793,402 759,419 725,402" fill="#eff2f5"/>
-<polygon points="555,419 589,436 589,396 555,379" fill="#0754ae"/>
-<polygon points="623,419 589,436 589,396 623,379" fill="#0969da"/>
-<polygon points="589,362 623,379 589,396 555,379" fill="#4493f8"/>
-<polygon points="657,402 691,419 657,436 623,419" fill="#eff2f5"/>
-<polygon points="725,402 759,419 725,436 691,419" fill="#eff2f5"/>
-<polygon points="793,402 827,419 793,436 759,419" fill="#eff2f5"/>
-<polygon points="623,419 657,436 623,453 589,436" fill="#eff2f5"/>
-<polygon points="657,436 691,453 691,373 657,356" fill="#923c21"/>
-<polygon points="725,436 691,453 691,373 725,356" fill="#B74C2A"/>
-<polygon points="691,339 725,356 691,373 657,356" fill="#D97757"/>
-<polygon points="725,436 759,453 759,423 725,406" fill="#715d8e"/>
-<polygon points="793,436 759,453 759,423 793,406" fill="#8E75B2"/>
-<polygon points="759,389 793,406 759,423 725,406" fill="#B79FDB"/>
-<polygon points="827,419 861,436 827,453 793,436" fill="#eff2f5"/>
-<polygon points="657,436 691,453 657,470 623,453" fill="#eff2f5"/>
-<polygon points="725,436 759,453 725,470 691,453" fill="#eff2f5"/>
-<polygon points="793,436 827,453 793,470 759,453" fill="#eff2f5"/>
-<polygon points="691,453 725,470 691,487 657,470" fill="#eff2f5"/>
-<polygon points="759,453 793,470 759,487 725,470" fill="#eff2f5"/>
-<polygon points="725,470 759,487 725,504 691,487" fill="#eff2f5"/>
-<rect x="480" y="556" width="10" height="10" rx="2" fill="#B74C2A"/>
-<rect x="498" y="556" width="10" height="10" rx="2" fill="#8E75B2"/>
-<rect x="516" y="556" width="10" height="10" rx="2" fill="#0969da"/>
-<text x="538" y="566" font-family="'Cascadia Mono', 'SFMono-Regular', 'Ubuntu Mono', 'DejaVu Sans Mono', Consolas, monospace" font-size="19" fill="#59636e">explicit git provenance - local-first - never inferred</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="ai-profile: show the evidence behind your AI collaboration">
+<rect width="1280" height="640" fill="#0b1625"/>
+<rect x="0" y="0" width="1280" height="640" fill="none" stroke="#34526f" stroke-width="2"/>
+<rect x="176" y="178" width="6" height="278" rx="3" fill="#8bc8ff"/>
+<text x="216" y="244" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="18" font-weight="600" letter-spacing="2.4" fill="#8bc8ff">AI COLLABORATION / EVIDENCE LEDGER</text>
+<text x="216" y="344" font-family="'IBM Plex Sans Condensed', 'Aptos Display', 'Segoe UI', sans-serif" font-size="82" font-weight="700" letter-spacing="-2.6" fill="#eff6ff">ai-profile</text>
+<text x="218" y="394" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', sans-serif" font-size="27" fill="#b5c7da">Show the evidence behind your AI collaboration.</text>
+<text x="218" y="452" font-family="'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace" font-size="15" font-weight="600" letter-spacing="1.1" fill="#fae17d">EXPLICIT · LOCAL-FIRST · PRIVATE</text>
 </svg>

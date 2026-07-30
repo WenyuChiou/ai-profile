@@ -1,13 +1,15 @@
-# Default-branch bootstrap stub for the manual v0.4.6 staging preview.
-# GitHub only offers workflow_dispatch for a workflow whose file exists on
-# the default branch, so this stub registers the staging-preview path and
-# nothing more. It is deliberately inert: workflow_dispatch-only, no
-# checkout, no secret access, no Pages deployment, no artifact upload, no
-# third-party actions, no network or repository writes, and an empty
-# permissions block. Dispatch the workflow with the v0.4.6 candidate ref
-# instead — the candidate-owned .github/workflows/staging-preview.yml
-# verifies the pinned candidate wheel and deploys the safe synthetic
-# staging artifact.
+# Manual-only GitHub Pages staging preview for the pinned v0.4.6 release
+# candidate (docs/reviews/promotion-eval-spec-v046-r5.md). An unprivileged
+# build job rebuilds the candidate wheel with the
+# frozen SOURCE_DATE_EPOCH, verifies the exact pinned digest, installs that
+# wheel into a fresh venv, renders the synthetic public-only dashboard, and
+# transfers only the recursively verified two-file staging root. A separate
+# least-privilege job deploys those already-verified bytes without checking
+# out or executing project code. The browser matrix runs at
+# https://wenyuchiou.github.io/ai-profile/v0.4.6/dashboard.html
+# Guardrails are pinned by tests/unit/test_staging_preview.py: never
+# triggered by push/pull_request/schedule, never from a fork, and no package
+# installation shares a job with Pages/OIDC authority.
 name: staging-preview
 
 on:
@@ -15,13 +17,180 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: staging-preview-pages
+  cancel-in-progress: false
+
 jobs:
-  refuse-default-branch-dispatch:
-    name: Refuse default-branch dispatch
+  build:
+    name: Build and verify the v0.4.6 staging preview
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
+    if: github.repository == 'WenyuChiou/ai-profile'
+    permissions:
+      contents: read
     steps:
-      - name: Fail with candidate-ref dispatch instructions
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Build and verify the exact pinned candidate wheel
         run: |
-          echo "::error title=staging-preview bootstrap::This run used the default-branch bootstrap stub, which deploys nothing. Re-dispatch .github/workflows/staging-preview.yml with the v0.4.6 candidate ref - the candidate-owned workflow verifies the pinned candidate wheel and deploys the safe synthetic staging artifact."
-          exit 1
+          python -m pip install build==1.4.3 twine==6.2.0
+          SOURCE_DATE_EPOCH="$(python -c 'import json; print(json.load(open("docs/reviews/promotion-candidate.json", encoding="utf-8"))["source_date_epoch"])')"
+          export SOURCE_DATE_EPOCH
+          python -m build
+          python -m twine check dist/*
+          python scripts/check_release_artifacts.py \
+            --dist-dir dist \
+            --expected-version 0.4.6 \
+            --expected-wheel-sha256 84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb
+      - name: Render the staging dashboard from the installed candidate wheel
+        run: |
+          STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
+          WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
+          python -m venv "$RUNNER_TEMP/staging-venv"
+          "$RUNNER_TEMP/staging-venv/bin/python" -m pip install "$WHEEL"
+          "$RUNNER_TEMP/staging-venv/bin/python" scripts/render_staging_dashboard.py \
+            --wheel "$WHEEL" \
+            --out "$STAGING_ROOT/v0.4.6"
+      - name: Verify the exact staging tree and pinned output digests
+        run: |
+          STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
+          export STAGING_ROOT
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["STAGING_ROOT"])
+          assert root.is_dir() and not root.is_symlink()
+          entries = sorted(
+              (
+                  path.relative_to(root).as_posix(),
+                  "dir" if path.is_dir() else "file",
+              )
+              for path in root.rglob("*")
+          )
+          assert entries == [
+              ("v0.4.6", "dir"),
+              ("v0.4.6/dashboard.html", "file"),
+              ("v0.4.6/staging-manifest.json", "file"),
+          ], entries
+          assert not any(path.is_symlink() for path in root.rglob("*"))
+          staging = root / "v0.4.6"
+          manifest = json.loads(
+              (staging / "staging-manifest.json").read_text(encoding="utf-8")
+          )
+          assert set(manifest) == {
+              "format_version",
+              "package_version",
+              "wheel_sha256",
+              "dashboard_sha256",
+              "fixture_id",
+          }, manifest
+          assert manifest["format_version"] == "aiprofile-staging-manifest/1", manifest
+          assert manifest["fixture_id"] == "synthetic-two-provider-fixture-v1", manifest
+          assert manifest["package_version"] == "0.4.6", manifest
+          assert manifest["wheel_sha256"] == (
+              "84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb"
+          ), manifest
+          digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
+          assert manifest["dashboard_sha256"] == digest, (manifest, digest)
+          assert digest == (
+              "17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192"
+          ), digest
+          canonical_manifest = (
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+          ).encode("utf-8")
+          assert (staging / "staging-manifest.json").read_bytes() == canonical_manifest
+          print("exact staging tree verified against pinned wheel and dashboard digests")
+          PY
+      - name: Transfer only the verified staging root
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: staging-preview-${{ github.sha }}
+          path: ${{ runner.temp }}/aiprofile-staging
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    name: Deploy the verified v0.4.6 staging preview
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.repository == 'WenyuChiou/ai-profile'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download the verified staging root
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: staging-preview-${{ github.sha }}
+          path: ${{ runner.temp }}/aiprofile-staging
+      - name: Re-verify transferred bytes without executing project code
+        run: |
+          STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
+          export STAGING_ROOT
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["STAGING_ROOT"])
+          assert root.is_dir() and not root.is_symlink()
+          entries = sorted(
+              (
+                  path.relative_to(root).as_posix(),
+                  "dir" if path.is_dir() else "file",
+              )
+              for path in root.rglob("*")
+          )
+          assert entries == [
+              ("v0.4.6", "dir"),
+              ("v0.4.6/dashboard.html", "file"),
+              ("v0.4.6/staging-manifest.json", "file"),
+          ], entries
+          assert not any(path.is_symlink() for path in root.rglob("*"))
+          staging = root / "v0.4.6"
+          manifest = json.loads(
+              (staging / "staging-manifest.json").read_text(encoding="utf-8")
+          )
+          assert set(manifest) == {
+              "format_version",
+              "package_version",
+              "wheel_sha256",
+              "dashboard_sha256",
+              "fixture_id",
+          }, manifest
+          assert manifest["format_version"] == "aiprofile-staging-manifest/1", manifest
+          assert manifest["fixture_id"] == "synthetic-two-provider-fixture-v1", manifest
+          assert manifest["package_version"] == "0.4.6", manifest
+          assert manifest["wheel_sha256"] == (
+              "84aa13766c70ad082fe70e4e860f2b15f77472826abbc579531376d5cdc4bcdb"
+          ), manifest
+          digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
+          assert manifest["dashboard_sha256"] == digest, (manifest, digest)
+          assert digest == (
+              "17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192"
+          ), digest
+          canonical_manifest = (
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+          ).encode("utf-8")
+          assert (staging / "staging-manifest.json").read_bytes() == canonical_manifest
+          print("transferred staging bytes match the pinned release candidate")
+          PY
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: ${{ runner.temp }}/aiprofile-staging
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        id: deployment
