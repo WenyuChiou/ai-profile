@@ -343,31 +343,27 @@ which is authoritative).
 
 - v0.4.2 was published as the immutable wheel-notice correction. Its package
   artifacts and tag remain unchanged.
-- **v0.4.5 Public Beta is released and promotion-verified.** v0.4.4 remains
-  available as its immutable predecessor.
-- v0.4.5 refines the dashboard and SVG family with pale blue and pale yellow
-  data surfaces, distinctive local cross-platform typography, clearer
-  hierarchy, provider filters, and newest-first keyboard navigation. Data,
-  privacy, schema, aggregation, CLI, and deterministic renderer contracts are
-  unchanged.
+- **v0.4.6 Public Beta is released and promotion-verified.** Its wheel and
+  runtime are correct; its immutable sdist unintentionally contains
+  non-sensitive Hypothesis cache data.
+- **v0.4.7 is the release candidate that corrects the v0.4.6 sdist.** It
+  excludes generated/private working roots and makes the artifact contract
+  reject unsafe paths, duplicate members, links, and special entries. Product
+  behavior, ACE, aggregation, privacy modes, CLI, and renderers are unchanged.
 - The canonical release bundle is built from a clean Ubuntu checkout with a
   manifest-frozen `SOURCE_DATE_EPOCH`; Windows and macOS smoke those retained
   bytes rather than rebuilding platform-specific ZIP metadata.
-- The published wheel digest is
-  `c03cbf694737bcf53ee44e88b0ddd4feb6ef4d68226a3ff372b03bb5051cff8b`.
-  PyPI and GitHub Release serve the verified bytes. The release passed 4/4
-  README-only roles, 816 cross-file/cross-encoding privacy checks, a 12-state
-  browser matrix with 36 provider states over byte-identical renderer output,
-  and all eight protected checks including Ubuntu/Windows/macOS onboarding.
-- The maintainer Profile was regenerated from live PyPI v0.4.5 and merged at
-  `41a1ed9`. The 53,288-comparison real-output privacy sweep has zero hits;
-  Pages serves all eight canonical Git blobs byte-for-byte.
-- Final promotion verdict:
-  `docs/reviews/promotion-readiness-review.md` records
-  **GO — PUBLIC BETA** with no unresolved Critical or High findings.
+- The pinned v0.4.7 wheel digest is
+  `75b896c7a1bfa462d1caa6df7025bca79650e8ad48a006272e76eb9bfb5667d8`.
+  The candidate passed 4/4 README-only roles, zero privacy-canary hits, a
+  13/13 browser matrix, Python 3.11–3.14, and exact-wheel onboarding on
+  Ubuntu, Windows, and macOS.
+- `docs/reviews/promotion-readiness-review.md` records
+  **GO WITH CONDITIONS** until final post-report CI, protected-main Pages
+  staging, live release verification, and maintainer Profile refresh finish.
 - Future import, reconciliation, richer views, GitHub API integration, and
   any configuration CLI remain deferred in ROADMAP. They are not part of
-  the v0.4.5 product boundary.
+  the v0.4.7 product boundary.
 
 ## Pointers
 

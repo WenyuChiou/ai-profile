@@ -32,6 +32,8 @@ below.
 - Exclude generated test, coverage, environment, and bytecode caches from
   source distributions, and make the release artifact contract reject any
   archive containing them.
+- Reject non-canonical, duplicate, linked, and special archive members before
+  release so wheel and source-distribution paths remain contained and regular.
 - Correct the immutable v0.4.6 source-distribution packaging issue, which
   included non-sensitive Hypothesis cache data. The v0.4.6 wheel and runtime
   package were unaffected.

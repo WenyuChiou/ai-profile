@@ -9,7 +9,7 @@ disagree, docs win and the code is the bug.
 ## Quality gates (must stay green after every change)
 
 - `python -m pytest tests -p no:cacheprovider` — full suite; state the
-  count you observe (as of 2026-07-30: 586 passed, 4 skipped — three
+  count you observe (as of 2026-07-30: 603 passed, 4 skipped — three
   skips are POSIX-only permission fixtures on Windows and one requires
   a case-sensitive filesystem; if your run differs, update this
   line in the same commit).

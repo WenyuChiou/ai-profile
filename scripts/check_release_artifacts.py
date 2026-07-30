@@ -7,6 +7,7 @@ import argparse
 import ast
 import hashlib
 import re
+import stat
 import tarfile
 import tomllib
 import zipfile
@@ -31,6 +32,24 @@ FORBIDDEN_ROOT_ENTRIES = frozenset({".ai", ".artifact", ".claude", "build", "dis
 
 class ArtifactContractError(RuntimeError):
     """A distribution artifact does not satisfy the release contract."""
+
+
+def _validated_member_path(name: str, *, label: str) -> PurePosixPath:
+    path = PurePosixPath(name)
+    canonical = path.as_posix()
+    if name.endswith("/") and canonical != ".":
+        canonical += "/"
+    if (
+        not path.parts
+        or path.is_absolute()
+        or "\x00" in name
+        or "\\" in name
+        or ".." in path.parts
+        or re.match(r"[A-Za-z]:", path.parts[0])
+        or name != canonical
+    ):
+        raise ArtifactContractError(f"{label} member path is unsafe: {name}")
+    return path
 
 
 def _metadata_version(text: str) -> str:
@@ -71,7 +90,26 @@ def _one_artifact(dist_dir: Path, pattern: str, label: str) -> Path:
 
 def _check_wheel(path: Path) -> str:
     with zipfile.ZipFile(path) as archive:
-        names = archive.namelist()
+        members = archive.infolist()
+        names = [member.filename for member in members]
+        raw_names = [member.orig_filename for member in members]
+        if len(names) != len(set(names)) or len(raw_names) != len(set(raw_names)):
+            raise ArtifactContractError(f"{path.name}: duplicate wheel member")
+        for member in members:
+            _validated_member_path(
+                member.orig_filename,
+                label=f"{path.name}: wheel",
+            )
+            mode = (member.external_attr >> 16) & 0xFFFF
+            file_type = stat.S_IFMT(mode)
+            if file_type not in {0, stat.S_IFDIR, stat.S_IFREG}:
+                raise ArtifactContractError(
+                    f"{path.name}: wheel member type is forbidden: {member.filename}"
+                )
+            if member.is_dir() != (file_type == stat.S_IFDIR) and file_type != 0:
+                raise ArtifactContractError(
+                    f"{path.name}: wheel member type is inconsistent: {member.filename}"
+                )
         metadata_names = [name for name in names if name.endswith(".dist-info/METADATA")]
         if len(metadata_names) != 1:
             raise ArtifactContractError(f"{path.name}: expected one METADATA file")
@@ -85,7 +123,16 @@ def _check_wheel(path: Path) -> str:
 
 def _check_sdist(path: Path) -> str:
     with tarfile.open(path, mode="r:gz") as archive:
-        names = archive.getnames()
+        members = archive.getmembers()
+        names = [member.name for member in members]
+        if len(names) != len(set(names)):
+            raise ArtifactContractError(f"{path.name}: duplicate sdist member")
+        for member in members:
+            _validated_member_path(member.name, label=f"{path.name}: sdist")
+            if member.type not in {tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE}:
+                raise ArtifactContractError(
+                    f"{path.name}: sdist member type is forbidden: {member.name}"
+                )
         roots = {name.split("/", 1)[0] for name in names if "/" in name}
         if len(roots) != 1:
             raise ArtifactContractError(f"{path.name}: expected one archive root")
