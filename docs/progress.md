@@ -356,11 +356,12 @@ which is authoritative).
 - The pinned v0.4.7 wheel digest is
   `75b896c7a1bfa462d1caa6df7025bca79650e8ad48a006272e76eb9bfb5667d8`.
   The candidate passed 4/4 README-only roles, zero privacy-canary hits, a
-  13/13 browser matrix, Python 3.11–3.14, and exact-wheel onboarding on
-  Ubuntu, Windows, and macOS.
+  public-HTTPS 13/13 browser matrix, Python 3.11–3.14, and exact-wheel
+  onboarding on Ubuntu, Windows, and macOS.
 - `docs/reviews/promotion-readiness-review.md` records
-  **GO WITH CONDITIONS** until final post-report CI, protected-main Pages
-  staging, live release verification, and maintainer Profile refresh finish.
+  **GO — PUBLIC BETA** after protected-main CI and Pages staging. The tag
+  workflow, live PyPI/GitHub Release verification, and maintainer Profile
+  refresh remain operational release steps, not unresolved product findings.
 - Future import, reconciliation, richer views, GitHub API integration, and
   any configuration CLI remain deferred in ROADMAP. They are not part of
   the v0.4.7 product boundary.
