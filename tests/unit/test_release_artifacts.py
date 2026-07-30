@@ -30,7 +30,13 @@ def _wheel(path: Path, version: str, *, notice: bool = True) -> None:
             )
 
 
-def _sdist(path: Path, version: str) -> None:
+def _sdist(
+    path: Path,
+    version: str,
+    *,
+    extra_members: tuple[tuple[str, bytes], ...] = (),
+    outside_members: tuple[tuple[str, bytes], ...] = (),
+) -> None:
     root = f"ai_profile_cli-{version}"
     with tarfile.open(path, "w:gz") as archive:
         for name, body in (
@@ -40,6 +46,14 @@ def _sdist(path: Path, version: str) -> None:
         ):
             payload = body.encode()
             info = tarfile.TarInfo(f"{root}/{name}")
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+        for name, payload in extra_members:
+            info = tarfile.TarInfo(f"{root}/{name}")
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+        for name, payload in outside_members:
+            info = tarfile.TarInfo(name)
             info.size = len(payload)
             archive.addfile(info, io.BytesIO(payload))
 
@@ -103,6 +117,79 @@ def test_release_artifacts_reject_missing_pkg_info_cleanly(tmp_path):
             archive.addfile(info, io.BytesIO(payload))
 
     with pytest.raises(artifacts.ArtifactContractError, match="missing PKG-INFO"):
+        artifacts.validate_release_artifacts(wheel, sdist)
+
+
+@pytest.mark.parametrize(
+    "member",
+    (
+        ".hypothesis/constants/cache-entry",
+        ".pytest_cache/v/cache/nodeids",
+        ".ruff_cache/cache-entry",
+        ".mypy_cache/3.12/cache-entry",
+        ".tox/py312/cache-entry",
+        ".nox/tests/cache-entry",
+        ".venv/Lib/site-packages/cache-entry",
+        "src/aiprofile/__pycache__/cli.cpython-312.pyc",
+        ".coverage",
+        ".coverage.hostname.1234",
+    ),
+)
+def test_release_artifacts_reject_generated_cache_members(tmp_path, member):
+    version = artifacts._project_version()
+    wheel = tmp_path / f"ai_profile_cli-{version}-py3-none-any.whl"
+    sdist = tmp_path / f"ai_profile_cli-{version}.tar.gz"
+    _wheel(wheel, version)
+    _sdist(sdist, version, extra_members=((member, b"generated cache"),))
+
+    with pytest.raises(artifacts.ArtifactContractError, match="generated cache"):
+        artifacts.validate_release_artifacts(wheel, sdist)
+
+
+@pytest.mark.parametrize(
+    "member",
+    (
+        ".ai/handoff/private.txt",
+        ".artifact/release/private.txt",
+        ".claude/settings.local.json",
+        "build/generated.txt",
+        "dist/old-release.whl",
+    ),
+)
+def test_release_artifacts_reject_private_or_generated_root_members(tmp_path, member):
+    version = artifacts._project_version()
+    wheel = tmp_path / f"ai_profile_cli-{version}-py3-none-any.whl"
+    sdist = tmp_path / f"ai_profile_cli-{version}.tar.gz"
+    _wheel(wheel, version)
+    _sdist(sdist, version, extra_members=((member, b"C:/Users/private"),))
+
+    with pytest.raises(
+        artifacts.ArtifactContractError,
+        match="private or generated root member",
+    ):
+        artifacts.validate_release_artifacts(wheel, sdist)
+
+
+@pytest.mark.parametrize("member", (".coverage", "unexpected-root-file.txt"))
+def test_release_artifacts_reject_members_outside_archive_root(tmp_path, member):
+    version = artifacts._project_version()
+    wheel = tmp_path / f"ai_profile_cli-{version}-py3-none-any.whl"
+    sdist = tmp_path / f"ai_profile_cli-{version}.tar.gz"
+    _wheel(wheel, version)
+    _sdist(sdist, version, outside_members=((member, b"outside root"),))
+
+    with pytest.raises(artifacts.ArtifactContractError, match="outside the archive root"):
+        artifacts.validate_release_artifacts(wheel, sdist)
+
+
+def test_release_artifacts_reject_parent_traversal_from_archive_root(tmp_path):
+    version = artifacts._project_version()
+    wheel = tmp_path / f"ai_profile_cli-{version}-py3-none-any.whl"
+    sdist = tmp_path / f"ai_profile_cli-{version}.tar.gz"
+    _wheel(wheel, version)
+    _sdist(sdist, version, extra_members=(("../unexpected.txt", b"outside root"),))
+
+    with pytest.raises(artifacts.ArtifactContractError, match="outside the archive root"):
         artifacts.validate_release_artifacts(wheel, sdist)
 
 

@@ -43,7 +43,7 @@ def test_candidate_manifest_matches_project_version_and_is_a_sha256():
     assert manifest["version"] == version.group(1)
     assert manifest["wheel"] == f"ai_profile_cli-{version.group(1)}-py3-none-any.whl"
     assert re.fullmatch(r"[0-9a-f]{64}", manifest["wheel_sha256"])
-    assert manifest["source_date_epoch"] == 1785024000
+    assert manifest["source_date_epoch"] == 1785369600
 
 
 def test_publish_workflow_builds_once_fans_out_and_splits_authority():

@@ -25,6 +25,17 @@ below.
 
 ## [Unreleased]
 
+## [0.4.7] — 2026-07-30
+
+### Fixed
+
+- Exclude generated test, coverage, environment, and bytecode caches from
+  source distributions, and make the release artifact contract reject any
+  archive containing them.
+- Correct the immutable v0.4.6 source-distribution packaging issue, which
+  included non-sensitive Hypothesis cache data. The v0.4.6 wheel and runtime
+  package were unaffected.
+
 ## [0.4.6] — 2026-07-26
 
 ### Changed

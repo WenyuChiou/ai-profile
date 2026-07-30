@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-profile-cli"
-version = "0.4.6"
+version = "0.4.7"
 description = "Evidence-backed, privacy-safe AI collaboration cards and dashboards generated locally from explicit Git provenance."
 readme = "README.md"
 license = "MIT"
@@ -41,6 +41,27 @@ dev = ["pytest>=8", "ruff>=0.4", "hypothesis>=6"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aiprofile"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.ai",
+    "/.artifact",
+    "/.claude",
+    "/.coverage",
+    "/.coverage.*",
+    "/.hypothesis",
+    "/.mypy_cache",
+    "/.nox",
+    "/.pytest_cache",
+    "/.ruff_cache",
+    "/.tox",
+    "/.venv",
+    "/build",
+    "/dist",
+    "**/__pycache__",
+    "**/*.pyc",
+    "**/*.pyo",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

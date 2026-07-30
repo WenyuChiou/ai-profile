@@ -10,10 +10,23 @@ import re
 import tarfile
 import tomllib
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_LICENSE_FILES = ("LICENSE", "THIRD_PARTY_NOTICES.md")
+GENERATED_CACHE_DIRS = frozenset(
+    {
+        ".hypothesis",
+        ".mypy_cache",
+        ".nox",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".tox",
+        ".venv",
+        "__pycache__",
+    }
+)
+FORBIDDEN_ROOT_ENTRIES = frozenset({".ai", ".artifact", ".claude", "build", "dist"})
 
 
 class ArtifactContractError(RuntimeError):
@@ -77,6 +90,30 @@ def _check_sdist(path: Path) -> str:
         if len(roots) != 1:
             raise ArtifactContractError(f"{path.name}: expected one archive root")
         root = next(iter(roots))
+        for name in names:
+            try:
+                relative = PurePosixPath(name).relative_to(root)
+            except ValueError as exc:
+                raise ArtifactContractError(
+                    f"{path.name}: member is outside the archive root: {name}"
+                ) from exc
+            if ".." in relative.parts:
+                raise ArtifactContractError(
+                    f"{path.name}: member is outside the archive root: {name}"
+                )
+            if relative.parts and relative.parts[0] in FORBIDDEN_ROOT_ENTRIES:
+                raise ArtifactContractError(
+                    f"{path.name}: private or generated root member is forbidden: {relative}"
+                )
+            if (
+                GENERATED_CACHE_DIRS.intersection(relative.parts)
+                or relative.name == ".coverage"
+                or relative.name.startswith(".coverage.")
+                or relative.suffix in {".pyc", ".pyo"}
+            ):
+                raise ArtifactContractError(
+                    f"{path.name}: generated cache member is forbidden: {relative}"
+                )
         for required in REQUIRED_LICENSE_FILES:
             if f"{root}/{required}" not in names:
                 raise ArtifactContractError(f"{path.name}: missing {required}")

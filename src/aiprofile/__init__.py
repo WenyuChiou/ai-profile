@@ -1,6 +1,6 @@
 """ai-profile: local-first, profile-level AI collaboration analytics for Git repositories."""
 
-__version__ = "0.4.6"
+__version__ = "0.4.7"
 
 #: ACE (AI Collaboration Event) schema version written into every event.
 #: Governed by docs/schema.md and ADR-012.
