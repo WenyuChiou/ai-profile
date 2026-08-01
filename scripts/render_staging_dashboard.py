@@ -64,9 +64,9 @@ _OUTPUT_NAMES = frozenset({"dashboard.html", "staging-manifest.json"})
 
 def build_fixture() -> VizStats:
     """The fixed synthetic preview fixture: two providers plus a mixed and a
-    human-only day, so provider filter, calendar, and evidence behavior are
-    all browser-verifiable. All values are invented; validation pins every
-    string to the closed public vocabulary."""
+    zero-attributed-AI day, so provider filter, calendar, and evidence
+    behavior are all browser-verifiable. All values are invented; validation
+    pins every string to the closed public vocabulary."""
     return VizStats(
         schema_version=ACE_SCHEMA_VERSION,
         period=Period(None, None, "All time"),

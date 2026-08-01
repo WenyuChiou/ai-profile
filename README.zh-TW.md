@@ -47,10 +47,9 @@
   </picture>
 </a>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/heatmap-dark.svg">
-  <img alt="Wenyu Chiou 的 AI 協作 heatmap；深淺代表 commit 量，色相代表 AI 比例" src="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/heatmap-light.svg">
-</picture>
+這張卡片呈現持續的 AI 協作（active AI days 與 12 週活動 terrain）、
+跨 AI providers 的廣度，以及每個數字背後的明確 evidence 總數。它是
+根據宣告 Git evidence 的紀錄，不是技能評分。
 
 ## 為什麼使用 ai-profile？
 
@@ -229,6 +228,11 @@ Profile 仍顯示 SVG，點擊連結後才開啟 `dashboard.html`。
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
   <img alt="使用 synthetic data 的 AI 協作 summary card" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/heatmap-sample-dark.svg">
+  <img alt="使用 synthetic data 的 commit 活動 heatmap；深淺代表 commit 量，色相代表 AI 比例" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/heatmap-sample-light.svg">
 </picture>
 
 <picture>

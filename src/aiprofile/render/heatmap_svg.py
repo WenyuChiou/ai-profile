@@ -4,12 +4,14 @@
 A GitHub-style year grid where each day cell encodes TWO dimensions:
 
 - INTENSITY (solid background-mix depth): the day's total_commits — the
-  owner's whole working rhythm, human-only commits included (the
-  round's driving requirement) — bucketed 1 / 2-4 / 5-7 / 8+.
+  owner's whole working rhythm, every commit regardless of attribution
+  (the round's driving requirement) — bucketed 1 / 2-4 / 5-7 / 8+.
 - HUE (fill color): the day's AI-collaboration share, quantized into five
   bins (0%, and quarters up to 100%), interpolated between the theme's
-  neutral and accent colors. A solo-coding week reads neutral and quiet;
-  a heavy pairing week reads accent.
+  neutral and accent colors. A week with no attributed AI reads neutral
+  and quiet (zero attributed AI, not a human-authorship claim —
+  unattributed commits sit in the same bin); a heavy pairing week reads
+  accent.
 
 Pure function of ``(stats, theme)`` like every renderer here: no clock
 (the grid anchors on the series' own newest date), no randomness, no
@@ -29,6 +31,14 @@ import datetime
 from xml.sax.saxutils import escape
 
 from ..viz import DayCell, VizStats
+from ._bins import (
+    SHARE_BIN_COUNT,
+    VOLUME_CAP,
+    _lerp_hex,
+    _share_bin,
+    _share_colors,
+    _volume_bin,
+)
 from .summary_svg import (
     PADDING,
     RADIUS,
@@ -91,56 +101,21 @@ HM_CUE_TEXT = "publishable repos only"
 #: compositor instead of this renderer.
 HM_VOLUME_MIX = (0.45, 0.65, 0.85, 1.0)
 HM_VOLUME_LABELS = ("1", "2-4", "5-7", "8+")
-HM_VOLUME_CAP = 8
+HM_VOLUME_CAP = VOLUME_CAP
 
 #: AI-share hue bins: 0 (pure neutral) plus four quarter bins up to 1
 #: (pure accent). Bin selection is integer arithmetic (ceil(4*ai/total)),
 #: so no float-equality edge can flip a bin between platforms.
-HM_SHARE_BIN_COUNT = 5
+HM_SHARE_BIN_COUNT = SHARE_BIN_COUNT
 
 
 # ---------------------------------------------------------------------------
-# Pure helpers
+# Pure helpers. The bin/color arithmetic itself lives in ._bins (v0.4.8):
+# the summary card's isometric terrain shares the exact same fixed bins,
+# and two hand-maintained copies would eventually disagree. The imported
+# names (_lerp_hex, _share_bin, _volume_bin, _share_colors) remain module
+# attributes here, so existing imports keep working unchanged.
 # ---------------------------------------------------------------------------
-
-
-def _lerp_hex(a: str, b: str, t: float) -> str:
-    """Channel-wise linear interpolation between two #RRGGBB colors at a
-    fixed t — called only with t in {0, .25, .5, .75, 1}, producing a
-    deterministic flat hex (round-half-even is irrelevant at these t
-    values only when channels differ by multiples of 4; plain round() is
-    deterministic for any fixed inputs, which is the actual requirement)."""
-    av = [int(a.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)]
-    bv = [int(b.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)]
-    return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(av, bv, strict=True))
-
-
-def _share_bin(ai_commits: int, total_commits: int) -> int:
-    """0..4: 0 for a human-only day; otherwise ceil(4 * ai / total) via
-    integer arithmetic (1 = share in (0, 25%], 4 = 100%)."""
-    if ai_commits == 0:
-        return 0
-    return -(-4 * ai_commits // total_commits)
-
-
-def _volume_bin(total_commits: int) -> int:
-    """0..3 over the 1 / 2-4 / 5-7 / 8+ buckets (cap = HM_VOLUME_CAP,
-    the same top bucket the D2 band derives from its own cap)."""
-    if total_commits <= 1:
-        return 0
-    if total_commits <= HM_VOLUME_CAP // 2:
-        return 1
-    if total_commits < HM_VOLUME_CAP:
-        return 2
-    return 3
-
-
-def _share_colors(theme: Theme) -> tuple[str, ...]:
-    """The five flat share-bin hexes for a theme: neutral -> accent."""
-    return tuple(
-        _lerp_hex(theme.muted, theme.accent, bin_index / (HM_SHARE_BIN_COUNT - 1))
-        for bin_index in range(HM_SHARE_BIN_COUNT)
-    )
 
 
 def _cell_fill(theme: Theme, share_bin: int, volume_bin: int) -> str:

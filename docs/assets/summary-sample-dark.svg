@@ -1,194 +1,206 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="830" height="899" viewBox="0 0 830 899" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
-<title id="aiprofileSummaryTitle">AI Collaboration Summary — All time</title>
-<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI actor presences across 58 active AI days (author dates), 7 AI providers. Daily activity calendar 2026-04-22 to 2026-07-14, peak day summed provider-attributed count 10; provider counts may overlap. Generated 2026-07-14.</desc>
-<rect x="0.5" y="0.5" width="829" height="898" rx="8" fill="#091321" stroke="#34526f" stroke-width="1"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="927" viewBox="0 0 830 927" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
+<title id="aiprofileSummaryTitle">AI Collaboration Record — All time</title>
+<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI actor presences across 58 active AI days (author dates), 7 AI providers. Collaboration terrain 2026-04-22 to 2026-07-14, peak day 12 commits; height is total commits, hue is the day's AI share; publishable repositories only. Generated 2026-07-14.</desc>
+<rect x="0.5" y="0.5" width="829" height="926" rx="8" fill="#091321" stroke="#34526f" stroke-width="1"/>
 <rect x="24" y="24" width="16" height="16" rx="3" fill="#091321" stroke="#8bc8ff" stroke-width="1"/>
 <rect x="29" y="29" width="6" height="6" rx="1" fill="#8bc8ff"/>
-<text x="48" y="36" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="16" font-weight="600" fill="#eff6ff" text-anchor="start">AI Collaboration Summary</text>
+<text x="48" y="36" font-family="'IBM Plex Sans Condensed', 'Aptos Display', 'Segoe UI', 'DejaVu Sans Condensed', sans-serif" font-size="16" font-weight="600" fill="#eff6ff" text-anchor="start">AI Collaboration Record</text>
 <text x="806" y="36" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="end">All time</text>
 <line x1="24" y1="56" x2="806" y2="56" stroke="#34526f"/>
-<text x="24" y="112" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="38" font-weight="700" fill="#8bc8ff" text-anchor="start">375</text>
+<text x="24" y="112" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="38" font-weight="700" fill="#8bc8ff" text-anchor="start">375</text>
 <text x="24" y="140" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">AI-attributed commits</text>
 <text x="24" y="160" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#eff6ff" text-anchor="start">72% of 520 unique commits scanned</text>
 <rect x="24" y="172" width="360" height="7" rx="2" fill="#1e3852"/>
 <rect x="24" y="172" width="260" height="7" rx="2" fill="#8bc8ff"/>
-<text x="512" y="88" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">AI actor presences</text>
-<text x="806" y="88" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="end">463</text>
-<text x="512" y="112" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">Active AI days (author dates)</text>
-<text x="806" y="112" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="end">58</text>
-<text x="512" y="136" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">AI providers</text>
-<text x="806" y="136" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="end">7</text>
+<text x="512" y="88" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">Active AI days (author dates)</text>
+<text x="806" y="88" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="end">58</text>
+<text x="512" y="112" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">AI providers</text>
+<text x="806" y="112" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="end">7</text>
+<text x="512" y="136" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">AI actor presences</text>
+<text x="806" y="136" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="end">463</text>
 <text x="512" y="160" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">Unattributed commits</text>
-<text x="806" y="160" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="end">100</text>
-<text x="24" y="208" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#b5c7da" text-anchor="start" letter-spacing="0.2">Attributed commits by provider</text>
-<text x="806" y="208" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="end">% of 375 AI-attributed commits</text>
-<rect x="24" y="228" width="20" height="20" rx="4" fill="#3C231B"/>
-<path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z" fill="#E2A28D" transform="translate(27,231) scale(0.583333)"/>
-<text x="52" y="244" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="400" fill="#eff6ff" text-anchor="start">Claude</text>
-<rect x="184" y="232" width="500" height="7" rx="2" fill="#1e3852"/>
-<rect x="184" y="232" width="500" height="7" rx="2" fill="#E2A28D"/>
-<text x="806" y="244" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">120</tspan><tspan fill="#b5c7da" font-weight="400"> · 32%</tspan></text>
-<rect x="24" y="256" width="20" height="20" rx="4" fill="#2E2E2E"/>
-<path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" fill="#7A7A7A" transform="translate(27,259) scale(0.583333)"/>
-<text x="52" y="272" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="400" fill="#eff6ff" text-anchor="start">OpenAI</text>
-<rect x="184" y="260" width="500" height="7" rx="2" fill="#1e3852"/>
-<rect x="184" y="260" width="396" height="7" rx="2" fill="#7A7A7A"/>
-<text x="806" y="272" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">95</tspan><tspan fill="#b5c7da" font-weight="400"> · 25%</tspan></text>
-<rect x="24" y="284" width="20" height="20" rx="4" fill="#2B203C"/>
-<path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81" fill="#8E75B2" transform="translate(27,287) scale(0.583333)"/>
-<text x="52" y="300" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="400" fill="#eff6ff" text-anchor="start">Gemini</text>
-<rect x="184" y="288" width="500" height="7" rx="2" fill="#1e3852"/>
-<rect x="184" y="288" width="250" height="7" rx="2" fill="#8E75B2"/>
-<text x="806" y="300" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">60</tspan><tspan fill="#b5c7da" font-weight="400"> · 16%</tspan></text>
-<rect x="24" y="312" width="20" height="20" rx="4" fill="#2E3138"/>
-<path d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z" fill="#E3E5E8" transform="translate(27,315) scale(0.583333)"/>
-<text x="52" y="328" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="400" fill="#eff6ff" text-anchor="start">Copilot</text>
-<rect x="184" y="316" width="500" height="7" rx="2" fill="#1e3852"/>
-<rect x="184" y="316" width="167" height="7" rx="2" fill="#E3E5E8"/>
-<text x="806" y="328" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">40</tspan><tspan fill="#b5c7da" font-weight="400"> · 11%</tspan></text>
-<rect x="24" y="340" width="20" height="20" rx="4" fill="#33302E"/>
-<path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23" fill="#E7E6E4" transform="translate(27,343) scale(0.583333)"/>
-<text x="52" y="356" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="400" fill="#eff6ff" text-anchor="start">Cursor</text>
-<rect x="184" y="344" width="500" height="7" rx="2" fill="#1e3852"/>
-<rect x="184" y="344" width="104" height="7" rx="2" fill="#E7E6E4"/>
-<text x="806" y="356" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">25</tspan><tspan fill="#b5c7da" font-weight="400"> · 7%</tspan></text>
-<rect x="24" y="368" width="20" height="20" rx="4" fill="#3b331e"/>
-<text x="34" y="382" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="600" fill="#b5c7da" text-anchor="middle">?</text>
-<text x="52" y="384" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="400" fill="#eff6ff" text-anchor="start">Unrecognized</text>
-<rect x="184" y="372" width="500" height="7" rx="2" fill="#1e3852"/>
-<rect x="184" y="372" width="83" height="7" rx="2" fill="#8bc8ff"/>
-<text x="806" y="384" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="14" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">20</tspan><tspan fill="#b5c7da" font-weight="400"> · 5%</tspan></text>
-<text x="24" y="408" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">+2 providers not shown</text>
-<text x="24" y="450" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#b5c7da" text-anchor="start" letter-spacing="0.2">Daily AI collaboration (last 84 days)</text>
-<text x="388" y="466" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="middle">May</text>
-<text x="460" y="466" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="middle">Jun</text>
-<text x="550" y="466" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="middle">Jul</text>
-<polygon points="352,509 370,518 370,526 352,517" fill="#8bc8ff" fill-opacity="0.62"/>
-<polygon points="370,518 388,509 388,517 370,526" fill="#8bc8ff" fill-opacity="0.42"/>
-<polygon points="370,500 388,509 370,518 352,509" fill="#8bc8ff" fill-opacity="0.88"/>
-<polygon points="352,517 370,526 352,535 334,526" fill="#1e3852"/>
-<polygon points="388,517 406,526 388,535 370,526" fill="#1e3852"/>
-<polygon points="334,526 352,535 334,544 316,535" fill="#1e3852"/>
-<polygon points="370,526 388,535 370,544 352,535" fill="#1e3852"/>
-<polygon points="406,526 424,535 406,544 388,535" fill="#1e3852"/>
-<polygon points="316,535 334,544 316,553 298,544" fill="#1e3852"/>
-<polygon points="352,535 370,544 352,553 334,544" fill="#1e3852"/>
-<polygon points="388,535 406,544 388,553 370,544" fill="#1e3852"/>
-<polygon points="424,535 442,544 424,553 406,544" fill="#1e3852"/>
-<polygon points="298,544 316,553 298,562 280,553" fill="#1e3852"/>
-<polygon points="334,544 352,553 334,562 316,553" fill="#1e3852"/>
-<polygon points="370,544 388,553 370,562 352,553" fill="#1e3852"/>
-<polygon points="406,544 424,553 406,562 388,553" fill="#1e3852"/>
-<polygon points="442,544 460,553 442,562 424,553" fill="#1e3852"/>
-<polygon points="280,553 298,562 280,571 262,562" fill="#1e3852"/>
-<polygon points="316,553 334,562 316,571 298,562" fill="#1e3852"/>
-<polygon points="352,553 370,562 352,571 334,562" fill="#1e3852"/>
-<polygon points="370,550 388,559 388,571 370,562" fill="#E2A28D" fill-opacity="0.62"/>
-<polygon points="388,559 406,550 406,562 388,571" fill="#E2A28D" fill-opacity="0.42"/>
-<polygon points="388,541 406,550 388,559 370,550" fill="#E2A28D" fill-opacity="0.88"/>
-<polygon points="424,553 442,562 424,571 406,562" fill="#1e3852"/>
-<polygon points="460,553 478,562 460,571 442,562" fill="#1e3852"/>
-<polygon points="262,562 280,571 262,580 244,571" fill="#1e3852"/>
-<polygon points="298,562 316,571 298,580 280,571" fill="#1e3852"/>
-<polygon points="334,562 352,571 334,580 316,571" fill="#1e3852"/>
-<polygon points="370,562 388,571 370,580 352,571" fill="#1e3852"/>
-<polygon points="406,562 424,571 406,580 388,571" fill="#1e3852"/>
-<polygon points="442,562 460,571 442,580 424,571" fill="#1e3852"/>
-<polygon points="478,562 496,571 478,580 460,571" fill="#1e3852"/>
-<polygon points="280,571 298,580 280,589 262,580" fill="#1e3852"/>
-<polygon points="316,571 334,580 316,589 298,580" fill="#1e3852"/>
-<polygon points="352,571 370,580 352,589 334,580" fill="#1e3852"/>
-<polygon points="388,571 406,580 388,589 370,580" fill="#1e3852"/>
-<polygon points="424,571 442,580 424,589 406,580" fill="#1e3852"/>
-<polygon points="442,564 460,573 460,589 442,580" fill="#E2A28D" fill-opacity="0.62"/>
-<polygon points="460,573 478,564 478,580 460,589" fill="#E2A28D" fill-opacity="0.42"/>
-<polygon points="442,556 460,565 460,573 442,564" fill="#8E75B2" fill-opacity="0.62"/>
-<polygon points="460,565 478,556 478,564 460,573" fill="#8E75B2" fill-opacity="0.42"/>
-<polygon points="442,552 460,561 460,565 442,556" fill="#8d9baa" fill-opacity="0.62"/>
-<polygon points="460,561 478,552 478,556 460,565" fill="#8d9baa" fill-opacity="0.42"/>
-<polygon points="460,543 478,552 460,561 442,552" fill="#8d9baa" fill-opacity="0.88"/>
-<polygon points="496,571 514,580 496,589 478,580" fill="#1e3852"/>
-<polygon points="298,580 316,589 298,598 280,589" fill="#1e3852"/>
-<polygon points="334,580 352,589 334,598 316,589" fill="#1e3852"/>
-<polygon points="370,580 388,589 370,598 352,589" fill="#1e3852"/>
-<polygon points="406,580 424,589 406,598 388,589" fill="#1e3852"/>
-<polygon points="442,580 460,589 442,598 424,589" fill="#1e3852"/>
-<polygon points="478,580 496,589 478,598 460,589" fill="#1e3852"/>
-<polygon points="514,580 532,589 514,598 496,589" fill="#1e3852"/>
-<polygon points="316,589 334,598 316,607 298,598" fill="#1e3852"/>
-<polygon points="352,589 370,598 352,607 334,598" fill="#1e3852"/>
-<polygon points="388,589 406,598 388,607 370,598" fill="#1e3852"/>
-<polygon points="424,589 442,598 424,607 406,598" fill="#1e3852"/>
-<polygon points="460,589 478,598 460,607 442,598" fill="#1e3852"/>
-<polygon points="496,589 514,598 496,607 478,598" fill="#1e3852"/>
-<polygon points="532,589 550,598 532,607 514,598" fill="#1e3852"/>
-<polygon points="334,598 352,607 334,616 316,607" fill="#1e3852"/>
-<polygon points="370,598 388,607 370,616 352,607" fill="#1e3852"/>
-<polygon points="406,598 424,607 406,616 388,607" fill="#1e3852"/>
-<polygon points="442,598 460,607 442,616 424,607" fill="#1e3852"/>
-<polygon points="478,598 496,607 478,616 460,607" fill="#1e3852"/>
-<polygon points="514,598 532,607 514,616 496,607" fill="#1e3852"/>
-<polygon points="550,598 568,607 550,616 532,607" fill="#1e3852"/>
-<polygon points="352,607 370,616 352,625 334,616" fill="#1e3852"/>
-<polygon points="388,607 406,616 388,625 370,616" fill="#1e3852"/>
-<polygon points="424,607 442,616 424,625 406,616" fill="#1e3852"/>
-<polygon points="460,607 478,616 460,625 442,616" fill="#1e3852"/>
-<polygon points="496,607 514,616 496,625 478,616" fill="#1e3852"/>
-<polygon points="532,607 550,616 532,625 514,616" fill="#1e3852"/>
-<polygon points="568,607 586,616 568,625 550,616" fill="#1e3852"/>
-<polygon points="370,616 388,625 370,634 352,625" fill="#1e3852"/>
-<polygon points="406,616 424,625 406,634 388,625" fill="#1e3852"/>
-<polygon points="442,616 460,625 442,634 424,625" fill="#1e3852"/>
-<polygon points="478,616 496,625 478,634 460,625" fill="#1e3852"/>
-<polygon points="514,616 532,625 514,634 496,625" fill="#1e3852"/>
-<polygon points="550,616 568,625 550,634 532,625" fill="#1e3852"/>
-<polygon points="388,625 406,634 388,643 370,634" fill="#1e3852"/>
-<polygon points="424,625 442,634 424,643 406,634" fill="#1e3852"/>
-<polygon points="460,625 478,634 460,643 442,634" fill="#1e3852"/>
-<polygon points="478,602 496,611 496,643 478,634" fill="#E2A28D" fill-opacity="0.62"/>
-<polygon points="496,611 514,602 514,634 496,643" fill="#E2A28D" fill-opacity="0.42"/>
-<polygon points="496,593 514,602 496,611 478,602" fill="#E2A28D" fill-opacity="0.88"/>
-<polygon points="532,625 550,634 532,643 514,634" fill="#1e3852"/>
-<polygon points="406,634 424,643 406,652 388,643" fill="#1e3852"/>
-<polygon points="442,634 460,643 442,652 424,643" fill="#1e3852"/>
-<polygon points="478,634 496,643 478,652 460,643" fill="#1e3852"/>
-<polygon points="514,634 532,643 514,652 496,643" fill="#1e3852"/>
-<polygon points="424,643 442,652 424,661 406,652" fill="#1e3852"/>
-<polygon points="460,643 478,652 460,661 442,652" fill="#1e3852"/>
-<polygon points="496,643 514,652 496,661 478,652" fill="#1e3852"/>
-<polygon points="442,652 460,661 442,670 424,661" fill="#1e3852"/>
-<polygon points="478,652 496,661 478,670 460,661" fill="#1e3852"/>
-<polygon points="442,658 460,667 460,679 442,670" fill="#8bc8ff" fill-opacity="0.62"/>
-<polygon points="460,667 478,658 478,670 460,679" fill="#8bc8ff" fill-opacity="0.42"/>
-<polygon points="442,638 460,647 460,667 442,658" fill="#E2A28D" fill-opacity="0.62"/>
-<polygon points="460,647 478,638 478,658 460,667" fill="#E2A28D" fill-opacity="0.42"/>
-<polygon points="460,629 478,638 460,647 442,638" fill="#E2A28D" fill-opacity="0.88"/>
-<polygon points="30,692 36,695 30,698 24,695" fill="#b5c7da" fill-opacity="0.35"/>
-<text x="40" y="699" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">1</text>
-<polygon points="66,692 72,695 66,698 60,695" fill="#b5c7da" fill-opacity="0.55"/>
-<text x="76" y="699" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">2-4</text>
-<polygon points="114,692 120,695 114,698 108,695" fill="#b5c7da" fill-opacity="0.75"/>
-<text x="124" y="699" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">5-7</text>
-<polygon points="162,692 168,695 162,698 156,695" fill="#b5c7da"/>
-<text x="172" y="699" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">8+</text>
-<text x="806" y="699" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="end">publishable repos only</text>
-<rect x="24" y="723" width="782" height="104" rx="6" fill="#3b331e"/>
-<text x="40" y="739" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#b5c7da" text-anchor="start" letter-spacing="0.2">Evidence (all records: 463)</text>
-<rect x="40" y="759" width="19" height="8" rx="2" fill="#a5d6ff"/>
-<rect x="61" y="759" width="643" height="8" rx="2" fill="#58a6ff"/>
-<rect x="706" y="759" width="8" height="8" rx="2" fill="#2f81f7"/>
-<rect x="716" y="759" width="74" height="8" rx="2" fill="#8d9baa"/>
-<rect x="40" y="780" width="8" height="8" rx="1" fill="#a5d6ff"/>
-<text x="52" y="787" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#eff6ff" text-anchor="start">verified 12</text>
-<rect x="127" y="780" width="8" height="8" rx="1" fill="#58a6ff"/>
-<text x="139" y="787" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#eff6ff" text-anchor="start">declared 400</text>
-<rect x="226" y="780" width="8" height="8" rx="1" fill="#2f81f7"/>
-<text x="238" y="787" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#eff6ff" text-anchor="start">inferred 5</text>
-<rect x="309" y="780" width="8" height="8" rx="1" fill="#8d9baa"/>
-<text x="321" y="787" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#eff6ff" text-anchor="start">unknown 46</text>
-<rect x="40" y="804" width="8" height="8" rx="1" fill="#b5c7da"/>
-<text x="52" y="811" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">Includes aggregate-only activity (repository identity withheld) — publishable 200 · aggregate-only 320</text>
-<line x1="24" y1="843" x2="806" y2="843" stroke="#34526f"/>
-<text x="24" y="867" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
-<text x="24" y="883" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">One commit may include several AI actor presences (one per provider/tool).</text>
+<text x="806" y="160" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" font-weight="600" fill="#eff6ff" text-anchor="end">100</text>
+<text x="24" y="218" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#b5c7da" text-anchor="start" letter-spacing="0.2">Collaboration terrain (last 12 weeks)</text>
+<text x="388" y="234" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="middle">May</text>
+<text x="460" y="234" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="middle">Jun</text>
+<text x="550" y="234" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="middle">Jul</text>
+<polygon points="352,269 370,278 370,294 352,285" fill="#96C8F6" fill-opacity="0.62"/>
+<polygon points="370,278 388,269 388,285 370,294" fill="#96C8F6" fill-opacity="0.42"/>
+<polygon points="370,260 388,269 370,278 352,269" fill="#96C8F6" fill-opacity="0.88"/>
+<polygon points="352,285 370,294 352,303 334,294" fill="#1e3852"/>
+<polygon points="388,285 406,294 388,303 370,294" fill="#1e3852"/>
+<polygon points="334,294 352,303 334,312 316,303" fill="#1e3852"/>
+<polygon points="370,294 388,303 370,312 352,303" fill="#1e3852"/>
+<polygon points="406,294 424,303 406,312 388,303" fill="#1e3852"/>
+<polygon points="316,303 334,312 316,321 298,312" fill="#1e3852"/>
+<polygon points="352,303 370,312 352,321 334,312" fill="#1e3852"/>
+<polygon points="388,303 406,312 388,321 370,312" fill="#1e3852"/>
+<polygon points="424,303 442,312 424,321 406,312" fill="#1e3852"/>
+<polygon points="298,312 316,321 298,330 280,321" fill="#1e3852"/>
+<polygon points="334,312 352,321 334,330 316,321" fill="#1e3852"/>
+<polygon points="370,312 388,321 370,330 352,321" fill="#1e3852"/>
+<polygon points="406,312 424,321 406,330 388,321" fill="#1e3852"/>
+<polygon points="442,312 460,321 442,330 424,321" fill="#1e3852"/>
+<polygon points="280,321 298,330 280,339 262,330" fill="#1e3852"/>
+<polygon points="316,321 334,330 316,339 298,330" fill="#1e3852"/>
+<polygon points="352,321 370,330 352,339 334,330" fill="#1e3852"/>
+<polygon points="370,314 388,323 388,339 370,330" fill="#8BC8FF" fill-opacity="0.62"/>
+<polygon points="388,323 406,314 406,330 388,339" fill="#8BC8FF" fill-opacity="0.42"/>
+<polygon points="388,305 406,314 388,323 370,314" fill="#8BC8FF" fill-opacity="0.88"/>
+<polygon points="424,321 442,330 424,339 406,330" fill="#1e3852"/>
+<polygon points="460,321 478,330 460,339 442,330" fill="#1e3852"/>
+<polygon points="262,330 280,339 262,348 244,339" fill="#1e3852"/>
+<polygon points="298,330 316,339 298,348 280,339" fill="#1e3852"/>
+<polygon points="334,330 352,339 334,348 316,339" fill="#1e3852"/>
+<polygon points="370,330 388,339 370,348 352,339" fill="#1e3852"/>
+<polygon points="406,330 424,339 406,348 388,339" fill="#1e3852"/>
+<polygon points="442,330 460,339 442,348 424,339" fill="#1e3852"/>
+<polygon points="478,330 496,339 478,348 460,339" fill="#1e3852"/>
+<polygon points="280,339 298,348 280,357 262,348" fill="#1e3852"/>
+<polygon points="316,339 334,348 316,357 298,348" fill="#1e3852"/>
+<polygon points="352,339 370,348 352,357 334,348" fill="#1e3852"/>
+<polygon points="388,339 406,348 388,357 370,348" fill="#1e3852"/>
+<polygon points="424,339 442,348 424,357 406,348" fill="#1e3852"/>
+<polygon points="442,316 460,325 460,357 442,348" fill="#8BC8FF" fill-opacity="0.62"/>
+<polygon points="460,325 478,316 478,348 460,357" fill="#8BC8FF" fill-opacity="0.42"/>
+<polygon points="460,307 478,316 460,325 442,316" fill="#8BC8FF" fill-opacity="0.88"/>
+<polygon points="496,339 514,348 496,357 478,348" fill="#1e3852"/>
+<polygon points="298,348 316,357 298,366 280,357" fill="#1e3852"/>
+<polygon points="334,348 352,357 334,366 316,357" fill="#1e3852"/>
+<polygon points="370,348 388,357 370,366 352,357" fill="#1e3852"/>
+<polygon points="406,348 424,357 406,366 388,357" fill="#1e3852"/>
+<polygon points="442,348 460,357 442,366 424,357" fill="#1e3852"/>
+<polygon points="478,348 496,357 478,366 460,357" fill="#1e3852"/>
+<polygon points="514,348 532,357 514,366 496,357" fill="#1e3852"/>
+<polygon points="316,357 334,366 316,375 298,366" fill="#1e3852"/>
+<polygon points="352,357 370,366 352,375 334,366" fill="#1e3852"/>
+<polygon points="388,357 406,366 388,375 370,366" fill="#1e3852"/>
+<polygon points="424,357 442,366 424,375 406,366" fill="#1e3852"/>
+<polygon points="460,357 478,366 460,375 442,366" fill="#1e3852"/>
+<polygon points="496,357 514,366 496,375 478,366" fill="#1e3852"/>
+<polygon points="532,357 550,366 532,375 514,366" fill="#1e3852"/>
+<polygon points="334,366 352,375 334,384 316,375" fill="#1e3852"/>
+<polygon points="370,366 388,375 370,384 352,375" fill="#1e3852"/>
+<polygon points="406,366 424,375 406,384 388,375" fill="#1e3852"/>
+<polygon points="442,366 460,375 442,384 424,375" fill="#1e3852"/>
+<polygon points="478,366 496,375 478,384 460,375" fill="#1e3852"/>
+<polygon points="514,366 532,375 514,384 496,375" fill="#1e3852"/>
+<polygon points="550,366 568,375 550,384 532,375" fill="#1e3852"/>
+<polygon points="352,375 370,384 352,393 334,384" fill="#1e3852"/>
+<polygon points="388,375 406,384 388,393 370,384" fill="#1e3852"/>
+<polygon points="424,375 442,384 424,393 406,384" fill="#1e3852"/>
+<polygon points="460,375 478,384 460,393 442,384" fill="#1e3852"/>
+<polygon points="496,375 514,384 496,393 478,384" fill="#1e3852"/>
+<polygon points="532,375 550,384 532,393 514,384" fill="#1e3852"/>
+<polygon points="568,375 586,384 568,393 550,384" fill="#1e3852"/>
+<polygon points="370,384 388,393 370,402 352,393" fill="#1e3852"/>
+<polygon points="406,384 424,393 406,402 388,393" fill="#1e3852"/>
+<polygon points="442,384 460,393 442,402 424,393" fill="#1e3852"/>
+<polygon points="478,384 496,393 478,402 460,393" fill="#1e3852"/>
+<polygon points="514,384 532,393 514,402 496,393" fill="#1e3852"/>
+<polygon points="550,384 568,393 550,402 532,393" fill="#1e3852"/>
+<polygon points="388,393 406,402 388,411 370,402" fill="#1e3852"/>
+<polygon points="424,393 442,402 424,411 406,402" fill="#1e3852"/>
+<polygon points="460,393 478,402 460,411 442,402" fill="#1e3852"/>
+<polygon points="478,370 496,379 496,411 478,402" fill="#8BC8FF" fill-opacity="0.62"/>
+<polygon points="496,379 514,370 514,402 496,411" fill="#8BC8FF" fill-opacity="0.42"/>
+<polygon points="496,361 514,370 496,379 478,370" fill="#8BC8FF" fill-opacity="0.88"/>
+<polygon points="532,393 550,402 532,411 514,402" fill="#1e3852"/>
+<polygon points="406,402 424,411 406,420 388,411" fill="#1e3852"/>
+<polygon points="442,402 460,411 442,420 424,411" fill="#1e3852"/>
+<polygon points="478,402 496,411 478,420 460,411" fill="#1e3852"/>
+<polygon points="514,402 532,411 514,420 496,411" fill="#1e3852"/>
+<polygon points="424,411 442,420 424,429 406,420" fill="#1e3852"/>
+<polygon points="460,411 478,420 460,429 442,420" fill="#1e3852"/>
+<polygon points="496,411 514,420 496,429 478,420" fill="#1e3852"/>
+<polygon points="442,420 460,429 442,438 424,429" fill="#1e3852"/>
+<polygon points="478,420 496,429 478,438 460,429" fill="#1e3852"/>
+<polygon points="442,406 460,415 460,447 442,438" fill="#8BC8FF" fill-opacity="0.62"/>
+<polygon points="460,415 478,406 478,438 460,447" fill="#8BC8FF" fill-opacity="0.42"/>
+<polygon points="460,397 478,406 460,415 442,406" fill="#8BC8FF" fill-opacity="0.88"/>
+<text x="24" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">Commits</text>
+<polygon points="75,461 81,464 81,466 75,463" fill="#b5c7da" fill-opacity="0.62"/>
+<polygon points="81,464 87,461 87,463 81,466" fill="#b5c7da" fill-opacity="0.42"/>
+<polygon points="81,458 87,461 81,464 75,461" fill="#b5c7da" fill-opacity="0.88"/>
+<text x="91" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">1</text>
+<polygon points="111,459 117,462 117,466 111,463" fill="#b5c7da" fill-opacity="0.62"/>
+<polygon points="117,462 123,459 123,463 117,466" fill="#b5c7da" fill-opacity="0.42"/>
+<polygon points="117,456 123,459 117,462 111,459" fill="#b5c7da" fill-opacity="0.88"/>
+<text x="127" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">2-4</text>
+<polygon points="159,457 165,460 165,466 159,463" fill="#b5c7da" fill-opacity="0.62"/>
+<polygon points="165,460 171,457 171,463 165,466" fill="#b5c7da" fill-opacity="0.42"/>
+<polygon points="165,454 171,457 165,460 159,457" fill="#b5c7da" fill-opacity="0.88"/>
+<text x="175" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">5-7</text>
+<polygon points="207,455 213,458 213,466 207,463" fill="#b5c7da" fill-opacity="0.62"/>
+<polygon points="213,458 219,455 219,463 213,466" fill="#b5c7da" fill-opacity="0.42"/>
+<polygon points="213,452 219,455 213,458 207,455" fill="#b5c7da" fill-opacity="0.88"/>
+<text x="223" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">8+</text>
+<text x="261" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">AI share</text>
+<text x="311" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">0%</text>
+<polygon points="338,460 344,463 338,466 332,463" fill="#B5C7DA"/>
+<polygon points="353,460 359,463 353,466 347,463" fill="#AAC7E3"/>
+<polygon points="368,460 374,463 368,466 362,463" fill="#A0C8EC"/>
+<polygon points="383,460 389,463 383,466 377,463" fill="#96C8F6"/>
+<polygon points="398,460 404,463 398,466 392,463" fill="#8BC8FF"/>
+<text x="411" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">100%</text>
+<text x="806" y="467" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="end">publishable repos only</text>
+<text x="24" y="503" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#b5c7da" text-anchor="start" letter-spacing="0.2">Attributed commits by provider</text>
+<text x="806" y="503" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="end">% of 375 AI-attributed commits</text>
+<rect x="24" y="523" width="20" height="20" rx="4" fill="#3C231B"/>
+<path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z" fill="#E2A28D" transform="translate(27,526) scale(0.583333)"/>
+<text x="52" y="539" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#eff6ff" text-anchor="start">Claude</text>
+<rect x="184" y="527" width="500" height="7" rx="2" fill="#1e3852"/>
+<rect x="184" y="527" width="500" height="7" rx="2" fill="#E2A28D"/>
+<text x="806" y="539" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">120</tspan><tspan fill="#b5c7da" font-weight="400"> · 32%</tspan></text>
+<rect x="24" y="551" width="20" height="20" rx="4" fill="#2E2E2E"/>
+<path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" fill="#7A7A7A" transform="translate(27,554) scale(0.583333)"/>
+<text x="52" y="567" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#eff6ff" text-anchor="start">OpenAI</text>
+<rect x="184" y="555" width="500" height="7" rx="2" fill="#1e3852"/>
+<rect x="184" y="555" width="396" height="7" rx="2" fill="#7A7A7A"/>
+<text x="806" y="567" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">95</tspan><tspan fill="#b5c7da" font-weight="400"> · 25%</tspan></text>
+<rect x="24" y="579" width="20" height="20" rx="4" fill="#2B203C"/>
+<path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81" fill="#8E75B2" transform="translate(27,582) scale(0.583333)"/>
+<text x="52" y="595" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#eff6ff" text-anchor="start">Gemini</text>
+<rect x="184" y="583" width="500" height="7" rx="2" fill="#1e3852"/>
+<rect x="184" y="583" width="250" height="7" rx="2" fill="#8E75B2"/>
+<text x="806" y="595" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">60</tspan><tspan fill="#b5c7da" font-weight="400"> · 16%</tspan></text>
+<rect x="24" y="607" width="20" height="20" rx="4" fill="#2E3138"/>
+<path d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z" fill="#E3E5E8" transform="translate(27,610) scale(0.583333)"/>
+<text x="52" y="623" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#eff6ff" text-anchor="start">Copilot</text>
+<rect x="184" y="611" width="500" height="7" rx="2" fill="#1e3852"/>
+<rect x="184" y="611" width="167" height="7" rx="2" fill="#E3E5E8"/>
+<text x="806" y="623" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">40</tspan><tspan fill="#b5c7da" font-weight="400"> · 11%</tspan></text>
+<rect x="24" y="635" width="20" height="20" rx="4" fill="#33302E"/>
+<path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23" fill="#E7E6E4" transform="translate(27,638) scale(0.583333)"/>
+<text x="52" y="651" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#eff6ff" text-anchor="start">Cursor</text>
+<rect x="184" y="639" width="500" height="7" rx="2" fill="#1e3852"/>
+<rect x="184" y="639" width="104" height="7" rx="2" fill="#E7E6E4"/>
+<text x="806" y="651" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">25</tspan><tspan fill="#b5c7da" font-weight="400"> · 7%</tspan></text>
+<rect x="24" y="663" width="20" height="20" rx="4" fill="#3b331e"/>
+<text x="34" y="677" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="600" fill="#b5c7da" text-anchor="middle">?</text>
+<text x="52" y="679" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#eff6ff" text-anchor="start">Unrecognized</text>
+<rect x="184" y="667" width="500" height="7" rx="2" fill="#1e3852"/>
+<rect x="184" y="667" width="83" height="7" rx="2" fill="#8bc8ff"/>
+<text x="806" y="679" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#eff6ff" font-weight="600">20</tspan><tspan fill="#b5c7da" font-weight="400"> · 5%</tspan></text>
+<text x="24" y="703" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#b5c7da" text-anchor="start">+2 providers not shown</text>
+<text x="24" y="725" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">Provider totals are not mutually exclusive - one commit can involve several providers.</text>
+<rect x="24" y="751" width="164" height="22" rx="4" fill="#3b331e"/>
+<text x="32" y="767" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#b5c7da" text-anchor="start" letter-spacing="0.2">Evidence (all records: 463)</text>
+<rect x="24" y="787" width="20" height="8" rx="2" fill="#a5d6ff"/>
+<rect x="46" y="787" width="671" height="8" rx="2" fill="#58a6ff"/>
+<rect x="719" y="787" width="8" height="8" rx="2" fill="#2f81f7"/>
+<rect x="729" y="787" width="77" height="8" rx="2" fill="#8d9baa"/>
+<rect x="24" y="808" width="8" height="8" rx="1" fill="#a5d6ff"/>
+<text x="36" y="815" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#eff6ff" text-anchor="start">verified 12</text>
+<rect x="111" y="808" width="8" height="8" rx="1" fill="#58a6ff"/>
+<text x="123" y="815" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#eff6ff" text-anchor="start">declared 400</text>
+<rect x="210" y="808" width="8" height="8" rx="1" fill="#2f81f7"/>
+<text x="222" y="815" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#eff6ff" text-anchor="start">inferred 5</text>
+<rect x="293" y="808" width="8" height="8" rx="1" fill="#8d9baa"/>
+<text x="305" y="815" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#eff6ff" text-anchor="start">unknown 46</text>
+<rect x="24" y="832" width="8" height="8" rx="1" fill="#b5c7da"/>
+<text x="36" y="839" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">Includes aggregate-only activity (repository identity withheld) — publishable 200 · aggregate-only 320</text>
+<line x1="24" y1="871" x2="806" y2="871" stroke="#34526f"/>
+<text x="24" y="895" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
+<text x="24" y="911" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#b5c7da" text-anchor="start">One commit may include several AI actor presences (one per provider/tool).</text>
 </svg>

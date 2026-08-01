@@ -48,10 +48,10 @@ open the provider-filterable dashboard.
   </picture>
 </a>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/heatmap-dark.svg">
-  <img alt="Wenyu Chiou's AI collaboration heatmap; intensity is commit volume and hue is AI share" src="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/heatmap-light.svg">
-</picture>
+The card shows sustained AI collaboration (active AI days and a 12-week
+activity terrain), breadth across AI providers, and the explicit evidence
+totals behind every number. It is a record of declared Git evidence, not
+a skill score.
 
 ## Why ai-profile?
 
@@ -235,6 +235,11 @@ The static, synthetic previews below demonstrate the complete output family:
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
   <img alt="Synthetic AI collaboration summary card" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/heatmap-sample-dark.svg">
+  <img alt="Synthetic commit-activity heatmap; intensity is commit volume and hue is AI share" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/heatmap-sample-light.svg">
 </picture>
 
 <picture>

@@ -209,7 +209,7 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
 
     assert 'name="viewport"' in html
     assert 'aria-live="polite"' in html
-    assert 'aria-label="Change color theme"' in html
+    assert 'aria-label="Theme: auto. Activate for light theme"' in html
     assert "prefers-color-scheme: dark" in html
     assert "prefers-reduced-motion: reduce" in html
     assert "@media (max-width: 38rem)" in html
@@ -273,6 +273,63 @@ def test_mobile_provider_filters_wrap_without_horizontal_scrolling():
     assert "overflow-x: visible" in mobile_css
     assert "width: 100%" in mobile_css
     assert "padding-inline: var(--space-2)" in mobile_css
+
+
+def test_narrow_22rem_reflow_prevents_zoom_overflow():
+    """200%-zoom blocker (v0.4.8 visual review): at effective widths of
+    145-195 CSS px the body expanded to 209px. The 22rem narrow-reflow
+    rule must collapse the filters to one column, tighten panel padding,
+    contain/wrap every unbreakable text run, and keep ONLY the calendar's
+    intentional horizontal scroller."""
+    html = render_dashboard(_stats())
+    narrow = html.split("@media (max-width: 22rem)", 1)[1].split(
+        "@media (pointer: coarse)", 1
+    )[0]
+    # Filters collapse to a single column.
+    assert ".filters {" in narrow
+    assert "grid-template-columns: minmax(0, 1fr)" in narrow
+    assert "repeat(2, minmax(0, 1fr))" not in narrow
+    # Panel padding tightens to the 1rem step.
+    assert ".hero-panel," in narrow
+    assert ".notes-panel {" in narrow
+    assert "padding: var(--space-4)" in narrow
+    # Shrink containment and wrapping for unbreakable runs.
+    assert "min-width: 0" in narrow
+    assert "max-width: 100%" in narrow
+    assert "overflow-wrap: anywhere" in narrow
+    for selector in (
+        ".panel-title",
+        ".panel-meta",
+        ".section-kicker",
+        ".provider-name",
+        ".provider-detail",
+        ".evidence-item",
+    ):
+        assert selector in narrow, selector
+    assert ".provider-row-head," in narrow
+    assert ".legend-scale" in narrow
+    assert "flex-wrap: wrap" in narrow
+    # Evidence heading stacks as a grid with left-aligned meta.
+    assert ".evidence-panel .panel-heading" in narrow
+    assert "display: grid" in narrow
+    assert "text-align: left" in narrow
+    # The calendar's horizontal scroller is intentional and untouched.
+    assert ".calendar-scroll" not in narrow
+
+
+def test_theme_toggle_accessible_name_includes_state_and_next_action():
+    """The button visibly reads `Theme: <state>`; its accessible name must
+    contain that visible text (WCAG label-in-name) plus the next action,
+    and setTheme() must keep it in sync across the auto/light/dark cycle."""
+    html = render_dashboard(_stats())
+    assert 'aria-label="Change color theme"' not in html
+    assert 'aria-label="Theme: auto. Activate for light theme"' in html
+    assert (
+        'const nextTheme = next === "auto" ? "light" : next === "light" ? "dark" : "auto";'
+        in html
+    )
+    assert "`Theme: ${next}. Activate for ${nextTheme} theme`" in html
+    assert 'setAttribute("aria-label"' in html
 
 
 def _relative_luminance(hex_color: str) -> float:

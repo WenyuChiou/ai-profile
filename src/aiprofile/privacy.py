@@ -60,8 +60,10 @@ def _build_daily(
     D4: total_commits/ai_commits come ONLY from totals_rows (distinct-
     commit semantics cannot be derived from per-provider counts, which
     overlap on multi-AI commits), summed across FULL repositories per
-    date. Human-only days (totals with zero AI) are real cells with empty
-    counts. A date with provider rows but no totals row is structurally
+    date. Days with zero attributed AI (totals rows with zero AI - not
+    provably human, since unattributed and explicitly human-declared
+    commits both land in that zero) are real cells with empty counts.
+    A date with provider rows but no totals row is structurally
     impossible when both inputs come from one database - raise, never
     fabricate and never silently drop.
     """

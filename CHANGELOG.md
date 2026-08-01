@@ -25,6 +25,36 @@ below.
 
 ## [Unreleased]
 
+Target version: 0.4.8 (version bumped in-tree; not yet published).
+
+### Changed
+
+- Redesign the summary card as the recruiter-first `AI Collaboration
+  Record` (ADR-022): hero AI-attributed commits with share of scanned
+  commits, a secondary ledger (active AI days, providers, actor
+  presences, unattributed commits), a prominent 12-week isometric
+  collaboration terrain, the top-six provider ledger with an explicit
+  non-exclusive note, and a compact evidence rail with the existing
+  privacy cue and footnote. Width, themes, zero state, and the privacy
+  wording are unchanged.
+- Make the terrain semantically honest: prism height now encodes the
+  day's total commits through the fixed 1 / 2-4 / 5-7 / 8+ bins and the
+  top-face hue encodes the day's AI share through the heatmap card's own
+  fixed share bins (shared bin arithmetic in `render/_bins.py`).
+  Provider counts no longer influence terrain geometry, and a day with
+  zero attributed AI commits (not provably human — unattributed history
+  counts toward the day's total) is a visible neutral prism instead of
+  being indistinguishable from a no-data day. A profile with nonzero
+  totals but no published daily series states exactly `Daily activity is
+  not published for this profile`.
+- Align the dashboard headline (`Evidence-backed AI collaboration.`) and
+  the summary card's local IBM Plex display/body/mono type stacks with
+  the shared editorial system; refresh the README banner and social
+  preview to the same wording. No new fonts, dependencies, network
+  access, or active SVG content.
+- Show only the Summary Card as the real Profile example in both READMEs
+  and move the heatmap preview to "What gets generated".
+
 ## [0.4.7] — 2026-07-30
 
 ### Fixed

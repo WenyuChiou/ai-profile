@@ -149,6 +149,19 @@ designed v0.5.0 plan.
 - [x] Preserve the static SVG README strategy; link to the generated HTML
       when users want interaction.
 
+## v0.4.8 — HR-first visual refresh (in progress)
+
+- [x] Summary card redesigned as the recruiter-first `AI Collaboration
+      Record` (ADR-022): hero + share, secondary ledger, prominent
+      12-week whole-rhythm isometric terrain (height = total-commit
+      bins, hue = AI-share bins, provider-independent geometry),
+      non-exclusive provider ledger, compact evidence rail.
+- [x] Dashboard headline and summary type system aligned with the shared
+      editorial-tech direction; README example simplified to the Summary
+      Card with the heatmap moved to "What gets generated".
+- [ ] Release round (canonical Ubuntu build, frozen candidate digest,
+      dogfood rerun, promotion review) per docs/RELEASING.md.
+
 ## Future capability milestone — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature

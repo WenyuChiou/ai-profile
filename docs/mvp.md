@@ -108,19 +108,24 @@ README embedding (documented in README):
 images through its asset proxy; paired light/dark assets via `<picture>` is
 the reliable, GitHub-native theming mechanism.)
 
-The summary card shows: reporting period ("All time" in v0.1) · unique
-commits scanned · one accent hero value for AI-attributed commits with
-its share of unique commits scanned shown in a thin bar · AI actor
-presences / active AI days (author dates) / number of AI providers /
-unknown count in a subordinate ledger · provider-ranked thin bars (top 6
-+ "+N more") with count and percentage, denominator stated in the table
-header · evidence provenance panel with its population stated ("all
-records: N" — G2-05), a stacked evidence bar, and square-swatch counts ·
-publication statement (policy-based wording, never visibility claims —
-G2-04: "Includes aggregate-only activity (repository identity withheld)"
-plus a publishable/aggregate split when both sides are nonzero) ·
-generation date (UTC date only) · metric definition footnote. Card height
-is dynamic-but-deterministic (collapses with few providers; ADR-010).
+The summary card (`AI Collaboration Record` since v0.4.8, ADR-022)
+shows, in recruiter-facing order: reporting period ("All time" in v0.1)
+· one accent hero value for AI-attributed commits with its share of
+unique commits scanned shown in a thin bar · active AI days (author
+dates) / number of AI providers / AI actor presences / unknown count in
+a subordinate ledger · a 12-week isometric collaboration terrain (height
+= total-commit volume bins, top-face hue = AI-share bins; publishable
+daily data only, with an explicit "not published" notice otherwise) ·
+provider-ranked thin bars (top 6 + "+N providers not shown") with count
+and percentage, denominator stated in the table header and an explicit
+non-exclusive note · a compact evidence rail with its population stated
+("all records: N" — G2-05), a stacked evidence bar, and square-swatch
+counts · publication statement (policy-based wording, never visibility
+claims — G2-04: "Includes aggregate-only activity (repository identity
+withheld)" plus a publishable/aggregate split when both sides are
+nonzero) · generation date (UTC date only) · metric definition footnote.
+Card height is dynamic-but-deterministic (collapses with few providers;
+ADR-010).
 
 ## 6. Privacy defaults
 

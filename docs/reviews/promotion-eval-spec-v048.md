@@ -19,14 +19,14 @@ dashboard H1, README structure, and the banner/social assets.
 - Wheel: `ai_profile_cli-0.4.8-py3-none-any.whl`
 - Frozen `SOURCE_DATE_EPOCH`: `1785369600`
 - Canonical clean-Linux wheel SHA-256:
-  `8c065a68c8bf6ff1e77c7de8591b2233429580d1f200db7637e8f8f81aaa7077`
+  `04e90f2599bda2ce24bbd254f48bb2034fcaba140a17a40912594edc45257bd0`
   (isolated Docker `python:3.12` build of the candidate tree; pinned in
   `docs/reviews/promotion-candidate.json`, the staging workflow, and
   `tests/unit/test_staging_preview.py` before any promotion evidence is
   accepted; a re-frozen digest requires rebuilding and re-running every
   gate below that consumed it).
 - The staging dashboard SHA-256 must remain
-  `ca32df54bc0a9fee107f1359425d045809430ce491f413acd86563d0138de893`.
+  `c8680c2812343077775c2b5c0fddae9dce32c1517bbaa4c920e056b347fdbd4f`.
 
 ## Required gates
 

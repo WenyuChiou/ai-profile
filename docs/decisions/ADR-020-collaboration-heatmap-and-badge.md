@@ -2,6 +2,12 @@
 
 Date: 2026-07-23 · Status: accepted
 Spec: `.ai/round_d4_heatmap_spec.md` (binding decisions frozen there)
+Erratum (2026-08-01, v0.4.8 review round): wording that equated a day
+with `ai_commits == 0` with "human-only" was corrected below to
+"zero-attributed-AI" — `compute_daily_commit_totals` counts unattributed
+(unknown) commits as well as explicit `AI-Mode: Human-Only` declarations
+in `total_commits`, so such a day is never provably human. The decisions
+themselves are unchanged.
 
 ## Context
 
@@ -17,12 +23,12 @@ this project's most differentiated visual.
 (`heatmap-{light,dark}.svg`) renders a Monday-anchored year grid where
 each day cell encodes:
 
-- intensity (fill-opacity, 4 steps): `total_commits` — every commit,
-  human-only included, bucketed 1 / 2-4 / 5-7 / 8+ (the D2 band's own
-  bucketing);
+- intensity (fill-opacity, 4 steps): `total_commits` — every commit
+  regardless of attribution, zero-attributed-AI commits included,
+  bucketed 1 / 2-4 / 5-7 / 8+ (the D2 band's own bucketing);
 - hue (fill color, 5 flat steps): the day's AI share, selected by
   integer arithmetic (`ceil(4·ai/total)`, bin 0 reserved for
-  human-only days) and interpolated neutral→accent per theme. Quantized
+  zero-attributed-AI days) and interpolated neutral→accent per theme. Quantized
   bins, not a continuous ramp: legend-explainable, snapshot-stable, no
   false precision, no float-equality platform edges.
 
@@ -50,9 +56,11 @@ bundle; sorted-by-name deterministic order. `aiprofile render` emits
 all six.
 
 **Band interplay.** The isometric band stays AI-only: it slices the
-365-day series to its own newest-anchored 84 days, and a human-only
-day renders as the flat base diamond (byte-identical to a no-data
-day). The whole-rhythm view belongs to the heatmap card exclusively.
+365-day series to its own newest-anchored 84 days, and a
+zero-attributed-AI day renders as the flat base diamond (byte-identical
+to a no-data day). The whole-rhythm view belongs to the heatmap card
+exclusively. (Superseded by ADR-022, v0.4.8: the summary card's terrain
+is whole-rhythm.)
 
 ## Consequences
 

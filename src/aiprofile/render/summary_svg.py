@@ -1,19 +1,29 @@
-"""Deterministic summary card SVG renderer (ADR-010, architecture.md section 9).
+"""Deterministic summary card SVG renderer (ADR-010, ADR-022,
+architecture.md section 9).
 
 `render_summary(stats, theme)` is a pure function of its two arguments: no
 clock reads, no randomness, no locale-dependent formatting. Byte-identical
 output for identical inputs is a pinned test (mvp.md section 7 test 11).
 
+v0.4.8 redesigns the card as the recruiter-facing `AI Collaboration
+Record` (ADR-022): header + period, a hero AI-attributed-commit figure
+with its share of scanned commits, a secondary metric ledger, a prominent
+12-week isometric collaboration terrain (height = total-commit volume
+bins, hue = AI-share bins — the heatmap card's own fixed bins, shared via
+`render/_bins.py`), the top-six provider ledger with an explicit
+non-exclusive note, and a compact evidence rail.
+
 Layout is dynamic-but-deterministic: the card height is a pure function of
-the data (number of provider rows, overflow line, zero state) so sparse
-profiles never show a dead band — see `card_height`.
+the data (number of provider rows, overflow line, published daily series,
+zero state) so sparse profiles never show a dead band — see `card_height`.
 
 Module graph is enforced by a separate unit test (architecture.md section 2):
 this module may import stdlib plus `aiprofile.viz`, `aiprofile.render.themes`,
-`aiprofile.render.brand`, and `aiprofile.errors` only — never storage,
-gitio, schema, or sqlite3. `render.brand` (round D1, ADR-017) is the vendored
-provider-glyph table; it is a sibling render-package module, not a schema
-import, so it does not cross the isolation boundary.
+`aiprofile.render.brand`, `aiprofile.render._bins`, and `aiprofile.errors`
+only — never storage, gitio, schema, or sqlite3. `render.brand` (round D1,
+ADR-017) is the vendored provider-glyph table and `render._bins` the shared
+day-cell bin arithmetic; both are sibling render-package modules, not schema
+imports, so they do not cross the isolation boundary.
 """
 
 from __future__ import annotations
@@ -22,6 +32,7 @@ import datetime
 from xml.sax.saxutils import escape
 
 from ..viz import DayCell, ProviderRow, Totals, VizStats
+from ._bins import VOLUME_CAP, _share_bin, _share_colors, _volume_bin
 from .brand import BRAND, BrandSpec
 from .themes import Theme
 
@@ -35,15 +46,31 @@ _UNRECOGNIZED_PROVIDER = "unrecognized"
 
 # ---------------------------------------------------------------------------
 # Layout constants (ADR-010: fixed constants, no template engine).
+# The v0.4.8 spacing system: 4px scale, 24px outer padding, 8-12px
+# within-group gaps, 20-24px between sections. Fixed type sizes
+# 11/12/13/16/38; weights 400 for labels, 600 for values/section labels,
+# 700 for the hero figure.
 # ---------------------------------------------------------------------------
 
 WIDTH = 830
 PADDING = 24
 RADIUS = 8
 
+#: The three local type stacks (ADR-022; mirrors the dashboard's system).
+#: Body carries labels and prose, display carries the card title/header,
+#: and mono carries numeric data — including the hero figure. All local
+#: fallbacks — never a font fetch.
 FONT_STACK = "'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif"
+FONT_STACK_DISPLAY = (
+    "'IBM Plex Sans Condensed', 'Aptos Display', 'Segoe UI', "
+    "'DejaVu Sans Condensed', sans-serif"
+)
+FONT_STACK_MONO = (
+    "'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', "
+    "Consolas, monospace"
+)
 
-TITLE_TEXT = "AI Collaboration Summary"
+TITLE_TEXT = "AI Collaboration Record"
 MAX_PROVIDER_ROWS = 6
 
 # Header: accent commit-node glyph + title + right-aligned period label.
@@ -67,15 +94,17 @@ LEDGER_VALUE_X = WIDTH - PADDING
 LEDGER_FIRST_Y = 88
 LEDGER_ROW_STEP = 24
 
-# Provider table.
-TABLE_LABEL_Y = 208
-ROWS_TOP = 224
+# Provider ledger (rendered BELOW the terrain since v0.4.8 — the terrain
+# is the card's recruiter-facing centerpiece, ADR-022). The table's top
+# depends on the terrain block's height, so the row origin is a function
+# (`_rows_top`), not a constant.
+TABLE_LABEL_OFFSET = 12  # terrain bottom + CAL_GAP_BELOW -> table label baseline
+ROWS_TOP_OFFSET = 16  # table label baseline -> first row top
 ROW_HEIGHT = 28
 
 # Provider identity tile (round D1 brand identity spec, "Provider row
 # lockup"): a 20x20 rounded-rect glyph tile sits where the name used to
-# start; the name shifts right to make room. BAR_X, COUNT_X, ROW_HEIGHT are
-# unchanged (minimal geometry churn per the spec).
+# start; the name shifts right to make room.
 GLYPH_TILE_X = PADDING  # 24 - the old NAME_X
 GLYPH_TILE_SIZE = 20
 GLYPH_TILE_RADIUS = 4
@@ -93,22 +122,35 @@ LETTER_TILE_TEXT_DY = 14  # baseline offset from the tile's top y
 LETTER_TILE_FONT_SIZE = 11
 
 NAME_X = GLYPH_TILE_X + GLYPH_TILE_SIZE + 8  # 52 (spec: tile + 8px gap)
-NAME_WIDTH = 122  # 150 - 28 (spec: NAME_WIDTH shrinks by 28)
+NAME_WIDTH = 122
 BAR_X = 184
 COUNT_X = WIDTH - PADDING  # right anchor for "count · pct%"
 BAR_MAX_WIDTH = 500  # COUNT_X - reserved count column (110) - gap (12) - BAR_X
 BAR_HEIGHT = 7
-NAME_FONT_SIZE = 14
-COUNT_FONT_SIZE = 14
+NAME_FONT_SIZE = 13
+COUNT_FONT_SIZE = 13
 
 MORE_LINE_EXTRA = 24  # vertical room for the "+N providers not shown" line when present
 
-# Evidence/privacy provenance panel.
+#: Explicit non-exclusive statement for the provider ledger (ADR-022):
+#: provider involvement totals overlap by definition, and the card says so
+#: in place rather than leaving the reader to derive it from the footnote.
+PROVIDER_NOTE_TEXT = (
+    "Provider totals are not mutually exclusive - one commit can involve several providers."
+)
+PROVIDER_NOTE_BASELINE = 14  # rows bottom -> note baseline
+PROVIDER_NOTE_EXTRA = 20  # vertical room the note adds below the rows
+
+# Evidence rail (v0.4.8): a compact rail replaces the former full-width
+# provenance panel. `chip_bg` survives as a SMALL evidence-backed chip
+# behind the rail label — an evidence cue, not a warning panel.
 PANEL_GAP_ABOVE = 20
-PANEL_PAD_X = 16
+PANEL_PAD_X = 0  # the rail spans the full content width
 PANEL_PAD_Y = 16
 PANEL_HEIGHT = 104
-PANEL_RADIUS = 6
+EVIDENCE_CHIP_HEIGHT = 22
+EVIDENCE_CHIP_PAD_X = 8
+EVIDENCE_CHIP_RADIUS = 4
 EVIDENCE_FONT_SIZE = 12
 EVIDENCE_LABEL_SIZE = 12
 EVIDENCE_PREFIX_TEMPLATE = "Evidence (all records: {n})"
@@ -133,60 +175,81 @@ ZERO_HINT_Y = 144
 ZERO_BODY_BOTTOM = 164
 
 # ---------------------------------------------------------------------------
-# Isometric daily-activity calendar band (round D2, ADR-018,
-# .ai/round_d2_isometric_calendar_spec.md "Renderer" section). Rendered
-# between the provider rows and the evidence panel, ONLY when
-# `stats.daily` is non-empty — an empty series omits the band entirely
-# and every geometry constant below drops out of the layout, so a
-# no-daily card stays byte-identical to the pre-D2 renderer (pinned by
-# tests/unit/test_calendar_band.py::test_empty_daily_omits_band_and_matches_pre_d2_geometry).
+# Isometric collaboration terrain (round D2 geometry, ADR-018; semantics
+# redefined by ADR-022). Rendered between the secondary ledger and the
+# provider table. Each published day is ONE solid prism:
+#
+# - HEIGHT encodes `DayCell.total_commits` through the fixed volume bins
+#   0 / 1 / 2-4 / 5-7 / 8+ (`_bins._volume_bin` -> TERRAIN_HEIGHTS) — the
+#   owner's whole working rhythm, every commit regardless of attribution
+#   (unattributed and explicitly human-declared included);
+# - the TOP-FACE HUE encodes the day's AI share (`ai_commits /
+#   total_commits`) through the heatmap card's own fixed share bins
+#   (`_bins._share_bin` -> `_bins._share_colors`).
+#
+# Provider rows and counts NEVER contribute to terrain geometry: a
+# one-commit multi-provider day is exactly as tall as a one-commit
+# single-provider day (pinned in tests/unit/test_recruiter_card.py).
+#
+# The daily series is publishable-only (ADR-018): an empty series with
+# nonzero headline totals renders the exact CAL_UNPUBLISHED_TEXT notice
+# instead of a fabricated grid.
 #
 # Geometry is precomputed INTEGER affine arithmetic on purpose: every
-# constant here (tile half-extents, the stack-height cap, the grid
-# origin) is an int, and col/row/elevation are always ints too, so a
-# <polygon> "points" list can never carry floating-point noise — the
-# same "no float noise" discipline test_coordinate_hygiene_no_float_noise
-# enforces on x/y/width/height (that regex does not reach "points";
-# test_calendar_band.py::test_polygon_points_carry_no_float_noise pins the
-# same invariant for the new element).
+# constant here is an int, and col/row/elevation are always ints too, so a
+# <polygon> "points" list can never carry floating-point noise
+# (test_calendar_band.py::test_polygon_points_carry_no_float_noise).
 # ---------------------------------------------------------------------------
 
-CAL_GAP_ABOVE = 20  # rows/"+N providers not shown" bottom -> label top (mirrors PANEL_GAP_ABOVE)
-CAL_GAP_BELOW = 20  # calendar bottom -> evidence panel top (mirrors PANEL_GAP_ABOVE)
+CAL_GAP_BELOW = 20  # terrain bottom -> provider-table label block
 CAL_LABEL_SIZE = 12
 CAL_LABEL_BASELINE_Y = 14  # local y (band-relative) of the label's text baseline
-CAL_LABEL_TEXT = "Daily AI collaboration (last 84 days)"
+CAL_LABEL_TEXT = "Collaboration terrain (last 12 weeks)"
+
+#: The exact honest message for a profile whose headline totals are
+#: nonzero but whose daily series is unpublished (ADR-022).
+CAL_UNPUBLISHED_TEXT = "Daily activity is not published for this profile"
+CAL_NOTICE_MESSAGE_Y = 38  # local baseline of the unpublished-daily message
+CAL_NOTICE_HEIGHT = 44  # total footprint of the unpublished-daily notice
+
+#: Fixed y where the terrain block starts: the hero/ledger block above it
+#: is fixed-height (share bar bottom 179 / ledger baseline 160), plus a
+#: 24px section gap on the 4px scale.
+CAL_TOP = 204
 
 # Round D3 P2: month-boundary labels sit in their own row between the band
 # header and the diamond grid. CAL_GRID_TOP_Y (below) derives from these so
 # bumping either constant here re-flows the whole grid/legend/CAL_HEIGHT
-# automatically -- the same "everything downstream recomputes" discipline
-# the original D2 layout uses for CAL_GRID_TOP_Y itself.
+# automatically.
 CAL_MONTH_LABEL_SIZE = 11
 CAL_MONTH_LABEL_BASELINE_Y = 30  # local y of the month-label row's text baseline
 CAL_MONTH_LABEL_GRID_GAP = 10  # month-label baseline -> grid top
 
 CAL_WEEKS = 12
 CAL_DAYS = 7
-CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- the band's OWN newest-anchored
+CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- the terrain's OWN newest-anchored
 # slice of the (D4: 365-day) viz.DAILY_WINDOW_DAYS series; gate-17 L-01
 
 CAL_TILE_HW = 18  # isometric tile half-width
 CAL_TILE_HH = 9  # isometric tile half-height (2:1 diamond ratio)
-CAL_MAX_STACK_PX = 32  # column height at CAL_CAP_COMMITS provider-counted commits
-#: A day whose provider-attributed counts sum to at least this value
-#: renders at the full CAL_MAX_STACK_PX column height. Documented cap, not
-#: a silent clip: one outlier day cannot dwarf the rest of the 84-day
-#: window or blow out the card's fixed geometry budget. Provider counts can
-#: overlap, so this intensity unit is not the all-provider unique-commit unit.
-CAL_CAP_COMMITS = 8
+CAL_MAX_STACK_PX = 32  # prism height of the top volume bin (8+ commits)
+
+#: Fixed prism heights per volume bin (ADR-022): 1 -> 8px, 2-4 -> 16px,
+#: 5-7 -> 24px, 8+ -> CAL_MAX_STACK_PX. Indexed by `_bins._volume_bin`,
+#: which shares the exact thresholds with the heatmap card. A documented
+#: saturating top bin, not a silent clip: one outlier day cannot dwarf the
+#: window or blow the card's fixed geometry budget.
+TERRAIN_HEIGHTS = (8, 16, 24, CAL_MAX_STACK_PX)
+
+#: The volume cap the legend bins derive from — the shared render/_bins
+#: contract value (8), kept under its historical name because the D3
+#: legend derivation (`_legend_bins`) and its tests address it this way.
+CAL_CAP_COMMITS = VOLUME_CAP
 
 #: Local (band-relative) y where the grid starts: high enough that even a
-#: full-height column at (col=0, row=0) never draws above y=0 within the
+#: full-height prism at (col=0, row=0) never draws above y=0 within the
 #: band. Local y=0 is the very top of the whole band (the label's own
-#: baseline sits below it, at CAL_LABEL_BASELINE_Y). Round D3 P2 moved this
-#: from a bare literal (24) to a derived value: the month-label row now
-#: owns the space between the band header and the grid.
+#: baseline sits below it, at CAL_LABEL_BASELINE_Y).
 CAL_GRID_TOP_Y = CAL_MONTH_LABEL_BASELINE_Y + CAL_MONTH_LABEL_GRID_GAP  # 40
 CAL_GRID_BOTTOM_MARGIN = 6
 
@@ -200,18 +263,17 @@ CAL_RIGHTMOST_LOCAL_X = (CAL_WEEKS - 1) * CAL_TILE_HW + CAL_TILE_HW  # 216
 CAL_X_OFFSET = WIDTH // 2 - (CAL_LEFTMOST_LOCAL_X + CAL_RIGHTMOST_LOCAL_X) // 2
 
 #: Shifts the grid's own (col=0, row=0, elevation=0) tile center so that
-#: the topmost possible point (col=0, row=0, full CAL_MAX_STACK_PX column)
+#: the topmost possible point (col=0, row=0, full CAL_MAX_STACK_PX prism)
 #: lands exactly at CAL_GRID_TOP_Y.
 CAL_ORIGIN_Y = CAL_GRID_TOP_Y + CAL_TILE_HH + CAL_MAX_STACK_PX
 
 #: Bottommost point of the grid (col=CAL_WEEKS-1, row=CAL_DAYS-1, elevation 0).
 CAL_GRID_BOTTOM_Y = CAL_ORIGIN_Y + (CAL_WEEKS - 1 + CAL_DAYS - 1) * CAL_TILE_HH + CAL_TILE_HH
 
-# Round D3 P1: a compact single-line intensity legend sits under the grid
-# (CAL_CAP_COMMITS-derived bins, see `_legend_bins`) plus the "publishable
-# repos only" cue. CAL_LEGEND_ROW_HEIGHT is the NAMED constant CAL_HEIGHT
-# grows by -- the legend renders only inside the same `if stats.daily:`
-# branch as the rest of the band, so an empty-daily card never sees it.
+# Terrain legend (v0.4.8): one compact line under the grid stating BOTH
+# encodings — four miniature prisms for the height bins (1 / 2-4 / 5-7 /
+# 8+ total commits) and the five-step neutral->accent ramp for the AI
+# share — plus the standing "publishable repos only" cue.
 CAL_LEGEND_TILE_HW = 6  # legend diamond half-width (smaller than a grid tile)
 CAL_LEGEND_TILE_HH = 3  # legend diamond half-height (2:1 ratio, matches CAL_TILE_HW/HH)
 CAL_LEGEND_LABEL_SIZE = 11
@@ -221,32 +283,32 @@ CAL_LEGEND_DIAMOND_DY = -4  # diamond center, relative to the legend baseline
 CAL_LEGEND_TOP_GAP = 14  # grid-bottom margin -> legend baseline
 CAL_LEGEND_BOTTOM_PAD = 4  # legend baseline -> band bottom (descender clearance)
 CAL_LEGEND_ROW_HEIGHT = CAL_LEGEND_TOP_GAP + CAL_LEGEND_BOTTOM_PAD  # the named growth constant
+CAL_LEGEND_GROUP_GAP = 12  # gap between the height group and the share group
+CAL_LEGEND_RAMP_STEP = 3  # gap between two share-ramp diamonds
 CAL_LEGEND_CUE_TEXT = "publishable repos only"
+CAL_LEGEND_HEIGHT_LABEL = "Commits"
+CAL_LEGEND_SHARE_LABEL = "AI share"
+
+#: Miniature prism elevations for the legend's four height bins — the real
+#: TERRAIN_HEIGHTS scaled to the legend tile (integer division keeps the
+#: no-float-noise discipline).
+CAL_LEGEND_ELEVATIONS = tuple(h // 4 for h in TERRAIN_HEIGHTS)  # (2, 4, 6, 8)
 
 #: Local (band-relative) y of the legend row's text baseline.
 CAL_LEGEND_BASELINE_Y = CAL_GRID_BOTTOM_Y + CAL_GRID_BOTTOM_MARGIN + CAL_LEGEND_TOP_GAP
 
-#: Fixed literal fill-opacity per bin index (never computed/blended, same
-#: discipline as CAL_FACE_OPACITY_*): all legend diamonds share the SAME
-#: theme.muted fill and are distinguished only by opacity, lightest bin
-#: first. Never indexed past its own length (`_legend_bins` never returns
-#: more than 4 bins).
-CAL_LEGEND_OPACITIES = (0.35, 0.55, 0.75, 1.0)
-
-#: Total fixed footprint of the band (label + month-label row + grid +
-#: legend); added to the layout only when stats.daily is non-empty.
+#: Total fixed footprint of the terrain (label + month-label row + grid +
+#: legend); the notice variant occupies CAL_NOTICE_HEIGHT instead.
 CAL_HEIGHT = CAL_LEGEND_BASELINE_Y + CAL_LEGEND_BOTTOM_PAD
 
-#: Isometric face shading -- same flat token color for all three faces of a
-#: column, distinguished only by fill-opacity (never a computed/blended
-#: hex): top face full strength, the two side "walls" progressively
-#: dimmer, giving a 3D cube read without introducing any new color value.
+#: Isometric face shading -- same flat hue for all three faces of a prism,
+#: distinguished only by fill-opacity (never a computed/blended hex): top
+#: face full strength, the two side "walls" progressively dimmer, giving a
+#: 3D read without introducing any new color value.
 CAL_FACE_OPACITY_TOP = 0.88
 CAL_FACE_OPACITY_LEFT = 0.62
 CAL_FACE_OPACITY_RIGHT = 0.42
 
-#: SMIL entrance (spec: "grow-in ... only if deterministic + byte-stable").
-#: Fixed literal dur/begin, one-shot (SMIL's default repeatCount is 1 --
 #: NO entrance animation - a deliberate REMOVAL, twice-earned during D2
 #: visual verification (spec rule: honest > flashy):
 #: 1. First attempt shipped `<g opacity="0">` + SMIL 0->1: renderers
@@ -258,8 +320,8 @@ CAL_FACE_OPACITY_RIGHT = 0.42
 #:    the band was STILL invisible in every static capture, verified on
 #:    a real PDF print.
 #: Any from-nothing entrance has this structural problem: some real
-#: consumer always captures t=0. The calendar band is therefore fully
-#: static; a future entrance must prove a t=0-visible capture first.
+#: consumer always captures t=0. The terrain is therefore fully static;
+#: a future entrance must prove a t=0-visible capture first.
 
 # ---------------------------------------------------------------------------
 # Conservative character-width table (ADR-010: no font dependency at render
@@ -320,11 +382,12 @@ def _text(
     anchor: str = "start",
     escaped: bool = False,
     letter_spacing: float | None = None,
+    family: str = FONT_STACK,
 ) -> str:
     body = content if escaped else escape(content)
     spacing_attr = f' letter-spacing="{letter_spacing}"' if letter_spacing is not None else ""
     return (
-        f'<text x="{x}" y="{y}" font-family="{FONT_STACK}" font-size="{size}" '
+        f'<text x="{x}" y="{y}" font-family="{family}" font-size="{size}" '
         f'font-weight="{weight}" fill="{fill}" text-anchor="{anchor}"{spacing_attr}>{body}</text>'
     )
 
@@ -396,27 +459,40 @@ def _has_more_line(stats: VizStats) -> bool:
     return len(stats.providers) > MAX_PROVIDER_ROWS
 
 
+def _calendar_top(stats: VizStats) -> int:
+    # Fixed since v0.4.8: the terrain block sits directly under the
+    # fixed-height hero/ledger block (ADR-022 moved it above the provider
+    # table). Kept as a function of stats for signature stability.
+    del stats
+    return CAL_TOP
+
+
+def _terrain_block_height(stats: VizStats) -> int:
+    """The terrain block's footprint: the full grid when a publishable
+    daily series exists, the compact unpublished-daily notice otherwise
+    (never zero — the zero state bypasses this layout entirely)."""
+    return CAL_HEIGHT if stats.daily else CAL_NOTICE_HEIGHT
+
+
+def _table_label_y(stats: VizStats) -> int:
+    return _calendar_top(stats) + _terrain_block_height(stats) + CAL_GAP_BELOW + TABLE_LABEL_OFFSET
+
+
+def _rows_top(stats: VizStats) -> int:
+    return _table_label_y(stats) + ROWS_TOP_OFFSET
+
+
 def _rows_bottom(stats: VizStats) -> int:
-    bottom = ROWS_TOP + _visible_rows(stats) * ROW_HEIGHT
+    bottom = _rows_top(stats) + _visible_rows(stats) * ROW_HEIGHT
     if _has_more_line(stats):
         bottom += MORE_LINE_EXTRA
     return bottom
 
 
-def _calendar_top(stats: VizStats) -> int:
-    return _rows_bottom(stats) + CAL_GAP_ABOVE
-
-
 def _panel_top(stats: VizStats) -> int:
-    # Round D2: when a publishable daily series exists, the calendar band
-    # sits between the provider rows and the evidence panel, and the panel
-    # shifts down by the band's fixed height. When stats.daily is empty
-    # this branch is never taken, so _rows_bottom(stats) + PANEL_GAP_ABOVE
-    # is EXACTLY the pre-D2 expression — zero geometry shift, byte-identical
-    # output for a no-daily card (pinned by test_calendar_band.py).
-    if stats.daily:
-        return _calendar_top(stats) + CAL_HEIGHT + CAL_GAP_BELOW
-    return _rows_bottom(stats) + PANEL_GAP_ABOVE
+    # The evidence rail follows the provider ledger and its non-exclusive
+    # note; every term is a pure function of the data shape.
+    return _rows_bottom(stats) + PROVIDER_NOTE_EXTRA + PANEL_GAP_ABOVE
 
 
 def card_height(stats: VizStats) -> int:
@@ -429,28 +505,27 @@ def card_height(stats: VizStats) -> int:
 
 
 def _calendar_desc_suffix(stats: VizStats) -> str:
-    """One-line ASCII calendar summary appended to <desc> (round D2 spec
-    item 5): the window span (anchored at the series' own newest date,
-    never "today") plus the peak day's summed provider-attributed count.
-    The overlap caveat is part of the accessible text because this is not
-    the all-provider unique-commit unit. Empty string when there is no daily
-    series to summarize."""
+    """One-line ASCII terrain summary appended to <desc>: the window span
+    (anchored at the series' own newest date, never "today"), the peak
+    day's total commits, and both encodings stated. The unpublished-daily
+    state repeats the exact on-card notice so the accessible text and the
+    visual text cannot disagree."""
     if not stats.daily:
-        return ""
+        return f" {CAL_UNPUBLISHED_TEXT}."
     newest = datetime.date.fromisoformat(stats.daily[-1].date)
     window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
-    # Peak over the band's OWN 84-day slice only: since D4 widened the
+    # Peak over the terrain's OWN 84-day slice only: since D4 widened the
     # series to 365 days, an out-of-window day must not leak into this
     # window-scoped claim.
-    peak_provider_count = max(
-        sum(dc.attributed_commits for dc in cell.counts)
+    peak_total = max(
+        cell.total_commits
         for cell in stats.daily
         if cell.date >= window_start.isoformat()
     )
     return (
-        f" Daily activity calendar {window_start.isoformat()} to {newest.isoformat()},"
-        f" peak day summed provider-attributed count {peak_provider_count};"
-        " provider counts may overlap."
+        f" Collaboration terrain {window_start.isoformat()} to {newest.isoformat()},"
+        f" peak day {peak_total} commits; height is total commits, hue is the day's"
+        " AI share; publishable repositories only."
     )
 
 
@@ -473,10 +548,13 @@ def _desc_text(stats: VizStats, zero_state: bool) -> str:
 
 
 def _ledger_svg(stats: VizStats, theme: Theme) -> str:
+    # Secondary metric order is the recruiter-facing priority (ADR-022):
+    # sustained use first, provider breadth second, then the multi-actor
+    # depth metric, then the honest unattributed remainder.
     rows = (
-        ("AI actor presences", stats.totals.ai_actor_presences),
         ("Active AI days (author dates)", stats.totals.active_ai_days),
         ("AI providers", stats.provider_count),
+        ("AI actor presences", stats.totals.ai_actor_presences),
         ("Unattributed commits", stats.totals.unknown_commits),
     )
     parts = []
@@ -484,7 +562,16 @@ def _ledger_svg(stats: VizStats, theme: Theme) -> str:
         y = LEDGER_FIRST_Y + index * LEDGER_ROW_STEP
         parts.append(_text(LEDGER_LABEL_X, y, label, size=12, fill=theme.muted))
         parts.append(
-            _text(LEDGER_VALUE_X, y, str(value), size=13, fill=theme.text, weight=600, anchor="end")
+            _text(
+                LEDGER_VALUE_X,
+                y,
+                str(value),
+                size=13,
+                fill=theme.text,
+                weight=600,
+                anchor="end",
+                family=FONT_STACK_MONO,
+            )
         )
     return "\n".join(parts)
 
@@ -505,6 +592,9 @@ def _hero_svg(stats: VizStats, theme: Theme) -> str:
             size=HERO_VALUE_SIZE,
             weight=700,
             fill=theme.accent,
+            # Numeric DATA renders in the mono stack (reviewer ruling,
+            # v0.4.8 round 3); display type is reserved for the title.
+            family=FONT_STACK_MONO,
         ),
         _text(PADDING, HERO_LABEL_Y, "AI-attributed commits", size=12, fill=theme.muted),
         _text(
@@ -599,7 +689,7 @@ def _provider_row_svg(
     index: int, stats: VizStats, max_attributed: int, denominator: int, theme: Theme
 ) -> str:
     row = stats.providers[index]
-    row_top = ROWS_TOP + index * ROW_HEIGHT
+    row_top = _rows_top(stats) + index * ROW_HEIGHT
     bar_y = row_top + 8
     text_y = row_top + 20
     tile_y = row_top + GLYPH_TILE_Y_INSET
@@ -621,7 +711,7 @@ def _provider_row_svg(
         pct = _pct_label(row.attributed_commits, denominator)
         count_spans += _tspan(f" · {pct}", fill=theme.muted)
     elements.append(
-        f'<text x="{COUNT_X}" y="{text_y}" font-family="{FONT_STACK}"'
+        f'<text x="{COUNT_X}" y="{text_y}" font-family="{FONT_STACK_MONO}"'
         f' font-size="{COUNT_FONT_SIZE}" text-anchor="end">{count_spans}</text>'
     )
     return "\n".join(elements)
@@ -639,19 +729,30 @@ def _evidence_items(stats: VizStats, theme: Theme) -> tuple[tuple[str, int, str,
 
 
 def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    """The compact evidence rail (v0.4.8): a small ``chip_bg`` label chip,
+    the stacked evidence bar, its legend, and the privacy cue — no
+    full-width surface. ``chip_bg`` deliberately survives only as the
+    small evidence-backed chip."""
     e = stats.evidence
-    panel_x = PADDING
-    panel_w = WIDTH - 2 * PADDING
-    inner_x = panel_x + PANEL_PAD_X
-    inner_w = panel_w - 2 * PANEL_PAD_X
+    inner_x = PADDING + PANEL_PAD_X
+    inner_w = (WIDTH - 2 * PADDING) - 2 * PANEL_PAD_X
     bar_y = top + EVIDENCE_BAR_Y_OFFSET
     legend_y = top + EVIDENCE_LEGEND_Y_OFFSET
+    prefix = EVIDENCE_PREFIX_TEMPLATE.format(n=e.total_records)
+    chip_w = round(_text_width(prefix, EVIDENCE_LABEL_SIZE)) + 2 * EVIDENCE_CHIP_PAD_X
     parts = [
-        _rect(panel_x, top, panel_w, PANEL_HEIGHT, fill=theme.chip_bg, rx=PANEL_RADIUS),
-        _text(
+        _rect(
             inner_x,
+            top,
+            chip_w,
+            EVIDENCE_CHIP_HEIGHT,
+            fill=theme.chip_bg,
+            rx=EVIDENCE_CHIP_RADIUS,
+        ),
+        _text(
+            inner_x + EVIDENCE_CHIP_PAD_X,
             top + PANEL_PAD_Y,
-            EVIDENCE_PREFIX_TEMPLATE.format(n=e.total_records),
+            prefix,
             size=EVIDENCE_LABEL_SIZE,
             weight=600,
             fill=theme.muted,
@@ -664,7 +765,7 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
     if not (e.total_records > 0 and nonzero_segments):
         # Empty composition: the track stands in for the bar. When segments
         # exist they span the full width and the 2px gaps between them show
-        # the PANEL surface (dataviz mark spec: surface gaps, not a track
+        # the card surface (dataviz mark spec: surface gaps, not a track
         # peeking through).
         parts.append(
             _rect(inner_x, bar_y, inner_w, EVIDENCE_BAR_HEIGHT, fill=theme.bar_track, rx=2)
@@ -679,11 +780,11 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
         # every width >= 0 by monotonicity and the total exactly equal
         # to available_w by construction.
         x = inner_x
-        prefix = 0
+        prefix_count = 0
         prev_end = 0
         for _, count, color in nonzero_segments:
-            prefix += count
-            end = round(available_w * prefix / e.total_records)
+            prefix_count += count
+            end = round(available_w * prefix_count / e.total_records)
             w = end - prev_end
             prev_end = end
             parts.append(_rect(x, bar_y, w, EVIDENCE_BAR_HEIGHT, fill=color, rx=2))
@@ -729,8 +830,8 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Isometric calendar band builders (round D2, ADR-018; round D3 P1/P2
-# card-polish additions live alongside it, same module section).
+# Isometric collaboration terrain builders (geometry from round D2,
+# ADR-018; semantics from ADR-022).
 # ---------------------------------------------------------------------------
 
 #: ASCII 3-letter English month abbreviations, index 0 = January (P2).
@@ -743,24 +844,12 @@ _MONTH_ABBR = (
 )
 
 
-def _calendar_color(provider: str, theme: Theme) -> str:
-    """Same branded/fallback/unrecognized precedence as the provider table
-    (`_glyph_tile_svg`'s bar_fill), reused for calendar column segments so
-    a provider's color reads identically in the table and the calendar."""
-    spec = BRAND.get(provider)
-    if spec is not None:
-        return _brand_fg_tint(spec, theme)[0]
-    if provider == _UNRECOGNIZED_PROVIDER:
-        return theme.evidence_unknown
-    return theme.bar_fill
-
-
 def _calendar_grid_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
     """84-length tuple in oldest-to-newest offset order (index 0 = the
     window's oldest day, CAL_WINDOW_DAYS-1 = the series' own newest date)
     — ``None`` wherever there is no publishable activity for that date.
-    Per the spec, a day that predates the series and a genuine zero-commit
-    day inside the series are the SAME case here (both simply absent from
+    A day that predates the series and a genuine zero-commit day inside
+    the series are the SAME case here (both simply absent from
     ``stats.daily``, since VizStats forbids storing a zero-count DayCell):
     both render as the flat base diamond in ``_day_cell_svg``.
     """
@@ -799,62 +888,39 @@ def _polygon(
 
 
 def _day_cell_svg(cell: DayCell | None, cx: int, cy: int, theme: Theme) -> str:
-    """One grid cell: a flat base diamond (zero/no-data day) or a stacked
-    isometric column — one prism "layer" per provider, bottom to top in
-    the cell's own slug-ascending order (the VizStats-enforced order),
-    each layer's height proportional to its share of the day's capped,
-    summed provider-attributed count. Provider counts may overlap, so this
-    intensity is deliberately not labeled as a unique-commit total. Segment
-    heights use the same cumulative-prefix-rounding trick
-    as `_evidence_panel_svg` (gate-6 finding): independently rounding each
-    segment can drift or go negative; rounding the running prefix keeps
-    every layer >= 0px and the layers sum exactly to the column height.
+    """One grid cell: a flat base diamond (no published data) or ONE solid
+    isometric prism (ADR-022) whose
+
+    - HEIGHT is the fixed volume bin of ``cell.total_commits``
+      (TERRAIN_HEIGHTS via `_bins._volume_bin` — the heatmap's own
+      1 / 2-4 / 5-7 / 8+ buckets), and
+    - HUE is the fixed AI-share bin of ``cell.ai_commits /
+      cell.total_commits`` (`_bins._share_bin` -> `_bins._share_colors`,
+      neutral for a day with zero attributed AI commits — never a human
+      claim, since unattributed history sits in that bin too — and accent
+      for a day whose commits are all AI-attributed).
+
+    Provider counts never reach this geometry: a one-commit
+    multi-provider day renders byte-identically to a one-commit
+    single-provider day (pinned in tests/unit/test_recruiter_card.py).
     """
-    if cell is None or not cell.counts:
-        # No data for this day - or a D4 human-only day (ai_commits == 0,
-        # empty counts): the BAND charts AI collaboration specifically,
-        # so a day with commits but zero AI renders exactly like a
-        # zero-activity day here (the whole-rhythm view is the heatmap
-        # card's job, not this band's).
+    if cell is None:
         top, right, bottom, left = _iso_tile_corners(cx, cy, 0)
         return _polygon((top, right, bottom, left), fill=theme.bar_track)
 
-    total = sum(dc.attributed_commits for dc in cell.counts)
-    scaled = min(total, CAL_CAP_COMMITS)
-    height_px = round(CAL_MAX_STACK_PX * scaled / CAL_CAP_COMMITS)
-
-    parts: list[str] = []
-    prev_end = 0
-    prefix = 0
-    for dc in cell.counts:
-        prefix += dc.attributed_commits
-        end = round(height_px * prefix / total)
-        if end > prev_end:
-            color = _calendar_color(dc.provider, theme)
-            _, right0, bottom0, left0 = _iso_tile_corners(cx, cy, prev_end)
-            _, right1, bottom1, left1 = _iso_tile_corners(cx, cy, end)
-            parts.append(
-                _polygon(
-                    (left1, bottom1, bottom0, left0), fill=color, opacity=CAL_FACE_OPACITY_LEFT
-                )
-            )
-            parts.append(
-                _polygon(
-                    (bottom1, right1, right0, bottom0), fill=color, opacity=CAL_FACE_OPACITY_RIGHT
-                )
-            )
-        prev_end = end
-
-    # The cap (top face) always sits at the FINAL height_px regardless of
-    # whether the last provider's own slice rounded to 0px — its color
-    # still represents the top of the stack (cell.counts is non-empty and
-    # slug-ascending, enforced by VizStats validation).
-    top_color = _calendar_color(cell.counts[-1].provider, theme)
+    height_px = TERRAIN_HEIGHTS[_volume_bin(cell.total_commits)]
+    color = _share_colors(theme)[_share_bin(cell.ai_commits, cell.total_commits)]
+    _, right0, bottom0, left0 = _iso_tile_corners(cx, cy, 0)
     top1, right1, bottom1, left1 = _iso_tile_corners(cx, cy, height_px)
-    parts.append(
-        _polygon((top1, right1, bottom1, left1), fill=top_color, opacity=CAL_FACE_OPACITY_TOP)
+    return "\n".join(
+        (
+            _polygon((left1, bottom1, bottom0, left0), fill=color, opacity=CAL_FACE_OPACITY_LEFT),
+            _polygon(
+                (bottom1, right1, right0, bottom0), fill=color, opacity=CAL_FACE_OPACITY_RIGHT
+            ),
+            _polygon((top1, right1, bottom1, left1), fill=color, opacity=CAL_FACE_OPACITY_TOP),
+        )
     )
-    return "\n".join(parts)
 
 
 def _calendar_cell_position(offset: int) -> tuple[int, int, int, int]:
@@ -898,9 +964,9 @@ def _dedupe_colliding_month_labels(
     run of 3+ same-column boundaries collapses to the first one rather
     than alternating). Real calendar months are always >= 28 days == >=
     4 CAL_DAYS-wide columns apart, so this never actually fires on a real
-    `stats.daily` window (see test_month_labels_span_three_to_four_months
+    `stats.daily` window (see test_month_boundaries_span_three_to_four_months
     for the real-date case) -- it exists as a documented, independently
-    falsifiable invariant, exercised directly here with synthetic input.
+    falsifiable invariant, exercised directly with synthetic input.
     """
     kept: list[tuple[int, str]] = []
     for col, label in boundaries:
@@ -947,13 +1013,13 @@ def _calendar_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
 
 
 def _legend_bins(cap: int) -> tuple[tuple[int, str], ...]:
-    """Up to 4 ``(representative_count, ASCII label)`` intensity bins
+    """Up to 4 ``(representative_count, ASCII label)`` volume bins
     derived from ``cap`` (P1): "1", "2-{mid}", "{mid+1}-{cap-1}",
     "{cap}+" where ``mid = cap // 2`` -- e.g. cap=8 (CAL_CAP_COMMITS
-    today) gives exactly "1", "2-4", "5-7", "8+". Recomputed from ``cap``
-    alone (never a hand-typed literal), so a future CAL_CAP_COMMITS change
-    keeps the legend true: a smaller cap collapses degenerate ranges
-    (low > high, e.g. cap=3's would-be "2-1") down to 2-3 bins
+    today) gives exactly "1", "2-4", "5-7", "8+", matching
+    `_bins._volume_bin`'s own thresholds. Recomputed from ``cap`` alone
+    (never a hand-typed literal): a smaller cap collapses degenerate
+    ranges (low > high, e.g. cap=3's would-be "2-1") down to 2-3 bins
     automatically instead of emitting a bogus range."""
     mid = cap // 2
     candidates = ((1, 1), (2, mid), (mid + 1, cap - 1))
@@ -970,8 +1036,7 @@ def _legend_bins(cap: int) -> tuple[tuple[int, str], ...]:
 def _legend_diamond_points(cx: int, cy: int) -> tuple[tuple[int, int], ...]:
     """(top, right, bottom, left) corners of a flat legend diamond
     centered at ``(cx, cy)`` -- same 2:1 shape as the grid tiles, sized by
-    the smaller CAL_LEGEND_TILE_HW/HH constants (P1, no elevation: the
-    legend never stacks)."""
+    the smaller CAL_LEGEND_TILE_HW/HH constants."""
     return (
         (cx, cy - CAL_LEGEND_TILE_HH),
         (cx + CAL_LEGEND_TILE_HW, cy),
@@ -980,27 +1045,70 @@ def _legend_diamond_points(cx: int, cy: int) -> tuple[tuple[int, int], ...]:
     )
 
 
+def _legend_prism_svg(cx: int, cy: int, elevation: int, theme: Theme) -> str:
+    """A miniature terrain prism for the legend's height bins: the same
+    three-face construction as `_day_cell_svg`, scaled to the legend tile
+    and rendered in the neutral ``theme.muted`` (the legend states the
+    HEIGHT encoding; hue is stated separately by the share ramp)."""
+
+    def corners(elev: int) -> tuple[tuple[int, int], ...]:
+        y = cy - elev
+        return (
+            (cx, y - CAL_LEGEND_TILE_HH),
+            (cx + CAL_LEGEND_TILE_HW, y),
+            (cx, y + CAL_LEGEND_TILE_HH),
+            (cx - CAL_LEGEND_TILE_HW, y),
+        )
+
+    _, right0, bottom0, left0 = corners(0)
+    top1, right1, bottom1, left1 = corners(elevation)
+    fill = theme.muted
+    return "\n".join(
+        (
+            _polygon((left1, bottom1, bottom0, left0), fill=fill, opacity=CAL_FACE_OPACITY_LEFT),
+            _polygon((bottom1, right1, right0, bottom0), fill=fill, opacity=CAL_FACE_OPACITY_RIGHT),
+            _polygon((top1, right1, bottom1, left1), fill=fill, opacity=CAL_FACE_OPACITY_TOP),
+        )
+    )
+
+
 def _calendar_legend_svg(theme: Theme, top: int) -> str:
-    """The compact single-line intensity legend (P1): CAL_CAP_COMMITS
-    -derived bins (`_legend_bins`) so it stays true if the cap changes,
-    plus the "publishable repos only" cue. Diamonds are uniform size and
-    share theme.muted, distinguished only by CAL_LEGEND_OPACITIES (never a
-    new hex value -- same discipline as CAL_FACE_OPACITY_*)."""
+    """The terrain legend (ADR-022): four miniature prisms stating the
+    height bins over total commits, the five-step neutral->accent ramp
+    stating the AI-share hue, and the standing "publishable repos only"
+    cue. Every color is a theme token or a `_bins._share_colors` step —
+    exactly the hexes real day prisms use."""
     baseline_y = top + CAL_LEGEND_BASELINE_Y
     diamond_cy = baseline_y + CAL_LEGEND_DIAMOND_DY
     parts: list[str] = []
     x = PADDING
-    for index, (_, label) in enumerate(_legend_bins(CAL_CAP_COMMITS)):
-        opacity = CAL_LEGEND_OPACITIES[min(index, len(CAL_LEGEND_OPACITIES) - 1)]
+    parts.append(
+        _text(x, baseline_y, CAL_LEGEND_HEIGHT_LABEL, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
+    )
+    x += round(_text_width(CAL_LEGEND_HEIGHT_LABEL, CAL_LEGEND_LABEL_SIZE)) + 8
+    for elevation, (_, label) in zip(
+        CAL_LEGEND_ELEVATIONS, _legend_bins(CAL_CAP_COMMITS), strict=True
+    ):
         cx = x + CAL_LEGEND_TILE_HW
-        parts.append(
-            _polygon(_legend_diamond_points(cx, diamond_cy), fill=theme.muted, opacity=opacity)
-        )
+        parts.append(_legend_prism_svg(cx, diamond_cy, elevation, theme))
         label_x = cx + CAL_LEGEND_TILE_HW + CAL_LEGEND_LABEL_GAP
         parts.append(
             _text(label_x, baseline_y, label, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
         )
         x = label_x + round(_text_width(label, CAL_LEGEND_LABEL_SIZE)) + CAL_LEGEND_ITEM_GAP
+    x += CAL_LEGEND_GROUP_GAP
+    parts.append(
+        _text(x, baseline_y, CAL_LEGEND_SHARE_LABEL, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
+    )
+    x += round(_text_width(CAL_LEGEND_SHARE_LABEL, CAL_LEGEND_LABEL_SIZE)) + 8
+    parts.append(_text(x, baseline_y, "0%", size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted))
+    x += round(_text_width("0%", CAL_LEGEND_LABEL_SIZE)) + 6
+    for color in _share_colors(theme):
+        cx = x + CAL_LEGEND_TILE_HW
+        parts.append(_polygon(_legend_diamond_points(cx, diamond_cy), fill=color))
+        x += 2 * CAL_LEGEND_TILE_HW + CAL_LEGEND_RAMP_STEP
+    x += CAL_LEGEND_LABEL_GAP
+    parts.append(_text(x, baseline_y, "100%", size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted))
     parts.append(
         _text(
             WIDTH - PADDING,
@@ -1014,20 +1122,48 @@ def _calendar_legend_svg(theme: Theme, top: int) -> str:
     return "\n".join(parts)
 
 
+def _calendar_notice_svg(theme: Theme, top: int) -> str:
+    """The unpublished-daily notice (ADR-022): the terrain section's label
+    plus the exact CAL_UNPUBLISHED_TEXT message — rendered whenever the
+    headline totals are nonzero but no daily series is published. Never a
+    fabricated grid, never a warning panel."""
+    return "\n".join(
+        (
+            _text(
+                PADDING,
+                top + CAL_LABEL_BASELINE_Y,
+                CAL_LABEL_TEXT,
+                size=CAL_LABEL_SIZE,
+                weight=600,
+                fill=theme.muted,
+                letter_spacing=0.2,
+            ),
+            _text(
+                WIDTH // 2,
+                top + CAL_NOTICE_MESSAGE_Y,
+                CAL_UNPUBLISHED_TEXT,
+                size=12,
+                fill=theme.muted,
+                anchor="middle",
+            ),
+        )
+    )
+
+
 def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The calendar band: an always-visible label, the month-boundary row
-    (P2), the isometric grid, and the intensity legend (P1) -- fully
+    """The terrain block: an always-visible label, the month-boundary row
+    (P2), the isometric prism grid, and the two-encoding legend -- fully
     STATIC (see the no-entrance-animation note in the constants section -
     two animation attempts each left the band invisible in static
-    captures). ``top`` is the band's absolute y (see `_calendar_top`);
+    captures). ``top`` is the block's absolute y (see `_calendar_top`);
     all local y math from the constants section is offset by it here,
     once.
     """
     cells = _calendar_grid_cells(stats)
     # Painter's algorithm: cells must be drawn back-to-front (ascending
-    # depth = col+row) or a tall column can visually occlude — or be
-    # wrongly occluded by — a neighboring column drawn out of order, since
-    # adjacent diamonds share an edge and a raised column overlaps into
+    # depth = col+row) or a tall prism can visually occlude — or be
+    # wrongly occluded by — a neighboring prism drawn out of order, since
+    # adjacent diamonds share an edge and a raised prism overlaps into
     # its back neighbors' screen space. The offset order used to look up
     # dates (column-major) is unrelated and NOT depth order, so it is
     # re-sorted here purely for draw order (deterministic tiebreak on the
@@ -1057,7 +1193,8 @@ def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
 
 
 def render_summary(stats: VizStats, theme: Theme) -> str:
-    """Render the summary card as SVG markup (ADR-010, architecture.md section 9).
+    """Render the summary card as SVG markup (ADR-010, ADR-022,
+    architecture.md section 9).
 
     Pure function of ``(stats, theme)``: no clock, no randomness, fixed
     decimal formatting, byte-identical output for identical inputs.
@@ -1081,7 +1218,15 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
     # Header: commit-node glyph + title + period label.
     parts.append(_commit_mark(GLYPH_CX, GLYPH_CY, theme))
     parts.append(
-        _text(TITLE_X, HEADER_TEXT_Y, TITLE_TEXT, size=16, weight=600, fill=theme.title)
+        _text(
+            TITLE_X,
+            HEADER_TEXT_Y,
+            TITLE_TEXT,
+            size=16,
+            weight=600,
+            fill=theme.title,
+            family=FONT_STACK_DISPLAY,
+        )
     )
     parts.append(
         _text(
@@ -1116,12 +1261,22 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         parts.append(_hero_svg(stats, theme))
         parts.append(_ledger_svg(stats, theme))
 
-        # Provider table with an explicit percentage denominator
+        # Isometric collaboration terrain (ADR-022): the card's
+        # centerpiece, directly under the headline block. An unpublished
+        # daily series renders the exact honest notice instead.
+        terrain_top = _calendar_top(stats)
+        if stats.daily:
+            parts.append(_calendar_svg(stats, theme, terrain_top))
+        else:
+            parts.append(_calendar_notice_svg(theme, terrain_top))
+
+        # Provider ledger with an explicit percentage denominator
         # (proposal section 26 rule 6: percentages state their denominator).
+        table_label_y = _table_label_y(stats)
         parts.append(
             _text(
                 PADDING,
-                TABLE_LABEL_Y,
+                table_label_y,
                 "Attributed commits by provider",
                 size=12,
                 weight=600,
@@ -1133,7 +1288,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
             parts.append(
                 _text(
                     WIDTH - PADDING,
-                    TABLE_LABEL_Y,
+                    table_label_y,
                     f"% of {stats.totals.ai_attributed_commits} AI-attributed commits",
                     size=11,
                     fill=theme.muted,
@@ -1145,9 +1300,8 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         for i in range(_visible_rows(stats)):
             parts.append(_provider_row_svg(i, stats, max_attributed, denominator, theme))
 
-        panel_top = _panel_top(stats)
         if _has_more_line(stats):
-            more_y = ROWS_TOP + MAX_PROVIDER_ROWS * ROW_HEIGHT + 16
+            more_y = _rows_top(stats) + MAX_PROVIDER_ROWS * ROW_HEIGHT + 16
             remaining = len(stats.providers) - MAX_PROVIDER_ROWS
             parts.append(
                 _text(
@@ -1159,13 +1313,18 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
                 )
             )
 
-        # Isometric daily-activity calendar band (round D2, ADR-018): only
-        # when a publishable daily series exists — an empty series omits
-        # the band entirely, and _panel_top already collapses to the
-        # pre-D2 expression in that case (zero geometry shift).
-        if stats.daily:
-            parts.append(_calendar_svg(stats, theme, _calendar_top(stats)))
+        # Explicit non-exclusive note (ADR-022).
+        parts.append(
+            _text(
+                PADDING,
+                _rows_bottom(stats) + PROVIDER_NOTE_BASELINE,
+                PROVIDER_NOTE_TEXT,
+                size=11,
+                fill=theme.muted,
+            )
+        )
 
+        panel_top = _panel_top(stats)
         parts.append(_evidence_panel_svg(stats, theme, panel_top))
         divider2_y = panel_top + PANEL_HEIGHT + FOOTER_GAP_ABOVE
 
@@ -1178,6 +1337,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
             f"Generated {stats.generated_on} · aiprofile",
             size=11,
             fill=theme.muted,
+            family=FONT_STACK_MONO,
         )
     )
     parts.append(_text(PADDING, divider2_y + FOOTER2_OFFSET, FOOTNOTE, size=11, fill=theme.muted))
