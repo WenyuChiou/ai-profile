@@ -4,7 +4,7 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## Where things stand (2026-07-26)
+## Where things stand (2026-08-01)
 
 - **v0.1 vertical slice implemented and reviewed**: Phase 0 design
   (`08f7413`) → implementation, 165 tests green (`50b8ac3`) → summary-card
@@ -366,16 +366,40 @@ which is authoritative).
   browser smoke after deployment.
 - Future import, reconciliation, richer views, GitHub API integration, and
   any configuration CLI remain deferred in ROADMAP. They are not part of
-  the v0.4.7 product boundary.
-- **v0.4.8 (in progress, 2026-08-01):** the HR-first visual refresh
-  (ADR-022) — summary card redesigned as the `AI Collaboration Record`
-  with a whole-rhythm isometric terrain (height = total-commit bins, hue
-  = AI-share bins, provider-independent geometry; shared bin arithmetic
-  in `render/_bins.py`), dashboard H1 alignment, README restructure, and
-  refreshed banner/social assets. The in-tree candidate manifest carries
-  a provisional 0.4.8 digest; the release round must re-freeze it from
-  the canonical clean Ubuntu build with a dogfood rerun before any
-  publication (docs/RELEASING.md).
+  the v0.4.8 product boundary.
+- **v0.4.8 Public Beta is released and promotion-verified (2026-08-01).**
+  The HR-first visual refresh (ADR-022) shipped: summary card redesigned
+  as the `AI Collaboration Record` with the whole-rhythm isometric
+  terrain (height = total-commit bins, hue = AI-share bins,
+  provider-independent geometry; shared bin arithmetic in
+  `render/_bins.py`), dashboard H1 alignment, README restructure, and
+  refreshed banner/social assets. Released from `main` commit
+  `b4e2178a79cf9d1437ebf46ce52d141720437762` (tag `v0.4.8`); the GitHub
+  Release is marked prerelease and the PyPI classifier is Beta.
+  Canonical digests — wheel
+  `d8d307d4155f58f157ee817cdd628ef4c257287083aad66cf30e02f679fe47b6`,
+  sdist
+  `0909aa3e2efe19ec1471c1f95f373646538c6df8bb344ecabf1fac6d20065b38`,
+  package dashboard
+  `c8680c2812343077775c2b5c0fddae9dce32c1517bbaa4c920e056b347fdbd4f`.
+  Verification: full local suite 628 passed / 4 skipped; CI Linux 631
+  passed / 1 skipped; Ruff clean; README parity pass; sanctioned
+  regeneration twice with zero byte drift; exact-wheel onboarding on
+  Ubuntu, Windows, and macOS; release run `30717707873` passed;
+  protected-main staging run `30717400004` passed and deployed the exact
+  pinned dashboard bytes. Four README-only dogfood roles passed 4/4 with
+  zero external hints, zero privacy-canary hits, exact hand totals, and
+  eight outputs. Full record: `docs/reviews/v0.4.8-release-readiness.md`.
+- **The maintainer Profile refresh on public PyPI 0.4.8 is complete.**
+  Profile PR #12 merged at `7f322beab1e532d906f943c62fc68e49ba21c02a`
+  with the unchanged exact 11-repository full-publication scope. Profile
+  Pages run `30718799030` passed; all eight published outputs are
+  HTTP 200 and byte-identical to the merged git blobs; profile dashboard
+  SHA-256
+  `b17e996a6fb0fa8530779c59d47d5cf069154ffd8437e431d2bf7331c12ac292`.
+  The Profile privacy review found zero hits across paths, names,
+  organizations, e-mails, full and 12-character SHAs, 1714 commit bodies,
+  1713 subjects, and 405 prompt-bearing lines.
 
 ## Pointers
 
