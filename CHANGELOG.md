@@ -25,7 +25,7 @@ below.
 
 ## [Unreleased]
 
-Target version: 0.4.8 (version bumped in-tree; not yet published).
+## [0.4.8] — 2026-08-01
 
 ### Changed
 
