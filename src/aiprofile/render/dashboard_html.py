@@ -940,7 +940,43 @@ _HTML_PREFIX = """<!doctype html>
 
     @media (max-width: 22rem) {
       .filters {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .hero-panel,
+      .activity-panel,
+      .providers-panel,
+      .evidence-panel,
+      .notes-panel {
+        padding: var(--space-4);
+      }
+
+      .panel-heading > *,
+      .provider-row {
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      .panel-title,
+      .panel-meta,
+      .section-kicker,
+      .provider-name,
+      .provider-detail,
+      .evidence-item {
+        overflow-wrap: anywhere;
+      }
+
+      .evidence-panel .panel-heading {
+        display: grid;
+      }
+
+      .evidence-panel .panel-meta {
+        text-align: left;
+      }
+
+      .provider-row-head,
+      .legend-scale {
+        flex-wrap: wrap;
       }
     }
 
@@ -975,7 +1011,7 @@ _HTML_PREFIX = """<!doctype html>
     <header class="masthead">
       <div>
         <p class="eyebrow">AI collaboration / evidence ledger</p>
-        <h1 class="title">Show the work behind the numbers.</h1>
+        <h1 class="title">Evidence-backed AI collaboration.</h1>
         <p class="lede">
           Explicit Git provenance, aggregated locally. Review the published
           all-provider record or one participating AI provider without turning
@@ -984,7 +1020,7 @@ _HTML_PREFIX = """<!doctype html>
       </div>
       <div class="utility">
         <button class="theme-toggle" id="themeToggle" type="button"
-                aria-label="Change color theme">Theme: auto</button>
+                aria-label="Theme: auto. Activate for light theme">Theme: auto</button>
         <div class="generated" id="generatedMeta"></div>
       </div>
     </header>
@@ -1649,7 +1685,12 @@ _HTML_SUFFIX = """</script>
       function setTheme(next) {
         theme = next;
         document.documentElement.dataset.theme = next;
+        const nextTheme = next === "auto" ? "light" : next === "light" ? "dark" : "auto";
         $("themeToggle").textContent = `Theme: ${next}`;
+        $("themeToggle").setAttribute(
+          "aria-label",
+          `Theme: ${next}. Activate for ${nextTheme} theme`
+        );
       }
 
       $("themeToggle").addEventListener("click", () => {

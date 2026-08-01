@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -35,11 +36,18 @@ def test_profile_cards_use_compact_mobile_sources_in_both_readmes():
         assert text.count("dist/badge-light.svg") >= 2
 
 
-def test_retained_public_link_evidence_matches_current_readmes():
+def test_candidate_v048_link_evidence_matches_current_readmes():
+    """The v0.4.8 candidate README set is covered by the PRE-RELEASE
+    candidate evidence file (scope/version asserted), with the exact
+    URL-set/status/Markdown-count contract the retained evidence uses.
+    The retained POST-RELEASE public evidence
+    (promotion-public-link-evidence.json) must stay byte-identical until
+    post-release live verification updates it — pinned here by digest
+    (the frozen pre-v0.4.8 HEAD bytes)."""
     evidence = json.loads(
-        (ROOT / "docs" / "reviews" / "promotion-public-link-evidence.json").read_text(
-            encoding="utf-8"
-        )
+        (
+            ROOT / "docs" / "reviews" / "promotion-public-link-candidate-v048.json"
+        ).read_text(encoding="utf-8")
     )
     urls = {
         url
@@ -48,12 +56,31 @@ def test_retained_public_link_evidence_matches_current_readmes():
         if "USERNAME" not in url
     }
 
+    assert evidence["candidate_version"] == "0.4.8"
+    assert "Pre-release candidate link evidence" in evidence["scope"]
+    assert "v0.4.7" in evidence["scope"]  # honest current-release pointer
     assert set(evidence["urls"]) == urls
     assert set(evidence["urls"].values()) == {200}
     assert evidence["github_markdown"] == {
         "README.md": {"status": 200, "h2": 13, "code_blocks": 10},
         "README.zh-TW.md": {"status": 200, "h2": 13, "code_blocks": 10},
     }
+    assert set(evidence["release_urls"]) == {
+        "https://pypi.org/project/ai-profile-cli/0.4.7/",
+        "https://github.com/WenyuChiou/ai-profile/releases/tag/v0.4.7",
+    }
+    assert set(evidence["release_urls"].values()) == {200}
+
+    retained = (
+        ROOT / "docs" / "reviews" / "promotion-public-link-evidence.json"
+    ).read_bytes()
+    assert (
+        hashlib.sha256(retained).hexdigest()
+        == "245e8e6b5cf695d74511310fcff24277e1525293603728ac7c467bcf0ad7a18c"
+    ), (
+        "retained post-release evidence changed before post-release live"
+        " verification; only that verification may update it (and this pin)"
+    )
 
 
 def test_parity_rejects_missing_privacy_contract(tmp_path):

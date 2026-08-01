@@ -109,11 +109,13 @@ class DayCell:
     # publishable — aggregate-only repositories NEVER contribute here.
     # Round D4 (.ai/round_d4_heatmap_spec.md) adds the day's WHOLE
     # rhythm: total_commits counts every commit the owner authored that
-    # day (human-only included — the heatmap's intensity axis), and
+    # day regardless of attribution (unattributed and explicitly
+    # human-declared included — the heatmap's intensity axis), and
     # ai_commits counts the distinct AI/mixed subset (the hue axis).
     date: str                        # YYYY-MM-DD, generated_on-class rules
     counts: tuple[DayCount, ...]     # slug-ascending, unique; empty IFF
-    #                                  ai_commits == 0 (human-only day)
+    #                                  ai_commits == 0 (zero attributed AI
+    #                                  that day — not provably human)
     total_commits: int               # all actors; strictly positive
     ai_commits: int                  # distinct ai/mixed commits;
     #                                  0 <= ai_commits <= total_commits
@@ -377,7 +379,8 @@ def _validate(s: VizStats) -> None:
                 " the AI subset cannot be larger than the day's whole"
             )
         # counts is the per-provider breakdown of ai_commits: empty IFF
-        # the day had zero AI commits (human-only day). When present,
+        # the day had zero attributed AI commits (which includes
+        # unattributed history — never provably human). When present,
         # each provider's distinct-commit count is a subset of the day's
         # distinct AI commits (count <= ai_commits), and every AI commit
         # surfaces in >=1 count (ai_commits <= sum).

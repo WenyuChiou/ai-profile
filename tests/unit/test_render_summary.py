@@ -22,6 +22,25 @@ diff before committing regenerated snapshots.
 
 from __future__ import annotations
 
+# Sanctioned-writer import provenance (P1, v0.4.8 review): when this module
+# is EXECUTED DIRECTLY as the sanctioned regeneration command, an
+# editable/site install of `aiprofile` from another checkout must never
+# shadow this worktree's `src`. Bootstrap this worktree's src ahead of every
+# install path BEFORE the first aiprofile import. Pytest runs never enter
+# this branch (pytest's own `pythonpath = ["src"]` resolves the correct
+# worktree already).
+if __name__ == "__main__":
+    import importlib.util as _bootstrap_importlib
+    import pathlib as _bootstrap_pathlib
+
+    _bootstrap_spec = _bootstrap_importlib.spec_from_file_location(
+        "_snapshot_provenance",
+        _bootstrap_pathlib.Path(__file__).resolve().parent / "_snapshot_provenance.py",
+    )
+    _bootstrap_module = _bootstrap_importlib.module_from_spec(_bootstrap_spec)
+    _bootstrap_spec.loader.exec_module(_bootstrap_module)
+    _bootstrap_module.bootstrap_direct_execution(__file__)
+
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -338,7 +357,7 @@ def test_title_includes_card_title_and_period_label():
     svg = render_summary(FIXTURE_POPULATED, theme)
     root = ET.fromstring(svg)
     title_text = root.find(f"{SVG_NS}title").text
-    assert "AI Collaboration Summary" in title_text
+    assert "AI Collaboration Record" in title_text
     assert FIXTURE_POPULATED.period.label in title_text
 
 
@@ -556,7 +575,7 @@ def test_zero_state_omits_metrics_and_table():
 
 def test_zero_state_keeps_title_period_and_footer():
     svg = render_summary(FIXTURE_ZERO, THEMES["github-light"])
-    assert "AI Collaboration Summary" in svg
+    assert "AI Collaboration Record" in svg
     assert FIXTURE_ZERO.period.label in svg
     assert f"Generated {GENERATED_ON} · aiprofile" in svg
 
@@ -602,7 +621,24 @@ def test_rounded_border_radius_8_and_1px_stroke():
 # ---------------------------------------------------------------------------
 
 
+def _assert_snapshot_write_provenance() -> None:
+    """Fail CLOSED before the first governed write unless the imported
+    aiprofile package resolves beneath THIS worktree's src/aiprofile (P1:
+    a stale editable install from another checkout silently regenerated
+    governed snapshots with old-renderer output while printing success)."""
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location(
+        "_snapshot_provenance", Path(__file__).resolve().parent / "_snapshot_provenance.py"
+    )
+    provenance = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(provenance)
+    provenance.assert_aiprofile_from(__file__, sys.modules["aiprofile"].__file__)
+
+
 def _write_all_snapshots() -> int:
+    _assert_snapshot_write_provenance()
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
     count = 0
     for case_name, stats in CASES.items():
@@ -621,6 +657,7 @@ def _write_sample_assets() -> int:
     authoritative fixture through this same sanctioned entry point
     (gate-7 L-02) — no manual copying, guarded byte-exact by
     test_docs_sample_assets_match_current_renderer."""
+    _assert_snapshot_write_provenance()
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
     count = 0
     for theme_name, suffix in _THEME_SUFFIX.items():
@@ -631,6 +668,9 @@ def _write_sample_assets() -> int:
 
 
 if __name__ == "__main__":
+    import aiprofile as _aiprofile_pkg
+
+    print(f"aiprofile imported from {_aiprofile_pkg.__file__}")
     written = _write_all_snapshots()
     samples = _write_sample_assets()
     print(f"Wrote {written} snapshot files to {SNAPSHOT_DIR}")

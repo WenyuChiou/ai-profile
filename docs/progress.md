@@ -367,6 +367,15 @@ which is authoritative).
 - Future import, reconciliation, richer views, GitHub API integration, and
   any configuration CLI remain deferred in ROADMAP. They are not part of
   the v0.4.7 product boundary.
+- **v0.4.8 (in progress, 2026-08-01):** the HR-first visual refresh
+  (ADR-022) — summary card redesigned as the `AI Collaboration Record`
+  with a whole-rhythm isometric terrain (height = total-commit bins, hue
+  = AI-share bins, provider-independent geometry; shared bin arithmetic
+  in `render/_bins.py`), dashboard H1 alignment, README restructure, and
+  refreshed banner/social assets. The in-tree candidate manifest carries
+  a provisional 0.4.8 digest; the release round must re-freeze it from
+  the canonical clean Ubuntu build with a dogfood rerun before any
+  publication (docs/RELEASING.md).
 
 ## Pointers
 

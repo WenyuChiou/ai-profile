@@ -65,6 +65,9 @@ src/aiprofile/
   viz.py               VizStats dataclasses (the visualization contract)
   render/
     themes.py          theme tokens (github-light / github-dark)
+    _bins.py           shared day-cell volume/AI-share bin arithmetic
+                       (ADR-020/ADR-022; summary terrain and heatmap must
+                       never disagree about a bin)
     brand.py           vendored provider marks + per-theme brand palette
                        (CC0 simple-icons subset; ADR-017; schema-free by
                        design - drift-tested mirror of the vocab set)
@@ -303,7 +306,15 @@ consumes it until the GitHub Action lands).
   tests); no clock reads inside render (only `generated_on` from the
   contract); no randomness; fixed decimal formatting.
 - Provider table: top 6 rows; remaining providers collapse to one
-  "+N more" line (counts included in totals regardless).
+  "+N more" line (counts included in totals regardless), with an explicit
+  non-exclusive note (ADR-022).
+- Summary terrain (ADR-022, superseding ADR-020's AI-only band clause):
+  the card's 12-week isometric terrain encodes day height from
+  `DayCell.total_commits` (fixed 1 / 2-4 / 5-7 / 8+ bins) and top-face
+  hue from the day's AI share — the same fixed bins as the heatmap card,
+  shared via the private `render/_bins.py` helper. Provider counts never
+  influence terrain geometry. Publishable-only; an unpublished daily
+  series renders an explicit notice, never a fabricated grid.
 - Two assets in v0.1: `summary-light.svg`, `summary-dark.svg` (embedding via
   `<picture>` in the README — documented in mvp.md). Accessibility:
   `<title>`, `<desc>`, ≥11px labels, non-color distinctions, explicit metric

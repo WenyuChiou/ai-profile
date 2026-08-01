@@ -22,6 +22,22 @@ test_render_summary.py — one command per snapshot family.)
 
 from __future__ import annotations
 
+# Sanctioned-writer import provenance (P1, v0.4.8 review): identical
+# discipline to test_render_summary.py — on DIRECT execution, bootstrap this
+# worktree's src ahead of any editable/site install BEFORE the first
+# aiprofile import; pytest runs never enter this branch.
+if __name__ == "__main__":
+    import importlib.util as _bootstrap_importlib
+    import pathlib as _bootstrap_pathlib
+
+    _bootstrap_spec = _bootstrap_importlib.spec_from_file_location(
+        "_snapshot_provenance",
+        _bootstrap_pathlib.Path(__file__).resolve().parent / "_snapshot_provenance.py",
+    )
+    _bootstrap_module = _bootstrap_importlib.module_from_spec(_bootstrap_spec)
+    _bootstrap_spec.loader.exec_module(_bootstrap_module)
+    _bootstrap_module.bootstrap_direct_execution(__file__)
+
 import datetime
 import re
 import xml.etree.ElementTree as ET
@@ -72,7 +88,8 @@ def _period() -> Period:
 # Fixture: mirrors test_render_summary.FIXTURE_POPULATED's daily series
 # (deliberately duplicated, not cross-imported — each module owns its
 # fixtures) plus TWO D4-specific days the summary fixture does not need:
-# a human-only day (2026-06-20, hue bin 0) and a low-share day
+# a zero-attributed-AI day (2026-06-20, hue bin 0 — not provably human;
+# unattributed commits land in the same bin) and a low-share day
 # (2026-06-27, 1 AI of 5 -> hue bin 1). Both exercise hue bins the
 # AI-only days cannot reach.
 # ---------------------------------------------------------------------------
@@ -233,7 +250,7 @@ def test_all_window_days_render_and_nothing_outside():
     assert len(day_rects) == 365 + len(HM_VOLUME_MIX) + HM_SHARE_BIN_COUNT
 
 
-def test_human_only_day_gets_neutral_hue_full_row_alignment():
+def test_zero_attributed_ai_day_gets_neutral_hue_full_row_alignment():
     theme = THEMES["github-light"]
     svg = render_heatmap(FIXTURE_HEATMAP, theme)
     # 2026-06-20: hue bin 0 (neutral), volume bin 1 (2 commits) -> the
@@ -405,12 +422,33 @@ def test_docs_sample_assets_match_current_renderer():
             assert render(stats, theme).encode("utf-8") == asset.read_bytes(), asset.name
 
 
-if __name__ == "__main__":
+def _assert_snapshot_write_provenance() -> None:
+    """Fail CLOSED before the first governed write unless the imported
+    aiprofile package resolves beneath THIS worktree's src/aiprofile (P1:
+    a stale editable install from another checkout silently regenerated
+    governed snapshots with old-renderer output while printing success)."""
+    import importlib.util
+    import sys
+
+    spec = importlib.util.spec_from_file_location(
+        "_snapshot_provenance", Path(__file__).resolve().parent / "_snapshot_provenance.py"
+    )
+    provenance = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(provenance)
+    provenance.assert_aiprofile_from(__file__, sys.modules["aiprofile"].__file__)
+
+
+def _write_all_snapshots() -> int:
+    _assert_snapshot_write_provenance()
     written = 0
     for name, svg in _render_all():
         (SNAPSHOT_DIR / name).write_bytes(svg.encode("utf-8"))
         written += 1
-    print(f"Wrote {written} snapshot files to {SNAPSHOT_DIR}")
+    return written
+
+
+def _write_sample_assets() -> int:
+    _assert_snapshot_write_provenance()
     samples = 0
     for kind, render, stats in (
         ("heatmap-sample", render_heatmap, FIXTURE_HEATMAP),
@@ -422,4 +460,12 @@ if __name__ == "__main__":
                 render(stats, theme).encode("utf-8")
             )
             samples += 1
-    print(f"Wrote {samples} sample assets to {ASSETS_DIR}")
+    return samples
+
+
+if __name__ == "__main__":
+    import aiprofile as _aiprofile_pkg
+
+    print(f"aiprofile imported from {_aiprofile_pkg.__file__}")
+    print(f"Wrote {_write_all_snapshots()} snapshot files to {SNAPSHOT_DIR}")
+    print(f"Wrote {_write_sample_assets()} sample assets to {ASSETS_DIR}")

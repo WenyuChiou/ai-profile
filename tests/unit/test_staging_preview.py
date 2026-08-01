@@ -1,7 +1,7 @@
 """Staging preview helper + manual-only Pages workflow guardrails.
 
-Pins the v0.4.7 pre-registration contract
-(docs/reviews/promotion-eval-spec-v047.md, Gate S): the helper is a
+Pins the v0.4.8 candidate contract
+(docs/reviews/promotion-eval-spec-v048.md, Gate S): the helper is a
 deterministic pure function of the wheel bytes and the installed renderer,
 writes exactly two files with computed digests, and the staging workflow
 stays manual-only, SHA-pinned, least-privilege, and digest-verified
@@ -29,9 +29,9 @@ assert SPEC is not None and SPEC.loader is not None
 staging = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(staging)
 
-#: The frozen v0.4.7 candidate digest (docs/reviews/promotion-candidate.json).
-PINNED_WHEEL_SHA256 = "75b896c7a1bfa462d1caa6df7025bca79650e8ad48a006272e76eb9bfb5667d8"
-PINNED_DASHBOARD_SHA256 = "17f2627e60c42a008e20af583af4cd51ca9a0814773163df5c5d1ec4982af192"
+#: The frozen v0.4.8 candidate digest (docs/reviews/promotion-candidate.json).
+PINNED_WHEEL_SHA256 = "d8d307d4155f58f157ee817cdd628ef4c257287083aad66cf30e02f679fe47b6"
+PINNED_DASHBOARD_SHA256 = "c8680c2812343077775c2b5c0fddae9dce32c1517bbaa4c920e056b347fdbd4f"
 
 _FAKE_WHEEL_BYTES = b"deterministic fake wheel bytes for staging preview tests\n"
 
@@ -247,10 +247,10 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
     # The workflow's hardcoded expectations must be the frozen candidate.
     assert manifest["wheel_sha256"] == PINNED_WHEEL_SHA256
     assert manifest["dashboard_sha256"] == PINNED_DASHBOARD_SHA256
-    assert manifest["version"] == "0.4.7"
+    assert manifest["version"] == "0.4.8"
     assert text.count(PINNED_WHEEL_SHA256) == 3  # artifact check + both job boundaries
-    assert "--expected-version 0.4.7" in text
-    assert 'manifest["package_version"] == "0.4.7"' in text
+    assert "--expected-version 0.4.8" in text
+    assert 'manifest["package_version"] == "0.4.8"' in text
 
     # Both digest verifications happen before anything is uploaded to Pages.
     upload_at = text.index("actions/upload-pages-artifact")
@@ -267,14 +267,23 @@ def test_workflow_renders_in_and_uploads_only_a_fresh_verified_staging_root():
     assert 'pip install "$WHEEL"' in text
     assert "pip install -e" not in text
     assert 'scripts/render_staging_dashboard.py' in text
-    assert '--out "$STAGING_ROOT/v0.4.7"' in text
+    assert '--out "$STAGING_ROOT/v0.4.8"' in text
     assert "path: ${{ runner.temp }}/aiprofile-staging\n" in text
     assert text.count("assert root.is_dir() and not root.is_symlink()") == 2
-    assert text.count('("v0.4.7", "dir")') == 2
-    assert text.count('("v0.4.7/dashboard.html", "file")') == 2
-    assert text.count('("v0.4.7/staging-manifest.json", "file")') == 2
+    assert text.count('("v0.4.8", "dir")') == 2
+    assert text.count('("v0.4.8/dashboard.html", "file")') == 2
+    assert text.count('("v0.4.8/staging-manifest.json", "file")') == 2
     assert "assert not any(path.is_symlink()" in text
     assert text.count("json.dumps(manifest, indent=2, sort_keys=True)") == 2
     assert text.count('"synthetic-two-provider-fixture-v1"') == 2
     assert "actions/upload-artifact" in text
     assert "actions/download-artifact" in text
+
+
+def test_fixture_description_never_claims_human_only():
+    """A `DayCell(ai_commits == 0)` fixture day is zero-attributed-AI,
+    never provably human (ADR-020 erratum / ADR-022): the staging script's
+    own prose must not resurrect the corrected claim."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "human-only" not in text.lower()
+    assert "zero-attributed-AI day" in text
