@@ -41,9 +41,9 @@ def test_candidate_v048_link_evidence_matches_current_readmes():
     candidate evidence file (scope/version asserted), with the exact
     URL-set/status/Markdown-count contract the retained evidence uses.
     The retained POST-RELEASE public evidence
-    (promotion-public-link-evidence.json) must stay byte-identical until
-    post-release live verification updates it — pinned here by digest
-    (the frozen pre-v0.4.8 HEAD bytes)."""
+    (promotion-public-link-evidence.json) is pinned here by digest to the
+    bytes recorded by the completed v0.4.8 post-release live verification —
+    any future change requires a new live verification and a pin update."""
     evidence = json.loads(
         (
             ROOT / "docs" / "reviews" / "promotion-public-link-candidate-v048.json"
@@ -76,10 +76,10 @@ def test_candidate_v048_link_evidence_matches_current_readmes():
     ).read_bytes()
     assert (
         hashlib.sha256(retained).hexdigest()
-        == "245e8e6b5cf695d74511310fcff24277e1525293603728ac7c467bcf0ad7a18c"
+        == "0e7a10e741476ff298a6e55b915c11a559c31e02efbd7601105033e0d92637a0"
     ), (
-        "retained post-release evidence changed before post-release live"
-        " verification; only that verification may update it (and this pin)"
+        "retained post-release evidence diverged from the v0.4.8 live-verified"
+        " bytes; a new live verification must update it (and this pin)"
     )
 
 

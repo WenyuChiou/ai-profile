@@ -1,5 +1,5 @@
 {
-  "checked_on": "2026-07-26",
+  "checked_on": "2026-08-01",
   "method": "HTTP GET with redirects, 45-second timeout, and a release-verifier user agent",
   "github_markdown": {
     "README.md": {
@@ -44,17 +44,37 @@
     "https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html": 200
   },
   "release_urls": {
-    "https://pypi.org/project/ai-profile-cli/0.4.5/": 200,
-    "https://github.com/WenyuChiou/ai-profile/releases/tag/v0.4.5": 200
+    "https://pypi.org/project/ai-profile-cli/0.4.8/": 200,
+    "https://github.com/WenyuChiou/ai-profile/releases/tag/v0.4.8": 200
+  },
+  "dashboards": {
+    "package": {
+      "url": "https://wenyuchiou.github.io/ai-profile/v0.4.8/dashboard.html",
+      "status": 200,
+      "sha256": "c8680c2812343077775c2b5c0fddae9dce32c1517bbaa4c920e056b347fdbd4f"
+    },
+    "profile": {
+      "url": "https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html",
+      "status": 200,
+      "sha256": "b17e996a6fb0fa8530779c59d47d5cf069154ffd8437e431d2bf7331c12ac292"
+    }
+  },
+  "profile_urls": {
+    "https://github.com/WenyuChiou": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/README.md": 200,
+    "https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/README.zh-TW.md": 200
   },
   "summary": {
     "non_placeholder_readme_urls_checked": 28,
     "release_urls_checked": 2,
-    "total_http_200": 30,
+    "dashboard_urls_checked": 2,
+    "profile_urls_checked": 3,
+    "unique_public_urls_checked": 34,
+    "total_http_200": 34,
     "failed": 0
   },
   "pages": {
-    "profile_head": "41a1ed92f2be54dc1a9beb09b4c1fdf16a902a95",
+    "profile_head": "7f322beab1e532d906f943c62fc68e49ba21c02a",
     "outputs_checked": 8,
     "http_200": 8,
     "byte_identical_to_git_blobs": 8
