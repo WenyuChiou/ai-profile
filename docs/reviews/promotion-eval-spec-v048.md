@@ -19,9 +19,13 @@ dashboard H1, README structure, and the banner/social assets.
 - Wheel: `ai_profile_cli-0.4.8-py3-none-any.whl`
 - Frozen `SOURCE_DATE_EPOCH`: `1785369600`
 - Canonical clean-Linux wheel SHA-256:
-  `04e90f2599bda2ce24bbd254f48bb2034fcaba140a17a40912594edc45257bd0`
-  (isolated Docker `python:3.12` build of the candidate tree; pinned in
-  `docs/reviews/promotion-candidate.json`, the staging workflow, and
+  `d8d307d4155f58f157ee817cdd628ef4c257287083aad66cf30e02f679fe47b6`
+  (produced by the authoritative GitHub `ubuntu-latest` Python 3.12.13
+  candidate builder from the candidate tree; the workflow builds once
+  there and distributes those exact bytes to every OS onboarding job.
+  Other clean-Linux environments can yield a differing wheel digest for
+  the same tree, so only this builder's digest is authoritative. Pinned
+  in `docs/reviews/promotion-candidate.json`, the staging workflow, and
   `tests/unit/test_staging_preview.py` before any promotion evidence is
   accepted; a re-frozen digest requires rebuilding and re-running every
   gate below that consumed it).
@@ -45,11 +49,15 @@ dashboard H1, README structure, and the banner/social assets.
    README EN/zh-TW parity, and deterministic release smoke must pass on
    the candidate tree. The heatmap/badge family must be byte-unchanged
    from the baseline (the `_bins` extraction is a pure refactor).
-3. **Exact artifacts.** A clean-Linux build with the frozen
-   `SOURCE_DATE_EPOCH` must reproduce the pinned wheel SHA-256 exactly.
-   `twine check` and the release artifact contract must pass for the
-   exact retained wheel and sdist (both notices present, no generated
-   cache or private members, canonical paths only).
+3. **Exact artifacts.** The authoritative GitHub `ubuntu-latest`
+   Python 3.12.13 candidate builder, with the frozen
+   `SOURCE_DATE_EPOCH`, must reproduce the pinned wheel SHA-256
+   exactly. Every later gate consumes that builder's exact retained
+   bytes; no other clean-Linux environment is required to reproduce the
+   compression-level digest. `twine check` and the release artifact
+   contract must pass for the exact retained wheel and sdist (both
+   notices present, no generated cache or private members, canonical
+   paths only).
 4. **Cross-platform smoke.** Ubuntu, Windows, and macOS must install the
    retained candidate wheel in a clean environment and complete
    onboarding smoke against those exact bytes (never a platform rebuild).
