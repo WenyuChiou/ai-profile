@@ -1,138 +1,167 @@
-# Gate 18 D6 heatmap aesthetics verification review
+# Gate review — v0.4.8 recruiter-first collaboration record
 
-Date: 2026-07-23
+Date: 2026-08-01
 
-Review range: `b70f3a5..63f00c6`
+Review range: `374118a88840388a0a374d5cab695b6f18a49c2c..04c27504ed02c83ccdd0ef657558d65f6798eb80`
 
-Reviewer posture: independent Principal Software Engineer; verification only.
-No production code, test code, schema, or design code was changed during this
-review. This report overwrites the prior gate review artifact per repository
-convention.
+Reviewer posture: independent Principal Software Engineer; implementation
+verification only. Production, schema, aggregation, and design code were not
+changed by the reviewer. This report overwrites the prior gate-review artifact
+per repository convention.
 
 ## Executive summary
 
-Round D6 is behaviorally sound but should take a small cleanup before the next
-gate. The requested aesthetic changes render correctly: populated day cells are
-11px squares on the same 14px step, `rx=3`, solid hex fills replace heatmap
-`fill-opacity`, the stat line uses styled `tspan`s, the date window is
-right-aligned, and the redesigned legend renders with numeric volume labels and
-0%/100% share endpoints.
+The v0.4.8 implementation follows the approved architecture and MVP boundary.
+It replaces the existing summary-card presentation without changing the ACE
+schema, CLI, configuration format, `VizStats` privacy boundary, aggregation
+units, or eight-output contract. The collaboration terrain uses unique daily
+commit totals for height and AI share for hue; provider participation never
+increases terrain height. Unknown remains distinct from human.
 
-Full suite and lint are clean. Independent probes confirmed byte determinism,
-snapshot/sample consistency, unchanged badge and empty-state bytes from the
-pre-range tree, unchanged Monday-anchored grid positions, no SMIL, well-formed
-XML, intact title/desc accessibility metadata, no heatmap `fill-opacity`, no
-color collisions with the card background or empty-track color, and no
-repo/path/email leakage across an end-to-end temp-home render.
+The initial candidate CI run correctly failed closed because the pinned wheel
+digest came from a non-authoritative Docker builder. The remediation did not
+weaken checksum enforcement: it re-froze the digest produced by the GitHub
+`ubuntu-latest` Python 3.12.13 candidate builder and documented that every
+cross-platform onboarding job consumes those retained bytes. The second run
+passed the candidate build, Python 3.11–3.14 suites, and Ubuntu, Windows, and
+macOS wheel onboarding.
 
-The remaining issues are narrow maintainability/documentation defects in the
-renderer source: `_cell_rects` duplicates the color formula instead of using the
-new `_cell_fill` helper, and two comments/docstrings still describe the old
-opacity model.
-
-## Findings
-
-| Severity | Issue | Location |
-|---|---|---|
-| Low | `_cell_rects` recomputes day-cell colors with `_lerp_hex(...)` instead of calling `_cell_fill(...)`, even though the D6 brief says `_cell_fill` is the single color source for day cells and legend swatches. The current output matches, but this leaves two formulas that can drift on the next palette change. | `src/aiprofile/render/heatmap_svg.py:176`, `src/aiprofile/render/heatmap_svg.py:189` |
-| Low | Stale renderer comments still describe intensity as `fill-opacity` / `volume-bin opacity` after the implementation moved to solid bg-mixed hexes. This is not user-facing output, but it contradicts the new renderer contract and can mislead future changes. | `src/aiprofile/render/heatmap_svg.py:6`, `src/aiprofile/render/heatmap_svg.py:168` |
+Independent browser probes cleared the normal and 200%-zoom width matrix,
+provider filtering, theme-state accessibility, keyboard navigation, tooltip
+dismissal, and visible focus. Four README-only clean-room roles completed
+against the exact CI-retained wheel. Hand-derived aggregation values matched,
+and the privacy role found zero matches across 69 private canaries and all
+eight public artifacts. No Critical, High, or Medium finding remains.
 
 ## Review basis
 
-Reviewed `README.md`, `CONTRIBUTING.md`, the handoff brief, the
-`b70f3a5..63f00c6` diff, and the changed source/test artifacts:
-`CHANGELOG.md`, `src/aiprofile/render/heatmap_svg.py`,
-`tests/unit/test_heatmap_svg.py`, `tests/snapshots/heatmap_light.svg`,
-`tests/snapshots/heatmap_dark.svg`,
-`docs/assets/heatmap-sample-light.svg`, and
-`docs/assets/heatmap-sample-dark.svg`.
+The review covered the complete pinned range, repository guidance, README and
+Traditional Chinese mirror, architecture and MVP documents, privacy contract,
+ROADMAP and progress records, ADR-020 and ADR-022, release workflow and
+candidate manifest, changed renderers and `VizStats` boundary, all changed
+tests, committed snapshots/sample assets, and the CI-retained wheel/sdist.
 
-The range is renderer/test/sample scoped. `git diff --name-only
-b70f3a5..63f00c6` does not touch `src/aiprofile/viz.py`,
-aggregate/privacy/export/CLI modules, `src/aiprofile/render/badge_svg.py`, or
-`src/aiprofile/render/summary_svg.py`.
+The range contains three commits:
+
+1. `0b012ba` — freezes the v0.4.8 evaluation gates before implementation.
+2. `e1ba6cb` — implements the recruiter-first card, dashboard/brand alignment,
+   documentation, tests, and fail-closed snapshot provenance guard.
+3. `04c2750` — re-pins the candidate to the authoritative GitHub-built wheel
+   after the checksum gate rejected environment-specific local bytes.
+
+## Findings
+
+### Low — README does not explicitly place Human-Only records in the declared-evidence bucket
+
+**Location:** `README.md:275`, `README.md:310`; mirrored concepts in
+`README.zh-TW.md:267`, `README.zh-TW.md:300`.
+
+**Description:** The README correctly explains `AI-Mode: Human-Only`, the
+unknown/human separation, and the evidence-quality order. It does not say in
+one sentence that an explicit Human-Only record contributes to the aggregate
+`declared` evidence count. The multi-provider clean-room role initially
+derived two declared AI actor records instead of the observed three declared
+records (two AI actors plus one Human-Only declaration).
+
+**Impact:** A user manually checking evidence totals may need one extra
+interpretive step. Commit, provider, human, unknown, and actor-presence counts
+remain correct; the CLI labels the denominator as “all records,” and no privacy
+or attribution ambiguity results.
+
+**Recommendation:** Clarify the evidence bucket in the next documentation
+release. This is accepted as Low for v0.4.8 because the role completed without
+an outside product hint and all public counts were unambiguous.
 
 ## Verification evidence
 
 Commands and observed results:
 
-- `git status --short`: clean before verification.
-- `git rev-parse --short HEAD`: `63f00c6`.
-- `git log --oneline --decorate -5`: HEAD was `63f00c6 (HEAD -> main, origin/main) Round D6: heatmap aesthetic pass (solid cells, styled stats, clean legend)`.
-- `git diff --name-only b70f3a5..63f00c6`: only `CHANGELOG.md`, heatmap sample assets, `src/aiprofile/render/heatmap_svg.py`, heatmap snapshots, and `tests/unit/test_heatmap_svg.py`.
-- `git diff --stat b70f3a5..63f00c6`: 7 files changed, 1680 insertions, 1626 deletions.
-- `git diff --check b70f3a5..63f00c6`: no whitespace errors.
-- `python -m pytest tests -p no:cacheprovider`: `493 passed, 4 skipped in 26.86s` (exit 0). The run emitted unrelated global-environment warnings from `requests` and `langsmith`.
-- `python -m ruff check src tests scripts`: `All checks passed!` (exit 0).
-- Byte-safe `git show b70f3a5:<path>` comparisons against current files:
-  `tests/snapshots/badge_light.svg`, `badge_dark.svg`,
-  `badge_zero_light.svg`, `badge_zero_dark.svg`,
-  `heatmap_empty_light.svg`, `heatmap_empty_dark.svg`,
-  `docs/assets/badge-sample-light.svg`, and
-  `docs/assets/badge-sample-dark.svg` were all byte-identical.
-- `rg -n "fill-opacity|opacity|_cell_fill" ...`: heatmap rendered SVG/tests
-  correctly ban `fill-opacity`; the remaining heatmap source matches were the
-  stale comments/docstrings listed above and the intended `_cell_fill` helper
-  usage in the legend/tests.
+- `python -m pytest tests -p no:cacheprovider`:
+  `628 passed, 4 skipped in 32.01s` on Windows. The four skips match the
+  documented platform/filesystem fixtures.
+- `python -m ruff check src tests scripts`: `All checks passed!`.
+- `python scripts/check_readme_parity.py`:
+  `PASS: README English/Traditional Chinese structure and contract parity`.
+- `git diff --check`: clean.
+- `python tests/unit/test_render_summary.py` and
+  `python tests/unit/test_heatmap_svg.py`, each run twice with `PYTHONPATH`
+  unset: every run imported this worktree's `src/aiprofile/__init__.py`; first-
+  and second-run drift were both zero.
+- Mismatched-import behavioral regression: all four governed writer entry
+  points refused before writing and retained-file digests remained unchanged.
+- `python scripts/check_release_artifacts.py --artifact-only ...`:
+  `PASS: artifact contract for ai-profile-cli 0.4.8`; wheel contains `LICENSE`
+  and `THIRD_PARTY_NOTICES.md`.
 
-Independent renderer probe result:
+Authoritative CI evidence for PR #16, run `30714875482`:
 
-```text
-determinism populated light True
-determinism empty dark True
-github-light bg/track collisions: none
-github-light share0-volume0: #B4B9BE track: #eff2f5 bg: #ffffff
-github-dark bg/track collisions: none
-github-dark share0-volume0: #484E55 track: #21262d bg: #0d1117
-geometry light: positions_equal=True; old_day_count=365 current_day_count=365; old_widths=['10']; current_widths=['11']; current_rx=['3']
-geometry dark: positions_equal=True; old_day_count=365 current_day_count=365; old_widths=['10']; current_widths=['11']; current_rx=['3']
-populated-light role img title True desc True smil False fill-opacity False
-empty-dark role img title True desc True smil False fill-opacity False
-```
+- Release candidate build: pass.
+- Python 3.11, 3.12, 3.13, and 3.14: pass. Linux observed
+  `631 passed, 1 skipped`, the expected inverse of three Windows-only skips.
+- Wheel onboarding on Ubuntu, Windows, and macOS, Python 3.12: pass against
+  the same retained candidate bundle.
+- Wheel SHA-256:
+  `d8d307d4155f58f157ee817cdd628ef4c257287083aad66cf30e02f679fe47b6`.
+- sdist SHA-256:
+  `6ee4971ed20300f96196326a1abf048b9bdd44d530092fd70207cae08cb0acd2`.
 
-Independent privacy canary result:
+Independent browser evidence:
 
-```text
-assets: badge-dark.svg, badge-light.svg, heatmap-dark.svg, heatmap-light.svg, profile.json, summary-dark.svg, summary-light.svg
-badge-dark.svg: leaks=0
-badge-light.svg: leaks=0
-heatmap-dark.svg: leaks=0
-heatmap-light.svg: leaks=0
-profile.json: leaks=0
-summary-dark.svg: leaks=0
-summary-light.svg: leaks=0
-total_leaks=0
-```
+- Normal widths 320, 390, 768, 1280, and 1440px: no document/body horizontal
+  overflow.
+- 200% effective widths 145, 180, 369, 625, and 705px: no document/body
+  horizontal overflow.
+- Theme state cycled `auto → light → dark → auto`; visible text and accessible
+  name remained synchronized with the next action.
+- All AI, Claude, and OpenAI filters each exposed the correct pressed state and
+  live-region status.
+- Calendar ArrowLeft moved focus by one week, Escape dismissed the tooltip,
+  and the active cell exposed a 3px solid focus outline.
+- Light/dark summary assets show `AI Collaboration Record`, terrain before the
+  provider ledger, no rail/text collision, and no clipping.
 
-The canary used a temp `AIPROFILE_HOME`, a temp git repo named
-`SECRET_REPO_NAME_CANARY`, author email
-`secret.email.canary@example.test`, and filename
-`sensitive_file_canary.txt`; none appeared in the seven dist assets.
+Independent privacy and dogfood evidence:
 
-## Verified areas without blocking findings
+- Four of four README-only roles completed against the exact retained wheel.
+- Newcomer: 2 commits → 1 unique AI commit, 1 actor presence, 1 unknown.
+- Multi-provider: 3 commits → 1 unique AI commit, 2 actor presences,
+  1 human, and 1 unknown; Claude and OpenAI each report 1/1/1.
+- Privacy policy: 2 full plus 3 aggregate-only commits yielded 5 public total;
+  four excluded commits had no effect. Only the two full-policy dates appeared.
+- Agent sweep: 69 private markers across eight public artifacts, zero hits.
+- Reviewer recomputation: 47 independently reconstructed markers × 8 artifacts
+  = 376 comparisons, zero hits; aggregate-only dates had zero hits and the two
+  full dates served as positive controls.
+- Publisher retry: clean non-worktree root, exact eight files, local `main`
+  publish commit containing only `README.md` and `dist/`, coherent Pages URL,
+  and no configured remote.
 
-- Heatmap day cells are flat hex fills; `fill-opacity` is absent from
-  populated and empty heatmap output.
-- All 20 `(share_bin, volume_bin)` colors per theme are pairwise distinct by
-  the committed tests; the independent probe also found no collisions with
-  `theme.bg` or `theme.bar_track`.
-- The share-0/volume-0 color is distinguishable from empty-track and card-bg
-  colors in both themes.
-- Monday-anchored `x,y` positions match the pre-range populated heatmap
-  snapshots; only cell width changed from 10 to 11.
-- XML is well-formed; `role="img"`, `<title>`, and `<desc>` are present.
-- The static rendering ban remains intact for the heatmap path: no `<animate`,
-  `<set`, or `@keyframes`.
-- Snapshot and docs sample assets match the current renderer; badge and
-  heatmap empty-state files are byte-identical to the pre-range tree.
+## Verified areas without findings
+
+- Renderer dependency direction remains `VizStats → renderer`; renderers do
+  not scan Git, access SQLite/storage, call the network, infer attribution, or
+  recompute aggregates.
+- One commit with multiple AI actors remains one unique AI-attributed commit
+  and multiple actor presences. Provider totals are explicitly non-exclusive.
+- Terrain height is derived from `DayCell.total_commits`, not provider sums;
+  its hue uses `ai_commits / total_commits` fixed bins.
+- Aggregate-only repositories contribute permitted totals but not daily dates;
+  excluded repositories contribute neither totals nor dates.
+- Unknown is never converted to human; zero-attributed-AI days use neutral
+  wording and still show whole-rhythm commit volume.
+- SVG output is deterministic and static; no external font, script, tracker,
+  animation, gradient, or runtime dependency was added.
+- README EN/zh-TW structure, claims, links, and privacy promises remain paired.
+- No duplicated Git AI, GitHub API, generic GitHub statistics, or contribution
+  graph subsystem was introduced.
 
 ## Severity summary
 
 - Critical: 0
 - High: 0
 - Medium: 0
-- Low: 2
+- Low: 1
 
 ## Final recommendation
 
-READY AFTER MINOR FIXES
+READY FOR NEXT GATE

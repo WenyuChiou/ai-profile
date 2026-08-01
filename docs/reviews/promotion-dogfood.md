@@ -1,109 +1,97 @@
-# v0.4.7 Public Beta promotion dogfood evidence
+# v0.4.8 Public Beta promotion dogfood evidence
 
-Date: 2026-07-30
+Date: 2026-08-01
 
-Candidate wheel: `ai_profile_cli-0.4.7-py3-none-any.whl`
+Candidate wheel: `ai_profile_cli-0.4.8-py3-none-any.whl`
 
 SHA-256:
-`75b896c7a1bfa462d1caa6df7025bca79650e8ad48a006272e76eb9bfb5667d8`
+`d8d307d4155f58f157ee817cdd628ef4c257287083aad66cf30e02f679fe47b6`
 
 ## Posture and acceptance rule
 
 This is the README-only evaluation pre-registered in
-[promotion-eval-spec-v047.md](promotion-eval-spec-v047.md). Each role
-received only the English and Traditional Chinese READMEs, the exact
-CI-retained wheel, wheel metadata, and its user objective. Source, tests,
-project scripts, prior dogfood, and orchestrator product hints were
-prohibited.
+`promotion-eval-spec-v048.md`. Four independent user roles received only the
+English and Traditional Chinese READMEs, the exact CI-retained wheel, wheel
+metadata, and a role objective. They could not inspect source or tests and did
+not receive product instructions from the orchestrator.
 
-Each role used a separate venv, synthetic repository, and
-`AIPROFILE_HOME` below `.ai/dogfood-v047/`. Raw command ledgers remain
-unversioned because they contain local paths and synthetic private canaries.
+Each role used an isolated temporary repository, venv, and `AIPROFILE_HOME`.
+Raw ledgers remain unversioned because they contain local paths and synthetic
+private canaries. The coordinating reviewer independently parsed the retained
+`profile.json` and artifact sets rather than accepting role summaries.
 
 Pass required:
 
-- all four roles complete without an outside-README product hint;
+- all four roles complete with zero outside-README product hints;
 - exact candidate identity in every role;
-- no install, configuration, or Pages dead end;
+- no installation, configuration, privacy-policy, or Pages dead end;
 - zero private-canary matches in generated public artifacts;
-- exact agreement with hand-derived aggregation values;
-- deterministic eight-file output.
+- exact agreement with hand-derived commit, provider, evidence, and day units;
+- exactly eight deterministic outputs.
 
 ## Result matrix
 
 | Role | Result | Key evidence |
 | --- | --- | --- |
-| Newcomer | PASS | Install, version, `init`, `scan`, `aggregate`, and `render`; 8/8 deterministic outputs; 224 privacy comparisons, zero hits |
-| Privacy user | PASS | `aggregate_only`, `full`, and `excluded`; 46/46 commands; 558 primary comparisons plus 27 exclusion comparisons, zero hits |
-| Multi-provider user | PASS | One unique AI commit, two actor presences, human and unknown distinct; All AI/Claude/OpenAI filters exact |
-| Profile publisher | PASS | Eight outputs, light/dark and mobile embeds, Pages main/root layout, deterministic rerender, 16 canaries with zero hits |
+| Newcomer | PASS | Install, version, `init`, `scan`, `aggregate`, and `render`; 2 commits became 1 unique AI commit, 1 presence, and 1 unknown; exact eight files |
+| Privacy user | PASS | `full`, `aggregate_only`, and `excluded`; 69 role canaries and 376 independent byte comparisons produced zero public hits |
+| Multi-provider user | PASS | One commit remained one unique AI commit while Claude and OpenAI produced two actor presences; unknown and human stayed separate |
+| Profile publisher | PASS | Root README plus eight `dist/` outputs, clickable summary, light/dark assets, Pages main/root instructions, deterministic local publish commit |
 
-All four roles used the pinned wheel digest. No role required an
-outside-README product instruction.
-
-## Root-agent recomputation
-
-The coordinating reviewer read all four raw reports and independently
-checked their command ledgers and generated artifacts:
-
-- every successful product command used the exact 0.4.7 wheel;
-- each role's final `AIPROFILE_HOME` was task-local;
-- the accidental harness-created `%USERPROFILE%\config.json` was removed,
-  and a final filesystem check confirmed it absent;
-- each complete render contained exactly the documented eight nonempty
-  files;
-- all reported aggregate values matched the retained `profile.json` data;
-- no public output contained a repository name, path, organization, email,
-  prompt, commit message, branch, salt, repository UID, or commit SHA
-  canary;
-- deterministic rerenders were byte-identical.
+All four roles installed the exact retained candidate wheel. No role needed a
+product hint outside the READMEs.
 
 ## Verified role evidence
 
 ### Newcomer
 
-The role installed the exact wheel in a fresh Python 3.14 venv and confirmed
-`aiprofile 0.4.7`. A three-commit repository produced:
+The newcomer completed the documented sequence in a clean environment and
+confirmed `aiprofile 0.4.8`. The two-commit fixture produced:
 
 ```text
-commits scanned             3
+commits scanned             2
 unique AI-attributed        1
 AI actor presences          1
-human-declared              1
+human-declared              0
 unknown                     1
 active AI days              1
 ```
 
-The first and second renders were identical for all eight files. Twenty-eight
-canaries across eight outputs produced `224` byte comparisons and zero hits.
+The rendered directory contained exactly the documented eight non-empty
+files. The role initially chose a temporary directory inside an enclosing Git
+worktree; the CLI emitted the documented privacy warning, and the user moved
+`AIPROFILE_HOME` to a non-worktree location without outside assistance.
 
 ### Privacy user
 
-Three repositories exercised all publication modes:
+The role created three policy classes:
 
-| Mode | Behavior verified |
-| --- | --- |
-| `aggregate_only` | Totals retained; private activity date absent |
-| `full` | Totals retained; identity-redacted daily date present |
-| `excluded` | Four commits and the provider removed from every data-bearing aggregate |
+| Policy | Commits | Public effect |
+| --- | ---: | --- |
+| `full` | 2 | Totals and two identity-redacted daily dates published |
+| `aggregate_only` | 3 | Totals published; all three dates withheld |
+| `excluded` | 4 | No totals, dates, providers, or evidence published |
 
-Before exclusion, totals were 9 scanned / 7 AI-attributed / 7 presences.
-After exclusion, totals were 5 / 3 / 3. The exact four-commit delta,
-provider removal, and date behavior matched the hand-derived oracle.
+Observed public totals were 5 scanned commits, 4 unique AI-attributed
+commits, 4 actor presences, 1 unknown, and 4 active AI days. Only the two
+`full` dates appeared in daily data; the aggregate-only and excluded dates did
+not appear.
 
-Thirty-one probes across sixteen rendered assets and two aggregate previews
-produced `558` byte comparisons and zero matches. A separate final exclusion
-sweep produced another `27` comparisons and zero matches.
+The role tested 69 synthetic private markers across all eight artifacts and
+reported zero hits. The coordinating reviewer rebuilt 47 markers from the
+fixture repositories, identities, paths, e-mails, SHAs, and trailer values,
+then performed 47 x 8 = 376 byte comparisons with zero hits. The two permitted
+full-mode dates were retained as positive controls.
 
 ### Multi-provider user
 
-The frozen three-commit oracle was:
+The three-commit oracle was:
 
 | Commit kind | Unique AI commits | AI presences | Human | Unknown | Evidence records |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Unknown | 0 | 0 | 0 | 1 | 1 |
+| No explicit declaration | 0 | 0 | 0 | 1 | 1 |
 | `Human-Only` | 0 | 0 | 1 | 0 | 1 |
-| Anthropic + OpenAI | 1 | 2 | 0 | 0 | 2 |
+| Anthropic plus OpenAI | 1 | 2 | 0 | 0 | 2 |
 
 Observed values matched exactly:
 
@@ -119,41 +107,43 @@ evidence records            4
 active AI days              1
 ```
 
-The dashboard's All AI, Claude, and OpenAI states matched the embedded
-validated data and restored correctly. The daily row remained one unique AI
-commit even though both providers received one attributed commit.
-Twenty-four private canaries were absent from all eight outputs.
+The dashboard's All AI, Claude, and OpenAI filters matched the embedded data.
+The daily row stayed at one unique AI commit even though both providers had
+one attributed commit. Unknown was never rewritten as human.
 
 ### Profile publisher
 
-The role generated all eight outputs, validated the six SVGs and JSON, and
-created a Profile-shaped `main` repository with root `README.md` and
-`dist/dashboard.html`. It verified:
+The first fixture was discarded because its root was inside an enclosing Git
+worktree and the role ended before producing a valid publish commit. The retry
+started in a verified non-worktree root and completed unassisted.
 
-- the documented clickable summary-card target;
-- badge fallback references for narrow screens;
-- light/dark summary, badge, and heatmap references;
-- exact-case local paths;
-- Pages `main` + `/ (root)` mapping;
-- self-contained dashboard CSP and no remote scripts, styles, or network
-  APIs.
+It produced exactly eight artifacts, embedded the compact badge and clickable
+summary in a root Profile README, and derived the documented Pages URL from a
+synthetic account/repository name. Its local `main` publish commit contained
+only `README.md` and the eight `dist/` files, and the worktree was clean. The
+role verified light/dark SVG references, root-case paths, dashboard CSP, and
+the Pages `main` plus `/ (root)` settings. No remote was configured or mutated.
 
-All eight rerendered files were byte-identical. Sixteen privacy canaries had
-zero hits. The exact wheel and staging dashboard hashes matched the
-candidate staging manifest. Public upload remained a dry run until protected
-`main` merge.
+## Root-agent recomputation
+
+The coordinating reviewer independently verified:
+
+- all four retained `profile.json` files and every eight-file output set;
+- the candidate version and wheel digest recorded by each role;
+- the commit/provider/presence/human/unknown/day values above;
+- full-mode dates as positive controls and aggregate-only dates as absent;
+- the publisher commit's exact file membership and clean repository state;
+- zero privacy-canary hits in the public artifacts.
 
 ## Findings and disposition
 
 | Severity | Description | Impact | Recommendation | Disposition |
 | --- | --- | --- | --- | --- |
-| Low | The READMEs do not explicitly define evidence-record and active-AI-day counting semantics. | A README-only user may initially derive evidence or active-day totals differently, although CLI labels and stored data are internally consistent. | Add a concise metric glossary in a later documentation release. | Accepted for Public Beta; no correctness or privacy defect. |
-| Low | Singular synthetic data produces `1 commits contain...` and `appears in 1 unique commits` in dashboard explanatory copy. | Cosmetic grammar issue for very small histories; values and units remain unambiguous. | Add count-aware copy with renderer tests in a later patch. | Accepted to preserve the artifact-only v0.4.7 boundary. |
-| Low | A deliberately repo-contained `AIPROFILE_HOME` emits a privacy warning. | Expected stderr in isolated automation, not a command failure. | Keep the warning; users should normally place the home outside a Git worktree. | Accepted; the warning enforces the documented privacy posture. |
+| Low | The README explains `Human-Only` and the evidence order but does not explicitly say that a Human-Only declaration contributes to the aggregate `declared` evidence bucket. | A manual evidence-total check can require one extra interpretive step; the CLI output and all attribution units remain correct. | Add one glossary sentence in v0.4.9. | Accepted for v0.4.8 Public Beta; no correctness, privacy, or onboarding dead end. |
 
 ## Final result
 
-**PASS — 4/4 required roles completed.** There were zero outside-README
-product hints, zero install/configuration/Pages dead ends, zero public-output
+**PASS - 4/4 required roles completed.** There were zero outside-README
+product hints, zero installation/configuration/Pages dead ends, zero public
 canary hits, exact aggregation agreement, and deterministic eight-file
-renders. This evidence is valid only for the pinned v0.4.7 wheel.
+renders. This evidence is valid only for the pinned v0.4.8 wheel above.
