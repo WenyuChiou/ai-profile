@@ -1,7 +1,7 @@
 # 模型類別貢獻視覺化計畫
 
 日期：2026-08-04
-狀態：候選實作與本地獨立驗收完成；等待 Ubuntu CI、跨平台 onboarding 與發布 gate
+狀態：候選實作、本地驗收、Ubuntu CI 與跨平台 onboarding 完成；等待發布與 live Profile gate
 基準：v0.4.10 Public Beta（目前版本維持可發布，不因本計畫自動變更）
 
 ## 目的與現況
@@ -17,8 +17,10 @@ provider、tool、commit message 或程式碼風格猜模型，均違反架構�
 
 目前候選分支已依本計畫落地 `ModelAgg`、`ModelRow`、公開 JSON、summary
 ledger、dashboard model panel、synthetic sample 與 clean-wheel smoke。這些
-變更尚未改寫已發布的 v0.4.10 assets；在 Ubuntu artifact、跨平台 onboarding、
-privacy、browser 與獨立 review 全部通過前，v0.4.10 仍是唯一正式 Public Beta。
+變更尚未改寫已發布的 v0.4.10 assets；在 PyPI 發布與 live Profile 驗證完成前，
+v0.4.10 仍是唯一正式 Public Beta。Ubuntu CI run `30934549387` 已固定
+authoritative wheel digest `dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4be457221f245`，
+並通過 Ubuntu、macOS、Windows exact-wheel onboarding。
 
 ## 研究得到的設計約束
 

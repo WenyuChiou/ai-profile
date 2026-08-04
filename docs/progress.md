@@ -472,9 +472,12 @@ which is authoritative).
   non-exclusive, presence rows reconcile to AI actor presences, and missing
   models remain `Unknown` rather than Human. The local candidate records
   `667 passed, 4 skipped`, clean Ruff, deterministic sanctioned assets,
-  exact-wheel smoke, browser QA, and zero privacy-canary hits. v0.4.10 remains
-  the last released Public Beta until Ubuntu CI, cross-platform onboarding,
-  publication, and live Profile verification close the release gate.
+  exact-wheel smoke, browser QA, and zero privacy-canary hits. Ubuntu CI run
+  `30934549387` passed the authoritative candidate build plus exact-wheel
+  onboarding on Ubuntu, macOS, and Windows; its wheel digest is
+  `dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4be457221f245`.
+  v0.4.10 remains the last released Public Beta until publication and live
+  Profile verification close the release gate.
 
 ## Pointers
 
