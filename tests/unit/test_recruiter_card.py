@@ -1,4 +1,4 @@
-"""v0.4.8 HR-first summary card contract (ADR-022).
+"""v0.4.9 flat evidence-ledger summary card contract (ADR-025).
 
 Focused RED-first contract tests for the `AI Collaboration Record`
 redesign: the recruiter-facing section order, the semantically honest
@@ -372,5 +372,5 @@ def test_dashboard_h1_is_evidence_backed_ai_collaboration():
     assert "Show the work behind the numbers." not in html
 
 
-def test_runtime_version_is_0_4_8():
-    assert aiprofile.__version__ == "0.4.8"
+def test_runtime_version_is_0_4_9():
+    assert aiprofile.__version__ == "0.4.9"

@@ -5,13 +5,13 @@ architecture.md section 9).
 clock reads, no randomness, no locale-dependent formatting. Byte-identical
 output for identical inputs is a pinned test (mvp.md section 7 test 11).
 
-v0.4.8 redesigns the card as the recruiter-facing `AI Collaboration
-Record` (ADR-022): header + period, a hero AI-attributed-commit figure
-with its share of scanned commits, a secondary metric ledger, a readable
-12-week flat daily matrix (bar height = total-commit volume bins, fill =
-AI-share bins — the heatmap card's own fixed bins, shared via
-`render/_bins.py`), the top-six provider ledger with an explicit
-non-exclusive note, and a compact evidence rail.
+The v0.4.8 recruiter-facing `AI Collaboration Record` (ADR-022) is retained;
+v0.4.9 (ADR-025) refines its daily treatment into a readable 12-week flat
+matrix (bar height = total-commit volume bins, fill = AI-share bins — the
+heatmap card's own fixed bins, shared via `render/_bins.py`). The card also
+keeps its header + period, hero AI-attributed-commit figure with share of
+scanned commits, secondary metric ledger, top-six provider ledger with an
+explicit non-exclusive note, and compact evidence rail.
 
 Layout is dynamic-but-deterministic: the card height is a pure function of
 the data (number of provider rows, overflow line, published daily series,
@@ -46,7 +46,8 @@ _UNRECOGNIZED_PROVIDER = "unrecognized"
 
 # ---------------------------------------------------------------------------
 # Layout constants (ADR-010: fixed constants, no template engine).
-# The v0.4.8 spacing system: 4px scale, 24px outer padding, 8-12px
+# Shared spacing system (introduced in v0.4.8 and retained in v0.4.9): 4px
+# scale, 24px outer padding, 8-12px
 # within-group gaps, 20-24px between sections. Fixed type sizes
 # 11/12/13/16/38; weights 400 for labels, 600 for values/section labels,
 # 700 for the hero figure.
@@ -94,7 +95,7 @@ LEDGER_VALUE_X = WIDTH - PADDING
 LEDGER_FIRST_Y = 88
 LEDGER_ROW_STEP = 24
 
-# Provider ledger (rendered BELOW the daily matrix since v0.4.8 — the matrix
+# Provider ledger (rendered BELOW the daily matrix — the matrix
 # is the card's recruiter-facing centerpiece, ADR-022). The table's top
 # depends on the daily block's height, so the row origin is a function
 # (`_rows_top`), not a constant.
@@ -151,7 +152,7 @@ PROVIDER_NOTE_TEXT = (
 PROVIDER_NOTE_BASELINE = 14  # rows bottom -> note baseline
 PROVIDER_NOTE_EXTRA = 20  # vertical room the note adds below the rows
 
-# Evidence rail (v0.4.8): a compact rail replaces the former full-width
+# Evidence rail: a compact rail replaces the former full-width
 # provenance panel. `chip_bg` survives as a SMALL evidence-backed chip
 # behind the rail label — an evidence cue, not a warning panel.
 PANEL_GAP_ABOVE = 20
@@ -480,7 +481,7 @@ def _has_more_line(stats: VizStats) -> bool:
 
 
 def _calendar_top(stats: VizStats) -> int:
-    # Fixed since v0.4.8: the matrix block sits directly under the
+    # The matrix block sits directly under the
     # fixed-height hero/ledger block (ADR-022 moved it above the provider
     # table). Kept as a function of stats for signature stability.
     del stats
@@ -613,7 +614,7 @@ def _hero_svg(stats: VizStats, theme: Theme) -> str:
             weight=700,
             fill=theme.accent,
             # Numeric DATA renders in the mono stack (reviewer ruling,
-            # v0.4.8 round 3); display type is reserved for the title.
+            # Current type system; display type is reserved for the title.
             family=FONT_STACK_MONO,
         ),
         _text(PADDING, HERO_LABEL_Y, "AI-attributed commits", size=12, fill=theme.muted),
@@ -767,7 +768,7 @@ def _evidence_items(stats: VizStats, theme: Theme) -> tuple[tuple[str, int, str,
 
 
 def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The compact evidence rail (v0.4.8): a small ``chip_bg`` label chip,
+    """The compact evidence rail: a small ``chip_bg`` label chip,
     the stacked evidence bar, its legend, and the privacy cue — no
     full-width surface. ``chip_bg`` deliberately survives only as the
     small evidence-backed chip."""

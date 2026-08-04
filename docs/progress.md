@@ -407,13 +407,15 @@ which is authoritative).
   adding runtime dependencies or a new data model. That branch's perspective
   treatment was intentionally rejected for the summary card; its rollback
   remains available until the flat replacement completes verification.
-- **Flat Evidence Ledger pivot (candidate branch, 2026-08-04).**
+- **v0.4.9 Flat Evidence Ledger pivot (candidate branch, 2026-08-04).**
   ADR-025 replaces the summary-card perspective treatment with a 12-column by
   7-row flat daily matrix. Bars encode unique daily total-commit bins and fill
   encodes AI-share bins; provider overlap, unknown/human separation, privacy
   redaction, and the eight-file output contract remain unchanged. The branch
-  is not a release: full-suite, artifact, browser, independent review, and
-  release verification are still required before any public version update.
+  is the v0.4.9 Public Beta candidate; full-suite, artifact, browser,
+  independent review, and release verification remain required before
+  publication. Readiness record:
+  `docs/reviews/v0.4.9-flat-ledger-readiness.md`.
 - **The maintainer Profile refresh on public PyPI 0.4.8 is complete.**
   Profile PR #12 merged at `7f322beab1e532d906f943c62fc68e49ba21c02a`
   with the unchanged exact 11-repository full-publication scope. Profile

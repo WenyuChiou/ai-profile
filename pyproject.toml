@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-profile-cli"
-version = "0.4.8"
+version = "0.4.9"
 description = "Evidence-backed, privacy-safe AI collaboration cards and dashboards generated locally from explicit Git provenance."
 readme = "README.md"
 license = "MIT"

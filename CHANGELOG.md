@@ -25,6 +25,10 @@ below.
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.4.9] — 2026-08-04 (Public Beta candidate)
+
 ### Changed
 
 - Document the Flat Evidence Ledger visual system in `DESIGN.md` and ADR-025,
