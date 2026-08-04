@@ -426,6 +426,23 @@ def test_provider_percentages_and_denominator_label():
     # rule 6): the table header names it, each visible row carries its pct.
     svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
     denominator = FIXTURE_POPULATED.totals.ai_attributed_commits
+    # The evidence-ledger lockup keeps count and share as separate columns;
+    # a shared right edge would recreate the README-scale collision this
+    # refinement fixes. Row dividers stop at the same percentage edge.
+    root = ET.fromstring(svg)
+    text_nodes = {
+        (node.attrib.get("x"), "".join(node.itertext()))
+        for node in root
+        if node.tag.rsplit("}", 1)[-1] == "text"
+    }
+    assert ("748", "120") in text_nodes
+    assert ("806", " · 32%") in text_nodes
+    assert any(
+        node.attrib.get("x1") == "24"
+        and node.attrib.get("x2") == "806"
+        for node in root
+        if node.tag.rsplit("}", 1)[-1] == "line"
+    )
     assert f"% of {denominator} AI-attributed commits" in svg
     for row in FIXTURE_POPULATED.providers[:6]:
         pct = round(100 * row.attributed_commits / denominator)

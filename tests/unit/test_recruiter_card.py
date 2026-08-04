@@ -152,6 +152,18 @@ def test_card_title_is_ai_collaboration_record():
 def test_terrain_section_precedes_the_provider_ledger():
     svg = render_summary(FIXTURE_TERRAIN, THEMES["github-light"])
     assert svg.index(CAL_LABEL_TEXT) < svg.index("Attributed commits by provider")
+    # Section headings use the shared quiet marker primitive rather than an
+    # accent block, keeping accent color reserved for data marks.
+    root = ET.fromstring(svg)
+    assert any(
+        node.attrib.get("x") == "24"
+        and node.attrib.get("width") == "4"
+        and node.attrib.get("height") == "12"
+        and node.attrib.get("rx") == "2"
+        and node.attrib.get("fill") == THEMES["github-light"].border
+        for node in root
+        if node.tag.rsplit("}", 1)[-1] == "rect"
+    )
 
 
 # ---------------------------------------------------------------------------

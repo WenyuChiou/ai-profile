@@ -122,13 +122,23 @@ LETTER_TILE_TEXT_DY = 14  # baseline offset from the tile's top y
 LETTER_TILE_FONT_SIZE = 11
 
 NAME_X = GLYPH_TILE_X + GLYPH_TILE_SIZE + 8  # 52 (spec: tile + 8px gap)
-NAME_WIDTH = 122
+NAME_WIDTH = 120  # 4px scale: keeps the lockup column predictable
 BAR_X = 184
-COUNT_X = WIDTH - PADDING  # right anchor for "count · pct%"
-BAR_MAX_WIDTH = 500  # COUNT_X - reserved count column (110) - gap (12) - BAR_X
+COUNT_X = WIDTH - PADDING  # right edge for the percentage column and dividers
+COUNT_VALUE_X = 748  # independent right-aligned count column
+COUNT_PERCENT_X = COUNT_X  # independent right-aligned share column
+BAR_MAX_WIDTH = 480  # 4px scale; leaves a readable gap before metric columns
 BAR_HEIGHT = 7
 NAME_FONT_SIZE = 13
 COUNT_FONT_SIZE = 13
+
+# Section marker: a quiet, non-accent editorial rule. Accent remains reserved
+# for the hero, share fill, provider fills, and header mark (ADR-022).
+SECTION_MARK_X = PADDING
+SECTION_MARK_WIDTH = 4
+SECTION_MARK_HEIGHT = 12
+SECTION_MARK_RADIUS = 2
+SECTION_MARK_GAP = 8
 
 MORE_LINE_EXTRA = 24  # vertical room for the "+N providers not shown" line when present
 
@@ -389,6 +399,37 @@ def _text(
     return (
         f'<text x="{x}" y="{y}" font-family="{family}" font-size="{size}" '
         f'font-weight="{weight}" fill="{fill}" text-anchor="{anchor}"{spacing_attr}>{body}</text>'
+    )
+
+
+def _section_label(label: str, baseline_y: int, theme: Theme) -> str:
+    """Render a section marker and label as one replaceable visual unit.
+
+    The marker uses the border token rather than the accent token so the
+    accent remains a data signal. Keeping this as a small pure helper makes
+    the section grammar independently replaceable without touching metrics.
+    """
+    marker_y = baseline_y - SECTION_MARK_HEIGHT + 2
+    return "\n".join(
+        (
+            _rect(
+                SECTION_MARK_X,
+                marker_y,
+                SECTION_MARK_WIDTH,
+                SECTION_MARK_HEIGHT,
+                fill=theme.border,
+                rx=SECTION_MARK_RADIUS,
+            ),
+            _text(
+                SECTION_MARK_X + SECTION_MARK_WIDTH + SECTION_MARK_GAP,
+                baseline_y,
+                label,
+                size=12,
+                weight=600,
+                fill=theme.muted,
+                letter_spacing=0.2,
+            ),
+        )
     )
 
 
@@ -706,14 +747,32 @@ def _provider_row_svg(
         bar_w = round(BAR_MAX_WIDTH * row.attributed_commits / max_attributed)
         elements.append(_rect(BAR_X, bar_y, bar_w, BAR_HEIGHT, fill=bar_fill, rx=2))
 
-    count_spans = _tspan(str(row.attributed_commits), fill=theme.text, weight=600)
+    # Keep the count and percentage in independent right-aligned columns.
+    # The old single text run made a three-digit count visually collide with
+    # its percentage at README scale; separate columns preserve the exact
+    # strings while giving both values a stable reading edge.
+    count_span = _tspan(str(row.attributed_commits), fill=theme.text, weight=600)
+    elements.append(
+        f'<text x="{COUNT_VALUE_X}" y="{text_y}" font-family="{FONT_STACK_MONO}"'
+        f' font-size="{COUNT_FONT_SIZE}" text-anchor="end">{count_span}</text>'
+    )
     if denominator > 0:
         pct = _pct_label(row.attributed_commits, denominator)
-        count_spans += _tspan(f" · {pct}", fill=theme.muted)
-    elements.append(
-        f'<text x="{COUNT_X}" y="{text_y}" font-family="{FONT_STACK_MONO}"'
-        f' font-size="{COUNT_FONT_SIZE}" text-anchor="end">{count_spans}</text>'
-    )
+        pct_span = _tspan(f" · {pct}", fill=theme.muted)
+        elements.append(
+            f'<text x="{COUNT_PERCENT_X}" y="{text_y}" font-family="{FONT_STACK_MONO}"'
+            f' font-size="{COUNT_FONT_SIZE}" text-anchor="end">{pct_span}</text>'
+        )
+    if index < _visible_rows(stats) - 1:
+        elements.append(
+            _line(
+                PADDING,
+                row_top + ROW_HEIGHT,
+                COUNT_X,
+                row_top + ROW_HEIGHT,
+                stroke=theme.border,
+            )
+        )
     return "\n".join(elements)
 
 
@@ -1129,15 +1188,7 @@ def _calendar_notice_svg(theme: Theme, top: int) -> str:
     fabricated grid, never a warning panel."""
     return "\n".join(
         (
-            _text(
-                PADDING,
-                top + CAL_LABEL_BASELINE_Y,
-                CAL_LABEL_TEXT,
-                size=CAL_LABEL_SIZE,
-                weight=600,
-                fill=theme.muted,
-                letter_spacing=0.2,
-            ),
+            _section_label(CAL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
             _text(
                 WIDTH // 2,
                 top + CAL_NOTICE_MESSAGE_Y,
@@ -1176,15 +1227,7 @@ def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
         diamonds.append(_day_cell_svg(cells[offset], cx, top + cy, theme))
 
     sections = (
-        _text(
-            PADDING,
-            top + CAL_LABEL_BASELINE_Y,
-            CAL_LABEL_TEXT,
-            size=CAL_LABEL_SIZE,
-            weight=600,
-            fill=theme.muted,
-            letter_spacing=0.2,
-        ),
+        _section_label(CAL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
         _calendar_month_labels_svg(stats, theme, top),
         "\n".join(diamonds),
         _calendar_legend_svg(theme, top),
@@ -1274,15 +1317,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         # (proposal section 26 rule 6: percentages state their denominator).
         table_label_y = _table_label_y(stats)
         parts.append(
-            _text(
-                PADDING,
-                table_label_y,
-                "Attributed commits by provider",
-                size=12,
-                weight=600,
-                fill=theme.muted,
-                letter_spacing=0.2,
-            )
+            _section_label("Attributed commits by provider", table_label_y, theme)
         )
         if stats.totals.ai_attributed_commits > 0:
             parts.append(

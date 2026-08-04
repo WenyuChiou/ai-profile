@@ -306,8 +306,11 @@ consumes it until the GitHub Action lands).
   tests); no clock reads inside render (only `generated_on` from the
   contract); no randomness; fixed decimal formatting.
 - Provider table: top 6 rows; remaining providers collapse to one
-  "+N more" line (counts included in totals regardless), with an explicit
-  non-exclusive note (ADR-022).
+  "+N providers not shown" line (counts included in totals regardless),
+  with an explicit
+  non-exclusive note (ADR-022). The post-v0.4.8 evidence-ledger refinement
+  keeps count and percentage in separate right-aligned columns and uses a
+  quiet border-token section marker; this is presentation-only (ADR-023).
 - Summary terrain (ADR-022, superseding ADR-020's AI-only band clause):
   the card's 12-week isometric terrain encodes day height from
   `DayCell.total_commits` (fixed 1 / 2-4 / 5-7 / 8+ bins) and top-face

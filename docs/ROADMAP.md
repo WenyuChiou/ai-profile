@@ -166,6 +166,14 @@ designed v0.5.0 plan.
       Beta). Readiness record:
       `docs/reviews/v0.4.8-release-readiness.md`.
 
+## Post-v0.4.8 visual refinement (design branch)
+
+- [x] Evidence-ledger alignment (ADR-023): separate provider count and
+      percentage columns, keep section markers semantic, and preserve the
+      existing renderer/data/privacy contract.
+- [x] Complete the independent visual, accessibility, privacy, and artifact
+      review before deciding whether a patch release is warranted.
+
 ## Future capability milestone — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature
