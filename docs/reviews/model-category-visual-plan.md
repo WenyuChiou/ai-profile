@@ -1,8 +1,8 @@
 # 模型類別貢獻視覺化計畫
 
 日期：2026-08-04
-狀態：候選實作、本地驗收、Ubuntu CI 與跨平台 onboarding 完成；等待發布與 live Profile gate
-基準：v0.4.10 Public Beta（目前版本維持可發布，不因本計畫自動變更）
+狀態：v0.5.0 Public Beta 已發布，並完成 live Profile 驗證
+基準：v0.5.0 Public Beta（GitHub Release 為 prerelease，PyPI classifier 為 Beta）
 
 ## 目的與現況
 
@@ -15,12 +15,13 @@ provider、tool、commit message 或程式碼風格猜模型，均違反架構�
 本計畫把模型類別視為新的公開 aggregate 維度，而不是把它塞進 provider
 欄位或用顏色暗示。
 
-目前候選分支已依本計畫落地 `ModelAgg`、`ModelRow`、公開 JSON、summary
-ledger、dashboard model panel、synthetic sample 與 clean-wheel smoke。這些
-變更尚未改寫已發布的 v0.4.10 assets；在 PyPI 發布與 live Profile 驗證完成前，
-v0.4.10 仍是唯一正式 Public Beta。Ubuntu CI run `30934549387` 已固定
-authoritative wheel digest `dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4be457221f245`，
-並通過 Ubuntu、macOS、Windows exact-wheel onboarding。
+本計畫已落地 `ModelAgg`、`ModelRow`、公開 JSON、summary ledger、dashboard
+model panel、synthetic sample 與 clean-wheel smoke。v0.5.0 已從 tag
+`v0.5.0`（main merge `4e369c6`）發布；Ubuntu CI 固定的 authoritative wheel
+digest 為
+`dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4be457221f245`，並通過
+Ubuntu、macOS、Windows exact-wheel onboarding。維護者 Profile PR #15 已於
+`ead0f41` 合併，Pages dashboard 與八個 live outputs 均以該 wheel 驗證。
 
 ## 研究得到的設計約束
 
@@ -37,7 +38,7 @@ authoritative wheel digest `dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4
   高度 + AI share 的色階」為語意。provider/model 都不能改變柱高，否則
   一個 commit 多個 actors 會被重複放大。
 
-## 決策（候選 v0.5.0）
+## 決策（已落地 v0.5.0）
 
 ### 新的公開契約
 
@@ -151,9 +152,9 @@ aggregate rows 與相應測試。
 
 ## Promotion gate
 
-目前 v0.4.10 維持 `GO — PUBLIC BETA` 的既有 release evidence。模型類別
-功能只有在新版本完成 schema/ADR、red-first tests、公開隱私掃描、跨平台
-wheel smoke、瀏覽器視覺 QA、snapshot byte stability、獨立 gate review，且
-無未解 Critical/High 後，才能另行 promotion。若任何分母或 privacy boundary
-無法從 raw logs/artifacts 重新計算，結論必須是 `NO-GO`，不可用畫面美觀掩蓋
-資料契約缺口。
+v0.5.0 已完成 schema/ADR、red-first tests、公開隱私掃描、跨平台 wheel
+smoke、瀏覽器視覺 QA、snapshot byte stability、獨立 gate review、PyPI/
+GitHub Release 與 live Profile 驗證，且沒有未解 Critical/High。最終證據與
+分母重算記錄於 `docs/reviews/v0.5.0-release-readiness.md`；若後續版本無法
+從 raw logs/artifacts 重新計算任何分母或 privacy boundary，結論仍必須是
+`NO-GO`，不可用畫面美觀掩蓋資料契約缺口。

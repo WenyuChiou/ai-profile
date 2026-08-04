@@ -37,6 +37,6 @@ privacy totals, and the existing All AI/provider dashboard controls.
 | Finding | Severity | Disposition |
 |---|---|---|
 | Legacy manually constructed `VizStats` may omit `models` for compatibility | Low | Accepted for v0.5.0; production `build_viz_stats` always supplies model rows and the empty state is explicit. Tightening is a future contract change. |
-| Publication and live Profile promotion | Medium | Ubuntu build and all three onboarding jobs passed in CI run `30934549387`; tag/PyPI/Profile promotion remains open. |
+| Publication and live Profile promotion | Medium | Closed: tag `v0.5.0`, PyPI, GitHub Release prerelease metadata, Profile PR #15, Pages run `30937320357`, and all eight live bytes were independently verified. |
 
 No Critical or High dogfood finding was reproduced.

@@ -466,18 +466,23 @@ which is authoritative).
   The Profile privacy review found zero hits across paths, names,
   organizations, e-mails, full and 12-character SHAs, 1714 commit bodies,
   1713 subjects, and 405 prompt-bearing lines.
-- **v0.5.0 model-family contribution candidate is locally verified
+- **v0.5.0 model-family contribution is released and promotion-verified
   (2026-08-04).** ADR-027 and the model-category plan define a closed,
   explicit-only family ledger over ACE `0.3.0`: model-family commit rows are
   non-exclusive, presence rows reconcile to AI actor presences, and missing
-  models remain `Unknown` rather than Human. The local candidate records
+  models remain `Unknown` rather than Human. The release records
   `667 passed, 4 skipped`, clean Ruff, deterministic sanctioned assets,
   exact-wheel smoke, browser QA, and zero privacy-canary hits. Ubuntu CI run
-  `30934549387` passed the authoritative candidate build plus exact-wheel
-  onboarding on Ubuntu, macOS, and Windows; its wheel digest is
-  `dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4be457221f245`.
-  v0.4.10 remains the last released Public Beta until publication and live
-  Profile verification close the release gate.
+  `30935669158` and publish run `30935872159` passed; the exact wheel was
+  published to PyPI and the GitHub Release is a prerelease. Tag `v0.5.0` is at
+  main merge `4e369c6`; wheel digest
+  `dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4be457221f245`; sdist
+  digest
+  `24f581f9914ac0372af4e921889f79c935207852f6c66b4affe110901a5d1ed8`.
+  Maintainer Profile PR #15 merged at `ead0f41`; Pages run `30937320357` and
+  snake run `30937324074` passed, with all eight live outputs matching the
+  merged LF-normalized blobs. Full evidence:
+  `docs/reviews/v0.5.0-release-readiness.md`.
 
 ## Pointers
 
