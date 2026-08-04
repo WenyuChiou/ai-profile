@@ -34,7 +34,7 @@ from xml.sax.saxutils import escape
 from ..viz import DayCell, ProviderRow, Totals, VizStats
 from ._bins import VOLUME_CAP, _share_bin, _share_colors, _volume_bin
 from .brand import BRAND, BrandSpec
-from .themes import Theme
+from .themes import Theme, model_category_color
 
 # Mirrors aiprofile.schema.vocab.UNRECOGNIZED_PROVIDER verbatim. The
 # render-layer isolation boundary (architecture.md section 2) forbids
@@ -163,7 +163,7 @@ SECTION_RULE_WIDTH = 12
 
 MORE_LINE_EXTRA = 24  # vertical room for the "+N providers not shown" line when present
 
-# Model-family ledger (ADR-027): compact, all-time evidence rows sourced only
+# Model-family ledger (ADR-027, ADR-028): compact, all-time evidence rows sourced only
 # from the validated VizStats model tuple.  It deliberately has no daily
 # geometry or filter semantics.
 MODEL_LABEL_TEXT = "Model contribution"
@@ -861,13 +861,14 @@ def _provider_row_svg(
 
 
 def _model_mark_svg(category: str, theme: Theme, tile_y: int) -> str:
-    """Render a neutral, category-only model mark.
+    """Render a stable category mark without exposing raw model text.
 
     The mark is presentation metadata derived from the already validated
     public category slug.  It is not a provider logo and never exposes the
     raw model declaration.
     """
     mark = MODEL_MARKS[category]
+    category_color = model_category_color(theme, category)
     return "\n".join(
         (
             _rect(
@@ -877,7 +878,7 @@ def _model_mark_svg(category: str, theme: Theme, tile_y: int) -> str:
                 MODEL_TILE_SIZE,
                 fill=theme.bar_track,
                 rx=MODEL_TILE_RADIUS,
-                stroke=theme.border,
+                stroke=category_color,
             ),
             _text(
                 MODEL_TILE_CX,
@@ -885,7 +886,7 @@ def _model_mark_svg(category: str, theme: Theme, tile_y: int) -> str:
                 mark,
                 size=11,
                 weight=700,
-                fill=theme.muted,
+                fill=category_color,
                 anchor="middle",
                 family=FONT_STACK_MONO,
             ),
@@ -921,7 +922,16 @@ def _model_row_svg(
     ]
     if max_attributed > 0 and row.attributed_commits > 0:
         bar_w = round(MODEL_BAR_MAX_WIDTH * row.attributed_commits / max_attributed)
-        elements.append(_rect(MODEL_BAR_X, bar_y, bar_w, BAR_HEIGHT, fill=theme.model_fill, rx=2))
+        elements.append(
+            _rect(
+                MODEL_BAR_X,
+                bar_y,
+                bar_w,
+                BAR_HEIGHT,
+                fill=model_category_color(theme, row.category),
+                rx=2,
+            )
+        )
     count_span = _tspan(str(row.attributed_commits), fill=theme.text, weight=600)
     elements.append(
         f'<text x="{COUNT_VALUE_X}" y="{text_y}" font-family="{FONT_STACK_MONO}"'

@@ -12,9 +12,16 @@ import json
 
 from ..viz import VizStats, to_json_dict
 from .brand import BRAND
+from .themes import MODEL_CATEGORY_COLORS
 
 _PROVIDER_GLYPHS_JSON = json.dumps(
     {slug: spec.path for slug, spec in sorted(BRAND.items())},
+    ensure_ascii=True,
+    separators=(",", ":"),
+    sort_keys=True,
+)
+_MODEL_CATEGORY_COLORS_JSON = json.dumps(
+    MODEL_CATEGORY_COLORS,
     ensure_ascii=True,
     separators=(",", ":"),
     sort_keys=True,
@@ -1295,6 +1302,11 @@ _HTML_SUFFIX = """</script>
         other: "+",
         unknown: "?"
       };
+      // Stable category-keyed colours keep a family visually consistent when
+      // the ledger gains a new row.  These are small categorical marks/bars;
+      // labels and counts remain text-colour so colour is never the only
+      // channel.  The neutral buckets intentionally share the model token.
+      const modelColors = __MODEL_CATEGORY_COLORS__;
       const providerColors = {
         anthropic: "#9a6700",
         openai: "#1a7f37",
@@ -1337,6 +1349,18 @@ _HTML_SUFFIX = """</script>
         let hash = 0;
         for (const char of slug) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
         return fallbackColors[Math.abs(hash) % fallbackColors.length];
+      }
+
+      function modelColor(category) {
+        let mode = theme;
+        if (mode === "auto") {
+          mode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark" : "light";
+        }
+        const palette = modelColors[mode === "dark" ? "github-dark" : "github-light"];
+        const neutral = palette && palette.unknown
+          ? palette.unknown : (mode === "dark" ? "#b5c7da" : "#52647a");
+        return (palette && palette[category]) || neutral;
       }
 
       function providerIcon(slug, label, variant) {
@@ -1785,6 +1809,9 @@ _HTML_SUFFIX = """</script>
           mark.className = "model-mark";
           mark.setAttribute("aria-hidden", "true");
           mark.textContent = modelMarks[row.category] || "?";
+          const categoryColor = modelColor(row.category);
+          mark.style.color = categoryColor;
+          mark.style.borderColor = categoryColor;
           name.append(mark, document.createTextNode(row.display_name));
           const count = document.createElement("span");
           count.className = "model-count";
@@ -1795,6 +1822,7 @@ _HTML_SUFFIX = """</script>
           const fill = document.createElement("div");
           fill.className = "model-fill";
           fill.style.width = `${(row.attributed_commits / max) * 100}%`;
+          fill.style.background = categoryColor;
           track.append(fill);
           const detail = document.createElement("div");
           detail.className = "model-detail";
@@ -1863,6 +1891,7 @@ _HTML_SUFFIX = """</script>
       function render() {
         renderHero();
         renderCalendar();
+        renderModels();
         document.querySelectorAll(".filter").forEach((button) => {
           button.setAttribute("aria-pressed", String(button.dataset.provider === selected));
           if (button.dataset.provider === "all") {
@@ -1873,6 +1902,24 @@ _HTML_SUFFIX = """</script>
           button.setAttribute("aria-current", String(button.dataset.provider === selected));
         });
         $("selectionStatus").textContent = `Showing ${selectedName()} collaboration activity.`;
+      }
+
+      // CSS updates the surface tokens immediately when the OS preference
+      // changes. Re-render the small inline model marks as well so an `auto`
+      // dashboard never leaves light categorical colours on a dark surface
+      // (or the reverse). The legacy branch keeps this working in older
+      // WebKit without adding a dependency or a network path.
+      const systemScheme = window.matchMedia
+        ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+      const handleSystemSchemeChange = () => {
+        if (theme === "auto") render();
+      };
+      if (systemScheme) {
+        if (systemScheme.addEventListener) {
+          systemScheme.addEventListener("change", handleSystemSchemeChange);
+        } else if (systemScheme.addListener) {
+          systemScheme.addListener(handleSystemSchemeChange);
+        }
       }
 
       function setTheme(next) {
@@ -1898,7 +1945,6 @@ _HTML_SUFFIX = """</script>
       setTheme("auto");
       renderFilters();
       renderProviders();
-      renderModels();
       render();
     })();
   </script>
@@ -1927,4 +1973,4 @@ def render_dashboard(stats: VizStats) -> str:
     )
     return _HTML_PREFIX + payload + _HTML_SUFFIX.replace(
         "__PROVIDER_GLYPHS__", _PROVIDER_GLYPHS_JSON
-    )
+    ).replace("__MODEL_CATEGORY_COLORS__", _MODEL_CATEGORY_COLORS_JSON)

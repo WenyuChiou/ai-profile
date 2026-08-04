@@ -211,6 +211,8 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     assert 'aria-live="polite"' in html
     assert 'aria-label="Theme: auto. Activate for light theme"' in html
     assert "prefers-color-scheme: dark" in html
+    assert 'systemScheme.addEventListener("change", handleSystemSchemeChange)' in html
+    assert "systemScheme.addListener(handleSystemSchemeChange)" in html
     assert "prefers-reduced-motion: reduce" in html
     assert "@media (max-width: 38rem)" in html
     assert "font-size: clamp(" in html
