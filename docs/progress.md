@@ -4,7 +4,7 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## Current v0.6.0 visual candidate (2026-08-04)
+## Current v0.6.0 Public Beta (2026-08-04)
 
 - Research and implementation slice complete on `codex/v060-evidence-ledger`:
   the flat Evidence Ledger now gives canonical model families stable
@@ -12,10 +12,12 @@ which is authoritative).
   unique-commit daily geometry. ADR-028, design forensics, and visual QA are
   recorded in the review/decision documents.
 - Verification: **667 passed, 4 skipped**, Ruff clean, README parity pass,
-  sanctioned snapshot regeneration byte-stable, candidate-wheel release smoke
-  pass, and Playwright responsive/theme/auto-system checks pass. This is an
-  unreleased `0.6.0` candidate; v0.5.0 remains the public PyPI/GitHub release
-  until the candidate artifact and release gates are green.
+  sanctioned snapshot regeneration byte-stable, exact-wheel release smoke
+  pass, and Playwright responsive/theme/auto-system checks pass. The exact
+  Ubuntu-authoritative wheel was published to PyPI and the GitHub Release is
+  marked prerelease; the maintainer Profile was refreshed from that wheel and
+  its Pages and snake workflows passed. Final evidence is recorded in
+  `docs/reviews/v0.6.0-release-readiness.md`.
 
 ## Where things stand (2026-08-01)
 
