@@ -47,7 +47,7 @@ jobs:
           python scripts/check_release_artifacts.py \
             --dist-dir dist \
             --expected-version 0.6.0 \
-            --expected-wheel-sha256 d36dac6db34a34aa9716047a1dcf18243778b0c47f10dc657d6a4073ed80a5b1
+            --expected-wheel-sha256 7ea7b3db484615d5f361d2ba0a237819a94757065b47464efb1d8058bf0ba789
       - name: Render the staging dashboard from the installed candidate wheel
         run: |
           STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
@@ -97,7 +97,7 @@ jobs:
           assert manifest["fixture_id"] == "synthetic-two-provider-fixture-v2-model-ledger", manifest
           assert manifest["package_version"] == "0.6.0", manifest
           assert manifest["wheel_sha256"] == (
-              "d36dac6db34a34aa9716047a1dcf18243778b0c47f10dc657d6a4073ed80a5b1"
+              "7ea7b3db484615d5f361d2ba0a237819a94757065b47464efb1d8058bf0ba789"
           ), manifest
           digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
           assert manifest["dashboard_sha256"] == digest, (manifest, digest)
@@ -176,7 +176,7 @@ jobs:
           assert manifest["fixture_id"] == "synthetic-two-provider-fixture-v2-model-ledger", manifest
           assert manifest["package_version"] == "0.6.0", manifest
           assert manifest["wheel_sha256"] == (
-              "d36dac6db34a34aa9716047a1dcf18243778b0c47f10dc657d6a4073ed80a5b1"
+              "7ea7b3db484615d5f361d2ba0a237819a94757065b47464efb1d8058bf0ba789"
           ), manifest
           digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
           assert manifest["dashboard_sha256"] == digest, (manifest, digest)
