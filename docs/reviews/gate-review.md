@@ -1,79 +1,92 @@
-# ai-profile v0.5.0 model-family gate review
+# ai-profile v0.6.0 gate review
 
 Date: 2026-08-04
-Review range: `c0a5b78..working tree` on `codex/v050-model-categories`
-Reviewer posture: independent Principal Software Engineer; implementation
-verification with adversarial model/privacy/render probes
+Review range: `76c003b..58b1f21` (v0.6.0 visual release plus final release-readiness guard)
+Reviewer posture: independent Principal Software Engineer; verification only
 
 ## Executive summary
 
-The candidate follows the approved architecture and MVP boundary. Model-family
-contribution is an additive, explicit-evidence dimension: the aggregate layer
-normalizes only ACE `model`, the privacy layer emits only closed public rows,
-and renderers consume validated `VizStats` without Git, SQLite, network, or
-attribution inference. Provider counts, unique commits, actor presences,
-active days, evidence records, and model-family rows remain separate; one
-commit may contribute to more than one model family without inflating the
-unique-commit headline. Unknown remains distinct from Human.
+The v0.6.0 implementation follows the approved architecture and MVP boundary.
+The stable model-family visual key is additive: it uses canonical model rows
+already present in validated `VizStats`, keeps the all-time model ledger
+non-exclusive, and leaves the daily matrix's unique-commit geometry and AI
+share semantics unchanged. Unknown remains separate from Human.
 
-No Critical or High implementation defect was reproduced. The only open gate
-is release authority: CI must rebuild and verify the candidate on Ubuntu,
-Windows, and macOS before publication.
+The static Summary Card and self-contained dashboard remain deterministic,
+privacy-safe, and free of Git, SQLite, network, attribution inference, and
+external font dependencies. The maintainer Profile was regenerated from the
+released wheel; the retired green 3D map is no longer presented as the primary
+AI activity visual.
+
+The gate is green: **667 passed, 4 skipped**, Ruff clean, sanctioned snapshot
+regeneration byte-stable, exact-wheel smoke pass, Ubuntu/Windows/macOS
+onboarding pass, browser/privacy checks pass, and live PyPI/GitHub/Profile
+artifacts match the recorded release evidence. Detailed evidence is in
+[`v0.6.0-release-readiness.md`](v0.6.0-release-readiness.md).
 
 ## Verification evidence
 
 | Area | Exact command/probe | Result |
 |---|---|---|
-| Full suite | `python -m pytest tests -p no:cacheprovider` | 667 passed, 4 skipped |
-| Lint | `python -m ruff check src tests scripts` | All checks passed |
-| README parity | `python scripts/check_readme_parity.py` | PASS |
-| Summary regeneration | `python tests/unit/test_render_summary.py` | exit 0; 8 snapshots + 2 assets |
-| Heatmap regeneration | `python tests/unit/test_heatmap_svg.py` | exit 0; 8 snapshots + 4 assets |
-| Regeneration repeat | both sanctioned scripts run twice; hashes compared | zero diff across 25 files |
-| Exact wheel smoke | `python scripts/release_smoke.py --wheel dist/ai_profile_cli-0.5.0-py3-none-any.whl --expected-version 0.5.0` | PASS: install, 8 outputs, CSP, privacy, determinism |
-| Packaging | `python -m build`; `twine check`; `scripts/check_release_artifacts.py` | PASS |
-| Browser | bundled Chromium matrix: 320/390/768/1280/1440, light/dark, reduced motion, effective 200% | PASS; no overflow; 3 model rows |
-| Privacy byte sweep | snapshots, docs assets, dist; canary/email/path/SHA patterns | 27 files, zero hits |
-| Independent review | code-reviewer and silent-failure-hunter probes | APPROVE; no Critical/High |
+| Full suite | `python -m pytest tests -p no:cacheprovider` | **667 passed, 4 skipped** |
+| Lint | `python -m ruff check src tests scripts` | **All checks passed!** |
+| README parity | `python scripts/check_readme_parity.py` | **PASS** |
+| Summary regeneration | `python tests/unit/test_render_summary.py` twice | 8 snapshots + 2 assets; second run zero diff |
+| Exact wheel smoke | `python scripts/release_smoke.py --wheel dist/ai_profile_cli-0.6.0-py3-none-any.whl --expected-version 0.6.0` | **PASS**: install, init, scan, aggregate, render, CSP, privacy canary, determinism |
+| Cross-platform CI | PR #27 / run `30945358542`; Python 3.11–3.14 and Ubuntu/Windows/macOS wheel onboarding | **PASS** |
+| Browser visual QA | Chromium 320/390/768/1280/1440; auto/light/dark; keyboard/focus; effective 200% | **PASS**, no page overflow |
+| Model-category visual | Summary and dashboard model ledger | Claude/GPT/Unknown marks and bars present; labels and values remain textual |
+| Aggregation | multi-provider/model fixture and production public aggregate | unique commits, presences, providers, active days, evidence, model rows, and unknown/human remain separate |
+| Privacy/static safety | all eight Profile outputs, snapshots/assets, dashboard CSP, SVG active-content sweep | zero private paths, repo names, organizations, emails, prompts, SHAs, scripts, external network calls, or embedded objects |
+| Live release | PyPI `0.6.0`, GitHub Release `v0.6.0`, Profile PR #16 / Pages run `30944387849` / snake run `30944389155` | exact digests, prerelease metadata, and HTTP 200 outputs verified |
 
 ## Findings
 
-### Medium — publication gate remains unverified
+### Medium — Beta release metadata drift (closed)
 
-**Description:** This review was performed before a merged PR and before the
-Ubuntu-authoritative build, three-platform onboarding smoke, PyPI publication,
-and live Profile refresh.
+**Description:** The first v0.6.0 GitHub Release creation did not carry the
+prerelease flag, despite the project being a 0.x Public Beta. The discrepancy
+was reproduced with `gh release view`, repaired before announcement, and the
+publish workflow now applies `--prerelease` to `v0.*` creation/repair paths and
+asserts `isPrerelease=true` afterward.
 
-**Impact:** Local Windows artifact evidence cannot establish the exact bytes and
-cross-platform installation path users will receive.
+**Impact:** Without the repair, GitHub could communicate a stronger stability
+claim than PyPI, the changelog, and the README.
 
-**Recommendation:** Push the reviewed branch, require green CI/staging and the
-same-byte Ubuntu artifact contract, then publish and perform a clean PyPI/live
-Profile verification.
+**Recommendation:** Keep the scoped workflow guard and post-publication
+metadata assertion. **Disposition: closed; current release is
+`isDraft=false`, `isPrerelease=true`.**
 
-### Low — legacy empty model ledger compatibility
+### Low — model categories are not a dated time series (accepted)
 
-**Description:** `VizStats` intentionally permits `models=()` for older fixtures
-and callers even when AI totals are nonzero; the production privacy builder
-always supplies rows.
+**Description:** The model-family ledger is an all-time, non-exclusive view;
+the daily matrix does not expose a Claude/GPT-by-day filter.
 
-**Impact:** A caller that bypasses the production builder could publish totals
-without model-family rows.
+**Impact:** A user cannot answer a model-by-date question from v0.6.0, but
+renderer-side inference would double-count or invent a dimension absent from
+the validated aggregate.
 
-**Recommendation:** Retain for v0.5.0 source compatibility, keep the explicit
-empty-state copy, and tighten only in a future contract/schema bump.
+**Recommendation:** Keep this honest boundary. Add model-by-day only through a
+future schema/ADR aggregate with reconciliation and privacy tests.
+**Disposition: accepted; no release blocker.**
+
+No Critical or High findings remain open. No architecture, schema,
+aggregation, privacy, determinism, packaging, accessibility, or OSS-onboarding
+blocker was reproduced.
 
 ## Verified areas without findings
 
-- Architecture boundaries and dependency direction remain intact.
-- ACE vocabulary, schema/version handling, raw model redaction, and exact-type
-  `VizStats` validation are consistent.
-- Aggregation uses commit author dates, preserves non-exclusive model/provider
-  units, and keeps unknown/human separation.
-- Summary and dashboard are deterministic, flat, static, accessible, and
-  free of external resources; model rows do not alter daily terrain geometry.
-- README positioning now says provider-filterable dashboard plus an all-AI
-  model-family ledger; it does not claim a model filter.
+- Dependency direction is intact: storage/scan/aggregate/privacy feed the
+  render layer; renderers consume validated aggregates only.
+- Model colors are deterministic presentation tokens with light/dark contrast
+  checks. Unknown uses a neutral explicit row; color is not the only carrier
+  of meaning.
+- One commit with multiple model or provider records remains one unique commit;
+  non-exclusive ledger counts do not inflate the headline.
+- Raw model strings, repository names/paths, prompts, commit messages,
+  organizations, emails, and SHAs do not cross the public asset boundary.
+- README English/Traditional Chinese parity, real Profile examples, quickstart
+  wording, and dashboard links are current for v0.6.0 Public Beta.
 
 ## Severity summary
 
@@ -81,9 +94,9 @@ empty-state copy, and tighten only in a future contract/schema bump.
 |---|---:|---|
 | Critical | 0 | none |
 | High | 0 | none |
-| Medium | 1 | release CI/publication gate open |
-| Low | 1 | accepted compatibility note |
+| Medium | 1 | closed before final merge |
+| Low | 1 | accepted by design |
 
 ## Final recommendation
 
-**NOT READY**
+**READY FOR NEXT GATE**
