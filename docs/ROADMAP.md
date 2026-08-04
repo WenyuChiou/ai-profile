@@ -166,7 +166,7 @@ designed v0.5.0 plan.
       Beta). Readiness record:
       `docs/reviews/v0.4.8-release-readiness.md`.
 
-## v0.4.9 — Flat Evidence Ledger Public Beta candidate (2026-08-04)
+## v0.4.9 — Flat Evidence Ledger Public Beta (released 2026-08-04)
 
 - [x] Evidence-ledger alignment (ADR-023): separate provider count and
       percentage columns, keep section markers semantic, and preserve the
@@ -180,8 +180,11 @@ designed v0.5.0 plan.
 - [x] Complete the independent visual, accessibility, privacy, and artifact
       review; candidate artifact identity is frozen in
       `docs/reviews/promotion-candidate.json`; the readiness record is
-      `docs/reviews/v0.4.9-flat-ledger-readiness.md`; release publication
-      remains gated on PR CI and cross-platform smoke.
+      `docs/reviews/v0.4.9-flat-ledger-readiness.md`.
+- [x] Complete the PR/CI, immutable artifact publication, clean-install smoke,
+      and maintainer Profile refresh. Tag `v0.4.9` is live at commit
+      `876bab3`; final release evidence is recorded in
+      `docs/reviews/v0.4.9-release-readiness.md`.
 
 ## Future capability milestone — GitHub integration
 
