@@ -207,7 +207,7 @@ designed v0.5.0 plan.
       passed, and all eight live outputs match the merged LF-normalized
       blobs.
 
-## v0.5.0 — Explicit model-family contribution (candidate)
+## v0.5.0 — Explicit model-family contribution (released 2026-08-04, Public Beta)
 
 - [x] Implement ADR-027's closed model-family aggregate as ACE/public contract
       `0.3.0`; keep `0.1.x` and `0.2.x` stored events readable.
@@ -218,9 +218,16 @@ designed v0.5.0 plan.
       raw model strings stay local-only); no style/provider/tool inference.
 - [x] Add the compact model ledger to the summary SVG and dashboard without
       changing the flat daily terrain or claiming model-by-day filtering.
-- [ ] Complete the remaining independent cross-platform and publication gates;
-      local privacy, deterministic SVG/HTML, accessibility, README parity, and
-      browser checks pass. Until then v0.4.10 remains the production Public Beta.
+- [x] Complete the independent cross-platform and publication gates. The
+      Ubuntu-authoritative wheel passed exact-wheel onboarding on Ubuntu,
+      macOS, and Windows; PyPI and GitHub Release publication completed from
+      tag `v0.5.0` at main merge `4e369c6` (GitHub Release is prerelease; PyPI
+      classifier remains Beta). Final evidence:
+      `docs/reviews/v0.5.0-release-readiness.md`.
+- [x] Refresh the maintainer Profile from that exact public artifact. Profile
+      PR #15 merged at `ead0f41`; Pages run `30937320357` and the snake run
+      `30937324074` passed, and all eight live outputs match the merged
+      LF-normalized blobs.
 
 ## Future capability milestone — GitHub integration
 

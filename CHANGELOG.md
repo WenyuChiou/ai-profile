@@ -25,7 +25,9 @@ below.
 
 ## [Unreleased]
 
-### v0.5.0 Public Beta candidate (unreleased)
+## [0.5.0] — 2026-08-04 (Public Beta)
+
+### Changed
 
 - Add the ADR-027 closed model-family aggregate: explicit model evidence is
   normalized into low-cardinality family rows while provider, unique-commit,
@@ -36,11 +38,19 @@ below.
   exists.
 - Bump the ACE/public aggregate contract to `0.3.0`; stored `0.1.x` and
   `0.2.x` events remain readable and new scans write `0.3.0`.
-- Local candidate verification is green: 667 passed / 4 skipped, Ruff clean,
-  exact-wheel smoke, deterministic assets, browser QA, and zero privacy hits.
-  Ubuntu-authoritative CI, cross-platform onboarding, publication, and live
-  Profile verification remain required before tagging or calling this release
-  public.
+- Verification is complete: 667 passed / 4 skipped, Ruff clean, exact-wheel
+  smoke, deterministic assets, browser QA, and zero privacy hits. Ubuntu-
+  authoritative CI, exact-wheel onboarding on Ubuntu/macOS/Windows, PyPI
+  publication, GitHub Release, and the maintainer Profile Pages refresh all
+  passed. The release remains a GitHub prerelease and PyPI Beta package; it is
+  public beta, not Stable/GA.
+- Release tag: `v0.5.0` at main merge `4e369c6`; wheel SHA-256
+  `dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4be457221f245`; sdist
+  SHA-256
+  `24f581f9914ac0372af4e921889f79c935207852f6c66b4affe110901a5d1ed8`.
+- The maintainer Profile refresh was merged as PR #15 at `ead0f41`; its live
+  Pages dashboard and all eight published artifacts were verified from the
+  exact v0.5.0 wheel.
 
 ## [0.4.10] — 2026-08-04 (Public Beta)
 
