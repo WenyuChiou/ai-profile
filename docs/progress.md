@@ -424,7 +424,7 @@ which is authoritative).
   Profile PR #13 merged at `b991504`; its Pages deployment passed and all
   eight live outputs match the merged LF-normalized blobs. Final record:
   `docs/reviews/v0.4.9-release-readiness.md`.
-- **Editorial Signal skin candidate (2026-08-04, unreleased v0.4.10).**
+- **Editorial Signal skin (pre-release candidate record, 2026-08-04).**
   A new research round compared Nanako0129's terminal-ledger composition with
   Primer, Carbon, Radix, Geist, Vega-Lite, and profile generators. The
   presentation-only candidate keeps the v0.4.9 flat Evidence Ledger, adds
@@ -434,8 +434,28 @@ which is authoritative).
   `docs/reviews/design-research-2026-08-04.md`; decision:
   `docs/decisions/ADR-026-editorial-signal-skin.md`. Local exact-wheel smoke,
   privacy sweep, and browser evidence are recorded in
-  `docs/reviews/v0.4.10-visual-qa.md`; cross-platform publication and Profile
-  verification remain release blockers.
+  `docs/reviews/v0.4.10-visual-qa.md`. Cross-platform publication and Profile
+  verification were still open when that candidate record was written; the
+  candidate was subsequently verified and released as v0.4.10, and the final
+  evidence is the release record below.
+- **v0.4.10 Public Beta is released and promotion-verified (2026-08-04).**
+  Tag `v0.4.10` and the GitHub Release are live as a prerelease; PyPI serves
+  the verified wheel and sdist and remains classified as Beta. The candidate
+  merged to `main` as `91260bdf368dc32ecc25c6446f38f6b987047f26` via PR #21.
+  The Ubuntu-authoritative wheel digest is
+  `41c91d01ee761abc5a22add1c2a2fb8d3b36e309411b5db0398a7eae7824cd7a` and the
+  sdist digest is
+  `b327a421797c51e8b1866baff09a4612828f6bde4fb6445757e8808d980b7951`. PR CI
+  run `30921682522` and publish run `30922283841` passed; an earlier publish
+  attempt, run `30921090861`, failed on a digest mismatch against the frozen
+  candidate manifest and was corrected by commit `b78a8da` before the
+  successful publish. Clean installation of the exact PyPI wheel reported
+  `aiprofile 0.4.10`, and the eight-output release smoke passed. Maintainer
+  Profile PR #14 merged at `9c346fde0ebbbf0c12485f9bbacb0e486ed9d8af`
+  (implementation commit `42e8ecf4571fe084fe10ee2ce1fb379de9e4022e`); Pages
+  run `30924497319` and the snake run `30924498845` passed, and all eight
+  live outputs are HTTP 200 and match the merged LF-normalized blobs. Final
+  record: `docs/reviews/v0.4.10-release-readiness.md`.
 - **The maintainer Profile refresh on public PyPI 0.4.8 is complete.**
   Profile PR #12 merged at `7f322beab1e532d906f943c62fc68e49ba21c02a`
   with the unchanged exact 11-repository full-publication scope. Profile
