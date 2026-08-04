@@ -229,6 +229,27 @@ designed v0.5.0 plan.
       `30937324074` passed, and all eight live outputs match the merged
       LF-normalized blobs.
 
+## v0.6.0 — Stable model-family visual key (released 2026-08-04, Public Beta)
+
+- [x] Add a stable, contrast-checked category mark and bar palette for the
+      canonical model families in the Summary Card and self-contained
+      dashboard. Unknown remains a neutral, explicit row.
+- [x] Keep the daily matrix semantically unchanged: column height is unique
+      daily commit volume and fill is daily AI share. The model ledger is an
+      all-time, non-exclusive view; no model-by-day inference or filter is
+      exposed without a validated cross-dimension aggregate.
+- [x] Preserve the ACE schema, aggregation units, privacy boundary, CLI, and
+      eight-output contract. No external fonts, network calls, animation,
+      gradients, or 3D surface were introduced.
+- [x] Publish the exact candidate from main merge `76c003b` as tag `v0.6.0`.
+      The Ubuntu-authoritative wheel SHA-256 is
+      `7ea7b3db484615d5f361d2ba0a237819a94757065b47464efb1d8058bf0ba789`;
+      final evidence is recorded in
+      `docs/reviews/v0.6.0-release-readiness.md`.
+- [x] Refresh the maintainer Profile from the released wheel. Profile PR #16
+      merged at `ca12bdd`; Pages run `30944387849` and the snake run
+      `30944389155` passed, and all eight live outputs returned HTTP 200.
+
 ## Future capability milestone — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature

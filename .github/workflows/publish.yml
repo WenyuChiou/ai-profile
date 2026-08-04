@@ -193,10 +193,17 @@ jobs:
         run: |
           WHEEL="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.whl")); assert len(paths)==1, paths; print(paths[0])')"
           SDIST="$(python -c 'from pathlib import Path; paths=list(Path("dist").glob("*.tar.gz")); assert len(paths)==1, paths; print(paths[0])')"
+          RELEASE_METADATA_ARGS=()
+          if [[ "$GITHUB_REF_NAME" == v0.* ]]; then
+            RELEASE_METADATA_ARGS+=(--prerelease)
+          fi
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" "$WHEEL" "$SDIST" SHA256SUMS \
               --repo "$GITHUB_REPOSITORY" \
               --clobber
+            gh release edit "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              "${RELEASE_METADATA_ARGS[@]}"
           else
             gh release create \
               "$GITHUB_REF_NAME" \
@@ -204,7 +211,18 @@ jobs:
               "$SDIST" \
               SHA256SUMS \
               --repo "$GITHUB_REPOSITORY" \
-              --generate-notes
+              --generate-notes \
+              "${RELEASE_METADATA_ARGS[@]}"
+          fi
+          if [[ "$GITHUB_REF_NAME" == v0.* ]]; then
+            IS_PRERELEASE="$(gh release view "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json isPrerelease \
+              --jq '.isPrerelease')"
+            if [[ "$IS_PRERELEASE" != true ]]; then
+              echo "error: 0.x GitHub Release must remain a prerelease" >&2
+              exit 1
+            fi
           fi
           RETAINED_MANIFEST="$GITHUB_WORKSPACE/SHA256SUMS"
           EXPECTED_ASSETS="$(

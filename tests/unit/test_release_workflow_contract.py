@@ -71,6 +71,12 @@ def test_publish_workflow_builds_once_fans_out_and_splits_authority():
     assert "needs: [build, onboarding, publish-pypi]" in github_job
     assert "GitHub Release asset set differs from the retained bundle" in github_job
     assert "gh release download" in github_job
+    assert 'RELEASE_METADATA_ARGS+=(--prerelease)' in github_job
+    assert 'if [[ "$GITHUB_REF_NAME" == v0.* ]]' in github_job
+    assert 'gh release edit "$GITHUB_REF_NAME"' in github_job
+    assert github_job.count('"${RELEASE_METADATA_ARGS[@]}"') == 2
+    assert 'IS_PRERELEASE="$(gh release view' in github_job
+    assert '[[ "$IS_PRERELEASE" != true ]]' in github_job
     assert github_job.count('gh release ') == github_job.count(
         '--repo "$GITHUB_REPOSITORY"'
     )
