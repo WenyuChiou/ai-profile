@@ -164,6 +164,44 @@ def test_terrain_section_precedes_the_provider_ledger():
         for node in root
         if node.tag.rsplit("}", 1)[-1] == "rect"
     )
+    # Structural Current scaffold: the terrain gets a quiet integer guide
+    # frame, but the existing prisms remain the only data-bearing marks.
+    guides = summary_svg._calendar_grid_guides_svg(THEMES["github-light"], top=0)
+    expected_guide_count = summary_svg.CAL_WEEKS + summary_svg.CAL_DAYS + 2
+    assert guides.count("<line") == expected_guide_count
+    assert all(f'stroke="{THEMES["github-light"].border}"' in line for line in guides.splitlines())
+    guide_endpoints = {
+        tuple(
+            re.search(
+                r'x1="(-?\d+)" y1="(-?\d+)" x2="(-?\d+)" y2="(-?\d+)"', line
+            ).groups()
+        )
+        for line in guides.splitlines()
+    }
+    assert len(guide_endpoints) == expected_guide_count
+
+    # Integration guard: boundary guides must survive in the actual card and
+    # be emitted after the terrain faces, rather than being hidden behind them.
+    nodes = list(root)
+    guide_indices = [
+        index
+        for index, node in enumerate(nodes)
+        if node.tag.rsplit("}", 1)[-1] == "line"
+        and node.attrib.get("stroke") == THEMES["github-light"].border
+        and node.attrib.get("stroke-opacity") == "0.45"
+    ]
+    assert len(guide_indices) == expected_guide_count
+    first_guide = min(guide_indices)
+    terrain_polygon_indices = [
+        index
+        for index, node in enumerate(nodes[:first_guide])
+        if node.tag.rsplit("}", 1)[-1] == "polygon"
+    ]
+    expected_terrain_polygons = sum(
+        1 if cell is None else 3 for cell in _calendar_grid_cells(FIXTURE_TERRAIN)
+    )
+    assert len(terrain_polygon_indices) == expected_terrain_polygons
+    assert max(terrain_polygon_indices) < first_guide
 
 
 # ---------------------------------------------------------------------------

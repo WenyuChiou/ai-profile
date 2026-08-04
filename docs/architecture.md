@@ -110,6 +110,11 @@ see events.
 No hidden global state: configuration and database handles are constructed
 in `cli.py` and passed explicitly.
 
+The presentation contract is documented in the repository-root `DESIGN.md`
+and governed by ADR-024 (Structural Current / Evidence Ledger). This is a
+maintainer-facing visual source of truth only; it is not runtime configuration
+and cannot carry event or repository identity data.
+
 ## 3. Privacy enforcement (the redaction boundary)
 
 `VizStats` is the only object renderers and exporters accept. Its fields
@@ -311,6 +316,9 @@ consumes it until the GitHub Action lands).
   non-exclusive note (ADR-022). The post-v0.4.8 evidence-ledger refinement
   keeps count and percentage in separate right-aligned columns and uses a
   quiet border-token section marker; this is presentation-only (ADR-023).
+- The Structural Current refinement (ADR-024) may draw a faint integer guide
+  scaffold along terrain seams after its faces. Guide lines are spatial
+  scaffolding only and do not add a metric or alter prism geometry.
 - Summary terrain (ADR-022, superseding ADR-020's AI-only band clause):
   the card's 12-week isometric terrain encodes day height from
   `DayCell.total_commits` (fixed 1 / 2-4 / 5-7 / 8+ bins) and top-face

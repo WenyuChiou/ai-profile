@@ -263,6 +263,11 @@ CAL_CAP_COMMITS = VOLUME_CAP
 CAL_GRID_TOP_Y = CAL_MONTH_LABEL_BASELINE_Y + CAL_MONTH_LABEL_GRID_GAP  # 40
 CAL_GRID_BOTTOM_MARGIN = 6
 
+# Structural Current guide lines: a faint, deterministic calibration grid
+# following the tile seams. These lines are a visual scaffold only; they never
+# encode a second metric and are drawn after the faces so the existing
+# height/share marks remain the only data-bearing terrain signal.
+
 #: Bounding box of the flat (unraised) diamond grid, in a LOCAL x space
 #: centered on nothing in particular (col=0,row=0 sits at local x=0) --
 #: used only to size/center the grid; final absolute x adds CAL_X_OFFSET.
@@ -444,8 +449,22 @@ def _rect(
     return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{rx}" fill="{fill}"{stroke_attr}/>'
 
 
-def _line(x1: float, y1: float, x2: float, y2: float, *, stroke: str) -> str:
-    return f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{stroke}"/>'
+def _line(
+    x1: float,
+    y1: float,
+    x2: float,
+    y2: float,
+    *,
+    stroke: str,
+    stroke_opacity: float | None = None,
+) -> str:
+    opacity_attr = (
+        f' stroke-opacity="{stroke_opacity}"' if stroke_opacity is not None else ""
+    )
+    return (
+        f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}"'
+        f' stroke="{stroke}"{opacity_attr}/>'
+    )
 
 
 def _commit_mark(cx: int, cy: int, theme: Theme) -> str:
@@ -991,6 +1010,68 @@ def _calendar_cell_position(offset: int) -> tuple[int, int, int, int]:
     return col, row, cx, cy
 
 
+def _calendar_grid_guides_svg(theme: Theme, top: int) -> str:
+    """Render the quiet isometric scaffold along the daily tile boundaries.
+
+    The guides follow the same integer corner arithmetic as
+    ``_calendar_cell_position`` and ``_iso_tile_corners``.  They are
+    intentionally independent of ``VizStats``: an empty day and a populated
+    day share the same spatial frame.  The caller draws them *after* the
+    prisms so the scaffold remains visible at the tile seams; it never runs
+    through a data face.
+    """
+    parts: list[str] = []
+    seen: set[tuple[tuple[int, int], tuple[int, int]]] = set()
+
+    def append_guide(start: tuple[int, int], end: tuple[int, int]) -> None:
+        """Append one seam chain, suppressing shared-edge duplicates."""
+        key = (start, end) if start <= end else (end, start)
+        if key in seen:
+            return
+        seen.add(key)
+        parts.append(
+            _line(
+                *start,
+                *end,
+                stroke=theme.border,
+                stroke_opacity=0.45,
+            )
+        )
+
+    # Each row has two continuous boundary chains parallel to the week axis:
+    # the top/right and bottom/left edges of its diamonds.
+    for row in range(CAL_DAYS):
+        first = _calendar_cell_position(row)
+        last = _calendar_cell_position((CAL_WEEKS - 1) * CAL_DAYS + row)
+        _, _, first_x, first_y = first
+        _, _, last_x, last_y = last
+        first_top, first_right, first_bottom, first_left = _iso_tile_corners(
+            first_x, top + first_y, 0
+        )
+        last_top, last_right, last_bottom, last_left = _iso_tile_corners(
+            last_x, top + last_y, 0
+        )
+        append_guide(first_top, last_right)
+        append_guide(first_left, last_bottom)
+
+    # Each column has two continuous boundary chains parallel to the
+    # weekday axis: the top/left and right/bottom edges of its diamonds.
+    for col in range(CAL_WEEKS):
+        first = _calendar_cell_position(col * CAL_DAYS)
+        last = _calendar_cell_position(col * CAL_DAYS + CAL_DAYS - 1)
+        _, _, first_x, first_y = first
+        _, _, last_x, last_y = last
+        first_top, first_right, first_bottom, first_left = _iso_tile_corners(
+            first_x, top + first_y, 0
+        )
+        last_top, last_right, last_bottom, last_left = _iso_tile_corners(
+            last_x, top + last_y, 0
+        )
+        append_guide(first_top, last_left)
+        append_guide(first_right, last_bottom)
+    return "\n".join(parts)
+
+
 def _month_boundaries(dates: tuple[datetime.date, ...]) -> tuple[tuple[int, str], ...]:
     """Raw ``(col, 3-letter month label)`` pairs for every month BOUNDARY
     in an ordered, contiguous, oldest-to-newest date sequence (P2) -- col
@@ -1230,6 +1311,7 @@ def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
         _section_label(CAL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
         _calendar_month_labels_svg(stats, theme, top),
         "\n".join(diamonds),
+        _calendar_grid_guides_svg(theme, top),
         _calendar_legend_svg(theme, top),
     )
     return "\n".join(section for section in sections if section)

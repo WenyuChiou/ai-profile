@@ -25,6 +25,18 @@ below.
 
 ## [Unreleased]
 
+### Changed
+
+- Document the Structural Current / Evidence Ledger visual system in
+  `DESIGN.md` and ADR-024, including semantic role tokens, local fallback
+  typography, evidence-first hierarchy, and the no-network/no-inference
+  boundary.
+- Add a faint deterministic terrain scaffold and neutral dashboard section
+  markers for stronger spatial alignment. These are presentation-only; daily
+  height/share bins, provider overlap, privacy semantics, and all eight output
+  filenames/contracts remain unchanged (the two summary assets are regenerated
+  with the presentation update).
+
 ## [0.4.8] — 2026-08-01
 
 ### Changed

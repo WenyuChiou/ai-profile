@@ -399,6 +399,17 @@ which is authoritative).
   Independent verification is green; public patch publication remains
   conditional on a versioned artifact/CI/Pages release round. Full record:
   `docs/reviews/v0.4.9-visual-readiness.md`.
+- **Structural Current visual slice (design branch, 2026-08-04).**
+  Independent design forensics (Nanako0129's public tools plus Primer,
+  Carbon, Radix, Geist, Vega-Lite, and related systems) is recorded in
+  `docs/reviews/design-reverse-engineering.md`. `DESIGN.md` and ADR-024 now
+  define the semantic role tokens and evidence-first composition without
+  adding runtime dependencies or a new data model. The summary terrain has a
+  faint deterministic integer guide scaffold and the dashboard uses neutral
+  section markers; terrain encodings, provider overlap, unknown/human
+  separation, privacy redaction, and the eight-file output contract are
+  unchanged. Targeted verification: **93 passed**; full-suite, artifact, and
+  release verification remain required before a new public version.
 - **The maintainer Profile refresh on public PyPI 0.4.8 is complete.**
   Profile PR #12 merged at `7f322beab1e532d906f943c62fc68e49ba21c02a`
   with the unchanged exact 11-repository full-publication scope. Profile

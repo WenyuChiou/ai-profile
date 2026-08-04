@@ -171,6 +171,12 @@ designed v0.5.0 plan.
 - [x] Evidence-ledger alignment (ADR-023): separate provider count and
       percentage columns, keep section markers semantic, and preserve the
       existing renderer/data/privacy contract.
+- [x] Structural Current visual contract (ADR-024): document semantic roles,
+      local fallback typography, the evidence-first composition grammar, and
+      the no-gradient/no-network/no-inference boundary in `DESIGN.md`.
+- [x] Add a faint deterministic terrain scaffold and neutral dashboard section
+      markers; the scaffold is decorative and does not alter daily height/share
+      or provider/commit aggregation semantics.
 - [x] Complete the independent visual, accessibility, privacy, and artifact
       review before deciding whether a patch release is warranted.
 
