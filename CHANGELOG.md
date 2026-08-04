@@ -32,6 +32,16 @@ below.
   non-exclusive ledger and daily unique-commit semantics. No schema, CLI,
   privacy boundary, or output count changes.
 
+## [0.6.0] — candidate
+
+### Changed
+
+- Publish the evidence-ledger visual refinement as a public-beta candidate:
+  model-family contribution rows use stable category marks and bars in both
+  the static summary and self-contained dashboard. Daily geometry remains
+  unique-commit volume plus AI share; no schema, CLI, privacy boundary, or
+  output-count contract changes.
+
 ## [0.5.0] — 2026-08-04 (Public Beta)
 
 ### Changed

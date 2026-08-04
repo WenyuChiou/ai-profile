@@ -379,5 +379,5 @@ def test_dashboard_h1_is_evidence_backed_ai_collaboration():
     assert "Show the work behind the numbers." not in html
 
 
-def test_runtime_version_is_0_5_0_candidate():
-    assert aiprofile.__version__ == "0.5.0"
+def test_runtime_version_is_0_6_0_candidate():
+    assert aiprofile.__version__ == "0.6.0"
