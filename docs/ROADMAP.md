@@ -186,17 +186,26 @@ designed v0.5.0 plan.
       `876bab3`; final release evidence is recorded in
       `docs/reviews/v0.4.9-release-readiness.md`.
 
-## v0.4.10 — Editorial Signal skin (candidate, unreleased)
+## v0.4.10 — Editorial Signal Public Beta (released 2026-08-04)
 
 - [x] Keep the flat 12-week Evidence Ledger and add sparse editorial
       alignment rails plus the shared two-part section marker (ADR-026).
 - [x] Re-run local renderer, dashboard, privacy, determinism, packaging, and
-      browser gates. Evidence:
+      browser gates. Pre-publication candidate evidence:
       `docs/reviews/v0.4.10-visual-qa.md`.
-- [ ] Run the cross-platform release workflow and publish the exact artifact;
-      record final evidence in `docs/reviews/v0.4.10-release-readiness.md`.
-- [ ] Regenerate the maintainer Profile from the exact public artifact after
-      the release workflow and Pages checks pass.
+- [x] Run the cross-platform release workflow and publish the exact artifact.
+      Released as Public Beta from `main` merge commit `91260bd` (PR #21,
+      tag `v0.4.10`; the GitHub Release is marked prerelease and the PyPI
+      classifier is Beta). Publish run `30922283841` and PR CI run
+      `30921682522` passed; the canonical wheel digest is
+      `41c91d01ee761abc5a22add1c2a2fb8d3b36e309411b5db0398a7eae7824cd7a`.
+      Final release evidence:
+      `docs/reviews/v0.4.10-release-readiness.md`.
+- [x] Regenerate the maintainer Profile from the exact public artifact after
+      the release workflow and Pages checks pass. Profile PR #14 merged at
+      `9c346fd`; Pages run `30924497319` and the snake run `30924498845`
+      passed, and all eight live outputs match the merged LF-normalized
+      blobs.
 
 ## Future capability milestone — GitHub integration
 

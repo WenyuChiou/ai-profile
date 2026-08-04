@@ -25,15 +25,29 @@ below.
 
 ## [Unreleased]
 
-- Candidate for v0.4.10: add the presentation-only Editorial Signal skin
-  (ADR-026), with sparse quarter-window alignment rails and a two-part
-  editorial section-marker grammar over the flat Evidence Ledger.
+No unreleased changes yet.
+
+## [0.4.10] — 2026-08-04 (Public Beta)
+
+This is a 0.x Public Beta release, not Stable/GA: the GitHub Release is marked
+prerelease and the PyPI classifier remains Beta.
+
+### Changed
+
+- Add the presentation-only Editorial Signal skin (ADR-026), with sparse
+  quarter-window alignment rails and a two-part editorial section-marker
+  grammar over the flat Evidence Ledger.
 - Keep ACE/schema, aggregation, privacy, CLI, typography fallback, and the
   eight-output contract unchanged; no network font, animation, 3D surface, or
   new runtime dependency is introduced.
-- Local exact-wheel smoke and browser checks pass; cross-platform release
-  workflow, PyPI/GitHub publication, and maintainer Profile verification are
-  still required before this becomes a release.
+- Publish the immutable v0.4.10 wheel and sdist from the verified Ubuntu build.
+  Wheel SHA-256
+  `41c91d01ee761abc5a22add1c2a2fb8d3b36e309411b5db0398a7eae7824cd7a`; sdist
+  SHA-256
+  `b327a421797c51e8b1866baff09a4612828f6bde4fb6445757e8808d980b7951`.
+- Refresh the maintainer Profile from that exact wheel over the unchanged
+  eleven-repository publication scope. Profile PR #14 merged and its GitHub
+  Pages deployment passed the live artifact checks.
 
 ## [0.4.9] — 2026-08-04 (Public Beta)
 
