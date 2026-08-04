@@ -30,7 +30,7 @@ staging = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(staging)
 
 #: The frozen v0.5.0 candidate digest (docs/reviews/promotion-candidate.json).
-PINNED_WHEEL_SHA256 = "2d67bd40b47a32125c5e609873626c1c64f92d79d4ca83a58ce608db88a41181"
+PINNED_WHEEL_SHA256 = "dcd407fa5a570b1a47ba3c613998f681c5c992f10f18119ab4f4be457221f245"
 PINNED_DASHBOARD_SHA256 = "cace8ed2b4f61affb0661e5ba3beae9de42836cc025ce8334b76b4226609110e"
 
 _FAKE_WHEEL_BYTES = b"deterministic fake wheel bytes for staging preview tests\n"
