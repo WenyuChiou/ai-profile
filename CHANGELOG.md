@@ -27,7 +27,7 @@ below.
 
 No unreleased changes yet.
 
-## [0.4.9] — 2026-08-04 (Public Beta candidate)
+## [0.4.9] — 2026-08-04 (Public Beta)
 
 ### Changed
 
@@ -38,6 +38,10 @@ No unreleased changes yet.
   12-column by 7-row matrix. Daily bar height/share bins, provider overlap,
   privacy semantics, and all eight output filenames/contracts remain unchanged
   (the two summary assets are regenerated with the presentation update).
+- Publish the immutable v0.4.9 wheel and sdist from the verified Ubuntu build;
+  the GitHub Release remains a prerelease and PyPI remains classified as Beta.
+- Refresh the maintainer Profile from that exact wheel. Profile PR #13 merged
+  and its GitHub Pages deployment passed the live artifact and browser checks.
 
 ## [0.4.8] — 2026-08-01
 

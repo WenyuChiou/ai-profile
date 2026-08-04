@@ -407,15 +407,23 @@ which is authoritative).
   adding runtime dependencies or a new data model. That branch's perspective
   treatment was intentionally rejected for the summary card; its rollback
   remains available until the flat replacement completes verification.
-- **v0.4.9 Flat Evidence Ledger pivot (candidate branch, 2026-08-04).**
+- **v0.4.9 Flat Evidence Ledger pivot (pre-release record, 2026-08-04).**
   ADR-025 replaces the summary-card perspective treatment with a 12-column by
   7-row flat daily matrix. Bars encode unique daily total-commit bins and fill
   encodes AI-share bins; provider overlap, unknown/human separation, privacy
   redaction, and the eight-file output contract remain unchanged. The branch
-  is the v0.4.9 Public Beta candidate; full-suite, artifact, browser,
-  independent review, and release verification remain required before
-  publication. Readiness record:
+  was subsequently verified and released as v0.4.9; the candidate readiness
+  record remains the historical pre-publication review:
   `docs/reviews/v0.4.9-flat-ledger-readiness.md`.
+- **v0.4.9 Public Beta is released and promotion-verified (2026-08-04).**
+  Tag `v0.4.9` and the GitHub Release are live; PyPI serves the verified
+  wheel and sdist. The final Ubuntu-authoritative wheel digest is
+  `f04e6c33b72072190e1cb18fbb154897c25ec7986fd316427d807c81e49fb468`.
+  Main CI and the publish workflow passed, clean PyPI installation reported
+  `aiprofile 0.4.9`, and the eight-output release smoke passed. Maintainer
+  Profile PR #13 merged at `b991504`; its Pages deployment passed and all
+  eight live outputs match the merged LF-normalized blobs. Final record:
+  `docs/reviews/v0.4.9-release-readiness.md`.
 - **The maintainer Profile refresh on public PyPI 0.4.8 is complete.**
   Profile PR #12 merged at `7f322beab1e532d906f943c62fc68e49ba21c02a`
   with the unchanged exact 11-repository full-publication scope. Profile
