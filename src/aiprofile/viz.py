@@ -22,6 +22,8 @@ from . import ACE_SCHEMA_VERSION
 from .errors import RenderError
 from .schema.vocab import (
     CANONICAL_PROVIDERS,
+    MODEL_CATEGORIES,
+    MODEL_DISPLAY,
     PROVIDER_DISPLAY,
     UNRECOGNIZED_DISPLAY,
     UNRECOGNIZED_PROVIDER,
@@ -71,6 +73,23 @@ class ProviderRow:
     attributed_commits: int   # unit: commits (schema.md section 15)
     actor_presences: int       # unit: presences (G2-02)
     active_days: int           # unit: days (author dates)
+
+
+@dataclass(frozen=True)
+class ModelRow:
+    """One validated public model-family contribution row.
+
+    Counts are explicit-event aggregates.  ``attributed_commits`` is
+    non-exclusive across model families; ``actor_presences`` is the event
+    presence unit and reconciles to ``Totals.ai_actor_presences`` when model
+    rows are present.
+    """
+
+    category: str
+    display_name: str
+    attributed_commits: int
+    actor_presences: int
+    active_days: int
 
 
 @dataclass(frozen=True)
@@ -135,6 +154,11 @@ class VizStats:
     # calendar band. Defaults to empty so the field is additive for
     # existing constructor sites; validation runs regardless.
     daily: tuple[DayCell, ...] = ()
+    # Explicit model-family ledger (ADR-027).  Defaults preserve source
+    # compatibility for callers constructing legacy fixtures; the production
+    # privacy builder always supplies rows for every AI/mixed presence.
+    models: tuple[ModelRow, ...] = ()
+    model_count: int = 0
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         # SEAL against subclassing at class-definition time (gate-9 H-01):
@@ -215,6 +239,9 @@ def _validate(s: VizStats) -> None:
     _require_exact(s.providers, tuple, "providers container")
     for row in s.providers:
         _require_exact(row, ProviderRow, "each provider row")
+    _require_exact(s.models, tuple, "models container")
+    for row in s.models:
+        _require_exact(row, ModelRow, "each model row")
     # String leaves must be exact str (gate-8 H-01): a str subclass can
     # override __str__/__format__ and emit text validation never saw.
     for value, what in (
@@ -223,6 +250,8 @@ def _validate(s: VizStats) -> None:
         (s.generated_on, "generated_on"),
         *((r.provider, "provider slug") for r in s.providers),
         *((r.display_name, "display name") for r in s.providers),
+        *((r.category, "model category") for r in s.models),
+        *((r.display_name, "model display name") for r in s.models),
     ):
         if type(value) is not str:
             raise RenderError(f"VizStats: {what} must be exact str")
@@ -248,6 +277,10 @@ def _validate(s: VizStats) -> None:
         *(p.attributed_commits for p in s.providers),
         *(p.actor_presences for p in s.providers),
         *(p.active_days for p in s.providers),
+        s.model_count,
+        *(m.attributed_commits for m in s.models),
+        *(m.actor_presences for m in s.models),
+        *(m.active_days for m in s.models),
     ]
     # Exact int, deliberately not isinstance (gate-8 code-review pass):
     # an int SUBCLASS can override __str__ and emit render-time text
@@ -294,6 +327,14 @@ def _validate(s: VizStats) -> None:
             "VizStats: provider actor_presences rows must sum to"
             " totals.ai_actor_presences"
         )
+    # Legacy constructor sites may omit the additive model ledger entirely;
+    # once rows are supplied, their presence unit is strict and must reconcile
+    # exactly like provider rows.  build_viz_stats always supplies rows.
+    if s.models and sum(m.actor_presences for m in s.models) != s.totals.ai_actor_presences:
+        raise RenderError(
+            "VizStats: model actor_presences rows must sum to"
+            " totals.ai_actor_presences"
+        )
     if s.totals.ai_attributed_commits > s.totals.commits_scanned:
         raise RenderError(
             "VizStats: ai_attributed_commits cannot exceed commits_scanned"
@@ -304,6 +345,37 @@ def _validate(s: VizStats) -> None:
         raise RenderError(
             "VizStats: a provider attributed_commits value cannot exceed the"
             " AI-attributed total"
+        )
+    if any(
+        m.attributed_commits > s.totals.ai_attributed_commits for m in s.models
+    ):
+        raise RenderError(
+            "VizStats: a model attributed_commits value cannot exceed the"
+            " AI-attributed total"
+        )
+    if any(m.attributed_commits > m.actor_presences for m in s.models):
+        raise RenderError(
+            "VizStats: a model attributed_commits value cannot exceed its"
+            " actor_presences"
+        )
+    if any(
+        m.actor_presences > 0
+        and (m.attributed_commits == 0 or m.active_days == 0)
+        for m in s.models
+    ):
+        raise RenderError(
+            "VizStats: a model row with actor presences must have attributed"
+            " commits and active days"
+        )
+    if any(m.active_days > m.actor_presences for m in s.models):
+        raise RenderError(
+            "VizStats: a model active_days value cannot exceed its"
+            " actor_presences"
+        )
+    if any(m.active_days > m.attributed_commits for m in s.models):
+        raise RenderError(
+            "VizStats: a model active_days value cannot exceed its"
+            " attributed_commits"
         )
     expected_rank = sorted(
         s.providers, key=lambda p: (-p.attributed_commits, p.provider)
@@ -317,6 +389,22 @@ def _validate(s: VizStats) -> None:
         raise RenderError(
             "VizStats.provider_count must equal providers excluding the"
             " unrecognized bucket"
+        )
+    expected_model_rank = sorted(
+        s.models, key=lambda m: (-m.attributed_commits, m.category)
+    )
+    if list(s.models) != expected_model_rank:
+        raise RenderError(
+            "VizStats.models must be ranked by attributed_commits desc, category asc"
+        )
+    model_categories = [m.category for m in s.models]
+    if len(model_categories) != len(set(model_categories)):
+        raise RenderError(
+            "VizStats.models must contain at most one row per model category"
+        )
+    if s.model_count != sum(1 for m in s.models if m.category != "unknown"):
+        raise RenderError(
+            "VizStats.model_count must equal models excluding the unknown bucket"
         )
     # ---- Structural privacy boundary for STRING fields (gate-7 H-01):
     # a validated VizStats must be unable to carry arbitrary text into
@@ -469,6 +557,17 @@ def _validate(s: VizStats) -> None:
                 f" schema-owned public display {expected_display!r} -"
                 " arbitrary display text is not publishable"
             )
+    for row in s.models:
+        if row.category not in MODEL_CATEGORIES:
+            raise RenderError(
+                f"VizStats model category {row.category!r} is not in the"
+                " closed public vocabulary"
+            )
+        if row.display_name != MODEL_DISPLAY[row.category]:
+            raise RenderError(
+                f"VizStats display name for model {row.category!r} must be"
+                f" the schema-owned public display {MODEL_DISPLAY[row.category]!r}"
+            )
 
 
 def to_json_dict(s: VizStats) -> dict:
@@ -499,6 +598,17 @@ def to_json_dict(s: VizStats) -> dict:
             for p in s.providers
         ],
         "provider_count": s.provider_count,
+        "models": [
+            {
+                "category": m.category,
+                "display_name": m.display_name,
+                "attributed_commits": m.attributed_commits,
+                "actor_presences": m.actor_presences,
+                "active_days": m.active_days,
+            }
+            for m in s.models
+        ],
+        "model_count": s.model_count,
         "evidence_records": {
             "verified": s.evidence.verified,
             "declared": s.evidence.declared,

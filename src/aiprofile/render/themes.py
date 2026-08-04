@@ -22,6 +22,7 @@ class Theme:
     muted: str
     accent: str
     bar_fill: str
+    model_fill: str  # neutral model-family bar, separate from the collaboration accent
     bar_track: str
     chip_bg: str  # Primer canvas-subtle: chip/badge background
     evidence_verified: str
@@ -41,6 +42,7 @@ THEMES: dict[str, Theme] = {
         muted="#52647a",
         accent="#005cc5",
         bar_fill="#005cc5",
+        model_fill="#3d5a80",
         bar_track="#d9eaff",
         chip_bg="#fff0bd",
         # Ordinal evidence ramp validated against the #fff0bd provenance
@@ -61,6 +63,7 @@ THEMES: dict[str, Theme] = {
         muted="#b5c7da",
         accent="#8bc8ff",
         bar_fill="#8bc8ff",
+        model_fill="#9ecbff",
         bar_track="#1e3852",
         chip_bg="#3b331e",
         # Ordinal evidence ramp validated against the #3b331e provenance

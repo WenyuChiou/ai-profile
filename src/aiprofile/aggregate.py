@@ -13,6 +13,7 @@ import sqlite3
 from dataclasses import dataclass, field
 
 from .errors import StorageError
+from .schema.vocab import normalize_model_category
 
 #: DIVERGENCE NOTE (round D2 brief vs. this module's own established
 #: pattern) -- read before touching compute_daily_provider_counts:
@@ -43,7 +44,7 @@ from .errors import StorageError
 
 #: major.minor ACE schema versions this aggregator knows how to read
 #: (ADR-012). Bump alongside a real migration, never to silence this guard.
-_SUPPORTED_SCHEMA_VERSIONS = {"0.1", "0.2"}
+_SUPPORTED_SCHEMA_VERSIONS = {"0.1", "0.2", "0.3"}
 
 
 @dataclass
@@ -60,6 +61,21 @@ class ProviderAgg:
 
 
 @dataclass
+class ModelAgg:
+    """Per-model-family counts within one repository.
+
+    ``category`` is the key in ``RepoAggregates.models`` and is always one of
+    the schema-owned model-family slugs.  ``raw_values`` is diagnostic-only;
+    it never crosses the privacy boundary.
+    """
+
+    attributed_commits: int = 0
+    actor_presences: int = 0
+    active_dates: set[str] = field(default_factory=set)
+    raw_values: set[str] = field(default_factory=set)
+
+
+@dataclass
 class RepoAggregates:
     repository_uid: str
     commits_scanned: int = 0           # unique commits stored for this repo
@@ -70,6 +86,7 @@ class RepoAggregates:
     active_ai_dates: set[str] = field(default_factory=set)  # dates with >=1 ai event
     evidence_records: dict[str, int] = field(default_factory=dict)  # level -> records
     providers: dict[str | None, ProviderAgg] = field(default_factory=dict)
+    models: dict[str, ModelAgg] = field(default_factory=dict)
 
 
 def compute_repo_aggregates(conn: sqlite3.Connection) -> list[RepoAggregates]:
@@ -142,10 +159,15 @@ def _aggregate_repository(
 
     agg = RepoAggregates(repository_uid=repository_uid, commits_scanned=commits_scanned)
 
+    # All public active-day metrics use the commit author's own calendar day.
+    # Event timestamps are provenance-recording metadata and may legitimately
+    # differ when imported or merged, so using them here would make the model
+    # ledger disagree with the daily series and the schema contract.
     event_rows = conn.execute(
-        "SELECT commit_id, actor_type, provider, provider_raw, tool_raw,"
-        " evidence_level, activity_timestamp"
-        " FROM events WHERE repository_id = ?",
+        "SELECT e.commit_id, e.actor_type, e.provider, e.provider_raw, e.tool_raw,"
+        " e.model, e.model_raw, e.evidence_level, c.author_date"
+        " FROM events AS e JOIN commits AS c ON c.id = e.commit_id"
+        " WHERE e.repository_id = ?",
         (repository_id,),
     ).fetchall()
 
@@ -153,6 +175,7 @@ def _aggregate_repository(
     human_commits: set[int] = set()
     unknown_commits: set[int] = set()
     provider_commits: dict[str | None, set[int]] = {}
+    model_commits: dict[str, set[int]] = {}
 
     for row in event_rows:
         actor_type = row["actor_type"]
@@ -164,7 +187,7 @@ def _aggregate_repository(
         if actor_type in ("ai", "mixed"):
             ai_commits.add(commit_id)
             agg.ai_actor_presences += 1
-            date = row["activity_timestamp"][:10]
+            date = row["author_date"][:10]
             agg.active_ai_dates.add(date)
 
             provider_key = row["provider"]
@@ -177,6 +200,19 @@ def _aggregate_repository(
                 raw = row["provider_raw"] if row["provider_raw"] is not None else row["tool_raw"]
                 if raw is not None:
                     provider_agg.raw_values.add(raw)
+
+            # Model attribution is intentionally independent of provider
+            # attribution.  Only the canonical model column participates;
+            # missing canonical values are the public ``unknown`` family and
+            # explicit values outside the closed vocabulary are ``other``.
+            model_category = normalize_model_category(row["model"])
+            model_agg = agg.models.setdefault(model_category, ModelAgg())
+            model_agg.actor_presences += 1
+            model_agg.active_dates.add(date)
+            model_commits.setdefault(model_category, set()).add(commit_id)
+            raw_model = row["model_raw"]
+            if raw_model is not None:
+                model_agg.raw_values.add(raw_model)
         elif actor_type == "human":
             human_commits.add(commit_id)
         elif actor_type == "unknown":
@@ -184,6 +220,8 @@ def _aggregate_repository(
 
     for provider_key, commit_ids in provider_commits.items():
         agg.providers[provider_key].attributed_commits = len(commit_ids)
+    for model_category, commit_ids in model_commits.items():
+        agg.models[model_category].attributed_commits = len(commit_ids)
 
     agg.ai_attributed_commits = len(ai_commits)
     agg.human_declared_commits = len(human_commits - ai_commits)

@@ -11,7 +11,7 @@ below.
 - **Within a minor line (0.1.x):** drop-in. The database migration
   runner applies any pending migrations automatically on the next
   command; config.json is read-compatible; no action needed.
-- **Across minors (0.1 → 0.2):** read the release notes first. The ACE
+- **Across minors (0.1 → 0.2 → 0.3):** read the release notes first. The ACE
   schema refuses aggregation across incompatible `major.minor` payload
   versions by design (ADR-012) — a release that bumps the event schema
   states explicitly whether existing scanned data re-aggregates or a
@@ -25,7 +25,22 @@ below.
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### v0.5.0 Public Beta candidate (unreleased)
+
+- Add the ADR-027 closed model-family aggregate: explicit model evidence is
+  normalized into low-cardinality family rows while provider, unique-commit,
+  presence, evidence, and unknown semantics remain separate.
+- Add the validated model-family ledger to `profile.json`, the summary SVG,
+  and the self-contained dashboard. Raw model strings remain local-only and
+  no model filter is exposed until a matching dated cross-dimension contract
+  exists.
+- Bump the ACE/public aggregate contract to `0.3.0`; stored `0.1.x` and
+  `0.2.x` events remain readable and new scans write `0.3.0`.
+- Local candidate verification is green: 667 passed / 4 skipped, Ruff clean,
+  exact-wheel smoke, deterministic assets, browser QA, and zero privacy hits.
+  Ubuntu-authoritative CI, cross-platform onboarding, publication, and live
+  Profile verification remain required before tagging or calling this release
+  public.
 
 ## [0.4.10] — 2026-08-04 (Public Beta)
 

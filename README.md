@@ -7,9 +7,10 @@
 
 ## Show the evidence behind your AI collaboration.
 
-`ai-profile` turns explicit Git provenance across your local repositories
-into privacy-safe GitHub Profile cards and a filterable provider
-dashboard—without uploading source code or guessing attribution.
+`ai-profile` turns explicit Git provenance across your local repositories into
+privacy-safe GitHub Profile cards and a provider-filterable dashboard with an
+all-AI model-family ledger—without uploading source code or guessing
+attribution.
 
 **[Explore the live dashboard →](https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html)**
 · **[Generate yours in four commands](#quickstart)**
@@ -37,7 +38,8 @@ commits when you want their AI participation recorded.
 ## A real GitHub Profile example
 
 This card contains the maintainer's real public aggregate data. Select it to
-open the provider-filterable dashboard.
+open the provider-filterable dashboard; the card also shows explicit model
+family contribution when the Git history declares `AI-Model`.
 
 <a href="https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html">
   <picture>
@@ -49,9 +51,10 @@ open the provider-filterable dashboard.
 </a>
 
 The card shows sustained AI collaboration (active AI days and a 12-week
-flat activity matrix), breadth across AI providers, and the explicit evidence
-totals behind every number. It is a record of declared Git evidence, not
-a skill score.
+flat activity matrix), breadth across AI providers, model-family contribution,
+and the explicit evidence totals behind every number. Model-family rows are
+non-exclusive evidence views: one commit can name more than one family. It is
+a record of declared Git evidence, not a skill score.
 
 ## Why ai-profile?
 
@@ -253,7 +256,8 @@ small alignment rules that improve reading without turning activity into a
 </picture>
 
 The six SVGs are static and GitHub-ready. `dashboard.html` is a self-contained
-provider-filterable view with light, dark, and system themes. It loads no
+provider-filterable view with an all-AI model-family ledger, plus light, dark,
+and system themes. It loads no
 external script, font, tracker, or API. `profile.json` contains the same
 validated public aggregate contract used by every renderer.
 
@@ -284,6 +288,13 @@ Provider declarations are normalized to a canonical provider identity
 product display name instead: `AI-Provider: Anthropic` is shown as **Claude**.
 This is a label-only mapping; it does not change aggregation or counts.
 
+When `AI-Model` is present, its canonical value is mapped to a small
+schema-owned family vocabulary (for example, `Claude-Sonnet` → **Claude**).
+The model ledger is an all-AI, all-time evidence view: family commit counts
+are intentionally non-exclusive, while actor presences and active days remain
+separate measures. Missing model declarations stay **Unknown**; raw model
+strings never enter public assets.
+
 ## Privacy
 
 - The CLI makes no network calls, uploads no repository data, and sends no
@@ -310,6 +321,9 @@ Read the complete
   actor presence.
 - **Actor presences** count distinct provider/tool participation inside a
   commit. Provider totals can exceed unique commit totals.
+- **Model-family rows** count explicit canonical `AI-Model` evidence. A commit
+  can contribute to more than one family row; this does not inflate the unique
+  AI-attributed commit headline.
 - **Unknown** remains separate from human.
 - Evidence quality is
   `verified > declared > imported > inferred > unknown`.

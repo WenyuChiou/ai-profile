@@ -16,6 +16,8 @@ from .config import Config, resolve_publication_levels
 from .registry import provider_display
 from .schema.vocab import (
     CANONICAL_PROVIDERS,
+    MODEL_CATEGORIES,
+    MODEL_DISPLAY,
     UNRECOGNIZED_DISPLAY,
     UNRECOGNIZED_PROVIDER,
     EvidenceLevel,
@@ -27,6 +29,7 @@ from .viz import (
     DayCell,
     DayCount,
     EvidenceTotals,
+    ModelRow,
     Period,
     PrivacySplit,
     ProviderRow,
@@ -194,6 +197,40 @@ def build_viz_stats(
         )
     )
 
+    # Model categories use the same publication policy as providers: full,
+    # repository-anonymous, and aggregate-only repositories contribute to
+    # all-time rows; excluded repositories contribute nothing.  The input
+    # category is already normalized by aggregate.py, but this boundary still
+    # collapses malformed/future keys into ``other`` and never publishes raw
+    # model values.
+    model_merged: dict[str, dict] = {}
+    for agg, _ in included:
+        for key, magg in agg.models.items():
+            category = key if key in MODEL_CATEGORIES else "other"
+            row = model_merged.setdefault(
+                category,
+                {"attributed_commits": 0, "actor_presences": 0, "dates": set()},
+            )
+            row["attributed_commits"] += magg.attributed_commits
+            row["actor_presences"] += magg.actor_presences
+            row["dates"] |= magg.active_dates
+
+    model_rows = tuple(
+        sorted(
+            (
+                ModelRow(
+                    category=category,
+                    display_name=MODEL_DISPLAY[category],
+                    attributed_commits=row["attributed_commits"],
+                    actor_presences=row["actor_presences"],
+                    active_days=len(row["dates"]),
+                )
+                for category, row in model_merged.items()
+            ),
+            key=lambda m: (-m.attributed_commits, m.category),
+        )
+    )
+
     return VizStats(
         schema_version=ACE_SCHEMA_VERSION,
         period=Period(from_date=None, to_date=None, label=V01_PERIOD_LABEL),
@@ -228,6 +265,8 @@ def build_viz_stats(
         ),
         generated_on=generated_on,
         daily=_build_daily(daily_rows, totals_rows, levels),
+        models=model_rows,
+        model_count=sum(1 for m in model_rows if m.category != "unknown"),
     )
 
 
@@ -243,6 +282,7 @@ def local_only_details(repo_aggs: list[RepoAggregates], cfg: Config) -> dict:
         is PublicationLevel.EXCLUDED
     )
     unrecognized_raws: set[str] = set()
+    unrecognized_models: set[str] = set()
     for agg in repo_aggs:
         if (
             levels.get(agg.repository_uid, PublicationLevel.EXCLUDED)
@@ -252,7 +292,10 @@ def local_only_details(repo_aggs: list[RepoAggregates], cfg: Config) -> dict:
         none_agg = agg.providers.get(None)
         if none_agg:
             unrecognized_raws |= none_agg.raw_values
+        for model_agg in agg.models.values():
+            unrecognized_models |= model_agg.raw_values
     return {
         "excluded_repositories": excluded,
         "unrecognized_provider_values": sorted(unrecognized_raws),
+        "unrecognized_model_values": sorted(unrecognized_models),
     }

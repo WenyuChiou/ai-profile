@@ -63,7 +63,7 @@ Semantics pinned:
   an existing entry. Other level changes (`aggregate_only`, `excluded`)
   are config edits in v0.1 (documented in README).
 - `aggregate` stdout contains only post-redaction content. `-v` adds
-  local-only detail (unrecognized raw provider strings,
+  local-only detail (unrecognized/raw provider and model strings,
   excluded-repository count) — clearly marked local-only.
   Skipped-author counts are scan-run diagnostics: `scan` reports them at
   scan time; they are not persisted for later `aggregate` runs (gate
@@ -119,7 +119,9 @@ only, with an explicit "not published" notice otherwise) ·
 provider-ranked thin bars (top 6 + "+N providers not shown") with count
 and percentage in separate aligned metric columns, denominator stated in the
 table header and an explicit
-non-exclusive note · a compact evidence rail with its population stated
+non-exclusive note · a compact all-time model-family ledger (top 4 + "+N
+model categories not shown"), sourced only from explicit canonical model
+trailers and keeping `unknown` separate · a compact evidence rail with its population stated
 ("all records: N" — G2-05), a stacked evidence bar, and square-swatch
 counts · publication statement (policy-based wording, never visibility
 claims — G2-04: "Includes aggregate-only activity (repository identity
@@ -134,9 +136,10 @@ ADR-010).
   explicit opt-in; publication policy lives in config only; a repository
   absent from config is excluded (fail-closed); duplicate entries for one
   uid resolve to the most restrictive level (schema.md §9).
-- Public outputs contain only: counts, canonical provider slugs/display
-  names (plus the reserved `unrecognized` bucket — never raw strings),
-  evidence totals, period, flags, UTC generation date.
+- Public outputs contain only: counts, canonical provider and model-family
+  slugs/display names (plus the reserved `unrecognized` provider and
+  `unknown` model buckets — never raw strings), evidence totals, period,
+  flags, UTC generation date.
 - Never in outputs: repository names/uids/paths, org names, branch names,
   commit shas/messages, raw trailer values, prompts, author emails, local
   paths, tokens, excluded-repository counts, timestamps finer than a date.

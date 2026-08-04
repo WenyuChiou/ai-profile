@@ -207,6 +207,21 @@ designed v0.5.0 plan.
       passed, and all eight live outputs match the merged LF-normalized
       blobs.
 
+## v0.5.0 — Explicit model-family contribution (candidate)
+
+- [x] Implement ADR-027's closed model-family aggregate as ACE/public contract
+      `0.3.0`; keep `0.1.x` and `0.2.x` stored events readable.
+- [x] Reconcile model-family attributed commits, actor presences, active days,
+      provider rows, unique commits, evidence records, and unknown/human
+      separation on synthetic and real-profile fixtures.
+- [x] Publish only schema-owned family labels (`unknown` remains separate;
+      raw model strings stay local-only); no style/provider/tool inference.
+- [x] Add the compact model ledger to the summary SVG and dashboard without
+      changing the flat daily terrain or claiming model-by-day filtering.
+- [ ] Complete the remaining independent cross-platform and publication gates;
+      local privacy, deterministic SVG/HTML, accessibility, README parity, and
+      browser checks pass. Until then v0.4.10 remains the production Public Beta.
+
 ## Future capability milestone — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature

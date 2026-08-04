@@ -118,15 +118,15 @@ and cannot carry event or repository identity data.
 ## 3. Privacy enforcement (the redaction boundary)
 
 `VizStats` is the only object renderers and exporters accept. Its fields
-are counts, canonical provider slugs/display names, evidence totals,
+are counts, canonical provider/model slugs/display names, evidence totals,
 period, boolean flags, and a UTC generation date. No repository
 uid/name/path, no author emails, no commit shas, no messages, no local
 paths, no raw trailer strings exist in the type — and since gate-7 H-01
 this is VALIDATED, not conventional: `VizStats.__post_init__` pins every
 string field to a closed public vocabulary (the supported ACE schema
-version, the fixed v0.1 all-time period, canonical provider slugs from
-schema.md §10, and the schema-owned display name for each slug), so a
-validated instance structurally cannot carry arbitrary private text into
+version, the fixed v0.1 all-time period, canonical provider/model slugs from
+schema.md §10 and ADR-027, and the schema-owned display name for each slug),
+so a validated instance structurally cannot carry arbitrary private text into
 SVG or JSON regardless of who constructed it. Since gate-8 H-01 the
 GRAPH is immutable too: validation requires the exact frozen contract
 types (never subclasses or duck types) for every nested record, the
@@ -164,10 +164,11 @@ is the single constructor, and applies exactly these rules:
    labels, never visibility claims — G2-04): `full` → explicitly
    publishable commits; `aggregate_only` → anonymous aggregate commits;
    `includes_anonymous_aggregate` flag set when the latter is nonzero.
-4. **Unrecognized collapse** (schema.md §10): all canonical-`null`
-   provider groups merge into the single reserved `unrecognized` bucket;
-   raw strings never cross this boundary. (`aggregate -v` prints raw
-   unrecognized values locally so users can request registry additions.)
+4. **Unrecognized/model collapse** (schema.md §10, ADR-027): all
+   canonical-`null` provider groups merge into the reserved `unrecognized`
+   bucket; model rows use only the closed family vocabulary, with missing
+   canonical models in `unknown` and explicit unmatched values in `other`.
+   Raw provider/model strings never cross this boundary.
 5. **Identity stripping**: repo-level rows are summed; nothing uid-keyed
    survives into `VizStats`.
 
@@ -262,9 +263,12 @@ Notes:
 in this module, one row per repository uid, holding the schema.md §15
 counts (commits scanned, AI-attributed commits, actor presences,
 human/unknown commits, per-provider commit/event/day counts keyed by
-canonical slug or `None`, evidence totals in events, active-day date
-sets). It is internal to the pipeline: only `privacy.py` may consume it,
-and it never reaches renderers, exports, or stdout.
+canonical slug or `None`, per-model-family commit/event/day counts keyed by
+the closed ADR-027 category vocabulary, evidence totals in events, and
+active-day date sets). It is internal to the pipeline: only `privacy.py` may
+consume it, and it never reaches renderers, exports, or stdout.  Model
+projection reads only the canonical `events.model` column; `model_raw` remains
+local diagnostic data on `ModelAgg`.
 
 Period filtering is post-v0.1 (all-time only; schema.md §15).
 
@@ -283,6 +287,11 @@ VizStats
       # ranked by attributed_commits desc, then slug asc (deterministic);
       # may include the reserved `unrecognized` bucket, ranked like any row
   provider_count: int        # distinct providers excluding `unrecognized`
+  models: [ {category, display_name, attributed_commits,
+             actor_presences, active_days} ]
+      # ranked by attributed_commits desc, then category asc (deterministic);
+      # closed ADR-027 categories; may include `unknown`
+  model_count: int            # model rows excluding `unknown`
   evidence: {verified, declared, imported, inferred, unknown,
              total_records}  # population: ALL ACE records (G2-05)
   privacy: {explicitly_publishable_commits, anonymous_aggregate_commits,
@@ -293,13 +302,16 @@ VizStats
 Construction-time invariants (validated, G2-05/§9 of the Gate 2 review):
 evidence categories sum to `total_records`; publishable + anonymous
 aggregate commits equal `commits_scanned`; provider `actor_presences`
-rows sum to `totals.ai_actor_presences`; each provider's
-`attributed_commits` ≤ `totals.ai_attributed_commits`;
+rows sum to `totals.ai_actor_presences`; when model rows are present, their
+`actor_presences` rows also sum to `totals.ai_actor_presences`; each provider
+and model row's `attributed_commits` ≤ `totals.ai_attributed_commits`;
 `ai_attributed_commits` ≤ `commits_scanned`.
 
 This is the contract consumed by `render/` and `export.py` and serialized
-(sorted keys, deterministic) into `profile.json`. It changes only with a
-schema-version bump. `generated_on` is date-only by design (a full
+(sorted keys, deterministic) into `profile.json`. The v0.5 model ledger is an
+additive ACE `0.3.0` change (ADR-027); future contract changes require the
+schema-version strategy in ADR-012/ADR-027. `generated_on` is date-only by
+design (a full
 timestamp would disclose timezone/working hours in a published artifact —
 supersedes the proposal §24 example). No `manifest.json` in v0.1 (nothing
 consumes it until the GitHub Action lands).
@@ -316,6 +328,13 @@ consumes it until the GitHub Action lands).
   non-exclusive note (ADR-022). The post-v0.4.8 evidence-ledger refinement
   keeps count and percentage in separate right-aligned columns and uses a
   quiet border-token section marker; this is presentation-only (ADR-023).
+- Model-family table: top 4 explicit model categories; remaining categories
+  collapse to one "+N model categories not shown" line. It is an all-time,
+  non-exclusive ledger sourced from `VizStats.models`; it never changes daily
+  terrain geometry and never offers a model filter without a matching scoped
+  aggregate contract (ADR-027). Its two-character category marks and neutral
+  model bar token are presentation-only; the collaboration accent remains
+  reserved for the hero, share bar, provider bars, and header mark.
 - The Flat Evidence Ledger refinement (ADR-025) supersedes the perspective
   treatment for the summary's daily visual. It renders a 12-column by 7-row
   matrix of neutral tracks; each published day adds a bottom-anchored bar

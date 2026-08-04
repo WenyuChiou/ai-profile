@@ -7,6 +7,7 @@ plus a version bump per ADR-012.
 
 from __future__ import annotations
 
+import re
 from enum import StrEnum
 
 
@@ -136,6 +137,89 @@ PROVIDER_DISPLAY: dict[str, str] = {
     "ollama": "Ollama",
     "meta": "Llama",
 }
+
+#: Closed public model-family vocabulary (ADR-027).  Model categories are
+#: intentionally separate from providers: an explicit canonical ``model``
+#: value is the only input to this normalizer.  Provider, tool, author,
+#: commit-message, and source-style values are never consulted.
+MODEL_DISPLAY: dict[str, str] = {
+    "claude": "Claude",
+    "gpt": "GPT",
+    "gemini": "Gemini",
+    "llama": "Llama",
+    "mistral": "Mistral",
+    "deepseek": "DeepSeek",
+    "qwen": "Qwen",
+    "grok": "Grok",
+    "kimi": "Kimi",
+    "other": "Other",
+    "unknown": "Unknown",
+}
+MODEL_CATEGORIES = frozenset(MODEL_DISPLAY)
+
+# Prefixes are matched only at a token boundary (exact value, or a separator
+#/version character after the family token).  Keeping the table schema-owned
+# makes normalization deterministic and auditable rather than a loose keyword
+# search.  Exact aliases cover product names that do not carry the family as
+# their first token.
+MODEL_CATEGORY_PREFIXES: dict[str, tuple[str, ...]] = {
+    "claude": ("claude", "anthropic/claude", "anthropic.claude", "anthropic-claude"),
+    "gpt": (
+        "gpt",
+        "openai/gpt",
+        "openai.gpt",
+        "openai-gpt",
+        "chatgpt",
+        "o1",
+        "o3",
+        "o4",
+    ),
+    "gemini": ("gemini", "google/gemini", "google.gemini", "google-gemini"),
+    "llama": ("llama", "meta/llama", "meta.llama", "meta-llama"),
+    "mistral": ("mistral", "mixtral", "mistralai"),
+    "deepseek": ("deepseek",),
+    "qwen": ("qwen", "alibaba/qwen", "alibaba.qwen", "alibaba-qwen"),
+    "grok": ("grok", "xai/grok", "xai.grok", "xai-grok"),
+    "kimi": ("kimi", "moonshot/kimi", "moonshot.kimi", "moonshot-kimi"),
+}
+MODEL_CATEGORY_ALIASES: dict[str, str] = {
+    "chatgpt": "gpt",
+    "o1": "gpt",
+    "o3": "gpt",
+    "o4": "gpt",
+    "mixtral": "mistral",
+    "mistral-ai": "mistral",
+    "meta-ai": "llama",
+}
+_MODEL_BOUNDARY_RE = re.compile(r"[-_.:/\s0-9]")
+
+
+def normalize_model_category(model: str | None) -> str:
+    """Map one explicit canonical ACE model to a public family slug.
+
+    ``None``/blank values are ``unknown``.  A non-empty value that is not in
+    the closed alias/prefix table is deliberately ``other``.  The function
+    never falls back to provider/tool values or to ``model_raw``.
+    """
+    if model is None:
+        return "unknown"
+    if type(model) is not str:
+        return "other"
+    value = model.strip().lower()
+    if not value:
+        return "unknown"
+    alias = MODEL_CATEGORY_ALIASES.get(value)
+    if alias is not None:
+        return alias
+    for category, prefixes in MODEL_CATEGORY_PREFIXES.items():
+        for prefix in prefixes:
+            if value == prefix:
+                return category
+            if value.startswith(prefix) and len(value) > len(prefix):
+                remainder = value[len(prefix) :]
+                if _MODEL_BOUNDARY_RE.match(remainder):
+                    return category
+    return "other"
 
 #: Canonical slug vocabularies (schema.md section 10; gate finding H-02).
 #: The schema OWNS these sets: `build_event` rejects any canonical
