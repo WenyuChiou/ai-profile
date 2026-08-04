@@ -110,8 +110,9 @@ HM_SHARE_BIN_COUNT = SHARE_BIN_COUNT
 
 
 # ---------------------------------------------------------------------------
-# Pure helpers. The bin/color arithmetic itself lives in ._bins (v0.4.8):
-# the summary card's isometric terrain shares the exact same fixed bins,
+# Pure helpers. The bin/color arithmetic itself lives in ._bins (introduced
+# in v0.4.8 and reused by the v0.4.9 flat matrix):
+# the summary card's flat daily matrix shares the exact same fixed bins,
 # and two hand-maintained copies would eventually disagree. The imported
 # names (_lerp_hex, _share_bin, _volume_bin, _share_colors) remain module
 # attributes here, so existing imports keep working unchanged.

@@ -1,11 +1,18 @@
 # ADR-022: Recruiter-first summary card with a whole-rhythm terrain
 
-Date: 2026-08-01 · Status: accepted
+Date: 2026-08-01 · Status: accepted; daily visual clauses superseded by ADR-025
+Superseded by: ADR-025 for the summary-card daily visual
 Supersedes: ADR-020's "Band interplay" clause only ("The isometric band
 stays AI-only ... a zero-attributed-AI day renders as the flat base
 diamond" — quoted as corrected by ADR-020's 2026-08-01 erratum).
 Every other ADR-020 decision (heatmap card, badge, `DayCell`
 whole-rhythm contract, bundle allowlist) is unchanged.
+
+> Status note (2026-08-04): ADR-025 replaces the perspective/prism treatment
+> described below. This ADR remains the source for the recruiter-facing card
+> order, whole-rhythm volume/share semantics, honest empty states,
+> provider-overlap disclosure, and compatible typography/privacy boundaries;
+> read ADR-025 for the active flat daily visual contract.
 
 ## Context
 

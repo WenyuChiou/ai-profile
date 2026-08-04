@@ -153,8 +153,8 @@ designed v0.5.0 plan.
 
 - [x] Summary card redesigned as the recruiter-first `AI Collaboration
       Record` (ADR-022): hero + share, secondary ledger, prominent
-      12-week whole-rhythm isometric terrain (height = total-commit
-      bins, hue = AI-share bins, provider-independent geometry),
+      12-week isometric collaboration terrain (bar height = total-commit
+      bins, fill = AI-share bins, provider-independent geometry),
       non-exclusive provider ledger, compact evidence rail.
 - [x] Dashboard headline and summary type system aligned with the shared
       editorial-tech direction; README example simplified to the Summary
@@ -165,6 +165,23 @@ designed v0.5.0 plan.
       (tag `v0.4.8`; GitHub Release marked prerelease, PyPI classifier
       Beta). Readiness record:
       `docs/reviews/v0.4.8-release-readiness.md`.
+
+## v0.4.9 — Flat Evidence Ledger Public Beta candidate (2026-08-04)
+
+- [x] Evidence-ledger alignment (ADR-023): separate provider count and
+      percentage columns, keep section markers semantic, and preserve the
+      existing renderer/data/privacy contract.
+- [x] Flat Evidence Ledger visual contract (ADR-025): document semantic roles,
+      local fallback typography, the evidence-first composition grammar, and
+      the no-gradient/no-network/no-inference boundary in `DESIGN.md`.
+- [x] Replace the perspective daily treatment with a deterministic flat
+      matrix and neutral dashboard section markers; the matrix preserves daily
+      height/share and provider/commit aggregation semantics.
+- [x] Complete the independent visual, accessibility, privacy, and artifact
+      review; candidate artifact identity is frozen in
+      `docs/reviews/promotion-candidate.json`; the readiness record is
+      `docs/reviews/v0.4.9-flat-ledger-readiness.md`; release publication
+      remains gated on PR CI and cross-platform smoke.
 
 ## Future capability milestone — GitHub integration
 

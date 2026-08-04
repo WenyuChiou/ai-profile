@@ -426,6 +426,23 @@ def test_provider_percentages_and_denominator_label():
     # rule 6): the table header names it, each visible row carries its pct.
     svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
     denominator = FIXTURE_POPULATED.totals.ai_attributed_commits
+    # The evidence-ledger lockup keeps count and share as separate columns;
+    # a shared right edge would recreate the README-scale collision this
+    # refinement fixes. Row dividers stop at the same percentage edge.
+    root = ET.fromstring(svg)
+    text_nodes = {
+        (node.attrib.get("x"), "".join(node.itertext()))
+        for node in root
+        if node.tag.rsplit("}", 1)[-1] == "text"
+    }
+    assert ("748", "120") in text_nodes
+    assert ("806", " · 32%") in text_nodes
+    assert any(
+        node.attrib.get("x1") == "24"
+        and node.attrib.get("x2") == "806"
+        for node in root
+        if node.tag.rsplit("}", 1)[-1] == "line"
+    )
     assert f"% of {denominator} AI-attributed commits" in svg
     for row in FIXTURE_POPULATED.providers[:6]:
         pct = round(100 * row.attributed_commits / denominator)
@@ -701,16 +718,13 @@ _ALLOWED_SVG_TAGS = {
     # a single static <path fill="..." transform="...">, never active
     # content — still covered by the checks below (no "on*" handlers, no
     # href, no external refs).
-    # "polygon" was pre-provisioned for round D2 (isometric calendar band,
-    # ADR-018): each grid cell's flat diamond or stacked-column faces are
-    # static <polygon points="..." fill="..."> elements.
     # "g"/"animate" were briefly allowed for a D2 SMIL entrance and then
     # REMOVED with the animation itself (two static-capture invisibility
     # failures - see summary_svg's no-entrance-animation note): the band
     # ships fully static, so the allowlist shrinks back accordingly and
     # the sweep would catch any reintroduction.
     for t in (
-        "svg", "title", "desc", "rect", "line", "text", "tspan", "polygon", "path",
+        "svg", "title", "desc", "rect", "line", "text", "tspan", "path",
     )
 }
 

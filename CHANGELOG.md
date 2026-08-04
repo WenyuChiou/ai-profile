@@ -25,6 +25,20 @@ below.
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.4.9] — 2026-08-04 (Public Beta candidate)
+
+### Changed
+
+- Document the Flat Evidence Ledger visual system in `DESIGN.md` and ADR-025,
+  including semantic role tokens, local fallback typography, evidence-first
+  hierarchy, and the no-network/no-inference boundary.
+- Replace the presentation-only perspective daily treatment with a flat
+  12-column by 7-row matrix. Daily bar height/share bins, provider overlap,
+  privacy semantics, and all eight output filenames/contracts remain unchanged
+  (the two summary assets are regenerated with the presentation update).
+
 ## [0.4.8] — 2026-08-01
 
 ### Changed

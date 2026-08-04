@@ -113,11 +113,12 @@ shows, in recruiter-facing order: reporting period ("All time" in v0.1)
 · one accent hero value for AI-attributed commits with its share of
 unique commits scanned shown in a thin bar · active AI days (author
 dates) / number of AI providers / AI actor presences / unknown count in
-a subordinate ledger · a 12-week isometric collaboration terrain (height
-= total-commit volume bins, top-face hue = AI-share bins; publishable
-daily data only, with an explicit "not published" notice otherwise) ·
+a subordinate ledger · a 12-week flat collaboration matrix (bar height
+= total-commit volume bins, fill = AI-share bins; publishable daily data
+only, with an explicit "not published" notice otherwise) ·
 provider-ranked thin bars (top 6 + "+N providers not shown") with count
-and percentage, denominator stated in the table header and an explicit
+and percentage in separate aligned metric columns, denominator stated in the
+table header and an explicit
 non-exclusive note · a compact evidence rail with its population stated
 ("all records: N" — G2-05), a stacked evidence bar, and square-swatch
 counts · publication statement (policy-based wording, never visibility

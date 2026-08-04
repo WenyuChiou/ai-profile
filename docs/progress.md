@@ -390,6 +390,32 @@ which is authoritative).
   pinned dashboard bytes. Four README-only dogfood roles passed 4/4 with
   zero external hints, zero privacy-canary hits, exact hand totals, and
   eight outputs. Full record: `docs/reviews/v0.4.8-release-readiness.md`.
+- **Post-v0.4.8 evidence-ledger refinement (design branch, 2026-08-04).**
+  Research reviewed Nanako0129, Primer, Carbon, Radix, Geist, Vega-Lite,
+  Observable Plot, Grafana, and related primary sources. The branch keeps the
+  v0.4.8 data/privacy contract while separating provider metric columns,
+  adding semantic section markers, and regenerating only sanctioned summary
+  snapshots/assets. ADR-023 and the implementation plan document the scope.
+  Independent verification is green; public patch publication remains
+  conditional on a versioned artifact/CI/Pages release round. Full record:
+  `docs/reviews/v0.4.9-visual-readiness.md`.
+- **Structural Current visual slice (superseded design branch, 2026-08-04).**
+  Independent design forensics (Nanako0129's public tools plus Primer,
+  Carbon, Radix, Geist, Vega-Lite, and related systems) is recorded in
+  `docs/reviews/design-reverse-engineering.md`. `DESIGN.md` and ADR-024 now
+  define the semantic role tokens and evidence-first composition without
+  adding runtime dependencies or a new data model. That branch's perspective
+  treatment was intentionally rejected for the summary card; its rollback
+  remains available until the flat replacement completes verification.
+- **v0.4.9 Flat Evidence Ledger pivot (candidate branch, 2026-08-04).**
+  ADR-025 replaces the summary-card perspective treatment with a 12-column by
+  7-row flat daily matrix. Bars encode unique daily total-commit bins and fill
+  encodes AI-share bins; provider overlap, unknown/human separation, privacy
+  redaction, and the eight-file output contract remain unchanged. The branch
+  is the v0.4.9 Public Beta candidate; full-suite, artifact, browser,
+  independent review, and release verification remain required before
+  publication. Readiness record:
+  `docs/reviews/v0.4.9-flat-ledger-readiness.md`.
 - **The maintainer Profile refresh on public PyPI 0.4.8 is complete.**
   Profile PR #12 merged at `7f322beab1e532d906f943c62fc68e49ba21c02a`
   with the unchanged exact 11-repository full-publication scope. Profile

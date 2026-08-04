@@ -42,7 +42,7 @@ _DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 #: 84 → 365 by round D4's heatmap, ADR-018 addendum): the series
 #: publishes at most a year of publishable-repo activity. A hard
 #: contract bound, not a renderer preference — a validated instance
-#: cannot carry an unbounded activity history. (The isometric band
+#: cannot carry an unbounded activity history. (The flat daily matrix
 #: renders only its own last-84-day slice of this series.)
 DAILY_WINDOW_DAYS = 365
 

@@ -1,5 +1,4 @@
-"""Unit tests for the isometric collaboration terrain (grid geometry from
-round D2/ADR-018, whole-rhythm semantics from ADR-022).
+"""Unit tests for the flat collaboration timeline (ADR-025).
 
 Fixtures here are built inline from `aiprofile.viz` dataclasses, same
 discipline as `test_render_summary.py` (never round-tripped through
@@ -8,7 +7,7 @@ validators (subset-of-provider-rows, window bound, slug-ascending unique
 counts, date-ascending unique cells): an invalid series fails at module
 import time, not just in a targeted assertion.
 
-The terrain's ENCODING contract (height = total-commit bins, hue =
+The timeline's ENCODING contract (bar height = total-commit bins, fill =
 AI-share bins, provider independence) is pinned in
 tests/unit/test_recruiter_card.py; this module keeps the grid-mechanics
 regressions: window slicing, month labels, legend derivation, painter
@@ -34,15 +33,15 @@ from aiprofile.render.summary_svg import (
     CAL_LABEL_TEXT,
     CAL_LEGEND_CUE_TEXT,
     CAL_NOTICE_HEIGHT,
-    CAL_TILE_HH,
     CAL_UNPUBLISHED_TEXT,
     CAL_WINDOW_DAYS,
-    TERRAIN_HEIGHTS,
+    VOLUME_BAR_HEIGHTS,
     _calendar_cell_position,
     _calendar_desc_suffix,
     _calendar_grid_cells,
     _calendar_legend_svg,
     _calendar_month_labels_svg,
+    _calendar_weekday_labels_svg,
     _day_cell_svg,
     _dedupe_colliding_month_labels,
     _legend_bins,
@@ -212,7 +211,7 @@ def test_omitted_daily_equals_explicit_empty_tuple():
 
 def test_empty_daily_renders_notice_not_grid_and_shrinks_the_card():
     """An unpublished daily series renders the exact CAL_UNPUBLISHED_TEXT
-    notice in the terrain slot (no polygons, no legend, no month labels)
+    notice in the timeline slot (no polygons, no legend, no month labels)
     and the card shrinks by the grid-vs-notice height difference."""
     no_daily = dataclasses.replace(FIXTURE_MAIN, daily=())
     assert card_height(FIXTURE_MAIN) - card_height(no_daily) == CAL_HEIGHT - CAL_NOTICE_HEIGHT
@@ -241,24 +240,25 @@ def test_single_day_series_populates_exactly_one_cell():
     assert len(populated) == 1
     assert populated[0].date == "2026-07-14"
     # Card height is IDENTICAL to any other non-empty daily series: the
-    # terrain's footprint is a fixed constant, independent of how sparse
+    # timeline's footprint is a fixed constant, independent of how sparse
     # the data is (only presence/absence of `daily` changes the layout).
     assert card_height(FIXTURE_SINGLE_DAY) - card_height(
         dataclasses.replace(FIXTURE_SINGLE_DAY, daily=())
     ) == CAL_HEIGHT - CAL_NOTICE_HEIGHT
     svg = render_summary(FIXTURE_SINGLE_DAY, THEMES["github-light"])
-    assert "<polygon" in svg
+    assert '<rect' in svg
+    assert "<polygon" not in svg
     ET.fromstring(svg)  # well-formed
 
 
 # ---------------------------------------------------------------------------
-# 3. Volume-bin saturation and the flat no-data diamond.
+# 3. Volume-bin saturation and the flat no-data track.
 # ---------------------------------------------------------------------------
 
 
 def test_top_volume_bin_saturates_at_max_height():
     """A 12-commit day and an 8-commit day share the top volume bin, so
-    both prisms render at exactly TERRAIN_HEIGHTS[-1] — never a taller,
+    both bars render at exactly VOLUME_BAR_HEIGHTS[-1] — never a taller,
     proportionally-scaled column that would blow the fixed geometry
     budget."""
     cells = _calendar_grid_cells(FIXTURE_MAIN)
@@ -268,33 +268,32 @@ def test_top_volume_bin_saturates_at_max_height():
         assert cell is not None and cell.total_commits == total
         _, _, cx, cy = _calendar_cell_position(offset)
         svg = _day_cell_svg(cell, cx, cy, theme)
-        top_y = cy - CAL_TILE_HH - TERRAIN_HEIGHTS[-1]
-        assert f"{cx},{top_y}" in svg
+        assert f'height="{VOLUME_BAR_HEIGHTS[-1]}"' in svg
     # An under-cap day (3 commits -> bin 1) renders at its own fixed bin
     # height, strictly lower than the top bin.
     low_cell = cells[OFFSET_LOW]
     assert low_cell is not None
     _, _, cx_low, cy_low = _calendar_cell_position(OFFSET_LOW)
     svg_low = _day_cell_svg(low_cell, cx_low, cy_low, theme)
-    expected_h = TERRAIN_HEIGHTS[_volume_bin(3)]
-    assert 0 < expected_h < TERRAIN_HEIGHTS[-1]
-    assert f"{cx_low},{cy_low - CAL_TILE_HH - expected_h}" in svg_low
+    expected_h = VOLUME_BAR_HEIGHTS[_volume_bin(3)]
+    assert 0 < expected_h < VOLUME_BAR_HEIGHTS[-1]
+    assert f'height="{expected_h}"' in svg_low
 
 
-def test_zero_day_renders_flat_base_diamond_in_bar_track():
+def test_zero_day_renders_neutral_track_cell():
     """A date with no DayCell (whether it predates the series or is a
     genuine zero-activity day inside the window — both are simply absent
-    from stats.daily) draws a single flat diamond in theme.bar_track, not
-    a degenerate zero-height prism."""
+    from stats.daily) draws a single neutral track rectangle in
+    theme.bar_track, not a fabricated zero-height bar."""
     for theme in THEMES.values():
         empty_cell_svg = _day_cell_svg(None, 100, 100, theme)
-        assert empty_cell_svg.count("<polygon") == 1
+        assert empty_cell_svg.count("<rect") == 1
         assert f'fill="{theme.bar_track}"' in empty_cell_svg
         assert "fill-opacity" not in empty_cell_svg
 
 
 def test_rendered_card_uses_share_bin_hues_not_provider_colors():
-    """The terrain's hue axis is the AI-share ramp (ADR-022) — provider
+    """The timeline's fill axis is the AI-share ramp (ADR-022) — provider
     brand colors never reach the grid. The mixed 2026-06-04 day (7 AI of
     8) sits in share bin 4 despite spanning three providers."""
     theme = THEMES["github-light"]
@@ -304,7 +303,7 @@ def test_rendered_card_uses_share_bin_hues_not_provider_colors():
     cells = _calendar_grid_cells(FIXTURE_MAIN)
     mixed_svg = _day_cell_svg(cells[OFFSET_MIXED], 100, 100, theme)
     assert f'fill="{colors[4]}"' in mixed_svg
-    assert mixed_svg.count("<polygon") == 3  # one prism, never a provider stack
+    assert mixed_svg.count("<rect") == 2  # one cell track + one data bar
     # The partial-share oldest day (2 AI of 3 -> bin 3) uses a mid-ramp hue.
     oldest_svg = _day_cell_svg(cells[OFFSET_OLDEST], 100, 100, theme)
     assert f'fill="{colors[_share_bin(2, 3)]}"' in oldest_svg
@@ -330,22 +329,20 @@ def test_same_input_renders_byte_identical_calendar_markup():
         assert first.encode("utf-8") == second.encode("utf-8")
 
 
-def test_polygon_points_carry_no_float_noise():
+def test_cell_coordinates_carry_no_float_noise():
     """The coordinate-hygiene regex in test_render_summary.py does not
     reach the polygon "points" attribute (it only matches x/y/x1/y1/x2/
     y2/width/height) — this test pins the same "no float noise" invariant
-    for it directly: every coordinate the terrain emits is an exact
+    for it directly: every coordinate the timeline emits is an exact
     integer, by construction (every geometry constant is int, and the
-    fixed TERRAIN_HEIGHTS bins remove the last division)."""
-    pt_re = re.compile(r'<polygon points="([^"]+)"')
-    coord_re = re.compile(r"-?\d+,-?\d+")
+    fixed bar-height bins remove the last division)."""
+    coord_attr_re = re.compile(r' (?:x|y|width|height)="(-?\d+)"')
+    coord_re = re.compile(r"-?\d+")
     for theme in THEMES.values():
         svg = render_summary(FIXTURE_MAIN, theme)
-        matches = pt_re.findall(svg)
-        assert len(matches) > 80  # 84 cells, most with >=1 polygon
-        for points_attr in matches:
-            for pair in points_attr.split(" "):
-                assert coord_re.fullmatch(pair), pair
+        matches = coord_attr_re.findall(svg)
+        assert len(matches) > 80  # 84 cells plus card and legend rectangles
+        assert all(coord_re.fullmatch(value) for value in matches)
 
 
 # ---------------------------------------------------------------------------
@@ -361,8 +358,8 @@ def test_desc_suffix_states_window_span_peak_and_encodings():
     peak = max(cell.total_commits for cell in _MAIN_DAILY)
     assert peak == 12  # the 2026-07-04 day
     assert f"peak day {peak} commits" in suffix
-    assert "height is total commits" in suffix
-    assert "hue is the day's AI share" in suffix
+    assert "bar height is total commits" in suffix
+    assert "fill is the day's AI share" in suffix
     assert "publishable repositories only" in suffix
 
 
@@ -382,7 +379,7 @@ def test_calendar_label_and_desc_addition_are_ascii():
 
 
 # ---------------------------------------------------------------------------
-# 6. Allowed-tags sweep still passes with the terrain elements present.
+# 6. Allowed-tags sweep still passes with the timeline elements present.
 # ---------------------------------------------------------------------------
 
 
@@ -391,8 +388,9 @@ def test_new_svg_elements_are_allowlisted_and_carry_no_active_content():
         svg = render_summary(FIXTURE_MAIN, theme)
         root = ET.fromstring(svg)
         tags = {el.tag for el in root.iter()}
-        assert f"{SVG_NS}polygon" in tags
-        # No <g>/<animate>: the terrain ships fully static (see
+        assert f"{SVG_NS}rect" in tags
+        assert f"{SVG_NS}polygon" not in tags
+        # No <g>/<animate>: the timeline ships fully static (see
         # test_calendar_band_is_fully_static_no_animation).
         assert f"{SVG_NS}animate" not in tags
         for el in root.iter():
@@ -411,7 +409,7 @@ def test_calendar_band_is_fully_static_no_animation():
     because the renderer ignores SMIL (static opacity 0 = empty) or
     because a SMIL-aware print pipeline snapshots the timeline at t=0
     where the animated value (0) overrides the static value (1). The
-    terrain ships static; this test fails if anyone reintroduces an
+    timeline ships static; this test fails if anyone reintroduces an
     animation without first proving a t=0-visible capture."""
     svg1 = render_summary(FIXTURE_MAIN, THEMES["github-light"])
     svg2 = render_summary(FIXTURE_MAIN, THEMES["github-light"])
@@ -447,13 +445,13 @@ def test_daily_exceeding_provider_row_total_is_rejected_by_vizstats():
 
 def test_legend_bins_math_for_the_current_cap():
     """Falsifiable: with CAL_CAP_COMMITS == 8 today, `_legend_bins` must
-    produce EXACTLY the four bins the terrain heights encode
+    produce EXACTLY the four bins the bar heights encode
     ("1", "2-4", "5-7", "8+") -- fails if the derivation drifts from
     `_bins._volume_bin`'s worked thresholds."""
     assert _legend_bins(8) == ((1, "1"), (4, "2-4"), (7, "5-7"), (8, "8+"))
     # The derivation and the binning function agree bin-for-bin.
     for representative, _label in _legend_bins(CAL_CAP_COMMITS):
-        assert 0 <= _volume_bin(representative) <= len(TERRAIN_HEIGHTS) - 1
+        assert 0 <= _volume_bin(representative) <= len(VOLUME_BAR_HEIGHTS) - 1
 
 
 def test_legend_bins_resilient_to_a_cap_change():
@@ -487,23 +485,21 @@ def test_legend_states_both_encodings_ascii():
         svg = _calendar_legend_svg(theme, top=0)
         assert svg.isascii()
         assert CAL_LEGEND_CUE_TEXT in svg
-        assert "Commits" in svg
+        assert "Volume" in svg
         assert "AI share" in svg
         assert "0%" in svg and "100%" in svg
-        # Every share-ramp hex appears exactly as a real day prism would
+        # Every share-ramp hex appears exactly as a real day cell would
         # use it (the ramp swatches carry the bin colors verbatim).
         for color in _share_colors(theme):
             assert f'fill="{color}"' in svg
 
 
-def test_legend_diamonds_carry_no_float_noise():
-    coord_re = re.compile(r"-?\d+,-?\d+")
-    pt_re = re.compile(r'<polygon points="([^"]+)"')
+def test_legend_rectangles_carry_no_float_noise():
+    coord_re = re.compile(r"-?\d+")
+    coord_attr_re = re.compile(r' (?:x|y|width|height)="(-?\d+)"')
     for theme in THEMES.values():
         svg = _calendar_legend_svg(theme, top=0)
-        for points_attr in pt_re.findall(svg):
-            for pair in points_attr.split(" "):
-                assert coord_re.fullmatch(pair), pair
+        assert all(coord_re.fullmatch(value) for value in coord_attr_re.findall(svg))
 
 
 # ---------------------------------------------------------------------------
@@ -565,31 +561,43 @@ def test_month_labels_render_ascii_and_muted():
             assert f">{label}<" in svg
 
 
+def test_weekday_labels_follow_the_oldest_window_date():
+    """The flat matrix starts at the series' own oldest date, not Monday.
+
+    FIXTURE_MAIN starts on Wednesday (2026-04-22), so the seven left-rail
+    labels must rotate to W/T/F/S/S/M/T rather than falsely claiming M first.
+    """
+    svg = _calendar_weekday_labels_svg(FIXTURE_MAIN, THEMES["github-light"], top=0)
+    root = ET.fromstring(f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>')
+    labels = [element.text for element in root]
+    assert labels == ["W", "T", "F", "S", "S", "M", "T"]
+
+
 # ---------------------------------------------------------------------------
 # 10. D4 whole-rhythm days and the 84-day window slice.
 # ---------------------------------------------------------------------------
 
 
-def test_d4_zero_attributed_ai_day_renders_a_neutral_prism_not_a_flat_diamond():
+def test_d4_zero_attributed_ai_day_renders_a_neutral_bar_not_a_flat_cell():
     """ADR-022 supersedes the D4 rule that a zero-attributed-AI day
-    renders like a no-data day: the terrain charts the WHOLE rhythm, so a
+    renders like a no-data day: the timeline charts the WHOLE rhythm, so a
     3-commit day with zero attributed AI (not provably human — the day's
-    total includes unattributed commits) is a bin-1 prism in the neutral
+    total includes unattributed commits) is a bin-1 bar in the neutral
     share-0 hue — visibly different from both a no-data day (flat track
-    diamond) and an AI-share day (ramp hue)."""
+    track) and an AI-share day (ramp hue)."""
     theme = THEMES["github-light"]
     zero_ai = DayCell("2026-07-14", (), 3, 0)
     none_svg = _day_cell_svg(None, 100, 100, theme)
     zero_ai_svg = _day_cell_svg(zero_ai, 100, 100, theme)
     assert zero_ai_svg != none_svg
-    assert zero_ai_svg.count("<polygon") == 3
+    assert zero_ai_svg.count("<rect") == 2
     assert f'fill="{_share_colors(theme)[0]}"' in zero_ai_svg
-    assert theme.bar_track not in zero_ai_svg
+    assert theme.bar_track in zero_ai_svg  # the neutral track remains visible
 
 
 def test_d4_wider_series_band_shows_only_its_own_84_day_slice():
     # A 300-day-old AI day is valid under the D4 365-day contract but
-    # must not surface anywhere in the terrain (grid, desc, months).
+    # must not surface anywhere in the timeline (grid, desc, months).
     old_date = "2025-09-17"  # 300 days before 2026-07-14
     daily = (
         DayCell(old_date, (DayCount(provider="anthropic", attributed_commits=5),), 5, 5),
@@ -613,8 +621,8 @@ def test_out_of_window_day_does_not_leak_into_the_peak_claim():
     assert "peak day 40 commits" not in suffix
 
 
-def test_terrain_moves_the_provider_table_not_the_other_way_round():
-    """Layout regression: the terrain block sits between the ledger and
+def test_timeline_moves_the_provider_table_not_the_other_way_round():
+    """Layout regression: the timeline block sits between the ledger and
     the provider table, so an unpublished series shifts the table UP by
     the grid/notice difference while the table's internal geometry stays
     fixed."""

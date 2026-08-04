@@ -49,7 +49,7 @@ open the provider-filterable dashboard.
 </a>
 
 The card shows sustained AI collaboration (active AI days and a 12-week
-activity terrain), breadth across AI providers, and the explicit evidence
+flat activity matrix), breadth across AI providers, and the explicit evidence
 totals behind every number. It is a record of declared Git evidence, not
 a skill score.
 

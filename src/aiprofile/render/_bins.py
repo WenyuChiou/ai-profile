@@ -1,7 +1,7 @@
 """Shared fixed-bin arithmetic for day-cell renderers (ADR-020, ADR-022).
 
 One private home for the volume and AI-share bin math that the heatmap
-card (round D4) and the summary card's isometric terrain (v0.4.8) must
+card (round D4) and the summary card's current flat daily matrix must
 agree on. The two cards may never disagree about what "2-4 commits" or
 "a 50% AI-share day" means, so the arithmetic lives here exactly once:
 
