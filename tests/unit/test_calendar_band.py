@@ -33,6 +33,7 @@ from aiprofile.render.summary_svg import (
     CAL_LABEL_TEXT,
     CAL_LEGEND_CUE_TEXT,
     CAL_NOTICE_HEIGHT,
+    CAL_RAIL_COLUMNS,
     CAL_UNPUBLISHED_TEXT,
     CAL_WINDOW_DAYS,
     VOLUME_BAR_HEIGHTS,
@@ -559,6 +560,13 @@ def test_month_labels_render_ascii_and_muted():
         assert f'fill="{theme.muted}"' in svg
         for label in ("May", "Jun", "Jul"):
             assert f">{label}<" in svg
+
+
+def test_timeline_uses_sparse_editorial_alignment_rails():
+    """Rails are structural guides, not an extra quantitative channel."""
+    svg = render_summary(FIXTURE_MAIN, THEMES["github-light"])
+    assert svg.count('stroke-opacity="0.35"') == len(CAL_RAIL_COLUMNS)
+    assert "fill-opacity" not in svg
 
 
 def test_weekday_labels_follow_the_oldest_window_date():

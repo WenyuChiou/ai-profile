@@ -232,6 +232,11 @@ returns 404, confirm that Pages uses `main` and `/ (root)` and that
 
 The static, synthetic previews below demonstrate the complete output family:
 
+The summary card and dashboard share a flat Editorial Signal system: calm
+paper-and-ink surfaces, a blue collaboration signal, a warm evidence cue, and
+small alignment rules that improve reading without turning activity into a
+3D score or decorative scene.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
   <img alt="Synthetic AI collaboration summary card" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg">

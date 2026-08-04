@@ -246,6 +246,7 @@ def test_dashboard_uses_a_distinctive_local_typography_system():
     assert "repeating-linear-gradient(" not in html
     assert ".hero-panel::after" not in html
     assert ".section-kicker::before" in html
+    assert ".section-kicker::after" in html
     assert "background: var(--border-strong);" in html
     assert "border-inline-start: 0.25rem solid var(--warning);" in html
     assert "background: var(--canvas);" in html

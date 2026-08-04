@@ -424,6 +424,18 @@ which is authoritative).
   Profile PR #13 merged at `b991504`; its Pages deployment passed and all
   eight live outputs match the merged LF-normalized blobs. Final record:
   `docs/reviews/v0.4.9-release-readiness.md`.
+- **Editorial Signal skin candidate (2026-08-04, unreleased v0.4.10).**
+  A new research round compared Nanako0129's terminal-ledger composition with
+  Primer, Carbon, Radix, Geist, Vega-Lite, and profile generators. The
+  presentation-only candidate keeps the v0.4.9 flat Evidence Ledger, adds
+  sparse quarter-window alignment rails and a two-part editorial section
+  marker, and leaves ACE/schema, aggregation, privacy, CLI, and eight-output
+  contracts unchanged. Research and acceptance criteria:
+  `docs/reviews/design-research-2026-08-04.md`; decision:
+  `docs/decisions/ADR-026-editorial-signal-skin.md`. Local exact-wheel smoke,
+  privacy sweep, and browser evidence are recorded in
+  `docs/reviews/v0.4.10-visual-qa.md`; cross-platform publication and Profile
+  verification remain release blockers.
 - **The maintainer Profile refresh on public PyPI 0.4.8 is complete.**
   Profile PR #12 merged at `7f322beab1e532d906f943c62fc68e49ba21c02a`
   with the unchanged exact 11-repository full-publication scope. Profile

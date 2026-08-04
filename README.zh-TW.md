@@ -225,6 +225,10 @@ Profile 仍顯示 SVG，點擊連結後才開啟 `dashboard.html`。
 
 下方使用 synthetic data，展示完整輸出系列：
 
+summary card 與 dashboard 共用平面的 Editorial Signal 視覺系統：安靜的
+紙張與墨色表面、藍色協作訊號、暖黃色 evidence cue，以及只用來改善閱讀
+節奏的小型對齊線；活動不會被包裝成 3D 分數或裝飾場景。
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
   <img alt="使用 synthetic data 的 AI 協作 summary card" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-light.svg">
