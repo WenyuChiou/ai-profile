@@ -4,6 +4,19 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## Current v0.6.0 visual candidate (2026-08-04)
+
+- Research and implementation slice complete on `codex/v060-evidence-ledger`:
+  the flat Evidence Ledger now gives canonical model families stable
+  light/dark marks and bars, while preserving non-exclusive model semantics and
+  unique-commit daily geometry. ADR-028, design forensics, and visual QA are
+  recorded in the review/decision documents.
+- Verification: **667 passed, 4 skipped**, Ruff clean, README parity pass,
+  sanctioned snapshot regeneration byte-stable, candidate-wheel release smoke
+  pass, and Playwright responsive/theme/auto-system checks pass. This is an
+  unreleased `0.6.0` candidate; v0.5.0 remains the public PyPI/GitHub release
+  until the candidate artifact and release gates are green.
+
 ## Where things stand (2026-08-01)
 
 - **v0.1 vertical slice implemented and reviewed**: Phase 0 design

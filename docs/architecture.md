@@ -332,8 +332,8 @@ consumes it until the GitHub Action lands).
   collapse to one "+N model categories not shown" line. It is an all-time,
   non-exclusive ledger sourced from `VizStats.models`; it never changes daily
   terrain geometry and never offers a model filter without a matching scoped
-  aggregate contract (ADR-027). Its two-character category marks and neutral
-  model bar token are presentation-only; the collaboration accent remains
+  aggregate contract (ADR-027, ADR-028). Its two-character marks and stable
+  category palette are presentation-only; the collaboration accent remains
   reserved for the hero, share bar, provider bars, and header mark.
 - The Flat Evidence Ledger refinement (ADR-025) supersedes the perspective
   treatment for the summary's daily visual. It renders a 12-column by 7-row

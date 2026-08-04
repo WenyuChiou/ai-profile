@@ -3,7 +3,7 @@ name: ai-profile visual system
 version: 0.1
 status: beta
 audience: maintainers, contributors, and design-aware agents
-source_of_truth: docs/decisions/ADR-025-flat-evidence-ledger.md
+source_of_truth: [docs/decisions/ADR-025-flat-evidence-ledger.md, docs/decisions/ADR-028-stable-model-category-palette.md]
 themes: [github-light, github-dark]
 fonts: local-fallback-only
 network_assets: forbidden
@@ -27,6 +27,11 @@ The interface should let a reader answer, in roughly five seconds:
 The interface must also make the honest boundary visible: unknown is not
 human, provider presences can overlap one commit, and aggregate-only activity
 is identity redaction rather than anonymity.
+
+Model-family contribution is a separate all-time, non-exclusive ledger. Its
+canonical category mark, label, count/share, and stable category-coloured bar
+are redundant presentation channels; it never changes the daily matrix and it
+never implies a model-by-day aggregate. See ADR-028.
 
 ## Normative tokens
 
@@ -61,6 +66,11 @@ roles:
     border: "#34526f"
     evidence_surface: "#3b331e"
     unknown: "#8d9baa"
+model_categories:
+  key: canonical_category_slug
+  units: attributed_commits_and_actor_presences
+  denominator: unique_ai_attributed_commits
+  unknown: neutral_mark_and_label
 behavior:
   deterministic: true
   external_fonts: false
@@ -100,7 +110,7 @@ must not recalculate or infer attribution.
 
 ## Editorial Signal skin
 
-The v0.4.10 candidate keeps the flat ledger and adds a restrained editorial
+The v0.6 candidate keeps the flat ledger and adds a restrained editorial
 instrument rhythm: section headings use a short rule plus datum bar, and the
 12-week matrix uses sparse quarter-window alignment rails. These rails are
 structural guides only; they never encode a third statistic. The goal is a

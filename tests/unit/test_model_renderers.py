@@ -8,7 +8,7 @@ from dataclasses import replace
 from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.render.dashboard_html import render_dashboard
 from aiprofile.render.summary_svg import render_summary
-from aiprofile.render.themes import THEMES
+from aiprofile.render.themes import MODEL_CATEGORY_COLORS, THEMES, model_category_color
 from aiprofile.viz import (
     DayCell,
     DayCount,
@@ -40,6 +40,17 @@ def _stats(*, models: tuple[ModelRow, ...]) -> VizStats:
     )
 
 
+def _relative_luminance(hex_color: str) -> float:
+    channels = [int(hex_color[index : index + 2], 16) / 255 for index in (1, 3, 5)]
+    linear = [
+        channel / 12.92
+        if channel <= 0.04045
+        else ((channel + 0.055) / 1.055) ** 2.4
+        for channel in channels
+    ]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
 def test_summary_model_ledger_is_labeled_and_overflow_is_bounded():
     rows = tuple(
             ModelRow(category, display, 3 - index // 2, 3 - index // 2, 1)
@@ -59,6 +70,16 @@ def test_summary_model_ledger_is_labeled_and_overflow_is_bounded():
     assert "+1 model categories not shown" in svg
     assert "Claude" in svg and "GPT" in svg
     assert 'font-size="11"' in svg
+    assert f'fill="{model_category_color(THEMES["github-light"], "claude")}"' in svg
+    assert f'fill="{model_category_color(THEMES["github-light"], "gpt")}"' in svg
+    for theme_name, theme in THEMES.items():
+        for category, color in MODEL_CATEGORY_COLORS[theme_name].items():
+            assert model_category_color(theme, category) == color
+            foreground, background = sorted(
+                (_relative_luminance(color), _relative_luminance(theme.bg)),
+                reverse=True,
+            )
+            assert (foreground + 0.05) / (background + 0.05) >= 3
 
 
 def test_summary_description_matches_unknown_and_overflow_visibility():
@@ -118,6 +139,11 @@ def test_dashboard_embeds_same_validated_model_rows_without_raw_values():
     assert "private-model-canary" not in html
     assert "model_raw" not in dumps_stats(stats)
     assert "honestPercentLabel" in html
+    assert "const modelColors =" in html
+    assert '"claude":"#8a3f2f"' in html
+    assert '"gpt":"#146b5a"' in html
+    assert "mark.style.color = categoryColor" in html
+    assert "mark.style.borderColor = categoryColor" in html
 
 
 def test_dashboard_zero_model_state_is_honest():
