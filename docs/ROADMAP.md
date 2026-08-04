@@ -153,8 +153,8 @@ designed v0.5.0 plan.
 
 - [x] Summary card redesigned as the recruiter-first `AI Collaboration
       Record` (ADR-022): hero + share, secondary ledger, prominent
-      12-week whole-rhythm isometric terrain (height = total-commit
-      bins, hue = AI-share bins, provider-independent geometry),
+      12-week flat daily matrix (bar height = total-commit bins, fill =
+      AI-share bins, provider-independent geometry; ADR-025),
       non-exclusive provider ledger, compact evidence rail.
 - [x] Dashboard headline and summary type system aligned with the shared
       editorial-tech direction; README example simplified to the Summary
@@ -171,12 +171,12 @@ designed v0.5.0 plan.
 - [x] Evidence-ledger alignment (ADR-023): separate provider count and
       percentage columns, keep section markers semantic, and preserve the
       existing renderer/data/privacy contract.
-- [x] Structural Current visual contract (ADR-024): document semantic roles,
+- [x] Flat Evidence Ledger visual contract (ADR-025): document semantic roles,
       local fallback typography, the evidence-first composition grammar, and
       the no-gradient/no-network/no-inference boundary in `DESIGN.md`.
-- [x] Add a faint deterministic terrain scaffold and neutral dashboard section
-      markers; the scaffold is decorative and does not alter daily height/share
-      or provider/commit aggregation semantics.
+- [x] Replace the perspective daily treatment with a deterministic flat
+      matrix and neutral dashboard section markers; the matrix preserves daily
+      height/share and provider/commit aggregation semantics.
 - [x] Complete the independent visual, accessibility, privacy, and artifact
       review before deciding whether a patch release is warranted.
 

@@ -718,16 +718,13 @@ _ALLOWED_SVG_TAGS = {
     # a single static <path fill="..." transform="...">, never active
     # content — still covered by the checks below (no "on*" handlers, no
     # href, no external refs).
-    # "polygon" was pre-provisioned for round D2 (isometric calendar band,
-    # ADR-018): each grid cell's flat diamond or stacked-column faces are
-    # static <polygon points="..." fill="..."> elements.
     # "g"/"animate" were briefly allowed for a D2 SMIL entrance and then
     # REMOVED with the animation itself (two static-capture invisibility
     # failures - see summary_svg's no-entrance-animation note): the band
     # ships fully static, so the allowlist shrinks back accordingly and
     # the sweep would catch any reintroduction.
     for t in (
-        "svg", "title", "desc", "rect", "line", "text", "tspan", "polygon", "path",
+        "svg", "title", "desc", "rect", "line", "text", "tspan", "path",
     )
 }
 

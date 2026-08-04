@@ -7,9 +7,9 @@ output for identical inputs is a pinned test (mvp.md section 7 test 11).
 
 v0.4.8 redesigns the card as the recruiter-facing `AI Collaboration
 Record` (ADR-022): header + period, a hero AI-attributed-commit figure
-with its share of scanned commits, a secondary metric ledger, a prominent
-12-week isometric collaboration terrain (height = total-commit volume
-bins, hue = AI-share bins — the heatmap card's own fixed bins, shared via
+with its share of scanned commits, a secondary metric ledger, a readable
+12-week flat daily matrix (bar height = total-commit volume bins, fill =
+AI-share bins — the heatmap card's own fixed bins, shared via
 `render/_bins.py`), the top-six provider ledger with an explicit
 non-exclusive note, and a compact evidence rail.
 
@@ -94,11 +94,11 @@ LEDGER_VALUE_X = WIDTH - PADDING
 LEDGER_FIRST_Y = 88
 LEDGER_ROW_STEP = 24
 
-# Provider ledger (rendered BELOW the terrain since v0.4.8 — the terrain
+# Provider ledger (rendered BELOW the daily matrix since v0.4.8 — the matrix
 # is the card's recruiter-facing centerpiece, ADR-022). The table's top
-# depends on the terrain block's height, so the row origin is a function
+# depends on the daily block's height, so the row origin is a function
 # (`_rows_top`), not a constant.
-TABLE_LABEL_OFFSET = 12  # terrain bottom + CAL_GAP_BELOW -> table label baseline
+TABLE_LABEL_OFFSET = 12  # matrix bottom + CAL_GAP_BELOW -> table label baseline
 ROWS_TOP_OFFSET = 16  # table label baseline -> first row top
 ROW_HEIGHT = 28
 
@@ -185,19 +185,19 @@ ZERO_HINT_Y = 144
 ZERO_BODY_BOTTOM = 164
 
 # ---------------------------------------------------------------------------
-# Isometric collaboration terrain (round D2 geometry, ADR-018; semantics
-# redefined by ADR-022). Rendered between the secondary ledger and the
-# provider table. Each published day is ONE solid prism:
+# Flat collaboration timeline (ADR-025; semantics from ADR-022). Rendered
+# between the secondary ledger and the provider table. Each published day is
+# one compact 2D cell:
 #
-# - HEIGHT encodes `DayCell.total_commits` through the fixed volume bins
-#   0 / 1 / 2-4 / 5-7 / 8+ (`_bins._volume_bin` -> TERRAIN_HEIGHTS) — the
+# - BAR HEIGHT encodes `DayCell.total_commits` through the fixed volume bins
+#   0 / 1 / 2-4 / 5-7 / 8+ (`_bins._volume_bin` -> VOLUME_BAR_HEIGHTS) — the
 #   owner's whole working rhythm, every commit regardless of attribution
 #   (unattributed and explicitly human-declared included);
-# - the TOP-FACE HUE encodes the day's AI share (`ai_commits /
+# - FILL HUE encodes the day's AI share (`ai_commits /
 #   total_commits`) through the heatmap card's own fixed share bins
 #   (`_bins._share_bin` -> `_bins._share_colors`).
 #
-# Provider rows and counts NEVER contribute to terrain geometry: a
+# Provider rows and counts NEVER contribute to matrix geometry: a
 # one-commit multi-provider day is exactly as tall as a one-commit
 # single-provider day (pinned in tests/unit/test_recruiter_card.py).
 #
@@ -205,16 +205,14 @@ ZERO_BODY_BOTTOM = 164
 # nonzero headline totals renders the exact CAL_UNPUBLISHED_TEXT notice
 # instead of a fabricated grid.
 #
-# Geometry is precomputed INTEGER affine arithmetic on purpose: every
-# constant here is an int, and col/row/elevation are always ints too, so a
-# <polygon> "points" list can never carry floating-point noise
-# (test_calendar_band.py::test_polygon_points_carry_no_float_noise).
+# Geometry is precomputed INTEGER grid arithmetic on purpose so coordinates
+# and dimensions remain byte-stable and free of floating-point noise.
 # ---------------------------------------------------------------------------
 
-CAL_GAP_BELOW = 20  # terrain bottom -> provider-table label block
+CAL_GAP_BELOW = 20  # matrix bottom -> provider-table label block
 CAL_LABEL_SIZE = 12
 CAL_LABEL_BASELINE_Y = 14  # local y (band-relative) of the label's text baseline
-CAL_LABEL_TEXT = "Collaboration terrain (last 12 weeks)"
+CAL_LABEL_TEXT = "Daily collaboration (last 12 weeks)"
 
 #: The exact honest message for a profile whose headline totals are
 #: nonzero but whose daily series is unpublished (ADR-022).
@@ -222,13 +220,13 @@ CAL_UNPUBLISHED_TEXT = "Daily activity is not published for this profile"
 CAL_NOTICE_MESSAGE_Y = 38  # local baseline of the unpublished-daily message
 CAL_NOTICE_HEIGHT = 44  # total footprint of the unpublished-daily notice
 
-#: Fixed y where the terrain block starts: the hero/ledger block above it
+#: Fixed y where the matrix block starts: the hero/ledger block above it
 #: is fixed-height (share bar bottom 179 / ledger baseline 160), plus a
 #: 24px section gap on the 4px scale.
 CAL_TOP = 204
 
 # Round D3 P2: month-boundary labels sit in their own row between the band
-# header and the diamond grid. CAL_GRID_TOP_Y (below) derives from these so
+# header and the flat cell grid. CAL_GRID_TOP_Y (below) derives from these so
 # bumping either constant here re-flows the whole grid/legend/CAL_HEIGHT
 # automatically.
 CAL_MONTH_LABEL_SIZE = 11
@@ -237,92 +235,54 @@ CAL_MONTH_LABEL_GRID_GAP = 10  # month-label baseline -> grid top
 
 CAL_WEEKS = 12
 CAL_DAYS = 7
-CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- the terrain's OWN newest-anchored
+CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- the matrix's OWN newest-anchored
 # slice of the (D4: 365-day) viz.DAILY_WINDOW_DAYS series; gate-17 L-01
 
-CAL_TILE_HW = 18  # isometric tile half-width
-CAL_TILE_HH = 9  # isometric tile half-height (2:1 diamond ratio)
-CAL_MAX_STACK_PX = 32  # prism height of the top volume bin (8+ commits)
+CAL_CELL_W = 38
+CAL_CELL_H = 20
+CAL_CELL_GAP = 6
+CAL_BAR_INSET = 4
+CAL_MAX_BAR_HEIGHT = 12
 
-#: Fixed prism heights per volume bin (ADR-022): 1 -> 8px, 2-4 -> 16px,
-#: 5-7 -> 24px, 8+ -> CAL_MAX_STACK_PX. Indexed by `_bins._volume_bin`,
+#: Fixed bar heights per volume bin (ADR-025): 1 -> 3px, 2-4 -> 6px,
+#: 5-7 -> 9px, 8+ -> CAL_MAX_BAR_HEIGHT. Indexed by `_bins._volume_bin`,
 #: which shares the exact thresholds with the heatmap card. A documented
 #: saturating top bin, not a silent clip: one outlier day cannot dwarf the
 #: window or blow the card's fixed geometry budget.
-TERRAIN_HEIGHTS = (8, 16, 24, CAL_MAX_STACK_PX)
+VOLUME_BAR_HEIGHTS = (3, 6, 9, CAL_MAX_BAR_HEIGHT)
 
-#: The volume cap the legend bins derive from — the shared render/_bins
-#: contract value (8), kept under its historical name because the D3
-#: legend derivation (`_legend_bins`) and its tests address it this way.
+#: The volume cap used by the shared render/_bins contract (8).
 CAL_CAP_COMMITS = VOLUME_CAP
 
-#: Local (band-relative) y where the grid starts: high enough that even a
-#: full-height prism at (col=0, row=0) never draws above y=0 within the
-#: band. Local y=0 is the very top of the whole band (the label's own
-#: baseline sits below it, at CAL_LABEL_BASELINE_Y).
+#: Local (band-relative) y where the matrix starts. Local y=0 is the very
+#: top of the whole band; the label and month row sit above the cells.
 CAL_GRID_TOP_Y = CAL_MONTH_LABEL_BASELINE_Y + CAL_MONTH_LABEL_GRID_GAP  # 40
-CAL_GRID_BOTTOM_MARGIN = 6
+CAL_GRID_WIDTH = CAL_WEEKS * CAL_CELL_W + (CAL_WEEKS - 1) * CAL_CELL_GAP
+CAL_GRID_HEIGHT = CAL_DAYS * CAL_CELL_H + (CAL_DAYS - 1) * CAL_CELL_GAP
+CAL_GRID_X = (WIDTH - CAL_GRID_WIDTH) // 2
+CAL_GRID_BOTTOM_Y = CAL_GRID_TOP_Y + CAL_GRID_HEIGHT
 
-# Structural Current guide lines: a faint, deterministic calibration grid
-# following the tile seams. These lines are a visual scaffold only; they never
-# encode a second metric and are drawn after the faces so the existing
-# height/share marks remain the only data-bearing terrain signal.
-
-#: Bounding box of the flat (unraised) diamond grid, in a LOCAL x space
-#: centered on nothing in particular (col=0,row=0 sits at local x=0) --
-#: used only to size/center the grid; final absolute x adds CAL_X_OFFSET.
-CAL_LEFTMOST_LOCAL_X = -(CAL_DAYS - 1) * CAL_TILE_HW - CAL_TILE_HW  # -126
-CAL_RIGHTMOST_LOCAL_X = (CAL_WEEKS - 1) * CAL_TILE_HW + CAL_TILE_HW  # 216
-#: Centers the grid horizontally within the card (integer floor division;
-#: WIDTH/tile constants are fixed, so this is a deterministic constant).
-CAL_X_OFFSET = WIDTH // 2 - (CAL_LEFTMOST_LOCAL_X + CAL_RIGHTMOST_LOCAL_X) // 2
-
-#: Shifts the grid's own (col=0, row=0, elevation=0) tile center so that
-#: the topmost possible point (col=0, row=0, full CAL_MAX_STACK_PX prism)
-#: lands exactly at CAL_GRID_TOP_Y.
-CAL_ORIGIN_Y = CAL_GRID_TOP_Y + CAL_TILE_HH + CAL_MAX_STACK_PX
-
-#: Bottommost point of the grid (col=CAL_WEEKS-1, row=CAL_DAYS-1, elevation 0).
-CAL_GRID_BOTTOM_Y = CAL_ORIGIN_Y + (CAL_WEEKS - 1 + CAL_DAYS - 1) * CAL_TILE_HH + CAL_TILE_HH
-
-# Terrain legend (v0.4.8): one compact line under the grid stating BOTH
-# encodings — four miniature prisms for the height bins (1 / 2-4 / 5-7 /
-# 8+ total commits) and the five-step neutral->accent ramp for the AI
-# share — plus the standing "publishable repos only" cue.
-CAL_LEGEND_TILE_HW = 6  # legend diamond half-width (smaller than a grid tile)
-CAL_LEGEND_TILE_HH = 3  # legend diamond half-height (2:1 ratio, matches CAL_TILE_HW/HH)
+# Flat legend: one compact line under the matrix stating both encodings:
+# volume-bar bins, the five-step neutral-to-accent AI-share ramp, and the
+# standing "publishable repos only" cue.
+CAL_LEGEND_SWATCH = 10
 CAL_LEGEND_LABEL_SIZE = 11
-CAL_LEGEND_LABEL_GAP = 4  # a diamond's right edge -> its own label's x
-CAL_LEGEND_ITEM_GAP = 14  # one bin's label -> the next bin's diamond
-CAL_LEGEND_DIAMOND_DY = -4  # diamond center, relative to the legend baseline
-CAL_LEGEND_TOP_GAP = 14  # grid-bottom margin -> legend baseline
+CAL_LEGEND_LABEL_GAP = 4
+CAL_LEGEND_ITEM_GAP = 10
+CAL_LEGEND_TOP_GAP = 18  # grid bottom -> legend baseline
 CAL_LEGEND_BOTTOM_PAD = 4  # legend baseline -> band bottom (descender clearance)
-CAL_LEGEND_ROW_HEIGHT = CAL_LEGEND_TOP_GAP + CAL_LEGEND_BOTTOM_PAD  # the named growth constant
 CAL_LEGEND_GROUP_GAP = 12  # gap between the height group and the share group
-CAL_LEGEND_RAMP_STEP = 3  # gap between two share-ramp diamonds
+CAL_LEGEND_RAMP_STEP = 4
 CAL_LEGEND_CUE_TEXT = "publishable repos only"
-CAL_LEGEND_HEIGHT_LABEL = "Commits"
+CAL_LEGEND_HEIGHT_LABEL = "Volume"
 CAL_LEGEND_SHARE_LABEL = "AI share"
 
-#: Miniature prism elevations for the legend's four height bins — the real
-#: TERRAIN_HEIGHTS scaled to the legend tile (integer division keeps the
-#: no-float-noise discipline).
-CAL_LEGEND_ELEVATIONS = tuple(h // 4 for h in TERRAIN_HEIGHTS)  # (2, 4, 6, 8)
-
 #: Local (band-relative) y of the legend row's text baseline.
-CAL_LEGEND_BASELINE_Y = CAL_GRID_BOTTOM_Y + CAL_GRID_BOTTOM_MARGIN + CAL_LEGEND_TOP_GAP
+CAL_LEGEND_BASELINE_Y = CAL_GRID_BOTTOM_Y + CAL_LEGEND_TOP_GAP
 
-#: Total fixed footprint of the terrain (label + month-label row + grid +
+#: Total fixed footprint of the daily matrix (label + month-label row + grid +
 #: legend); the notice variant occupies CAL_NOTICE_HEIGHT instead.
 CAL_HEIGHT = CAL_LEGEND_BASELINE_Y + CAL_LEGEND_BOTTOM_PAD
-
-#: Isometric face shading -- same flat hue for all three faces of a prism,
-#: distinguished only by fill-opacity (never a computed/blended hex): top
-#: face full strength, the two side "walls" progressively dimmer, giving a
-#: 3D read without introducing any new color value.
-CAL_FACE_OPACITY_TOP = 0.88
-CAL_FACE_OPACITY_LEFT = 0.62
-CAL_FACE_OPACITY_RIGHT = 0.42
 
 #: NO entrance animation - a deliberate REMOVAL, twice-earned during D2
 #: visual verification (spec rule: honest > flashy):
@@ -335,7 +295,7 @@ CAL_FACE_OPACITY_RIGHT = 0.42
 #:    the band was STILL invisible in every static capture, verified on
 #:    a real PDF print.
 #: Any from-nothing entrance has this structural problem: some real
-#: consumer always captures t=0. The terrain is therefore fully static;
+#: consumer always captures t=0. The matrix is therefore fully static;
 #: a future entrance must prove a t=0-visible capture first.
 
 # ---------------------------------------------------------------------------
@@ -520,22 +480,22 @@ def _has_more_line(stats: VizStats) -> bool:
 
 
 def _calendar_top(stats: VizStats) -> int:
-    # Fixed since v0.4.8: the terrain block sits directly under the
+    # Fixed since v0.4.8: the matrix block sits directly under the
     # fixed-height hero/ledger block (ADR-022 moved it above the provider
     # table). Kept as a function of stats for signature stability.
     del stats
     return CAL_TOP
 
 
-def _terrain_block_height(stats: VizStats) -> int:
-    """The terrain block's footprint: the full grid when a publishable
+def _timeline_block_height(stats: VizStats) -> int:
+    """The daily matrix footprint: the full grid when a publishable
     daily series exists, the compact unpublished-daily notice otherwise
     (never zero — the zero state bypasses this layout entirely)."""
     return CAL_HEIGHT if stats.daily else CAL_NOTICE_HEIGHT
 
 
 def _table_label_y(stats: VizStats) -> int:
-    return _calendar_top(stats) + _terrain_block_height(stats) + CAL_GAP_BELOW + TABLE_LABEL_OFFSET
+    return _calendar_top(stats) + _timeline_block_height(stats) + CAL_GAP_BELOW + TABLE_LABEL_OFFSET
 
 
 def _rows_top(stats: VizStats) -> int:
@@ -565,7 +525,7 @@ def card_height(stats: VizStats) -> int:
 
 
 def _calendar_desc_suffix(stats: VizStats) -> str:
-    """One-line ASCII terrain summary appended to <desc>: the window span
+    """One-line ASCII matrix summary appended to <desc>: the window span
     (anchored at the series' own newest date, never "today"), the peak
     day's total commits, and both encodings stated. The unpublished-daily
     state repeats the exact on-card notice so the accessible text and the
@@ -574,7 +534,7 @@ def _calendar_desc_suffix(stats: VizStats) -> str:
         return f" {CAL_UNPUBLISHED_TEXT}."
     newest = datetime.date.fromisoformat(stats.daily[-1].date)
     window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
-    # Peak over the terrain's OWN 84-day slice only: since D4 widened the
+    # Peak over the matrix's OWN 84-day slice only: since D4 widened the
     # series to 365 days, an out-of-window day must not leak into this
     # window-scoped claim.
     peak_total = max(
@@ -583,8 +543,8 @@ def _calendar_desc_suffix(stats: VizStats) -> str:
         if cell.date >= window_start.isoformat()
     )
     return (
-        f" Collaboration terrain {window_start.isoformat()} to {newest.isoformat()},"
-        f" peak day {peak_total} commits; height is total commits, hue is the day's"
+        f" Daily collaboration {window_start.isoformat()} to {newest.isoformat()},"
+        f" peak day {peak_total} commits; bar height is total commits, fill is the day's"
         " AI share; publishable repositories only."
     )
 
@@ -908,8 +868,7 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Isometric collaboration terrain builders (geometry from round D2,
-# ADR-018; semantics from ADR-022).
+# Flat collaboration timeline builders (ADR-025; semantics from ADR-022).
 # ---------------------------------------------------------------------------
 
 #: ASCII 3-letter English month abbreviations, index 0 = January (P2).
@@ -929,7 +888,7 @@ def _calendar_grid_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
     A day that predates the series and a genuine zero-commit day inside
     the series are the SAME case here (both simply absent from
     ``stats.daily``, since VizStats forbids storing a zero-count DayCell):
-    both render as the flat base diamond in ``_day_cell_svg``.
+    both render as the neutral track cell in ``_day_cell_svg``.
     """
     if not stats.daily:
         return (None,) * CAL_WINDOW_DAYS
@@ -941,135 +900,67 @@ def _calendar_grid_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
     )
 
 
-def _iso_tile_corners(
-    cx: int, cy: int, elevation: int
-) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
-    """(top, right, bottom, left) corners of the diamond tile centered at
-    ``(cx, cy)``, raised ``elevation`` px (screen-space vertical extrusion —
-    the standard flat-shaded approximation for an isometric column)."""
-    y = cy - elevation
-    return (
-        (cx, y - CAL_TILE_HH),
-        (cx + CAL_TILE_HW, y),
-        (cx, y + CAL_TILE_HH),
-        (cx - CAL_TILE_HW, y),
-    )
-
-
-def _polygon(
-    points: tuple[tuple[int, int], ...], *, fill: str, opacity: float | None = None
-) -> str:
-    pts = " ".join(f"{x},{y}" for x, y in points)
-    has_opacity = opacity is not None and opacity != 1
-    opacity_attr = f' fill-opacity="{opacity}"' if has_opacity else ""
-    return f'<polygon points="{pts}" fill="{fill}"{opacity_attr}/>'
-
-
 def _day_cell_svg(cell: DayCell | None, cx: int, cy: int, theme: Theme) -> str:
-    """One grid cell: a flat base diamond (no published data) or ONE solid
-    isometric prism (ADR-022) whose
+    """One flat grid cell whose bottom bar carries the daily encodings:
 
-    - HEIGHT is the fixed volume bin of ``cell.total_commits``
-      (TERRAIN_HEIGHTS via `_bins._volume_bin` — the heatmap's own
+    - BAR HEIGHT is the fixed volume bin of ``cell.total_commits``
+      (VOLUME_BAR_HEIGHTS via `_bins._volume_bin` — the heatmap's own
       1 / 2-4 / 5-7 / 8+ buckets), and
-    - HUE is the fixed AI-share bin of ``cell.ai_commits /
+    - FILL HUE is the fixed AI-share bin of ``cell.ai_commits /
       cell.total_commits`` (`_bins._share_bin` -> `_bins._share_colors`,
       neutral for a day with zero attributed AI commits — never a human
       claim, since unattributed history sits in that bin too — and accent
       for a day whose commits are all AI-attributed).
 
-    Provider counts never reach this geometry: a one-commit
-    multi-provider day renders byte-identically to a one-commit
-    single-provider day (pinned in tests/unit/test_recruiter_card.py).
+    Provider counts never reach this geometry: a one-commit multi-provider
+    day renders byte-identically to a one-commit single-provider day.
     """
-    if cell is None:
-        top, right, bottom, left = _iso_tile_corners(cx, cy, 0)
-        return _polygon((top, right, bottom, left), fill=theme.bar_track)
-
-    height_px = TERRAIN_HEIGHTS[_volume_bin(cell.total_commits)]
-    color = _share_colors(theme)[_share_bin(cell.ai_commits, cell.total_commits)]
-    _, right0, bottom0, left0 = _iso_tile_corners(cx, cy, 0)
-    top1, right1, bottom1, left1 = _iso_tile_corners(cx, cy, height_px)
-    return "\n".join(
-        (
-            _polygon((left1, bottom1, bottom0, left0), fill=color, opacity=CAL_FACE_OPACITY_LEFT),
-            _polygon(
-                (bottom1, right1, right0, bottom0), fill=color, opacity=CAL_FACE_OPACITY_RIGHT
-            ),
-            _polygon((top1, right1, bottom1, left1), fill=color, opacity=CAL_FACE_OPACITY_TOP),
-        )
-    )
+    cell_x = cx - CAL_CELL_W // 2
+    cell_y = cy - CAL_CELL_H // 2
+    parts = [_rect(cell_x, cell_y, CAL_CELL_W, CAL_CELL_H, fill=theme.bar_track, rx=4)]
+    if cell is not None:
+        height_px = VOLUME_BAR_HEIGHTS[_volume_bin(cell.total_commits)]
+        color = _share_colors(theme)[_share_bin(cell.ai_commits, cell.total_commits)]
+        bar_x = cell_x + CAL_BAR_INSET
+        bar_y = cell_y + CAL_CELL_H - CAL_BAR_INSET - height_px
+        bar_w = CAL_CELL_W - 2 * CAL_BAR_INSET
+        parts.append(_rect(bar_x, bar_y, bar_w, height_px, fill=color, rx=2))
+    return "\n".join(parts)
 
 
 def _calendar_cell_position(offset: int) -> tuple[int, int, int, int]:
     """``(col, row, cx, cy)`` for a grid offset, cy relative to the band's
     own local origin (add the band's absolute top separately)."""
     col, row = offset // CAL_DAYS, offset % CAL_DAYS
-    cx = CAL_X_OFFSET + (col - row) * CAL_TILE_HW
-    cy = CAL_ORIGIN_Y + (col + row) * CAL_TILE_HH
+    cx = CAL_GRID_X + col * (CAL_CELL_W + CAL_CELL_GAP) + CAL_CELL_W // 2
+    cy = CAL_GRID_TOP_Y + row * (CAL_CELL_H + CAL_CELL_GAP) + CAL_CELL_H // 2
     return col, row, cx, cy
 
 
-def _calendar_grid_guides_svg(theme: Theme, top: int) -> str:
-    """Render the quiet isometric scaffold along the daily tile boundaries.
+def _calendar_weekday_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    """Render weekday labels aligned to the matrix's anchored window.
 
-    The guides follow the same integer corner arithmetic as
-    ``_calendar_cell_position`` and ``_iso_tile_corners``.  They are
-    intentionally independent of ``VizStats``: an empty day and a populated
-    day share the same spatial frame.  The caller draws them *after* the
-    prisms so the scaffold remains visible at the tile seams; it never runs
-    through a data face.
+    The matrix is oldest-to-newest in seven-row weekday order, but its
+    oldest date may begin on any weekday. Rotate the Monday-first vocabulary
+    from that actual window start so the left rail never claims the wrong day.
     """
-    parts: list[str] = []
-    seen: set[tuple[tuple[int, int], tuple[int, int]]] = set()
-
-    def append_guide(start: tuple[int, int], end: tuple[int, int]) -> None:
-        """Append one seam chain, suppressing shared-edge duplicates."""
-        key = (start, end) if start <= end else (end, start)
-        if key in seen:
-            return
-        seen.add(key)
-        parts.append(
-            _line(
-                *start,
-                *end,
-                stroke=theme.border,
-                stroke_opacity=0.45,
-            )
+    newest = datetime.date.fromisoformat(stats.daily[-1].date)
+    window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
+    monday_first = ("M", "T", "W", "T", "F", "S", "S")
+    labels = tuple(
+        monday_first[(window_start.weekday() + row) % CAL_DAYS] for row in range(CAL_DAYS)
+    )
+    return "\n".join(
+        _text(
+            CAL_GRID_X - 8,
+            top + CAL_GRID_TOP_Y + row * (CAL_CELL_H + CAL_CELL_GAP) + CAL_CELL_H // 2 + 4,
+            label,
+            size=11,
+            fill=theme.muted,
+            anchor="end",
         )
-
-    # Each row has two continuous boundary chains parallel to the week axis:
-    # the top/right and bottom/left edges of its diamonds.
-    for row in range(CAL_DAYS):
-        first = _calendar_cell_position(row)
-        last = _calendar_cell_position((CAL_WEEKS - 1) * CAL_DAYS + row)
-        _, _, first_x, first_y = first
-        _, _, last_x, last_y = last
-        first_top, first_right, first_bottom, first_left = _iso_tile_corners(
-            first_x, top + first_y, 0
-        )
-        last_top, last_right, last_bottom, last_left = _iso_tile_corners(
-            last_x, top + last_y, 0
-        )
-        append_guide(first_top, last_right)
-        append_guide(first_left, last_bottom)
-
-    # Each column has two continuous boundary chains parallel to the
-    # weekday axis: the top/left and right/bottom edges of its diamonds.
-    for col in range(CAL_WEEKS):
-        first = _calendar_cell_position(col * CAL_DAYS)
-        last = _calendar_cell_position(col * CAL_DAYS + CAL_DAYS - 1)
-        _, _, first_x, first_y = first
-        _, _, last_x, last_y = last
-        first_top, first_right, first_bottom, first_left = _iso_tile_corners(
-            first_x, top + first_y, 0
-        )
-        last_top, last_right, last_bottom, last_left = _iso_tile_corners(
-            last_x, top + last_y, 0
-        )
-        append_guide(first_top, last_left)
-        append_guide(first_right, last_bottom)
-    return "\n".join(parts)
+        for row, label in enumerate(labels)
+    )
 
 
 def _month_boundaries(dates: tuple[datetime.date, ...]) -> tuple[tuple[int, str], ...]:
@@ -1133,14 +1024,11 @@ def _month_label_columns(stats: VizStats) -> tuple[tuple[int, str], ...]:
 
 
 def _calendar_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The month-boundary label row (P2), rendered between the band header
-    and the diamond grid (see CAL_MONTH_LABEL_BASELINE_Y). Each label
-    anchors at its month's own first visible column, using that column's
-    row=0 x (the top/left-most point of its isometric skew)."""
+    """The month-boundary label row (P2), aligned to flat matrix columns."""
     baseline_y = top + CAL_MONTH_LABEL_BASELINE_Y
     parts = [
         _text(
-            CAL_X_OFFSET + col * CAL_TILE_HW,
+            CAL_GRID_X + col * (CAL_CELL_W + CAL_CELL_GAP) + CAL_CELL_W // 2,
             baseline_y,
             label,
             size=CAL_MONTH_LABEL_SIZE,
@@ -1173,65 +1061,25 @@ def _legend_bins(cap: int) -> tuple[tuple[int, str], ...]:
     return tuple(bins)
 
 
-def _legend_diamond_points(cx: int, cy: int) -> tuple[tuple[int, int], ...]:
-    """(top, right, bottom, left) corners of a flat legend diamond
-    centered at ``(cx, cy)`` -- same 2:1 shape as the grid tiles, sized by
-    the smaller CAL_LEGEND_TILE_HW/HH constants."""
-    return (
-        (cx, cy - CAL_LEGEND_TILE_HH),
-        (cx + CAL_LEGEND_TILE_HW, cy),
-        (cx, cy + CAL_LEGEND_TILE_HH),
-        (cx - CAL_LEGEND_TILE_HW, cy),
-    )
-
-
-def _legend_prism_svg(cx: int, cy: int, elevation: int, theme: Theme) -> str:
-    """A miniature terrain prism for the legend's height bins: the same
-    three-face construction as `_day_cell_svg`, scaled to the legend tile
-    and rendered in the neutral ``theme.muted`` (the legend states the
-    HEIGHT encoding; hue is stated separately by the share ramp)."""
-
-    def corners(elev: int) -> tuple[tuple[int, int], ...]:
-        y = cy - elev
-        return (
-            (cx, y - CAL_LEGEND_TILE_HH),
-            (cx + CAL_LEGEND_TILE_HW, y),
-            (cx, y + CAL_LEGEND_TILE_HH),
-            (cx - CAL_LEGEND_TILE_HW, y),
-        )
-
-    _, right0, bottom0, left0 = corners(0)
-    top1, right1, bottom1, left1 = corners(elevation)
-    fill = theme.muted
-    return "\n".join(
-        (
-            _polygon((left1, bottom1, bottom0, left0), fill=fill, opacity=CAL_FACE_OPACITY_LEFT),
-            _polygon((bottom1, right1, right0, bottom0), fill=fill, opacity=CAL_FACE_OPACITY_RIGHT),
-            _polygon((top1, right1, bottom1, left1), fill=fill, opacity=CAL_FACE_OPACITY_TOP),
-        )
-    )
-
-
 def _calendar_legend_svg(theme: Theme, top: int) -> str:
-    """The terrain legend (ADR-022): four miniature prisms stating the
-    height bins over total commits, the five-step neutral->accent ramp
+    """The flat legend (ADR-025): volume swatches and a share ramp state the
+    height bins over total commits, the five-step neutral-to-accent ramp
     stating the AI-share hue, and the standing "publishable repos only"
     cue. Every color is a theme token or a `_bins._share_colors` step —
-    exactly the hexes real day prisms use."""
+    exactly the hexes real day bars use."""
     baseline_y = top + CAL_LEGEND_BASELINE_Y
-    diamond_cy = baseline_y + CAL_LEGEND_DIAMOND_DY
     parts: list[str] = []
     x = PADDING
     parts.append(
         _text(x, baseline_y, CAL_LEGEND_HEIGHT_LABEL, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
     )
     x += round(_text_width(CAL_LEGEND_HEIGHT_LABEL, CAL_LEGEND_LABEL_SIZE)) + 8
-    for elevation, (_, label) in zip(
-        CAL_LEGEND_ELEVATIONS, _legend_bins(CAL_CAP_COMMITS), strict=True
-    ):
-        cx = x + CAL_LEGEND_TILE_HW
-        parts.append(_legend_prism_svg(cx, diamond_cy, elevation, theme))
-        label_x = cx + CAL_LEGEND_TILE_HW + CAL_LEGEND_LABEL_GAP
+    for height, (_, label) in zip(VOLUME_BAR_HEIGHTS, _legend_bins(CAL_CAP_COMMITS), strict=True):
+        swatch_y = baseline_y - height + 2
+        parts.append(
+            _rect(x, swatch_y, CAL_LEGEND_SWATCH, height, fill=theme.muted, rx=2)
+        )
+        label_x = x + CAL_LEGEND_SWATCH + CAL_LEGEND_LABEL_GAP
         parts.append(
             _text(label_x, baseline_y, label, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
         )
@@ -1244,9 +1092,17 @@ def _calendar_legend_svg(theme: Theme, top: int) -> str:
     parts.append(_text(x, baseline_y, "0%", size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted))
     x += round(_text_width("0%", CAL_LEGEND_LABEL_SIZE)) + 6
     for color in _share_colors(theme):
-        cx = x + CAL_LEGEND_TILE_HW
-        parts.append(_polygon(_legend_diamond_points(cx, diamond_cy), fill=color))
-        x += 2 * CAL_LEGEND_TILE_HW + CAL_LEGEND_RAMP_STEP
+        parts.append(
+            _rect(
+                x,
+                baseline_y - CAL_LEGEND_SWATCH + 2,
+                CAL_LEGEND_SWATCH,
+                CAL_LEGEND_SWATCH,
+                fill=color,
+                rx=2,
+            )
+        )
+        x += CAL_LEGEND_SWATCH + CAL_LEGEND_RAMP_STEP
     x += CAL_LEGEND_LABEL_GAP
     parts.append(_text(x, baseline_y, "100%", size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted))
     parts.append(
@@ -1263,7 +1119,7 @@ def _calendar_legend_svg(theme: Theme, top: int) -> str:
 
 
 def _calendar_notice_svg(theme: Theme, top: int) -> str:
-    """The unpublished-daily notice (ADR-022): the terrain section's label
+    """The unpublished-daily notice (ADR-022): the matrix section's label
     plus the exact CAL_UNPUBLISHED_TEXT message — rendered whenever the
     headline totals are nonzero but no daily series is published. Never a
     fabricated grid, never a warning panel."""
@@ -1283,35 +1139,18 @@ def _calendar_notice_svg(theme: Theme, top: int) -> str:
 
 
 def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The terrain block: an always-visible label, the month-boundary row
-    (P2), the isometric prism grid, and the two-encoding legend -- fully
-    STATIC (see the no-entrance-animation note in the constants section -
-    two animation attempts each left the band invisible in static
-    captures). ``top`` is the block's absolute y (see `_calendar_top`);
-    all local y math from the constants section is offset by it here,
-    once.
-    """
+    """The flat daily matrix and two-encoding legend."""
     cells = _calendar_grid_cells(stats)
-    # Painter's algorithm: cells must be drawn back-to-front (ascending
-    # depth = col+row) or a tall prism can visually occlude — or be
-    # wrongly occluded by — a neighboring prism drawn out of order, since
-    # adjacent diamonds share an edge and a raised prism overlaps into
-    # its back neighbors' screen space. The offset order used to look up
-    # dates (column-major) is unrelated and NOT depth order, so it is
-    # re-sorted here purely for draw order (deterministic tiebreak on the
-    # offset itself keeps output stable).
-    draw_order = sorted(range(CAL_WINDOW_DAYS), key=lambda o: ((o // CAL_DAYS) + (o % CAL_DAYS), o))
-
-    diamonds = []
-    for offset in draw_order:
+    cells_svg = []
+    for offset in range(CAL_WINDOW_DAYS):
         _, _, cx, cy = _calendar_cell_position(offset)
-        diamonds.append(_day_cell_svg(cells[offset], cx, top + cy, theme))
+        cells_svg.append(_day_cell_svg(cells[offset], cx, top + cy, theme))
 
     sections = (
         _section_label(CAL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
         _calendar_month_labels_svg(stats, theme, top),
-        "\n".join(diamonds),
-        _calendar_grid_guides_svg(theme, top),
+        _calendar_weekday_labels_svg(stats, theme, top),
+        "\n".join(cells_svg),
         _calendar_legend_svg(theme, top),
     )
     return "\n".join(section for section in sections if section)
@@ -1386,14 +1225,14 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         parts.append(_hero_svg(stats, theme))
         parts.append(_ledger_svg(stats, theme))
 
-        # Isometric collaboration terrain (ADR-022): the card's
+        # Flat daily collaboration matrix (ADR-025): the card's
         # centerpiece, directly under the headline block. An unpublished
         # daily series renders the exact honest notice instead.
-        terrain_top = _calendar_top(stats)
+        timeline_top = _calendar_top(stats)
         if stats.daily:
-            parts.append(_calendar_svg(stats, theme, terrain_top))
+            parts.append(_calendar_svg(stats, theme, timeline_top))
         else:
-            parts.append(_calendar_notice_svg(theme, terrain_top))
+            parts.append(_calendar_notice_svg(theme, timeline_top))
 
         # Provider ledger with an explicit percentage denominator
         # (proposal section 26 rule 6: percentages state their denominator).

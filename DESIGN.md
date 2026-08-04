@@ -3,13 +3,13 @@ name: ai-profile visual system
 version: 0.1
 status: beta
 audience: maintainers, contributors, and design-aware agents
-source_of_truth: docs/decisions/ADR-024-structural-current-visual-system.md
+source_of_truth: docs/decisions/ADR-025-flat-evidence-ledger.md
 themes: [github-light, github-dark]
 fonts: local-fallback-only
 network_assets: forbidden
 ---
 
-# Structural Current / Evidence Ledger
+# Flat Evidence Ledger
 
 This file is the maintainable visual contract for ai-profile. It describes
 how validated aggregate facts are presented; it is not a second data model and
@@ -78,7 +78,7 @@ contract change and requires a focused test plus an ADR update.
 
 The order is stable across the static summary and dashboard:
 
-`scope / period → hero fact → supporting ledger → daily terrain → provider
+`scope / period → hero fact → supporting ledger → daily timeline → provider
 ledger → evidence / privacy → generated metadata`
 
 The summary is a static profile artifact. The dashboard may add provider
@@ -102,7 +102,8 @@ must not recalculate or infer attribution.
 
 The renderer is intentionally composable through private pure functions:
 
-- summary: hero, ledger, terrain, provider row, evidence rail, footer;
+- summary: hero, ledger, flat daily timeline, provider row, evidence rail,
+  footer;
 - dashboard: masthead, filter deck, hero, activity, providers, evidence,
   definitions.
 

@@ -47,7 +47,7 @@
   </picture>
 </a>
 
-這張卡片呈現持續的 AI 協作（active AI days 與 12 週活動 terrain）、
+這張卡片呈現持續的 AI 協作（active AI days 與 12 週扁平活動矩陣）、
 跨 AI providers 的廣度，以及每個數字背後的明確 evidence 總數。它是
 根據宣告 Git evidence 的紀錄，不是技能評分。
 

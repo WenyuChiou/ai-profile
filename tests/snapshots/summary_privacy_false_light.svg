@@ -21,7 +21,7 @@
 <text x="512" y="160" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#52647a" text-anchor="start">Unattributed commits</text>
 <text x="806" y="160" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" font-weight="600" fill="#172033" text-anchor="end">5</text>
 <rect x="24" y="208" width="4" height="12" rx="2" fill="#c2d3e5"/>
-<text x="36" y="218" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#52647a" text-anchor="start" letter-spacing="0.2">Collaboration terrain (last 12 weeks)</text>
+<text x="36" y="218" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#52647a" text-anchor="start" letter-spacing="0.2">Daily collaboration (last 12 weeks)</text>
 <text x="415" y="242" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#52647a" text-anchor="middle">Daily activity is not published for this profile</text>
 <rect x="24" y="270" width="4" height="12" rx="2" fill="#c2d3e5"/>
 <text x="36" y="280" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#52647a" text-anchor="start" letter-spacing="0.2">Attributed commits by provider</text>

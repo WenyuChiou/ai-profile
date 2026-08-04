@@ -2,7 +2,7 @@
 
 Focused RED-first contract tests for the `AI Collaboration Record`
 redesign: the recruiter-facing section order, the semantically honest
-12-week isometric terrain (height = total-commit bins, hue = AI-share
+12-week flat timeline (bar height = total-commit bins, fill = AI-share
 bins, provider rows never contribute to height), the exact
 unpublished-daily message, the explicit non-exclusive provider note,
 and the summary-card type system.
@@ -25,14 +25,15 @@ from aiprofile.render import summary_svg
 from aiprofile.render._bins import _share_bin, _share_colors, _volume_bin
 from aiprofile.render.dashboard_html import render_dashboard
 from aiprofile.render.summary_svg import (
+    CAL_CELL_H,
+    CAL_CELL_W,
     CAL_LABEL_TEXT,
-    CAL_TILE_HH,
     CAL_UNPUBLISHED_TEXT,
     FONT_STACK_DISPLAY,
     FONT_STACK_MONO,
     PROVIDER_NOTE_TEXT,
-    TERRAIN_HEIGHTS,
     TITLE_TEXT,
+    VOLUME_BAR_HEIGHTS,
     _calendar_cell_position,
     _calendar_grid_cells,
     _day_cell_svg,
@@ -62,7 +63,7 @@ _PROVIDERS = (
                 actor_presences=6, active_days=2),
 )
 
-# Offsets into the 84-cell terrain grid (index 83 = the series' own
+# Offsets into the 84-cell timeline grid (index 83 = the series' own
 # newest date, 2026-07-14). Each day exercises one contract point.
 OFFSET_ONE_COMMIT_ONE_PROVIDER = 77   # 2026-07-08: total 1, ai 1, 1 provider
 OFFSET_ONE_COMMIT_TWO_PROVIDERS = 78  # 2026-07-09: total 1, ai 1, 2 providers
@@ -95,7 +96,7 @@ _DAILY = (
             total_commits=4, ai_commits=1),
 )
 
-FIXTURE_TERRAIN = VizStats(
+FIXTURE_TIMELINE = VizStats(
     schema_version=ACE_SCHEMA_VERSION,
     period=Period(from_date=None, to_date=None, label="All time"),
     totals=Totals(
@@ -120,7 +121,7 @@ FIXTURE_TERRAIN = VizStats(
     daily=_DAILY,
 )
 
-FIXTURE_NO_DAILY = dataclasses.replace(FIXTURE_TERRAIN, daily=())
+FIXTURE_NO_DAILY = dataclasses.replace(FIXTURE_TIMELINE, daily=())
 
 FIXTURE_ZERO = VizStats(
     schema_version=ACE_SCHEMA_VERSION,
@@ -141,16 +142,16 @@ FIXTURE_ZERO = VizStats(
 
 def test_card_title_is_ai_collaboration_record():
     assert TITLE_TEXT == "AI Collaboration Record"
-    svg = render_summary(FIXTURE_TERRAIN, THEMES["github-light"])
+    svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
     root = ET.fromstring(svg)
     title_text = root.find(f"{SVG_NS}title").text
     assert "AI Collaboration Record" in title_text
-    assert FIXTURE_TERRAIN.period.label in title_text
+    assert FIXTURE_TIMELINE.period.label in title_text
     assert "AI Collaboration Summary" not in svg
 
 
-def test_terrain_section_precedes_the_provider_ledger():
-    svg = render_summary(FIXTURE_TERRAIN, THEMES["github-light"])
+def test_timeline_section_precedes_the_provider_ledger():
+    svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
     assert svg.index(CAL_LABEL_TEXT) < svg.index("Attributed commits by provider")
     # Section headings use the shared quiet marker primitive rather than an
     # accent block, keeping accent color reserved for data marks.
@@ -164,68 +165,37 @@ def test_terrain_section_precedes_the_provider_ledger():
         for node in root
         if node.tag.rsplit("}", 1)[-1] == "rect"
     )
-    # Structural Current scaffold: the terrain gets a quiet integer guide
-    # frame, but the existing prisms remain the only data-bearing marks.
-    guides = summary_svg._calendar_grid_guides_svg(THEMES["github-light"], top=0)
-    expected_guide_count = summary_svg.CAL_WEEKS + summary_svg.CAL_DAYS + 2
-    assert guides.count("<line") == expected_guide_count
-    assert all(f'stroke="{THEMES["github-light"].border}"' in line for line in guides.splitlines())
-    guide_endpoints = {
-        tuple(
-            re.search(
-                r'x1="(-?\d+)" y1="(-?\d+)" x2="(-?\d+)" y2="(-?\d+)"', line
-            ).groups()
-        )
-        for line in guides.splitlines()
-    }
-    assert len(guide_endpoints) == expected_guide_count
-
-    # Integration guard: boundary guides must survive in the actual card and
-    # be emitted after the terrain faces, rather than being hidden behind them.
-    nodes = list(root)
-    guide_indices = [
-        index
-        for index, node in enumerate(nodes)
-        if node.tag.rsplit("}", 1)[-1] == "line"
-        and node.attrib.get("stroke") == THEMES["github-light"].border
-        and node.attrib.get("stroke-opacity") == "0.45"
+    # The timeline is deliberately flat: every one of the 84 dates has a
+    # neutral track rectangle and no perspective polygon.
+    tracks = [
+        node
+        for node in root
+        if node.tag.rsplit("}", 1)[-1] == "rect"
+        and node.attrib.get("width") == str(CAL_CELL_W)
+        and node.attrib.get("height") == str(CAL_CELL_H)
     ]
-    assert len(guide_indices) == expected_guide_count
-    first_guide = min(guide_indices)
-    terrain_polygon_indices = [
-        index
-        for index, node in enumerate(nodes[:first_guide])
-        if node.tag.rsplit("}", 1)[-1] == "polygon"
-    ]
-    expected_terrain_polygons = sum(
-        1 if cell is None else 3 for cell in _calendar_grid_cells(FIXTURE_TERRAIN)
-    )
-    assert len(terrain_polygon_indices) == expected_terrain_polygons
-    assert max(terrain_polygon_indices) < first_guide
+    assert len(tracks) == summary_svg.CAL_WINDOW_DAYS
+    assert "<polygon" not in svg
 
 
 # ---------------------------------------------------------------------------
-# 2. Terrain height: DayCell.total_commits, fixed bins 0 / 1 / 2-4 / 5-7 / 8+.
+# 2. Timeline bar height: DayCell.total_commits, fixed bins 0 / 1 / 2-4 / 5-7 / 8+.
 # ---------------------------------------------------------------------------
 
 
-def _top_face_apex_y(cell, offset: int) -> int:
-    """The rendered top-face apex y for a grid offset (absolute cell-local
-    coordinates as _day_cell_svg receives them)."""
+def _bar_height(cell, offset: int) -> int:
+    """Return the flat cell's encoded volume-bar height."""
     _, _, cx, cy = _calendar_cell_position(offset)
     svg = _day_cell_svg(cell, cx, cy, THEMES["github-light"])
-    apexes = [
-        int(pair.split(",")[1])
-        for points in re.findall(r'<polygon points="([^"]+)"', svg)
-        for pair in points.split(" ")
-        if int(pair.split(",")[0]) == cx
-    ]
-    return min(apexes)
+    heights = [int(node.attrib["height"]) for node in ET.fromstring(
+        f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>'
+    ) if node.tag.rsplit("}", 1)[-1] == "rect" and node.attrib.get("width") != str(CAL_CELL_W)]
+    return heights[-1]
 
 
-def test_terrain_height_uses_fixed_total_commit_bins():
-    assert TERRAIN_HEIGHTS == (8, 16, 24, 32)
-    cells = _calendar_grid_cells(FIXTURE_TERRAIN)
+def test_timeline_bar_height_uses_fixed_total_commit_bins():
+    assert VOLUME_BAR_HEIGHTS == (3, 6, 9, 12)
+    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
     for offset, total in (
         (OFFSET_ONE_COMMIT_ONE_PROVIDER, 1),
         (OFFSET_ZERO_AI, 3),
@@ -235,29 +205,23 @@ def test_terrain_height_uses_fixed_total_commit_bins():
     ):
         cell = cells[offset]
         assert cell is not None and cell.total_commits == total
-        _, _, cx, cy = _calendar_cell_position(offset)
-        expected_h = TERRAIN_HEIGHTS[_volume_bin(total)]
-        assert _top_face_apex_y(cell, offset) == cy - CAL_TILE_HH - expected_h
+        expected_h = VOLUME_BAR_HEIGHTS[_volume_bin(total)]
+        assert _bar_height(cell, offset) == expected_h
 
 
-def test_terrain_top_bin_saturates_like_the_heatmap():
-    cells = _calendar_grid_cells(FIXTURE_TERRAIN)
+def test_timeline_top_bin_saturates_like_the_heatmap():
+    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
     at_cap = cells[OFFSET_AT_TOP_BIN]
     over_cap = cells[OFFSET_OVER_TOP_BIN]
-    _, _, cx8, cy8 = _calendar_cell_position(OFFSET_AT_TOP_BIN)
-    _, _, cx20, cy20 = _calendar_cell_position(OFFSET_OVER_TOP_BIN)
-    assert (
-        _top_face_apex_y(at_cap, OFFSET_AT_TOP_BIN) - (cy8 - CAL_TILE_HH)
-        == _top_face_apex_y(over_cap, OFFSET_OVER_TOP_BIN) - (cy20 - CAL_TILE_HH)
-        == -TERRAIN_HEIGHTS[-1]
-    )
+    assert _bar_height(at_cap, OFFSET_AT_TOP_BIN) == VOLUME_BAR_HEIGHTS[-1]
+    assert _bar_height(over_cap, OFFSET_OVER_TOP_BIN) == VOLUME_BAR_HEIGHTS[-1]
 
 
-def test_provider_rows_never_contribute_to_terrain_height():
+def test_provider_rows_never_contribute_to_timeline_bar_height():
     """A one-commit multi-provider day must render byte-identically to a
     one-commit single-provider day at the same grid position: only
-    total_commits and the ai/total share may influence the prism."""
-    cells = _calendar_grid_cells(FIXTURE_TERRAIN)
+    total_commits and the ai/total share may influence the bar."""
+    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
     single = cells[OFFSET_ONE_COMMIT_ONE_PROVIDER]
     multi = cells[OFFSET_ONE_COMMIT_TWO_PROVIDERS]
     assert len(single.counts) == 1 and len(multi.counts) == 2
@@ -265,54 +229,55 @@ def test_provider_rows_never_contribute_to_terrain_height():
         assert _day_cell_svg(single, 400, 300, theme) == _day_cell_svg(multi, 400, 300, theme)
 
 
-def test_day_prism_is_one_solid_column_not_a_provider_stack():
-    cells = _calendar_grid_cells(FIXTURE_TERRAIN)
+def test_day_cell_is_flat_not_a_provider_stack():
+    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
     for offset in (OFFSET_ONE_COMMIT_TWO_PROVIDERS, OFFSET_AT_TOP_BIN, OFFSET_ZERO_AI):
         svg = _day_cell_svg(cells[offset], 400, 300, THEMES["github-light"])
-        # Exactly three faces: left wall, right wall, top face.
-        assert svg.count("<polygon") == 3
+        # Exactly two rectangles: one neutral track and one data bar.
+        assert svg.count("<rect") == 2
+        assert "<polygon" not in svg
 
 
 # ---------------------------------------------------------------------------
-# 3. Terrain hue: the heatmap's fixed AI-share bins, from ai/total.
+# 3. Timeline fill hue: the heatmap's fixed AI-share bins, from ai/total.
 # ---------------------------------------------------------------------------
 
 
-def _top_face_fill(cell) -> str:
+def _cell_fill(cell) -> str:
     svg = _day_cell_svg(cell, 400, 300, THEMES["github-light"])
     fills = re.findall(r'fill="([^"]+)"', svg)
-    return fills[-1]  # the top face is drawn last
+    return fills[-1]  # the data bar is drawn after the neutral track
 
 
-def test_terrain_top_face_hue_uses_the_heatmap_share_bins():
+def test_timeline_fill_hue_uses_the_heatmap_share_bins():
     theme = THEMES["github-light"]
     colors = _share_colors(theme)
-    cells = _calendar_grid_cells(FIXTURE_TERRAIN)
+    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
     zero_ai = cells[OFFSET_ZERO_AI]
     assert zero_ai.ai_commits == 0
-    assert _top_face_fill(zero_ai) == colors[0]
+    assert _cell_fill(zero_ai) == colors[0]
     assert colors[0].lower() == theme.muted.lower()
 
     full_ai = cells[OFFSET_AT_TOP_BIN]
     assert full_ai.ai_commits == full_ai.total_commits
-    assert _top_face_fill(full_ai) == colors[4]
+    assert _cell_fill(full_ai) == colors[4]
     assert colors[4].lower() == theme.accent.lower()
 
     partial = cells[OFFSET_PARTIAL_SHARE]
-    assert _top_face_fill(partial) == colors[_share_bin(2, 6)] == colors[2]
+    assert _cell_fill(partial) == colors[_share_bin(2, 6)] == colors[2]
 
 
 def test_zero_attributed_ai_day_is_visible_but_never_called_human():
-    """The whole-rhythm terrain shows a day with zero attributed AI
-    commits as a neutral prism (ADR-022 supersedes the AI-only band).
+    """The whole-rhythm timeline shows a day with zero attributed AI
+    commits as a neutral bar (ADR-022 supersedes the AI-only band).
     Such a day is NOT provably human — `compute_daily_commit_totals`
     counts unattributed (unknown) commits as well as explicit Human-Only
     declarations in total_commits — so the card must render it without
     labelling any of it human."""
-    svg = render_summary(FIXTURE_TERRAIN, THEMES["github-light"])
-    cells = _calendar_grid_cells(FIXTURE_TERRAIN)
+    svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
+    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
     _, _, cx, cy = _calendar_cell_position(OFFSET_ZERO_AI)
-    band_top = summary_svg._calendar_top(FIXTURE_TERRAIN)
+    band_top = summary_svg._calendar_top(FIXTURE_TIMELINE)
     assert (
         _day_cell_svg(cells[OFFSET_ZERO_AI], cx, band_top + cy, THEMES["github-light"]) in svg
     )
@@ -331,11 +296,11 @@ def test_empty_daily_with_nonzero_totals_says_exactly_not_published():
     for theme in THEMES.values():
         svg = render_summary(FIXTURE_NO_DAILY, theme)
         assert CAL_UNPUBLISHED_TEXT in svg
-        assert "<polygon" not in svg  # no fabricated terrain
+        assert "<polygon" not in svg  # no fabricated geometry
 
 
 def test_populated_daily_never_shows_the_unpublished_message():
-    svg = render_summary(FIXTURE_TERRAIN, THEMES["github-light"])
+    svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
     assert CAL_UNPUBLISHED_TEXT not in svg
 
 
@@ -352,7 +317,7 @@ def test_zero_state_keeps_onboarding_not_the_unpublished_message():
 
 def test_provider_totals_are_explicitly_non_exclusive():
     assert "not mutually exclusive" in PROVIDER_NOTE_TEXT
-    for stats in (FIXTURE_TERRAIN, FIXTURE_NO_DAILY):
+    for stats in (FIXTURE_TIMELINE, FIXTURE_NO_DAILY):
         svg = render_summary(stats, THEMES["github-light"])
         assert PROVIDER_NOTE_TEXT in svg
     zero_svg = render_summary(FIXTURE_ZERO, THEMES["github-light"])
@@ -365,7 +330,7 @@ def test_provider_totals_are_explicitly_non_exclusive():
 
 
 def test_summary_type_scale_is_the_fixed_five_sizes():
-    for stats in (FIXTURE_TERRAIN, FIXTURE_NO_DAILY, FIXTURE_ZERO):
+    for stats in (FIXTURE_TIMELINE, FIXTURE_NO_DAILY, FIXTURE_ZERO):
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             sizes = {int(n) for n in re.findall(r'font-size="(\d+)"', svg)}
@@ -376,7 +341,7 @@ def test_hero_value_binds_to_mono_while_header_stays_display():
     """The hero figure is numeric DATA, so it renders in the mono stack;
     the card title is display type. Bound to the actual elements, not
     just substring presence anywhere in the SVG."""
-    svg = render_summary(FIXTURE_TERRAIN, THEMES["github-light"])
+    svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
     hero = re.search(r'<text[^>]*font-size="38"[^>]*>40</text>', svg)
     assert hero is not None, "hero value element (38px, value 40) not found"
     assert FONT_STACK_MONO in hero.group(0)
@@ -390,7 +355,7 @@ def test_hero_value_binds_to_mono_while_header_stays_display():
 def test_summary_uses_display_and_mono_stacks_locally():
     assert FONT_STACK_DISPLAY.startswith("'IBM Plex Sans Condensed'")
     assert FONT_STACK_MONO.startswith("'IBM Plex Mono'")
-    svg = render_summary(FIXTURE_TERRAIN, THEMES["github-light"])
+    svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
     assert FONT_STACK_DISPLAY in svg
     assert FONT_STACK_MONO in svg
     assert "http" not in FONT_STACK_DISPLAY + FONT_STACK_MONO  # local stacks only
@@ -402,7 +367,7 @@ def test_summary_uses_display_and_mono_stacks_locally():
 
 
 def test_dashboard_h1_is_evidence_backed_ai_collaboration():
-    html = render_dashboard(FIXTURE_TERRAIN)
+    html = render_dashboard(FIXTURE_TIMELINE)
     assert '<h1 class="title">Evidence-backed AI collaboration.</h1>' in html
     assert "Show the work behind the numbers." not in html
 

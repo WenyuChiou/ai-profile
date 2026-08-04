@@ -1,8 +1,8 @@
 # ADR-024: Structural Current visual system
 
 Date: 2026-08-04
-Status: accepted for the post-v0.4.8 design branch
-Supersedes: none
+Status: superseded for the summary-card daily visual
+Supersedes: none; see ADR-025
 
 ## Context
 
@@ -13,12 +13,12 @@ found a common strength: a clear promise and scope precede metrics, semantic
 roles survive theme changes, and charts are paired with labels/fallbacks.
 
 The repository must remain a local-first, privacy-safe, deterministic static
-generator. Copying terminal telemetry, remote fonts, glass/aurora effects,
-animated 3D, or hosted analytics would conflict with that architecture.
+generator. Copying terminal telemetry, remote fonts, glass/aurora effects, or
+hosted analytics would conflict with that architecture.
 
 ## Decision
 
-Adopt **Structural Current / Evidence Ledger** as the visual direction:
+Adopt **Structural Current / Evidence Ledger** as the interim visual direction:
 
 - a strict 4px rhythm with generous group separation;
 - ice-blue/light and deep-blue/dark grounds with one cool data signal and one
@@ -28,9 +28,8 @@ Adopt **Structural Current / Evidence Ledger** as the visual direction:
   terrain → provider ledger → evidence/privacy → generated metadata;
 - visible numeric labels, denominator notes, non-color state cues, keyboard
   focus, reduced-motion behavior, and accessible descriptions;
-- static terrain may use a faint structural grid, but its encoding remains
-  unchanged: height is daily total-commit volume and top-face hue is daily AI
-  share; provider presences never change geometry.
+- the daily visual uses the same total-commit/share encoding, with the
+  perspective treatment later superseded by ADR-025's flat matrix.
 
 `DESIGN.md` is the human- and agent-readable source of truth for these roles.
 Runtime code continues to use the typed `Theme`, closed provider registry, and

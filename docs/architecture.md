@@ -66,7 +66,7 @@ src/aiprofile/
   render/
     themes.py          theme tokens (github-light / github-dark)
     _bins.py           shared day-cell volume/AI-share bin arithmetic
-                       (ADR-020/ADR-022; summary terrain and heatmap must
+                       (ADR-020/ADR-022; summary matrix and heatmap must
                        never disagree about a bin)
     brand.py           vendored provider marks + per-theme brand palette
                        (CC0 simple-icons subset; ADR-017; schema-free by
@@ -111,7 +111,7 @@ No hidden global state: configuration and database handles are constructed
 in `cli.py` and passed explicitly.
 
 The presentation contract is documented in the repository-root `DESIGN.md`
-and governed by ADR-024 (Structural Current / Evidence Ledger). This is a
+and governed by ADR-025 (Flat Evidence Ledger). This is a
 maintainer-facing visual source of truth only; it is not runtime configuration
 and cannot carry event or repository identity data.
 
@@ -316,16 +316,14 @@ consumes it until the GitHub Action lands).
   non-exclusive note (ADR-022). The post-v0.4.8 evidence-ledger refinement
   keeps count and percentage in separate right-aligned columns and uses a
   quiet border-token section marker; this is presentation-only (ADR-023).
-- The Structural Current refinement (ADR-024) may draw a faint integer guide
-  scaffold along terrain seams after its faces. Guide lines are spatial
-  scaffolding only and do not add a metric or alter prism geometry.
-- Summary terrain (ADR-022, superseding ADR-020's AI-only band clause):
-  the card's 12-week isometric terrain encodes day height from
-  `DayCell.total_commits` (fixed 1 / 2-4 / 5-7 / 8+ bins) and top-face
-  hue from the day's AI share — the same fixed bins as the heatmap card,
-  shared via the private `render/_bins.py` helper. Provider counts never
-  influence terrain geometry. Publishable-only; an unpublished daily
-  series renders an explicit notice, never a fabricated grid.
+- The Flat Evidence Ledger refinement (ADR-025) supersedes the perspective
+  treatment for the summary's daily visual. It renders a 12-column by 7-row
+  matrix of neutral tracks; each published day adds a bottom-anchored bar
+  whose height comes from `DayCell.total_commits` (fixed 1 / 2-4 / 5-7 / 8+
+  bins) and whose fill comes from the day's AI share — the same fixed bins as
+  the heatmap card, shared via the private `render/_bins.py` helper. Provider
+  counts never influence matrix geometry. Publishable-only; an unpublished
+  daily series renders an explicit notice, never a fabricated grid.
 - Two assets in v0.1: `summary-light.svg`, `summary-dark.svg` (embedding via
   `<picture>` in the README — documented in mvp.md). Accessibility:
   `<title>`, `<desc>`, ≥11px labels, non-color distinctions, explicit metric

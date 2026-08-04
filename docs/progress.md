@@ -399,17 +399,21 @@ which is authoritative).
   Independent verification is green; public patch publication remains
   conditional on a versioned artifact/CI/Pages release round. Full record:
   `docs/reviews/v0.4.9-visual-readiness.md`.
-- **Structural Current visual slice (design branch, 2026-08-04).**
+- **Structural Current visual slice (superseded design branch, 2026-08-04).**
   Independent design forensics (Nanako0129's public tools plus Primer,
   Carbon, Radix, Geist, Vega-Lite, and related systems) is recorded in
   `docs/reviews/design-reverse-engineering.md`. `DESIGN.md` and ADR-024 now
   define the semantic role tokens and evidence-first composition without
-  adding runtime dependencies or a new data model. The summary terrain has a
-  faint deterministic integer guide scaffold and the dashboard uses neutral
-  section markers; terrain encodings, provider overlap, unknown/human
-  separation, privacy redaction, and the eight-file output contract are
-  unchanged. Targeted verification: **93 passed**; full-suite, artifact, and
-  release verification remain required before a new public version.
+  adding runtime dependencies or a new data model. That branch's perspective
+  treatment was intentionally rejected for the summary card; its rollback
+  remains available until the flat replacement completes verification.
+- **Flat Evidence Ledger pivot (candidate branch, 2026-08-04).**
+  ADR-025 replaces the summary-card perspective treatment with a 12-column by
+  7-row flat daily matrix. Bars encode unique daily total-commit bins and fill
+  encodes AI-share bins; provider overlap, unknown/human separation, privacy
+  redaction, and the eight-file output contract remain unchanged. The branch
+  is not a release: full-suite, artifact, browser, independent review, and
+  release verification are still required before any public version update.
 - **The maintainer Profile refresh on public PyPI 0.4.8 is complete.**
   Profile PR #12 merged at `7f322beab1e532d906f943c62fc68e49ba21c02a`
   with the unchanged exact 11-repository full-publication scope. Profile
