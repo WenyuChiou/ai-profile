@@ -27,20 +27,21 @@ below.
 
 ### Changed
 
-- Candidate visual refinement (ADR-028) gives explicit model-family rows stable
-  light/dark category marks and bars while preserving the all-time,
-  non-exclusive ledger and daily unique-commit semantics. No schema, CLI,
-  privacy boundary, or output count changes.
+- No unreleased changes.
 
-## [0.6.0] — candidate
+## [0.6.0] — 2026-08-04 (Public Beta)
 
 ### Changed
 
-- Publish the evidence-ledger visual refinement as a public-beta candidate:
+- Publish the evidence-ledger visual refinement as a public-beta release:
   model-family contribution rows use stable category marks and bars in both
   the static summary and self-contained dashboard. Daily geometry remains
   unique-commit volume plus AI share; no schema, CLI, privacy boundary, or
   output-count contract changes.
+- Ubuntu-authoritative wheel SHA-256:
+  `7ea7b3db484615d5f361d2ba0a237819a94757065b47464efb1d8058bf0ba789`.
+- The release remains a GitHub prerelease and PyPI Beta package; it is public
+  beta, not Stable/GA.
 
 ## [0.5.0] — 2026-08-04 (Public Beta)
 
