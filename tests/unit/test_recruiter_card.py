@@ -158,12 +158,19 @@ def test_timeline_section_precedes_the_provider_ledger():
     root = ET.fromstring(svg)
     assert any(
         node.attrib.get("x") == "24"
-        and node.attrib.get("width") == "4"
+        and node.attrib.get("width") == "2"
         and node.attrib.get("height") == "12"
-        and node.attrib.get("rx") == "2"
+        and node.attrib.get("rx") == "1"
         and node.attrib.get("fill") == THEMES["github-light"].border
         for node in root
         if node.tag.rsplit("}", 1)[-1] == "rect"
+    )
+    assert any(
+        node.attrib.get("x1") == "26"
+        and node.attrib.get("x2") == "38"
+        and node.attrib.get("stroke") == THEMES["github-light"].border
+        for node in root
+        if node.tag.rsplit("}", 1)[-1] == "line"
     )
     # The timeline is deliberately flat: every one of the 84 dates has a
     # neutral track rectangle and no perspective polygon.
@@ -372,5 +379,5 @@ def test_dashboard_h1_is_evidence_backed_ai_collaboration():
     assert "Show the work behind the numbers." not in html
 
 
-def test_runtime_version_is_0_4_9():
-    assert aiprofile.__version__ == "0.4.9"
+def test_runtime_version_is_0_4_10():
+    assert aiprofile.__version__ == "0.4.10"

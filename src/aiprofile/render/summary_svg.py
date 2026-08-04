@@ -136,10 +136,11 @@ COUNT_FONT_SIZE = 13
 # Section marker: a quiet, non-accent editorial rule. Accent remains reserved
 # for the hero, share fill, provider fills, and header mark (ADR-022).
 SECTION_MARK_X = PADDING
-SECTION_MARK_WIDTH = 4
+SECTION_MARK_WIDTH = 2
 SECTION_MARK_HEIGHT = 12
-SECTION_MARK_RADIUS = 2
+SECTION_MARK_RADIUS = 1
 SECTION_MARK_GAP = 8
+SECTION_RULE_WIDTH = 12
 
 MORE_LINE_EXTRA = 24  # vertical room for the "+N providers not shown" line when present
 
@@ -262,6 +263,15 @@ CAL_GRID_WIDTH = CAL_WEEKS * CAL_CELL_W + (CAL_WEEKS - 1) * CAL_CELL_GAP
 CAL_GRID_HEIGHT = CAL_DAYS * CAL_CELL_H + (CAL_DAYS - 1) * CAL_CELL_GAP
 CAL_GRID_X = (WIDTH - CAL_GRID_WIDTH) // 2
 CAL_GRID_BOTTOM_Y = CAL_GRID_TOP_Y + CAL_GRID_HEIGHT
+
+# A few quiet editorial rails give the matrix a visible reading rhythm without
+# turning the background into a decorative pattern.  They are structural
+# alignment guides, not a third data channel: all quantitative meaning still
+# comes from bar height and AI-share fill.
+CAL_RAIL_COLUMNS = (0, 3, 6, 9, CAL_WEEKS)
+CAL_RAIL_TOP_PAD = 6
+CAL_RAIL_BOTTOM_PAD = 4
+CAL_RAIL_OPACITY = 0.35
 
 # Flat legend: one compact line under the matrix stating both encodings:
 # volume-bar bins, the five-step neutral-to-accent AI-share ramp, and the
@@ -386,8 +396,16 @@ def _section_label(label: str, baseline_y: int, theme: Theme) -> str:
                 fill=theme.border,
                 rx=SECTION_MARK_RADIUS,
             ),
+            _line(
+                SECTION_MARK_X + SECTION_MARK_WIDTH,
+                baseline_y - SECTION_MARK_HEIGHT // 2,
+                SECTION_MARK_X + SECTION_MARK_WIDTH + SECTION_RULE_WIDTH,
+                baseline_y - SECTION_MARK_HEIGHT // 2,
+                stroke=theme.border,
+                stroke_opacity=0.65,
+            ),
             _text(
-                SECTION_MARK_X + SECTION_MARK_WIDTH + SECTION_MARK_GAP,
+                SECTION_MARK_X + SECTION_MARK_WIDTH + SECTION_RULE_WIDTH + SECTION_MARK_GAP,
                 baseline_y,
                 label,
                 size=12,
@@ -1041,6 +1059,29 @@ def _calendar_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
     return "\n".join(parts)
 
 
+def _calendar_column_guides_svg(theme: Theme, top: int) -> str:
+    """Render sparse alignment rails for the twelve-week matrix.
+
+    The rails are deliberately limited to quarter-window boundaries.  They
+    make the card read like an editorial instrument panel while preserving a
+    strict two-channel encoding: a rail carries no value and is never used as
+    a substitute for a day label, bar height, or share color.
+    """
+    top_y = top + CAL_GRID_TOP_Y - CAL_RAIL_TOP_PAD
+    bottom_y = top + CAL_GRID_BOTTOM_Y + CAL_RAIL_BOTTOM_PAD
+    return "\n".join(
+        _line(
+            CAL_GRID_X + column * (CAL_CELL_W + CAL_CELL_GAP),
+            top_y,
+            CAL_GRID_X + column * (CAL_CELL_W + CAL_CELL_GAP),
+            bottom_y,
+            stroke=theme.border,
+            stroke_opacity=CAL_RAIL_OPACITY,
+        )
+        for column in CAL_RAIL_COLUMNS
+    )
+
+
 def _legend_bins(cap: int) -> tuple[tuple[int, str], ...]:
     """Up to 4 ``(representative_count, ASCII label)`` volume bins
     derived from ``cap`` (P1): "1", "2-{mid}", "{mid+1}-{cap-1}",
@@ -1151,6 +1192,7 @@ def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
         _section_label(CAL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
         _calendar_month_labels_svg(stats, theme, top),
         _calendar_weekday_labels_svg(stats, theme, top),
+        _calendar_column_guides_svg(theme, top),
         "\n".join(cells_svg),
         _calendar_legend_svg(theme, top),
     )

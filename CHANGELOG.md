@@ -25,7 +25,15 @@ below.
 
 ## [Unreleased]
 
-No unreleased changes yet.
+- Candidate for v0.4.10: add the presentation-only Editorial Signal skin
+  (ADR-026), with sparse quarter-window alignment rails and a two-part
+  editorial section-marker grammar over the flat Evidence Ledger.
+- Keep ACE/schema, aggregation, privacy, CLI, typography fallback, and the
+  eight-output contract unchanged; no network font, animation, 3D surface, or
+  new runtime dependency is introduced.
+- Local exact-wheel smoke and browser checks pass; cross-platform release
+  workflow, PyPI/GitHub publication, and maintainer Profile verification are
+  still required before this becomes a release.
 
 ## [0.4.9] — 2026-08-04 (Public Beta)
 

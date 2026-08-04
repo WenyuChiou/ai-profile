@@ -186,6 +186,18 @@ designed v0.5.0 plan.
       `876bab3`; final release evidence is recorded in
       `docs/reviews/v0.4.9-release-readiness.md`.
 
+## v0.4.10 — Editorial Signal skin (candidate, unreleased)
+
+- [x] Keep the flat 12-week Evidence Ledger and add sparse editorial
+      alignment rails plus the shared two-part section marker (ADR-026).
+- [x] Re-run local renderer, dashboard, privacy, determinism, packaging, and
+      browser gates. Evidence:
+      `docs/reviews/v0.4.10-visual-qa.md`.
+- [ ] Run the cross-platform release workflow and publish the exact artifact;
+      record final evidence in `docs/reviews/v0.4.10-release-readiness.md`.
+- [ ] Regenerate the maintainer Profile from the exact public artifact after
+      the release workflow and Pages checks pass.
+
 ## Future capability milestone — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature

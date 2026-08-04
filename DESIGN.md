@@ -98,14 +98,25 @@ must not recalculate or infer attribution.
 - Unknown keeps a neutral mark and explicit label. It must never be recolored
   or renamed to imply Human.
 
+## Editorial Signal skin
+
+The v0.4.10 candidate keeps the flat ledger and adds a restrained editorial
+instrument rhythm: section headings use a short rule plus datum bar, and the
+12-week matrix uses sparse quarter-window alignment rails. These rails are
+structural guides only; they never encode a third statistic. The goal is a
+distinctive, recruiter-readable card without perspective, prisms, glass,
+gradients, neon, animation, or decorative background patterns. The full
+research record is `docs/reviews/design-research-2026-08-04.md`; the decision
+record is ADR-026.
+
 ## Extension points
 
 The renderer is intentionally composable through private pure functions:
 
 - summary: hero, ledger, flat daily timeline, provider row, evidence rail,
-  footer;
+  footer, and Editorial Signal section/rail helpers;
 - dashboard: masthead, filter deck, hero, activity, providers, evidence,
-  definitions.
+  definitions, and the matching section-marker grammar.
 
 An extension may replace a visual primitive only if it preserves the same
 validated input, semantic units, privacy boundary, element/security allowlist,

@@ -204,6 +204,16 @@ _HTML_PREFIX = """<!doctype html>
       background: var(--border-strong);
     }
 
+    .eyebrow::after,
+    .section-kicker::after {
+      content: "";
+      flex: 0 0 auto;
+      width: 0.75rem;
+      height: 1px;
+      margin-left: -0.25rem;
+      background: var(--border-strong);
+    }
+
     .title {
       max-width: 17ch;
       margin: 0;
