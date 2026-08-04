@@ -223,7 +223,8 @@ def build_synthetic_repo(root: Path) -> Path:
         # b. Claude AI-* commit -> one ai actor presence
         (
             "Claude AI-* commit\n\n"
-            "AI-Provider: Anthropic\nAI-Tool: Claude-Code\nAI-Role: implementation",
+            "AI-Provider: Anthropic\nAI-Model: Claude-Sonnet\n"
+            "AI-Tool: Claude-Code\nAI-Role: implementation",
             "2026-01-02T12:00:00+00:00",
         ),
         # c. human-declared commit
@@ -280,6 +281,27 @@ def _check_profile_json(out_dir: Path) -> dict:
     }
     if data.get("totals") != expected_totals:
         raise SmokeFailure(f"unexpected totals: {data.get('totals')!r} != {expected_totals!r}")
+    expected_models = [
+        {
+            "category": "claude",
+            "display_name": "Claude",
+            "attributed_commits": 1,
+            "actor_presences": 1,
+            "active_days": 1,
+        },
+        {
+            "category": "unknown",
+            "display_name": "Unknown",
+            "attributed_commits": 1,
+            "actor_presences": 1,
+            "active_days": 1,
+        },
+    ]
+    if data.get("models") != expected_models or data.get("model_count") != 1:
+        raise SmokeFailure(
+            f"unexpected model rows: {data.get('models')!r} / "
+            f"model_count={data.get('model_count')!r}"
+        )
     return data
 
 
@@ -314,6 +336,7 @@ def _check_dashboard(out_dir: Path) -> None:
         'aria-label="Filter dashboard by AI provider"',
         "Unattributed commits",
         "No explicit AI or human declaration recorded.",
+        "Model contribution",
     )
     missing = [token for token in required if token not in html]
     if missing:

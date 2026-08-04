@@ -53,6 +53,7 @@ from aiprofile.viz import (
     DayCell,
     DayCount,
     EvidenceTotals,
+    ModelRow,
     Period,
     PrivacySplit,
     ProviderRow,
@@ -91,6 +92,17 @@ _POPULATED_PROVIDERS = (
                 actor_presences=12, active_days=5),
     ProviderRow(provider="aider", display_name="Aider", attributed_commits=5,
                 actor_presences=6, active_days=3),
+)
+
+_POPULATED_MODELS = (
+    ModelRow(category="claude", display_name="Claude", attributed_commits=190,
+             actor_presences=243, active_days=45),
+    ModelRow(category="gpt", display_name="GPT", attributed_commits=120,
+             actor_presences=120, active_days=30),
+    ModelRow(category="gemini", display_name="Gemini", attributed_commits=75,
+             actor_presences=75, active_days=20),
+    ModelRow(category="unknown", display_name="Unknown", attributed_commits=25,
+             actor_presences=25, active_days=15),
 )
 
 # ---------------------------------------------------------------------------
@@ -160,6 +172,8 @@ FIXTURE_POPULATED = VizStats(
     ),
     providers=_POPULATED_PROVIDERS,
     provider_count=7,  # excludes the unrecognized bucket
+    models=_POPULATED_MODELS,
+    model_count=3,
     evidence=EvidenceTotals(
         verified=12,
         declared=400,
@@ -370,6 +384,8 @@ def test_desc_summarizes_headline_numbers():
     assert "463" in desc_text  # ai_actor_presences
     assert "58" in desc_text  # active_ai_days
     assert "7" in desc_text  # provider_count
+    assert "known model families" in desc_text
+    assert "non-exclusive" in desc_text
 
 
 def test_role_img_on_root_svg():

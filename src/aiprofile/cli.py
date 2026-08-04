@@ -201,6 +201,8 @@ def _cmd_aggregate(args: argparse.Namespace) -> int:
         print(f"excluded repositories: {detail['excluded_repositories']}")
         raws = detail["unrecognized_provider_values"]
         print(f"unrecognized provider values: {', '.join(raws) if raws else '(none)'}")
+        model_raws = detail["unrecognized_model_values"]
+        print(f"raw model values: {', '.join(model_raws) if model_raws else '(none)'}")
     return 0
 
 
@@ -262,6 +264,15 @@ def _print_stats(s: VizStats) -> None:
             print(
                 f"  {p.display_name:<14} {p.attributed_commits}"
                 f" | {p.actor_presences} | {p.active_days}"
+            )
+    print(f"AI model families:          {s.model_count}")
+    if s.models:
+        print()
+        print("models (attributed commits | actor presences | active days):")
+        for m in s.models:
+            print(
+                f"  {m.display_name:<14} {m.attributed_commits}"
+                f" | {m.actor_presences} | {m.active_days}"
             )
     e = s.evidence
     parts = [f"declared {e.declared}", f"unknown {e.unknown}"]

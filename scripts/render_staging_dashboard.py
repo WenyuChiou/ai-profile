@@ -46,6 +46,7 @@ from aiprofile.viz import (
     DayCell,
     DayCount,
     EvidenceTotals,
+    ModelRow,
     Period,
     PrivacySplit,
     ProviderRow,
@@ -57,7 +58,7 @@ from aiprofile.viz import (
 MANIFEST_FORMAT = "aiprofile-staging-manifest/1"
 
 #: Names the fixed fixture below; a changed fixture needs a new identifier.
-FIXTURE_ID = "synthetic-two-provider-fixture-v1"
+FIXTURE_ID = "synthetic-two-provider-fixture-v2-model-ledger"
 
 _OUTPUT_NAMES = frozenset({"dashboard.html", "staging-manifest.json"})
 
@@ -83,6 +84,12 @@ def build_fixture() -> VizStats:
             ProviderRow("openai", "OpenAI", 10, 9, 6),
         ),
         provider_count=2,
+        models=(
+            ModelRow("claude", "Claude", 15, 15, 8),
+            ModelRow("gpt", "GPT", 9, 9, 5),
+            ModelRow("unknown", "Unknown", 2, 2, 2),
+        ),
+        model_count=2,
         evidence=EvidenceTotals(
             verified=4,
             declared=20,

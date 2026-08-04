@@ -1,13 +1,15 @@
-# ACE v0.1 — AI Collaboration Event Schema
+# ACE v0.3 — AI Collaboration Event Schema and public aggregate contract
 
-Status: **finalized for v0.1** (2026-07-14; revised same day after the
-Phase 0 three-lens adversarial review — see progress.md for the finding
-ledger).
-Schema version string: `"0.1.0"`.
+Status: **current for the v0.5.0 candidate** (2026-08-04; the v0.1 event
+field semantics remain the historical input contract, while ADR-027 adds the
+public model-family aggregate).
+Schema version string: `"0.3.0"`.
 
 An ACE event records one attributable participation (by an AI tool, a human,
-or an unknown actor) in one software-development artifact. For v0.1 the only
-artifact type is a Git commit.
+or an unknown actor) in one software-development artifact. The only supported
+artifact type remains a Git commit. Sections that explicitly say **v0.1**
+describe the frozen event-field and input semantics; the v0.3 additive public
+aggregate is specified in section 15 and ADR-027.
 
 This document is the single source of truth for the event model. Code
 (`src/aiprofile/schema/`) implements this document; where they disagree, this
@@ -427,8 +429,22 @@ canonical end-to-end. **Providers and tools** normalize through the registry
 preserved in `*_raw`. An unrecognized raw value yields canonical `null`.
 Nothing is ever guessed into a canonical slug.
 
-**Models do not use the registry** (ADR-013): canonical `model` =
-`lowercase(trim(model_raw))`; there is no model alias table in v0.1.
+**Models do not use the provider registry** (ADR-013): the canonical ACE
+`model` value is `lowercase(trim(model_raw))` when an `AI-Model` declaration is
+present, and no model value is invented when it is absent.  In the v0.5
+public aggregate (ACE `0.3.0`, ADR-027), aggregation applies the closed,
+schema-owned model-family normalizer to that canonical value only:
+
+```text
+claude, gpt, gemini, llama, mistral, deepseek, qwen, grok, kimi,
+other, unknown
+```
+
+Missing/blank canonical values are `unknown`; explicit values outside the
+reviewed family prefix/alias table are `other`.  Provider, tool, author,
+commit-message, source-style, and `model_raw` values are never consulted for
+this classification.  The raw model string remains local-only, just like
+other raw trailer values, and never enters `VizStats` or any public artifact.
 
 **Public-output rule for unrecognized values (privacy-critical):** raw
 strings are commit-message text and may contain anything, including
@@ -509,6 +525,13 @@ Adding any of these later is a minor-version schema change (§13).
   whose `major.minor` exceeds what it supports and says so explicitly.
 - The database migration sequence (integers, ADR-004) is independent of the
   ACE version.
+- The v0.5 model-family aggregate is the `0.3.0` minor revision (ADR-027).
+  Readers in this release accept stored `0.1.x`, `0.2.x`, and `0.3.x` events;
+  new scans write `0.3.0`.  The additive `VizStats.models` contract reuses
+  this `schema_version` because event and public-contract revisions move
+  together.  A future independently versioned visualization contract must
+  add an explicit `viz_schema_version` through a new ADR rather than silently
+  relabeling the ACE version.
 
 ## 14. Manual reconciliation (forward contract only)
 
@@ -550,6 +573,18 @@ a spec bug.
 - **Provider actor presences / active days** (units: presences / days,
   per provider) — same grouping; provider presence rows sum to total AI
   actor presences (including the `unrecognized` bucket).
+- **Model-family attributed commits** (unit: commits, per closed model
+  category) — distinct commits with at least one `ai`/`mixed` event whose
+  canonical `model` normalizes to that category.  Categories are
+  non-exclusive: one commit carrying two model families contributes one to
+  each row, while `totals.ai_attributed_commits` remains one.
+- **Model-family actor presences / active days** (units: presences / days,
+  per category) — the same AI/mixed event population grouped by normalized
+  model category.  Presence rows sum exactly to
+  `totals.ai_actor_presences`, including `unknown`; active days are the
+  cardinality of each category's author-local date set.  Missing model
+  evidence is `unknown`, not human, and an explicit value outside the closed
+  family table is `other`.
 - **Active AI day (author dates)** (unit: days) — a calendar date taken
   from the commit **author date's own UTC offset** (the author's local
   day; mutable git metadata, not verified session timing — G2-18; labels
