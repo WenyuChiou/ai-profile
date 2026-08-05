@@ -29,6 +29,22 @@ below.
 
 - No unreleased changes.
 
+## [0.6.1] - 2026-08-05 (Public Beta)
+
+### Changed
+
+- Make the provider ledger the sole model/provider contribution visual in the
+  static summary and self-contained dashboard. Canonical model evidence stays
+  available in `VizStats` and machine-readable `profile.json`; the renderer
+  no longer presents a duplicate model-family panel.
+- Keep ACE/public schema `0.3.0`, aggregation semantics, CLI behavior, privacy
+  boundary, and the eight-output contract unchanged. This is a presentation-
+  only patch release correcting the already-published v0.6.0 visual surface.
+- Ubuntu-authoritative wheel SHA-256:
+  `6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f`.
+- Candidate staging dashboard SHA-256:
+  `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
+
 ## [0.6.0] — 2026-08-04 (Public Beta)
 
 ### Changed

@@ -58,7 +58,7 @@ from aiprofile.viz import (
 MANIFEST_FORMAT = "aiprofile-staging-manifest/1"
 
 #: Names the fixed fixture below; a changed fixture needs a new identifier.
-FIXTURE_ID = "synthetic-two-provider-fixture-v2-model-ledger"
+FIXTURE_ID = "synthetic-two-provider-fixture-v3-provider-ledger"
 
 _OUTPUT_NAMES = frozenset({"dashboard.html", "staging-manifest.json"})
 
