@@ -4,7 +4,7 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## Current v0.6.1 Public Beta candidate (2026-08-05)
+## Current v0.6.1 Public Beta (2026-08-05)
 
 - The provider ledger is now the sole model/provider contribution visual in
   current Summary Card and dashboard renderers. Canonical model rows remain in
@@ -12,10 +12,14 @@ which is authoritative).
 - This is a presentation-only patch release: ACE/public schema `0.3.0`,
   aggregation semantics, CLI behavior, privacy boundary, and the eight-output
   contract remain unchanged. v0.6.0 remains the immutable historical release.
-- Candidate contract: Ubuntu-authoritative wheel
+- Released artifact: Ubuntu-authoritative wheel
   `6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f`, staging
   dashboard `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`,
   and fixture `synthetic-two-provider-fixture-v3-provider-ledger`.
+- Release evidence: tag `v0.6.1` at main merge `1be0c68`; CI run
+  `30984105485`, publish run `30984290387`, and staging run `30985228475` all
+  passed. The frozen promotion-candidate manifest remains the byte-level
+  artifact record.
 
 ## Historical v0.6.0 Public Beta (2026-08-04)
 

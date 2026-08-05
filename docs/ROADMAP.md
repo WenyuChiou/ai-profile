@@ -255,7 +255,7 @@ the model-family aggregate in ACE/profile data while making the provider ledger
 the sole model/provider contribution visual in current SVG and dashboard
 renderers.
 
-## v0.6.1 - Provider-ledger-only visual correction (2026-08-05, Public Beta candidate)
+## v0.6.1 - Provider-ledger-only visual correction (released 2026-08-05, Public Beta)
 
 - [x] Remove the duplicate model-family presentation from the Summary Card and
       self-contained dashboard while retaining canonical model evidence in
@@ -264,11 +264,14 @@ renderers.
       privacy boundary, and the eight-output contract. No new model-by-date
       inference or schema field is introduced.
 - [x] Use a patch version because the published v0.6.0 candidate is immutable;
-      freeze the v0.6.1 candidate in `docs/reviews/promotion-candidate.json`
-      with the Ubuntu-authoritative wheel digest
+      release the frozen v0.6.1 candidate from `docs/reviews/promotion-candidate.json`
+      as tag `v0.6.1` at main merge `1be0c68`. The Ubuntu-authoritative wheel
+      digest is
       `6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f` and
-      staging dashboard digest
+      the staging dashboard digest is
       `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
+- [x] Close the release gates: CI run `30984105485`, publish run `30984290387`,
+      and staging run `30985228475` all passed.
 
 ## Future capability milestone — GitHub integration
 
