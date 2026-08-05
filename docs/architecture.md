@@ -308,8 +308,10 @@ and model row's `attributed_commits` ≤ `totals.ai_attributed_commits`;
 `ai_attributed_commits` ≤ `commits_scanned`.
 
 This is the contract consumed by `render/` and `export.py` and serialized
-(sorted keys, deterministic) into `profile.json`. The v0.5 model ledger is an
-additive ACE `0.3.0` change (ADR-027); future contract changes require the
+(sorted keys, deterministic) into `profile.json`. The v0.5 model-family data
+is an additive ACE `0.3.0` change (ADR-027); renderers keep those rows in the
+machine-readable payload but the visual contribution ledger is provider-only
+per ADR-029. Future contract changes require the
 schema-version strategy in ADR-012/ADR-027. `generated_on` is date-only by
 design (a full
 timestamp would disclose timezone/working hours in a published artifact —
@@ -328,13 +330,11 @@ consumes it until the GitHub Action lands).
   non-exclusive note (ADR-022). The post-v0.4.8 evidence-ledger refinement
   keeps count and percentage in separate right-aligned columns and uses a
   quiet border-token section marker; this is presentation-only (ADR-023).
-- Model-family table: top 4 explicit model categories; remaining categories
-  collapse to one "+N model categories not shown" line. It is an all-time,
-  non-exclusive ledger sourced from `VizStats.models`; it never changes daily
-  terrain geometry and never offers a model filter without a matching scoped
-  aggregate contract (ADR-027, ADR-028). Its two-character marks and stable
-  category palette are presentation-only; the collaboration accent remains
-  reserved for the hero, share bar, provider bars, and header mark.
+- Model-family rows remain validated machine-readable evidence in `VizStats`
+  and `profile.json`, but are intentionally not rendered as a second visual
+  ledger. The provider table is the sole contribution ledger in the summary
+  and dashboard; model rows never change daily terrain geometry or imply a
+  model filter (ADR-029).
 - The Flat Evidence Ledger refinement (ADR-025) supersedes the perspective
   treatment for the summary's daily visual. It renders a 12-column by 7-row
   matrix of neutral tracks; each published day adds a bottom-anchored bar

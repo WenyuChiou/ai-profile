@@ -250,6 +250,11 @@ designed v0.5.0 plan.
       merged at `ca12bdd`; Pages run `30944387849` and the snake run
       `30944389155` passed, and all eight live outputs returned HTTP 200.
 
+The v0.6.0 model visual is a historical release surface. ADR-029 now keeps
+the model-family aggregate in ACE/profile data while making the provider ledger
+the sole model/provider contribution visual in current SVG and dashboard
+renderers.
+
 ## Future capability milestone — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature

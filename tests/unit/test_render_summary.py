@@ -384,8 +384,7 @@ def test_desc_summarizes_headline_numbers():
     assert "463" in desc_text  # ai_actor_presences
     assert "58" in desc_text  # active_ai_days
     assert "7" in desc_text  # provider_count
-    assert "known model families" in desc_text
-    assert "non-exclusive" in desc_text
+    assert "model" not in desc_text.lower()
 
 
 def test_role_img_on_root_svg():

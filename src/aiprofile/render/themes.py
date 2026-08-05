@@ -22,7 +22,6 @@ class Theme:
     muted: str
     accent: str
     bar_fill: str
-    model_fill: str  # neutral model-family bar, separate from the collaboration accent
     bar_track: str
     chip_bg: str  # Primer canvas-subtle: chip/badge background
     evidence_verified: str
@@ -30,53 +29,6 @@ class Theme:
     evidence_imported: str
     evidence_inferred: str
     evidence_unknown: str
-
-
-# Model-family marks are categorical evidence, not a second provider metric.
-# Keep the mapping keyed by the canonical category slug so adding/removing a
-# row never recolours an existing family.  The values are deliberately muted
-# enough for a small bar/mark and have a light/dark counterpart; body text
-# continues to use ``Theme.text``.  Unknown/other stay neutral so the honest
-# bucket cannot look like a named vendor.
-MODEL_CATEGORY_COLORS: dict[str, dict[str, str]] = {
-    "github-light": {
-        "claude": "#8a3f2f",
-        "gpt": "#146b5a",
-        "gemini": "#4b4aa3",
-        "llama": "#705700",
-        "mistral": "#7a3f99",
-        "deepseek": "#0b5b78",
-        "qwen": "#8b3d75",
-        "grok": "#404b5d",
-        "kimi": "#6b4d2a",
-        "other": "#52647a",
-        "unknown": "#52647a",
-    },
-    "github-dark": {
-        "claude": "#ff9b83",
-        "gpt": "#5ee0b4",
-        "gemini": "#b1afff",
-        "llama": "#f0cf7a",
-        "mistral": "#d99af4",
-        "deepseek": "#7dd7ff",
-        "qwen": "#f2a9d0",
-        "grok": "#c8d4e5",
-        "kimi": "#e8b98b",
-        "other": "#b5c7da",
-        "unknown": "#b5c7da",
-    },
-}
-
-
-def model_category_color(theme: Theme, category: str) -> str:
-    """Return the stable presentation colour for a validated model slug.
-
-    This is intentionally a small theme helper, not a model normalizer.  The
-    renderer has already received a canonical category from ``VizStats``;
-    unknown values therefore fail closed to the neutral model token.
-    """
-
-    return MODEL_CATEGORY_COLORS.get(theme.name, {}).get(category, theme.model_fill)
 
 
 THEMES: dict[str, Theme] = {
@@ -89,7 +41,6 @@ THEMES: dict[str, Theme] = {
         muted="#52647a",
         accent="#005cc5",
         bar_fill="#005cc5",
-        model_fill="#3d5a80",
         bar_track="#d9eaff",
         chip_bg="#fff0bd",
         # Ordinal evidence ramp validated against the #fff0bd provenance
@@ -110,7 +61,6 @@ THEMES: dict[str, Theme] = {
         muted="#b5c7da",
         accent="#8bc8ff",
         bar_fill="#8bc8ff",
-        model_fill="#9ecbff",
         bar_track="#1e3852",
         chip_bg="#3b331e",
         # Ordinal evidence ramp validated against the #3b331e provenance

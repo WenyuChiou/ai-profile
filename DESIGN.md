@@ -3,7 +3,7 @@ name: ai-profile visual system
 version: 0.1
 status: beta
 audience: maintainers, contributors, and design-aware agents
-source_of_truth: [docs/decisions/ADR-025-flat-evidence-ledger.md, docs/decisions/ADR-028-stable-model-category-palette.md]
+source_of_truth: [docs/decisions/ADR-025-flat-evidence-ledger.md, docs/decisions/ADR-029-provider-ledger-only-rendering.md]
 themes: [github-light, github-dark]
 fonts: local-fallback-only
 network_assets: forbidden
@@ -28,10 +28,10 @@ The interface must also make the honest boundary visible: unknown is not
 human, provider presences can overlap one commit, and aggregate-only activity
 is identity redaction rather than anonymity.
 
-Model-family contribution is a separate all-time, non-exclusive ledger. Its
-canonical category mark, label, count/share, and stable category-coloured bar
-are redundant presentation channels; it never changes the daily matrix and it
-never implies a model-by-day aggregate. See ADR-028.
+Model-family evidence remains in `VizStats` and `profile.json` for
+machine-readable consumers. The summary and dashboard intentionally expose one
+contribution ledger: providers. No model palette or category mark is part of
+the active visual contract. See ADR-029.
 
 ## Normative tokens
 
@@ -66,11 +66,6 @@ roles:
     border: "#34526f"
     evidence_surface: "#3b331e"
     unknown: "#8d9baa"
-model_categories:
-  key: canonical_category_slug
-  units: attributed_commits_and_actor_presences
-  denominator: unique_ai_attributed_commits
-  unknown: neutral_mark_and_label
 behavior:
   deterministic: true
   external_fonts: false

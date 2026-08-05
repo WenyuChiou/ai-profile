@@ -19,7 +19,7 @@ headline.
 
 ### Version strategy
 
-The additive model-family visualization contract ships as ACE schema
+The additive model-family data contract ships as ACE schema
 `0.3.0` (package release `0.5.0`).  `schema_version` remains the shared field
 in events, `VizStats`, and `profile.json`: the event payload and the public
 aggregate contract move together for this release, so a second version field
@@ -27,6 +27,11 @@ would add no information.  The aggregator continues to read stored `0.1.x`,
 `0.2.x`, and `0.3.x` events; a stored `major.minor` above that set fails
 loudly before any rows are counted.  No SQLite layout migration is needed.
 New scans write `0.3.0` events.
+
+The current renderer presentation is governed separately by ADR-029: model
+rows remain in the validated contract and machine-readable `profile.json`, but
+the summary and dashboard use the provider ledger as their sole visual
+contribution ledger.
 
 If a future public visualization change must evolve independently of the ACE
 event payload, it must introduce an explicit `viz_schema_version` field in a
@@ -78,8 +83,9 @@ missing model evidence as a family.
 
 ## Consequences
 
-- Renderers and exporters consume one privacy-safe, schema-owned model ledger;
-  they do not read SQLite or raw ACE events.
+- Exporters and machine-readable consumers retain one privacy-safe,
+  schema-owned model ledger; renderers do not read SQLite or raw ACE events and
+  may omit a separate model visual when the presentation ADR requires it.
 - Model attributed-commit rows may sum above the unique AI-attributed total;
   consumers must display them as non-exclusive evidence, not as a headline
   total.

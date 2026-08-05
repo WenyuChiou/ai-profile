@@ -8,7 +8,7 @@
 ## 讓你的 AI 協作有證據可查。
 
 `ai-profile` 會把本機多個 Git repository 中明確記錄的 provenance，
-轉換成適合 GitHub Profile 的隱私安全卡片與可依 provider 篩選、含 model family
+轉換成適合 GitHub Profile 的隱私安全卡片與可依 provider 篩選、含 provider
 ledger 的 dashboard；
 不需上傳原始碼，也不會猜測 attribution。
 
@@ -37,8 +37,7 @@ ledger 的 dashboard；
 ## 真實 GitHub Profile 範例
 
 下方卡片使用維護者的真實公開 aggregate data。點擊即可開啟可依 provider
-篩選的 dashboard；若 Git 歷史明確宣告 `AI-Model`，卡片也會顯示 model family
-contribution。
+篩選的 dashboard；卡片會顯示明確的 provider 參與與 evidence 總數。
 
 <a href="https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html">
   <picture>
@@ -50,9 +49,8 @@ contribution。
 </a>
 
 這張卡片呈現持續的 AI 協作（active AI days 與 12 週扁平活動矩陣）、
-跨 AI providers 的廣度、model family contribution，以及每個數字背後的
-明確 evidence 總數。Model family rows 是 non-exclusive evidence view：一個
-commit 可以明確記錄多個 family。它是根據宣告 Git evidence 的紀錄，不是技能評分。
+跨 AI providers 的廣度，以及每個數字背後的明確 evidence 總數。它是根據
+宣告 Git evidence 的紀錄，不是技能評分。
 
 ## 為什麼使用 ai-profile？
 
@@ -248,8 +246,8 @@ summary card 與 dashboard 共用平面的 Editorial Signal 視覺系統：安�
 </picture>
 
 六個 SVG 都是靜態且可直接放入 GitHub。`dashboard.html` 是 self-contained
-的 provider-filterable view，另有 all-AI model family ledger，支援 light、dark
-與 system themes，不會載入
+的 provider-filterable view，包含 provider ledger，支援 light、dark 與 system
+themes，不會載入
 外部 script、font、tracker 或 API。`profile.json` 與所有 renderer 使用
 相同、已驗證的公開 aggregate contract。
 
@@ -280,10 +278,10 @@ AI-attributed commit 與多個 actor presences。只有明確的人類獨立 com
 aggregation 或 counts。
 
 若有 `AI-Model`，canonical value 會對應到小型、由 schema 控制的 model family
-vocabulary（例如 `Claude-Sonnet` → **Claude**）。Model ledger 是 all-AI、all-time
-的 evidence view：family commit counts 刻意採 non-exclusive，actor presences
-與 active days 仍是分開的指標。沒有 model 宣告會維持 **Unknown**；raw model
-strings 不會進入公開資產。
+vocabulary（例如 `Claude-Sonnet` → **Claude**），並以已驗證的 machine-readable
+evidence 保留在 `profile.json`。Family commit counts 刻意採 non-exclusive，
+actor presences 與 active days 仍是分開的指標。沒有 model 宣告會維持
+**Unknown**；raw model strings 不會進入公開資產。
 
 ## 隱私
 
@@ -309,9 +307,9 @@ strings 不會進入公開資產。
   commits。
 - **Actor presences** 計算 commit 內不同 provider/tool 的參與；provider
   totals 可能大於 unique commit totals。
-- **Model-family rows** 計算明確 canonical `AI-Model` evidence；一個 commit
-  可以同時貢獻給多個 family row，但不會增加 unique AI-attributed commit
-  headline。
+- **`profile.json` 的 model-family rows** 計算明確 canonical `AI-Model`
+  evidence；一個 commit 可以同時貢獻給多個 family row，但不會增加 unique
+  AI-attributed commit headline。
 - **Unknown** 永遠與 human 分開。
 - Evidence quality 為
   `verified > declared > imported > inferred > unknown`。

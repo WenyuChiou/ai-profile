@@ -118,8 +118,9 @@ def test_output_is_the_exact_unmodified_candidate_render(tmp_path):
     assert "connect-src 'none'" in html
     assert 'id="profileData"' in html
     assert 'aria-label="Filter dashboard by AI provider"' in html
-    assert "Model contribution" in html
-    assert "model-family evidence" in html
+    assert "Provider ledger" in html
+    assert "Model contribution" not in html
+    assert "model-list" not in html
     for token in ("https://", "http://", "fetch(", "XMLHttpRequest", "WebSocket"):
         assert token not in html
 

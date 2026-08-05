@@ -393,16 +393,6 @@ def test_dark_mark_surfaces_use_the_validated_contrast_background():
 
 
 @pytest.mark.parametrize(
-    ("model_accent", "surface"),
-    [("#3d5a80", "#d9eaff"), ("#9ecbff", _DARK_MARK_SURFACE)],
-)
-def test_model_family_marks_use_a_separate_contrasting_token(model_accent, surface):
-    html = render_dashboard(_stats())
-    assert f"--model-accent: {model_accent};" in html
-    assert _contrast(model_accent, surface) >= 3
-
-
-@pytest.mark.parametrize(
     ("foreground", "background"),
     [
         ("#172033", "#fbfdff"),

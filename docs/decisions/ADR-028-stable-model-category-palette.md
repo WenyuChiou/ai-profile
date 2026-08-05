@@ -1,10 +1,15 @@
 # ADR-028: Stable model-category visual encoding
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-029
 - **Date:** 2026-08-04
 - **Decision owners:** ai-profile maintainers
 - **Supersedes:** the presentation-only portion of ADR-027 that described one
   neutral model bar token
+
+> This ADR records the v0.6.0 palette that was shipped at the time. ADR-029
+> supersedes its current presentation guidance: the palette and model rows are
+> no longer rendered by the summary SVG or dashboard, while model evidence
+> remains in the validated machine-readable contract.
 
 ## Context
 
