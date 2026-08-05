@@ -1,8 +1,8 @@
 {
-  "version": "0.6.0",
-  "wheel": "ai_profile_cli-0.6.0-py3-none-any.whl",
-  "wheel_sha256": "7ea7b3db484615d5f361d2ba0a237819a94757065b47464efb1d8058bf0ba789",
-  "dashboard_sha256": "69dee6fd9bd6f437446943ac89afa199f71c2173ab97ff27d98c8b20bb529cdc",
-  "source_date_epoch": 1785801600,
+  "version": "0.6.1",
+  "wheel": "ai_profile_cli-0.6.1-py3-none-any.whl",
+  "wheel_sha256": "6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f",
+  "dashboard_sha256": "8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1",
+  "source_date_epoch": 1785888000,
   "evaluation_baseline": "c0a5b78cda7fff41b66ffedc9f1ced7ae2695c56"
 }

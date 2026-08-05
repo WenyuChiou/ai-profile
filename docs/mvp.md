@@ -119,9 +119,7 @@ only, with an explicit "not published" notice otherwise) ·
 provider-ranked thin bars (top 6 + "+N providers not shown") with count
 and percentage in separate aligned metric columns, denominator stated in the
 table header and an explicit
-non-exclusive note · a compact all-time model-family ledger (top 4 + "+N
-model categories not shown"), sourced only from explicit canonical model
-trailers and keeping `unknown` separate · a compact evidence rail with its population stated
+non-exclusive note · a compact evidence rail with its population stated
 ("all records: N" — G2-05), a stacked evidence bar, and square-swatch
 counts · publication statement (policy-based wording, never visibility
 claims — G2-04: "Includes aggregate-only activity (repository identity
@@ -139,7 +137,9 @@ ADR-010).
 - Public outputs contain only: counts, canonical provider and model-family
   slugs/display names (plus the reserved `unrecognized` provider and
   `unknown` model buckets — never raw strings), evidence totals, period,
-  flags, UTC generation date.
+  flags, UTC generation date. Model-family rows remain machine-readable
+  contract data; ADR-029 keeps the summary and dashboard visuals
+  provider-ledger-only.
 - Never in outputs: repository names/uids/paths, org names, branch names,
   commit shas/messages, raw trailer values, prompts, author emails, local
   paths, tokens, excluded-repository counts, timestamps finer than a date.

@@ -12,7 +12,6 @@ import json
 
 from ..viz import VizStats, to_json_dict
 from .brand import BRAND
-from .themes import MODEL_CATEGORY_COLORS
 
 _PROVIDER_GLYPHS_JSON = json.dumps(
     {slug: spec.path for slug, spec in sorted(BRAND.items())},
@@ -20,13 +19,6 @@ _PROVIDER_GLYPHS_JSON = json.dumps(
     separators=(",", ":"),
     sort_keys=True,
 )
-_MODEL_CATEGORY_COLORS_JSON = json.dumps(
-    MODEL_CATEGORY_COLORS,
-    ensure_ascii=True,
-    separators=(",", ":"),
-    sort_keys=True,
-)
-
 _HTML_PREFIX = """<!doctype html>
 <html lang="en" data-theme="auto">
 <head>
@@ -52,7 +44,6 @@ _HTML_PREFIX = """<!doctype html>
       --muted: #52647a;
       --faint: #65758a;
       --accent: #005cc5;
-      --model-accent: #3d5a80;
       --success: #1a7f37;
       --warning: #9a6700;
       --warning-strong: #7d4e00;
@@ -94,7 +85,6 @@ _HTML_PREFIX = """<!doctype html>
         --muted: #b5c7da;
         --faint: #9fb2c6;
         --accent: #8bc8ff;
-        --model-accent: #9ecbff;
         --success: #3fb950;
         --warning: #eac54f;
         --warning-strong: #fae17d;
@@ -118,7 +108,6 @@ _HTML_PREFIX = """<!doctype html>
       --muted: #b5c7da;
       --faint: #9fb2c6;
       --accent: #8bc8ff;
-      --model-accent: #9ecbff;
       --success: #3fb950;
       --warning: #eac54f;
       --warning-strong: #fae17d;
@@ -502,7 +491,6 @@ _HTML_PREFIX = """<!doctype html>
 
     .activity-panel,
     .providers-panel,
-    .models-panel,
     .evidence-panel,
     .notes-panel {
       padding: clamp(1.5rem, 3vw, 2.25rem);
@@ -630,92 +618,6 @@ _HTML_PREFIX = """<!doctype html>
     .provider-list {
       display: grid;
       gap: var(--space-3);
-    }
-
-    .models-panel {
-      grid-column: 1 / -1;
-    }
-
-    .model-list {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: var(--space-4);
-    }
-
-    .model-row {
-      display: grid;
-      gap: var(--space-2);
-      min-width: 0;
-      padding: var(--space-3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: var(--surface);
-    }
-
-    .model-row-head {
-      display: flex;
-      gap: var(--space-2);
-      align-items: baseline;
-      justify-content: space-between;
-    }
-
-    .model-name {
-      display: inline-flex;
-      gap: var(--space-2);
-      align-items: center;
-      color: var(--text);
-      font-size: 0.9375rem;
-      font-weight: 700;
-    }
-
-    .model-mark {
-      display: inline-grid;
-      width: 1.35rem;
-      height: 1.35rem;
-      flex: 0 0 auto;
-      place-items: center;
-      border: 1px solid var(--border);
-      border-radius: 0.3rem;
-      background: var(--grid-empty);
-      color: var(--muted);
-      font-family: var(--mono);
-      font-size: 0.8125rem;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-    }
-
-    .model-count {
-      font-family: var(--mono);
-      font-size: 0.875rem;
-      font-weight: 700;
-    }
-
-    .model-track {
-      height: 0.38rem;
-      overflow: hidden;
-      border-radius: 0.125rem;
-      background: var(--grid-empty);
-    }
-
-    .model-fill {
-      height: 100%;
-      border-radius: inherit;
-      background: var(--model-accent);
-    }
-
-    .model-detail {
-      color: var(--muted);
-      font-family: var(--mono);
-      font-size: 0.8125rem;
-      line-height: 1.5;
-    }
-
-    .model-empty {
-      min-height: 4rem;
-      padding: var(--space-3);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius-md);
-      color: var(--muted);
     }
 
     .providers-panel .panel-title {
@@ -963,14 +865,6 @@ _HTML_PREFIX = """<!doctype html>
         display: block;
       }
 
-      .models-panel {
-        grid-column: auto;
-      }
-
-      .model-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
       .evidence-panel .panel-heading {
         display: flex;
         margin-bottom: var(--space-6);
@@ -1053,8 +947,7 @@ _HTML_PREFIX = """<!doctype html>
       }
 
       .evidence-grid,
-      .notes-panel,
-      .model-list {
+      .notes-panel {
         grid-template-columns: 1fr;
       }
     }
@@ -1229,17 +1122,6 @@ _HTML_PREFIX = """<!doctype html>
         <div class="provider-list" id="providerList"></div>
       </article>
 
-      <article class="panel models-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">Explicit model evidence</p>
-            <h2 class="panel-title">Model contribution</h2>
-          </div>
-          <p class="panel-meta">All AI view · family categories<br>not mutually exclusive</p>
-        </div>
-        <div class="model-list" id="modelList"></div>
-      </article>
-
       <article class="panel evidence-panel">
         <div class="panel-heading">
           <div>
@@ -1289,24 +1171,6 @@ _HTML_SUFFIX = """</script>
       const $ = (id) => document.getElementById(id);
       const number = new Intl.NumberFormat("en-US");
       const percent = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
-      const modelMarks = {
-        claude: "Cl",
-        gpt: "Gp",
-        gemini: "Ge",
-        llama: "Ll",
-        mistral: "Mi",
-        deepseek: "Ds",
-        qwen: "Qw",
-        grok: "Gk",
-        kimi: "Km",
-        other: "+",
-        unknown: "?"
-      };
-      // Stable category-keyed colours keep a family visually consistent when
-      // the ledger gains a new row.  These are small categorical marks/bars;
-      // labels and counts remain text-colour so colour is never the only
-      // channel.  The neutral buckets intentionally share the model token.
-      const modelColors = __MODEL_CATEGORY_COLORS__;
       const providerColors = {
         anthropic: "#9a6700",
         openai: "#1a7f37",
@@ -1349,18 +1213,6 @@ _HTML_SUFFIX = """</script>
         let hash = 0;
         for (const char of slug) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
         return fallbackColors[Math.abs(hash) % fallbackColors.length];
-      }
-
-      function modelColor(category) {
-        let mode = theme;
-        if (mode === "auto") {
-          mode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark" : "light";
-        }
-        const palette = modelColors[mode === "dark" ? "github-dark" : "github-light"];
-        const neutral = palette && palette.unknown
-          ? palette.unknown : (mode === "dark" ? "#b5c7da" : "#52647a");
-        return (palette && palette[category]) || neutral;
       }
 
       function providerIcon(slug, label, variant) {
@@ -1406,15 +1258,6 @@ _HTML_SUFFIX = """</script>
       function rgba(hex, alpha) {
         const [r, g, b] = hexToRgb(hex);
         return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
-      }
-
-      function honestPercentLabel(numerator, denominator) {
-        if (!denominator || numerator === 0) return "0%";
-        if (numerator === denominator) return "100%";
-        const rounded = Math.round((numerator / denominator) * 100);
-        if (rounded === 0) return "<1%";
-        if (rounded === 100) return ">99%";
-        return `${rounded}%`;
       }
 
       function providerBySlug(slug) {
@@ -1786,56 +1629,6 @@ _HTML_SUFFIX = """</script>
         }));
       }
 
-      function renderModels() {
-        const list = $("modelList");
-        if (!data.models.length) {
-          const empty = document.createElement("div");
-          empty.className = "model-empty";
-          empty.textContent = data.totals.ai_actor_presences
-            ? "No explicit model-family evidence published."
-            : "No model contribution recorded yet.";
-          list.replaceChildren(empty);
-          return;
-        }
-        const max = Math.max(...data.models.map((row) => row.attributed_commits), 1);
-        list.replaceChildren(...data.models.map((row) => {
-          const item = document.createElement("div");
-          item.className = "model-row";
-          const head = document.createElement("div");
-          head.className = "model-row-head";
-          const name = document.createElement("span");
-          name.className = "model-name";
-          const mark = document.createElement("span");
-          mark.className = "model-mark";
-          mark.setAttribute("aria-hidden", "true");
-          mark.textContent = modelMarks[row.category] || "?";
-          const categoryColor = modelColor(row.category);
-          mark.style.color = categoryColor;
-          mark.style.borderColor = categoryColor;
-          name.append(mark, document.createTextNode(row.display_name));
-          const count = document.createElement("span");
-          count.className = "model-count";
-          count.textContent = number.format(row.attributed_commits);
-          head.append(name, count);
-          const track = document.createElement("div");
-          track.className = "model-track";
-          const fill = document.createElement("div");
-          fill.className = "model-fill";
-          fill.style.width = `${(row.attributed_commits / max) * 100}%`;
-          fill.style.background = categoryColor;
-          track.append(fill);
-          const detail = document.createElement("div");
-          detail.className = "model-detail";
-          const denominator = data.totals.ai_attributed_commits;
-          const share = honestPercentLabel(row.attributed_commits, denominator);
-          detail.textContent = `${share} of ${number.format(denominator)} unique ` +
-            `AI-attributed commits · ${number.format(row.actor_presences)} presences · ` +
-            `${number.format(row.active_days)} active days`;
-          item.append(head, track, detail);
-          return item;
-        }));
-      }
-
       function renderEvidence() {
         const entries = ["verified", "declared", "imported", "inferred", "unknown"]
           .map((key) => ({ key, value: data.evidence_records[key] }))
@@ -1891,7 +1684,6 @@ _HTML_SUFFIX = """</script>
       function render() {
         renderHero();
         renderCalendar();
-        renderModels();
         document.querySelectorAll(".filter").forEach((button) => {
           button.setAttribute("aria-pressed", String(button.dataset.provider === selected));
           if (button.dataset.provider === "all") {
@@ -1905,10 +1697,8 @@ _HTML_SUFFIX = """</script>
       }
 
       // CSS updates the surface tokens immediately when the OS preference
-      // changes. Re-render the small inline model marks as well so an `auto`
-      // dashboard never leaves light categorical colours on a dark surface
-      // (or the reverse). The legacy branch keeps this working in older
-      // WebKit without adding a dependency or a network path.
+      // changes. The legacy branch keeps this working in older WebKit without
+      // adding a dependency or a network path.
       const systemScheme = window.matchMedia
         ? window.matchMedia("(prefers-color-scheme: dark)") : null;
       const handleSystemSchemeChange = () => {
@@ -1973,4 +1763,4 @@ def render_dashboard(stats: VizStats) -> str:
     )
     return _HTML_PREFIX + payload + _HTML_SUFFIX.replace(
         "__PROVIDER_GLYPHS__", _PROVIDER_GLYPHS_JSON
-    ).replace("__MODEL_CATEGORY_COLORS__", _MODEL_CATEGORY_COLORS_JSON)
+    )

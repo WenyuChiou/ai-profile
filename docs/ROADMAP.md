@@ -250,6 +250,26 @@ designed v0.5.0 plan.
       merged at `ca12bdd`; Pages run `30944387849` and the snake run
       `30944389155` passed, and all eight live outputs returned HTTP 200.
 
+The v0.6.0 model visual is a historical release surface. ADR-029 now keeps
+the model-family aggregate in ACE/profile data while making the provider ledger
+the sole model/provider contribution visual in current SVG and dashboard
+renderers.
+
+## v0.6.1 - Provider-ledger-only visual correction (2026-08-05, Public Beta candidate)
+
+- [x] Remove the duplicate model-family presentation from the Summary Card and
+      self-contained dashboard while retaining canonical model evidence in
+      `VizStats` and machine-readable `profile.json`.
+- [x] Preserve ACE/public schema `0.3.0`, aggregation units, CLI behavior,
+      privacy boundary, and the eight-output contract. No new model-by-date
+      inference or schema field is introduced.
+- [x] Use a patch version because the published v0.6.0 candidate is immutable;
+      freeze the v0.6.1 candidate in `docs/reviews/promotion-candidate.json`
+      with the Ubuntu-authoritative wheel digest
+      `6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f` and
+      staging dashboard digest
+      `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
+
 ## Future capability milestone — GitHub integration
 
 Public-API discovery wrapping the official REST/GraphQL API (mature

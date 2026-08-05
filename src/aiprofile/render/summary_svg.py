@@ -34,7 +34,7 @@ from xml.sax.saxutils import escape
 from ..viz import DayCell, ProviderRow, Totals, VizStats
 from ._bins import VOLUME_CAP, _share_bin, _share_colors, _volume_bin
 from .brand import BRAND, BrandSpec
-from .themes import Theme, model_category_color
+from .themes import Theme
 
 # Mirrors aiprofile.schema.vocab.UNRECOGNIZED_PROVIDER verbatim. The
 # render-layer isolation boundary (architecture.md section 2) forbids
@@ -73,25 +73,6 @@ FONT_STACK_MONO = (
 
 TITLE_TEXT = "AI Collaboration Record"
 MAX_PROVIDER_ROWS = 6
-MAX_MODEL_ROWS = 4
-
-# Model-family marks are deliberately typographic rather than vendor logos:
-# the public contract exposes a family category, not a product identity.  A
-# small two-character mark gives the ledger a scan-friendly visual anchor
-# without introducing another data channel or an external asset dependency.
-MODEL_MARKS = {
-    "claude": "Cl",
-    "gpt": "Gp",
-    "gemini": "Ge",
-    "llama": "Ll",
-    "mistral": "Mi",
-    "deepseek": "Ds",
-    "qwen": "Qw",
-    "grok": "Gk",
-    "kimi": "Km",
-    "other": "+",
-    "unknown": "?",
-}
 
 # Header: accent commit-node glyph + title + right-aligned period label.
 HEADER_TEXT_Y = 36
@@ -162,25 +143,6 @@ SECTION_MARK_GAP = 8
 SECTION_RULE_WIDTH = 12
 
 MORE_LINE_EXTRA = 24  # vertical room for the "+N providers not shown" line when present
-
-# Model-family ledger (ADR-027, ADR-028): compact, all-time evidence rows sourced only
-# from the validated VizStats model tuple.  It deliberately has no daily
-# geometry or filter semantics.
-MODEL_LABEL_TEXT = "Model contribution"
-MODEL_ROW_HEIGHT = 24
-MODEL_LABEL_OFFSET = 14
-MODEL_ROWS_TOP_OFFSET = 28
-MODEL_GAP_ABOVE = 20
-MODEL_MORE_LINE_EXTRA = 20
-MODEL_TILE_X = PADDING
-MODEL_TILE_SIZE = 20
-MODEL_TILE_RADIUS = 4
-MODEL_TILE_CX = MODEL_TILE_X + MODEL_TILE_SIZE // 2
-MODEL_TILE_TEXT_DY = 14
-MODEL_NAME_X = MODEL_TILE_X + MODEL_TILE_SIZE + 8
-MODEL_NAME_WIDTH = NAME_WIDTH - (MODEL_NAME_X - PADDING)
-MODEL_BAR_X = 184
-MODEL_BAR_MAX_WIDTH = 480
 
 #: Explicit non-exclusive statement for the provider ledger (ADR-022):
 #: provider involvement totals overlap by definition, and the card says so
@@ -536,14 +498,6 @@ def _has_more_line(stats: VizStats) -> bool:
     return len(stats.providers) > MAX_PROVIDER_ROWS
 
 
-def _visible_model_rows(stats: VizStats) -> int:
-    return min(len(stats.models), MAX_MODEL_ROWS)
-
-
-def _has_more_model_line(stats: VizStats) -> bool:
-    return len(stats.models) > MAX_MODEL_ROWS
-
-
 def _calendar_top(stats: VizStats) -> int:
     # The matrix block sits directly under the
     # fixed-height hero/ledger block (ADR-022 moved it above the provider
@@ -576,20 +530,8 @@ def _rows_bottom(stats: VizStats) -> int:
 
 def _panel_top(stats: VizStats) -> int:
     # The evidence rail follows the provider ledger and its non-exclusive
-    # note; every term is a pure function of the data shape.
-    model_extra = 0
-    if stats.models:
-        model_extra = MODEL_GAP_ABOVE + _model_block_height(stats)
-    return _rows_bottom(stats) + PROVIDER_NOTE_EXTRA + model_extra + PANEL_GAP_ABOVE
-
-
-def _model_block_height(stats: VizStats) -> int:
-    if not stats.models:
-        return 0
-    height = MODEL_ROWS_TOP_OFFSET + _visible_model_rows(stats) * MODEL_ROW_HEIGHT
-    if _has_more_model_line(stats):
-        height += MODEL_MORE_LINE_EXTRA
-    return height
+    # note; every term is a pure function of the provider data shape.
+    return _rows_bottom(stats) + PROVIDER_NOTE_EXTRA + PANEL_GAP_ABOVE
 
 
 def card_height(stats: VizStats) -> int:
@@ -630,38 +572,10 @@ def _desc_text(stats: VizStats, zero_state: bool) -> str:
     if zero_state:
         return f"No AI collaboration recorded yet. Generated {stats.generated_on}."
     t = stats.totals
-    if stats.models:
-        visible = min(len(stats.models), MAX_MODEL_ROWS)
-        overflow = len(stats.models) - visible
-        visible_rows = stats.models[:visible]
-        has_unknown = any(row.category == "unknown" for row in stats.models)
-        visible_unknown = any(row.category == "unknown" for row in visible_rows)
-        if overflow:
-            unknown_note = (
-                ", including the unknown bucket"
-                if visible_unknown
-                else ", with the unknown bucket in the hidden rows"
-                if has_unknown
-                else ""
-            )
-            model_note = (
-                f" {stats.model_count} known model families recorded; top {visible}"
-                f" rows shown{unknown_note}, with {overflow} more hidden in a"
-                " non-exclusive all-time evidence ledger."
-            )
-        else:
-            unknown_note = " plus an unknown bucket" if has_unknown else ""
-            model_note = (
-                f" {stats.model_count} known model families{unknown_note} are shown"
-                " in a non-exclusive all-time evidence ledger."
-            )
-    else:
-        model_note = " No explicit model-family evidence is published."
     return (
         f"{t.ai_attributed_commits} AI-attributed commits, "
         f"{t.ai_actor_presences} AI actor presences across "
         f"{t.active_ai_days} active AI days (author dates), {stats.provider_count} AI providers."
-        f"{model_note}"
         f"{_calendar_desc_suffix(stats)}"
         f" Generated {stats.generated_on}."
     )
@@ -858,138 +772,6 @@ def _provider_row_svg(
             )
         )
     return "\n".join(elements)
-
-
-def _model_mark_svg(category: str, theme: Theme, tile_y: int) -> str:
-    """Render a stable category mark without exposing raw model text.
-
-    The mark is presentation metadata derived from the already validated
-    public category slug.  It is not a provider logo and never exposes the
-    raw model declaration.
-    """
-    mark = MODEL_MARKS[category]
-    category_color = model_category_color(theme, category)
-    return "\n".join(
-        (
-            _rect(
-                MODEL_TILE_X,
-                tile_y,
-                MODEL_TILE_SIZE,
-                MODEL_TILE_SIZE,
-                fill=theme.bar_track,
-                rx=MODEL_TILE_RADIUS,
-                stroke=category_color,
-            ),
-            _text(
-                MODEL_TILE_CX,
-                tile_y + MODEL_TILE_TEXT_DY,
-                mark,
-                size=11,
-                weight=700,
-                fill=category_color,
-                anchor="middle",
-                family=FONT_STACK_MONO,
-            ),
-        )
-    )
-
-
-def _model_row_svg(
-    index: int, stats: VizStats, max_attributed: int, denominator: int, theme: Theme
-) -> str:
-    """Render one model-family row without model-name inference.
-
-    Public model display text has already been pinned to the schema vocabulary
-    by VizStats validation; this helper only lays out that validated row.
-    """
-    row = stats.models[index]
-    model_top = _rows_bottom(stats) + PROVIDER_NOTE_EXTRA + MODEL_GAP_ABOVE
-    row_top = model_top + MODEL_ROWS_TOP_OFFSET + index * MODEL_ROW_HEIGHT
-    bar_y = row_top + 8
-    text_y = row_top + 18
-    name = _truncate(row.display_name, MODEL_NAME_WIDTH, NAME_FONT_SIZE)
-    elements = [
-        _model_mark_svg(row.category, theme, row_top + 2),
-        _text(MODEL_NAME_X, text_y, name, size=NAME_FONT_SIZE, fill=theme.text),
-        _rect(
-            MODEL_BAR_X,
-            bar_y,
-            MODEL_BAR_MAX_WIDTH,
-            BAR_HEIGHT,
-            fill=theme.bar_track,
-            rx=2,
-        ),
-    ]
-    if max_attributed > 0 and row.attributed_commits > 0:
-        bar_w = round(MODEL_BAR_MAX_WIDTH * row.attributed_commits / max_attributed)
-        elements.append(
-            _rect(
-                MODEL_BAR_X,
-                bar_y,
-                bar_w,
-                BAR_HEIGHT,
-                fill=model_category_color(theme, row.category),
-                rx=2,
-            )
-        )
-    count_span = _tspan(str(row.attributed_commits), fill=theme.text, weight=600)
-    elements.append(
-        f'<text x="{COUNT_VALUE_X}" y="{text_y}" font-family="{FONT_STACK_MONO}"'
-        f' font-size="{COUNT_FONT_SIZE}" text-anchor="end">{count_span}</text>'
-    )
-    if denominator > 0:
-        pct_span = _tspan(f" · {_pct_label(row.attributed_commits, denominator)}", fill=theme.muted)
-        elements.append(
-            f'<text x="{COUNT_PERCENT_X}" y="{text_y}" font-family="{FONT_STACK_MONO}"'
-            f' font-size="{COUNT_FONT_SIZE}" text-anchor="end">{pct_span}</text>'
-        )
-    if index < _visible_model_rows(stats) - 1:
-        elements.append(
-            _line(
-                PADDING,
-                row_top + MODEL_ROW_HEIGHT,
-                COUNT_X,
-                row_top + MODEL_ROW_HEIGHT,
-                stroke=theme.border,
-            )
-        )
-    return "\n".join(elements)
-
-
-def _model_ledger_svg(stats: VizStats, theme: Theme) -> str:
-    if not stats.models:
-        return ""
-    top = _rows_bottom(stats) + PROVIDER_NOTE_EXTRA + MODEL_GAP_ABOVE
-    label_y = top + MODEL_LABEL_OFFSET
-    max_attributed = stats.models[0].attributed_commits
-    denominator = stats.totals.ai_attributed_commits
-    parts = [_section_label(MODEL_LABEL_TEXT, label_y, theme)]
-    if denominator > 0:
-        parts.append(
-            _text(
-                WIDTH - PADDING,
-                label_y,
-                f"Non-exclusive · % of {denominator} AI-attributed commits",
-                size=11,
-                fill=theme.muted,
-                anchor="end",
-            )
-        )
-    for index in range(_visible_model_rows(stats)):
-        parts.append(_model_row_svg(index, stats, max_attributed, denominator, theme))
-    if _has_more_model_line(stats):
-        remaining = len(stats.models) - MAX_MODEL_ROWS
-        more_y = top + MODEL_ROWS_TOP_OFFSET + MAX_MODEL_ROWS * MODEL_ROW_HEIGHT + 12
-        parts.append(
-            _text(
-                PADDING,
-                more_y,
-                f"+{remaining} model categories not shown",
-                size=12,
-                fill=theme.muted,
-            )
-        )
-    return "\n".join(parts)
 
 
 def _evidence_items(stats: VizStats, theme: Theme) -> tuple[tuple[str, int, str, bool], ...]:
@@ -1540,12 +1322,6 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
                 fill=theme.muted,
             )
         )
-
-        # Model-family ledger is an all-time contribution view.  It is kept
-        # separate from the flat daily terrain so no model-by-day geometry or
-        # implied filter semantics can be inferred by the renderer.
-        if stats.models:
-            parts.append(_model_ledger_svg(stats, theme))
 
         panel_top = _panel_top(stats)
         parts.append(_evidence_panel_svg(stats, theme, panel_top))

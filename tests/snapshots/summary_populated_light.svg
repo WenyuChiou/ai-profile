@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="830" height="1042" viewBox="0 0 830 1042" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="898" viewBox="0 0 830 898" role="img" aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">
 <title id="aiprofileSummaryTitle">AI Collaboration Record — All time</title>
-<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI actor presences across 58 active AI days (author dates), 7 AI providers. 3 known model families plus an unknown bucket are shown in a non-exclusive all-time evidence ledger. Daily collaboration 2026-04-22 to 2026-07-14, peak day 12 commits; bar height is total commits, fill is the day's AI share; publishable repositories only. Generated 2026-07-14.</desc>
-<rect x="0.5" y="0.5" width="829" height="1041" rx="8" fill="#fbfdff" stroke="#c2d3e5" stroke-width="1"/>
+<desc id="aiprofileSummaryDesc">375 AI-attributed commits, 463 AI actor presences across 58 active AI days (author dates), 7 AI providers. Daily collaboration 2026-04-22 to 2026-07-14, peak day 12 commits; bar height is total commits, fill is the day's AI share; publishable repositories only. Generated 2026-07-14.</desc>
+<rect x="0.5" y="0.5" width="829" height="897" rx="8" fill="#fbfdff" stroke="#c2d3e5" stroke-width="1"/>
 <rect x="24" y="24" width="16" height="16" rx="3" fill="#fbfdff" stroke="#005cc5" stroke-width="1"/>
 <rect x="29" y="29" width="6" height="6" rx="1" fill="#005cc5"/>
 <text x="48" y="36" font-family="'IBM Plex Sans Condensed', 'Aptos Display', 'Segoe UI', 'DejaVu Sans Condensed', sans-serif" font-size="16" font-weight="600" fill="#172033" text-anchor="start">AI Collaboration Record</text>
@@ -198,58 +198,23 @@
 <text x="806" y="650" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#52647a" font-weight="400"> · 5%</tspan></text>
 <text x="24" y="674" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#52647a" text-anchor="start">+2 providers not shown</text>
 <text x="24" y="696" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#52647a" text-anchor="start">Provider totals are not mutually exclusive - one commit can involve several providers.</text>
-<rect x="24" y="726" width="2" height="12" rx="1" fill="#c2d3e5"/>
-<line x1="26" y1="730" x2="38" y2="730" stroke="#c2d3e5" stroke-opacity="0.65"/>
-<text x="46" y="736" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#52647a" text-anchor="start" letter-spacing="0.2">Model contribution</text>
-<text x="806" y="736" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#52647a" text-anchor="end">Non-exclusive · % of 375 AI-attributed commits</text>
-<rect x="24" y="752" width="20" height="20" rx="4" fill="#d9eaff" stroke="#8a3f2f" stroke-width="1"/>
-<text x="34" y="766" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="11" font-weight="700" fill="#8a3f2f" text-anchor="middle">Cl</text>
-<text x="52" y="768" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#172033" text-anchor="start">Claude</text>
-<rect x="184" y="758" width="480" height="7" rx="2" fill="#d9eaff"/>
-<rect x="184" y="758" width="480" height="7" rx="2" fill="#8a3f2f"/>
-<text x="748" y="768" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#172033" font-weight="600">190</tspan></text>
-<text x="806" y="768" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#52647a" font-weight="400"> · 51%</tspan></text>
-<line x1="24" y1="774" x2="806" y2="774" stroke="#c2d3e5"/>
-<rect x="24" y="776" width="20" height="20" rx="4" fill="#d9eaff" stroke="#146b5a" stroke-width="1"/>
-<text x="34" y="790" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="11" font-weight="700" fill="#146b5a" text-anchor="middle">Gp</text>
-<text x="52" y="792" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#172033" text-anchor="start">GPT</text>
-<rect x="184" y="782" width="480" height="7" rx="2" fill="#d9eaff"/>
-<rect x="184" y="782" width="303" height="7" rx="2" fill="#146b5a"/>
-<text x="748" y="792" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#172033" font-weight="600">120</tspan></text>
-<text x="806" y="792" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#52647a" font-weight="400"> · 32%</tspan></text>
-<line x1="24" y1="798" x2="806" y2="798" stroke="#c2d3e5"/>
-<rect x="24" y="800" width="20" height="20" rx="4" fill="#d9eaff" stroke="#4b4aa3" stroke-width="1"/>
-<text x="34" y="814" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="11" font-weight="700" fill="#4b4aa3" text-anchor="middle">Ge</text>
-<text x="52" y="816" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#172033" text-anchor="start">Gemini</text>
-<rect x="184" y="806" width="480" height="7" rx="2" fill="#d9eaff"/>
-<rect x="184" y="806" width="189" height="7" rx="2" fill="#4b4aa3"/>
-<text x="748" y="816" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#172033" font-weight="600">75</tspan></text>
-<text x="806" y="816" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#52647a" font-weight="400"> · 20%</tspan></text>
-<line x1="24" y1="822" x2="806" y2="822" stroke="#c2d3e5"/>
-<rect x="24" y="824" width="20" height="20" rx="4" fill="#d9eaff" stroke="#52647a" stroke-width="1"/>
-<text x="34" y="838" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="11" font-weight="700" fill="#52647a" text-anchor="middle">?</text>
-<text x="52" y="840" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="400" fill="#172033" text-anchor="start">Unknown</text>
-<rect x="184" y="830" width="480" height="7" rx="2" fill="#d9eaff"/>
-<rect x="184" y="830" width="63" height="7" rx="2" fill="#52647a"/>
-<text x="748" y="840" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#172033" font-weight="600">25</tspan></text>
-<text x="806" y="840" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="13" text-anchor="end"><tspan fill="#52647a" font-weight="400"> · 7%</tspan></text>
-<rect x="24" y="866" width="164" height="22" rx="4" fill="#fff0bd"/>
-<text x="32" y="882" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#52647a" text-anchor="start" letter-spacing="0.2">Evidence (all records: 463)</text>
-<rect x="24" y="902" width="20" height="8" rx="2" fill="#033d8b"/>
-<rect x="46" y="902" width="671" height="8" rx="2" fill="#0550ae"/>
-<rect x="719" y="902" width="8" height="8" rx="2" fill="#1f87f8"/>
-<rect x="729" y="902" width="77" height="8" rx="2" fill="#6e7781"/>
-<rect x="24" y="923" width="8" height="8" rx="1" fill="#033d8b"/>
-<text x="36" y="930" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#172033" text-anchor="start">verified 12</text>
-<rect x="111" y="923" width="8" height="8" rx="1" fill="#0550ae"/>
-<text x="123" y="930" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#172033" text-anchor="start">declared 400</text>
-<rect x="210" y="923" width="8" height="8" rx="1" fill="#1f87f8"/>
-<text x="222" y="930" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#172033" text-anchor="start">inferred 5</text>
-<rect x="293" y="923" width="8" height="8" rx="1" fill="#6e7781"/>
-<text x="305" y="930" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#172033" text-anchor="start">unknown 46</text>
-<rect x="24" y="947" width="8" height="8" rx="1" fill="#52647a"/>
-<text x="36" y="954" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#52647a" text-anchor="start">Includes aggregate-only activity (repository identity withheld) — publishable 200 · aggregate-only 320</text>
-<line x1="24" y1="986" x2="806" y2="986" stroke="#c2d3e5"/>
-<text x="24" y="1010" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="11" font-weight="400" fill="#52647a" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
-<text x="24" y="1026" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#52647a" text-anchor="start">One commit may include several AI actor presences (one per provider/tool).</text>
+<rect x="24" y="722" width="164" height="22" rx="4" fill="#fff0bd"/>
+<text x="32" y="738" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#52647a" text-anchor="start" letter-spacing="0.2">Evidence (all records: 463)</text>
+<rect x="24" y="758" width="20" height="8" rx="2" fill="#033d8b"/>
+<rect x="46" y="758" width="671" height="8" rx="2" fill="#0550ae"/>
+<rect x="719" y="758" width="8" height="8" rx="2" fill="#1f87f8"/>
+<rect x="729" y="758" width="77" height="8" rx="2" fill="#6e7781"/>
+<rect x="24" y="779" width="8" height="8" rx="1" fill="#033d8b"/>
+<text x="36" y="786" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#172033" text-anchor="start">verified 12</text>
+<rect x="111" y="779" width="8" height="8" rx="1" fill="#0550ae"/>
+<text x="123" y="786" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#172033" text-anchor="start">declared 400</text>
+<rect x="210" y="779" width="8" height="8" rx="1" fill="#1f87f8"/>
+<text x="222" y="786" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#172033" text-anchor="start">inferred 5</text>
+<rect x="293" y="779" width="8" height="8" rx="1" fill="#6e7781"/>
+<text x="305" y="786" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="400" fill="#172033" text-anchor="start">unknown 46</text>
+<rect x="24" y="803" width="8" height="8" rx="1" fill="#52647a"/>
+<text x="36" y="810" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#52647a" text-anchor="start">Includes aggregate-only activity (repository identity withheld) — publishable 200 · aggregate-only 320</text>
+<line x1="24" y1="842" x2="806" y2="842" stroke="#c2d3e5"/>
+<text x="24" y="866" font-family="'IBM Plex Mono', 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono', Consolas, monospace" font-size="11" font-weight="400" fill="#52647a" text-anchor="start">Generated 2026-07-14 · aiprofile</text>
+<text x="24" y="882" font-family="'IBM Plex Sans', 'Aptos', 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="400" fill="#52647a" text-anchor="start">One commit may include several AI actor presences (one per provider/tool).</text>
 </svg>

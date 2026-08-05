@@ -336,7 +336,7 @@ def _check_dashboard(out_dir: Path) -> None:
         'aria-label="Filter dashboard by AI provider"',
         "Unattributed commits",
         "No explicit AI or human declaration recorded.",
-        "Model contribution",
+        "Provider ledger",
     )
     missing = [token for token in required if token not in html]
     if missing:

@@ -1,17 +1,14 @@
-"""Model-family contribution ledger renderer contract tests."""
+"""Renderer contract tests for data-only model-family evidence."""
 
 from __future__ import annotations
 
 import json
-from dataclasses import replace
 
 from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.render.dashboard_html import render_dashboard
 from aiprofile.render.summary_svg import render_summary
-from aiprofile.render.themes import MODEL_CATEGORY_COLORS, THEMES, model_category_color
+from aiprofile.render.themes import THEMES
 from aiprofile.viz import (
-    DayCell,
-    DayCount,
     EvidenceTotals,
     ModelRow,
     Period,
@@ -40,20 +37,9 @@ def _stats(*, models: tuple[ModelRow, ...]) -> VizStats:
     )
 
 
-def _relative_luminance(hex_color: str) -> float:
-    channels = [int(hex_color[index : index + 2], 16) / 255 for index in (1, 3, 5)]
-    linear = [
-        channel / 12.92
-        if channel <= 0.04045
-        else ((channel + 0.055) / 1.055) ** 2.4
-        for channel in channels
-    ]
-    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
-
-
-def test_summary_model_ledger_is_labeled_and_overflow_is_bounded():
+def test_summary_keeps_provider_ledger_and_hides_model_rows():
     rows = tuple(
-            ModelRow(category, display, 3 - index // 2, 3 - index // 2, 1)
+        ModelRow(category, display, 3 - index // 2, 3 - index // 2, 1)
         for index, (category, display) in enumerate(
             (
                 ("claude", "Claude"),
@@ -65,24 +51,16 @@ def test_summary_model_ledger_is_labeled_and_overflow_is_bounded():
         )
     )
     svg = render_summary(_stats(models=rows), THEMES["github-light"])
-    assert "Model contribution" in svg
-    assert "Non-exclusive" in svg
-    assert "+1 model categories not shown" in svg
-    assert "Claude" in svg and "GPT" in svg
-    assert 'font-size="11"' in svg
-    assert f'fill="{model_category_color(THEMES["github-light"], "claude")}"' in svg
-    assert f'fill="{model_category_color(THEMES["github-light"], "gpt")}"' in svg
-    for theme_name, theme in THEMES.items():
-        for category, color in MODEL_CATEGORY_COLORS[theme_name].items():
-            assert model_category_color(theme, category) == color
-            foreground, background = sorted(
-                (_relative_luminance(color), _relative_luminance(theme.bg)),
-                reverse=True,
-            )
-            assert (foreground + 0.05) / (background + 0.05) >= 3
+    assert "Attributed commits by provider" in svg
+    assert "Claude" in svg
+    assert "Model contribution" not in svg
+    assert "model-family" not in svg.lower()
+    assert "Gemini" not in svg
+    assert "Llama" not in svg
+    assert "Other" not in svg
 
 
-def test_summary_description_matches_unknown_and_overflow_visibility():
+def test_summary_description_omits_model_ledger_claims():
     known_only = tuple(
         ModelRow(category, display, 1, 1, 1)
         for category, display in (
@@ -91,8 +69,9 @@ def test_summary_description_matches_unknown_and_overflow_visibility():
         )
     )
     known_svg = render_summary(_stats(models=known_only), THEMES["github-light"])
-    assert "2 known model families are shown" in known_svg
-    assert "plus an unknown bucket" not in known_svg
+    assert "Attributed commits by provider" in known_svg
+    assert "known model families" not in known_svg
+    assert "model-family" not in known_svg.lower()
 
     overflow = known_only + (
         ModelRow("gemini", "Gemini", 1, 1, 1),
@@ -103,10 +82,11 @@ def test_summary_description_matches_unknown_and_overflow_visibility():
         sorted(overflow, key=lambda row: (-row.attributed_commits, row.category))
     )
     overflow_svg = render_summary(_stats(models=overflow), THEMES["github-light"])
-    assert "5 known model families recorded; top 4 rows shown, with 1 more hidden" in overflow_svg
+    assert "Attributed commits by provider" in overflow_svg
+    assert "model categories not shown" not in overflow_svg
 
 
-def test_dashboard_embeds_same_validated_model_rows_without_raw_values():
+def test_dashboard_keeps_model_rows_in_data_but_hides_model_visuals():
     stats = _stats(
         models=(
             ModelRow("claude", "Claude", 2, 2, 1),
@@ -114,8 +94,15 @@ def test_dashboard_embeds_same_validated_model_rows_without_raw_values():
         )
     )
     html = render_dashboard(stats)
-    assert "Model contribution" in html
-    assert "All AI view · family categories" in html
+    assert "Provider ledger" in html
+    assert "Who participated" in html
+    assert "Model contribution" not in html
+    assert "models-panel" not in html
+    assert "model-list" not in html
+    assert "renderModels" not in html
+    assert "modelMarks" not in html
+    assert "modelColors" not in html
+    assert "--model-accent" not in html
     payload = html.split('<script type="application/json" id="profileData">', 1)[1].split(
         "</script>", 1
     )[0]
@@ -138,34 +125,39 @@ def test_dashboard_embeds_same_validated_model_rows_without_raw_values():
     ]
     assert "private-model-canary" not in html
     assert "model_raw" not in dumps_stats(stats)
-    assert "honestPercentLabel" in html
-    assert "const modelColors =" in html
-    assert '"claude":"#8a3f2f"' in html
-    assert '"gpt":"#146b5a"' in html
-    assert "mark.style.color = categoryColor" in html
-    assert "mark.style.borderColor = categoryColor" in html
 
 
-def test_dashboard_zero_model_state_is_honest():
+def test_dashboard_zero_model_state_has_no_model_visual_or_copy():
     stats = _stats(models=())
     html = render_dashboard(stats)
-    assert "No explicit model-family evidence published." in html
+    assert "Provider ledger" in html
+    assert "Model contribution" not in html
+    assert "model-list" not in html
+    assert "renderModels" not in html
+    assert '"models":[]' in html
 
 
-def test_model_ledger_does_not_change_daily_terrain_geometry():
-    daily = (DayCell("2026-08-01", (DayCount("anthropic", 1),), 1, 1),)
+def test_model_rows_do_not_change_summary_layout_or_provider_ledger():
     rows = (
         ModelRow("claude", "Claude", 2, 2, 1),
         ModelRow("unknown", "Unknown", 1, 2, 1),
     )
-    without_models = render_summary(
-        replace(_stats(models=()), daily=daily), THEMES["github-light"]
+    without_models = render_summary(_stats(models=()), THEMES["github-light"])
+    with_models = render_summary(_stats(models=rows), THEMES["github-light"])
+    assert without_models == with_models
+
+
+def test_summary_card_height_ignores_data_only_model_rows():
+    from aiprofile.render.summary_svg import card_height
+
+    models = (ModelRow("claude", "Claude", 2, 2, 1),)
+    assert card_height(_stats(models=models)) == card_height(_stats(models=()))
+
+
+def test_dashboard_layout_has_provider_panel_but_no_model_panel():
+    html = render_dashboard(
+        _stats(models=(ModelRow("claude", "Claude", 2, 2, 1),))
     )
-    with_models = render_summary(
-        replace(_stats(models=rows), daily=daily), THEMES["github-light"]
-    )
-    start = "Daily collaboration (last 12 weeks)"
-    end = "Attributed commits by provider"
-    assert without_models[without_models.index(start) : without_models.index(end)] == (
-        with_models[with_models.index(start) : with_models.index(end)]
-    )
+    assert html.count('class="panel providers-panel"') == 1
+    assert 'class="panel models-panel"' not in html
+    assert html.index("Provider ledger") < html.index("Evidence quality")
