@@ -12,7 +12,7 @@ import os
 import threading
 from pathlib import Path
 
-from .errors import RenderError
+from .errors import IncompleteRollbackError, RenderError, diagnostic_text
 from .viz import VizStats, dumps_stats
 
 logger = logging.getLogger(__name__)
@@ -141,42 +141,56 @@ def write_outputs(stats: VizStats, assets: dict[str, str], out_dir: Path) -> lis
             # (gate-5 L-01), not only in logs.
             backed = {p for p, _ in backups}
             unretracted: list[str] = []
+            unretracted_details: list[str] = []
             for path in completed:
                 if path in backed:
                     continue
                 try:
                     path.unlink(missing_ok=True)
-                except OSError:
+                except OSError as rollback_exc:
                     unretracted.append(path.name)
-                    logger.warning("rollback could not retract %s", path.name)
+                    unretracted_details.append(f"{path.name}: {rollback_exc}")
+                    logger.warning(
+                        "%s",
+                        diagnostic_text(
+                            "rollback could not retract a generated asset",
+                            f"rollback could not retract {path.name}",
+                        ),
+                    )
             # Restore moved-aside olds, overwriting any installed news.
             # Gate-4 M-3: a restore failure no longer stops the loop —
             # every backup is attempted, and an unrestorable asset keeps
             # its .bak as recovery data, named in the raised error.
             unrestored: list[str] = []
+            unrestored_details: list[str] = []
             for path, bak in backups:
                 if not bak.exists():
                     continue
                 try:
                     os.replace(bak, path)
-                except OSError:
+                except OSError as rollback_exc:
                     unrestored.append(path.name)
+                    unrestored_details.append(f"{path.name}: {rollback_exc}")
             if unrestored or unretracted:
                 problems = []
                 if unrestored:
                     problems.append(
                         f"could not restore {', '.join(sorted(unrestored))}"
                         f" (previous content retained in the matching"
-                        f" *{suffix}.bak file(s))"
+                        f" *{suffix}.bak file(s); local detail:"
+                        f" {'; '.join(sorted(unrestored_details))})"
                     )
                 if unretracted:
                     problems.append(
                         f"could not retract {', '.join(sorted(unretracted))}"
-                        " (the partial new content remains published)"
+                        " (the partial new content remains published; local detail:"
+                        f" {'; '.join(sorted(unretracted_details))})"
                     )
-                raise RenderError(
+                raise IncompleteRollbackError(
                     f"cannot write assets to {out_dir}: {exc} - rollback"
-                    f" incomplete: {'; '.join(problems)}"
+                    f" incomplete: {'; '.join(problems)}",
+                    unrestored=tuple(sorted(unrestored)),
+                    unretracted=tuple(sorted(unretracted)),
                 ) from exc
             raise
         # Publication is complete once every new target is installed.
@@ -188,9 +202,11 @@ def write_outputs(stats: VizStats, assets: dict[str, str], out_dir: Path) -> lis
                 bak.unlink(missing_ok=True)
             except OSError as cleanup_exc:
                 logger.warning(
-                    "published OK, but could not remove backup %s: %s",
-                    bak,
-                    cleanup_exc,
+                    "%s",
+                    diagnostic_text(
+                        "published OK, but could not remove a private staging backup",
+                        f"published OK, but could not remove backup {bak}: {cleanup_exc}",
+                    ),
                 )
         return [p for p, _ in targets]
     except OSError as exc:
@@ -200,4 +216,10 @@ def write_outputs(stats: VizStats, assets: dict[str, str], out_dir: Path) -> lis
             try:
                 tmp.unlink(missing_ok=True)
             except OSError:
-                logger.warning("could not remove staging file %s", tmp)
+                logger.warning(
+                    "%s",
+                    diagnostic_text(
+                        "could not remove a private staging file",
+                        f"could not remove staging file {tmp}",
+                    ),
+                )

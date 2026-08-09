@@ -15,11 +15,17 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .errors import ConfigError
+from .errors import ConfigError, diagnostic_text
 from .schema.vocab import PUBLICATION_RESTRICTIVENESS, PublicationLevel
 
 CONFIG_NAME = "config.json"
 DB_NAME = "aiprofile.db"
+
+#: POSIX chmod failures get a stderr signal (a failing privacy feature
+#: deserves one); Windows stays quiet (os.chmod there is a documented
+#: no-op, not a failure). Module-level so tests can force the warning
+#: branch deterministically on any platform.
+_WARN_ON_CHMOD_FAILURE = sys.platform != "win32"
 
 
 @dataclass
@@ -69,12 +75,14 @@ def _restrict_to_owner(path: Path, mode: int) -> None:
         os.chmod(path, mode)
     except OSError:
         # On POSIX (where the bits are real) a failure deserves a signal,
-        # not silence - this is a privacy feature. Path + platform only
-        # (diagnostics hygiene, architecture.md section 10). Windows stays
-        # quiet: chmod there is a documented no-op, not a failure.
-        if sys.platform != "win32":
+        # not silence - this is a privacy feature. Windows stays quiet:
+        # chmod there is a documented no-op, not a failure.
+        if _WARN_ON_CHMOD_FAILURE:
             print(
-                f"warning: could not restrict permissions on {path}",
+                diagnostic_text(
+                    "warning: could not restrict permissions on a private profile file",
+                    f"warning: could not restrict permissions on {path}",
+                ),
                 file=sys.stderr,
             )
 

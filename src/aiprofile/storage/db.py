@@ -15,8 +15,14 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..errors import StorageError
+from ..errors import StorageError, diagnostic_text
 from .migrations import MIGRATIONS
+
+#: Mirrors config._WARN_ON_CHMOD_FAILURE (duplicated, not imported -
+#: storage's dependency graph is pinned at {schema, errors} only): POSIX
+#: chmod failures warn, Windows stays quiet; module-level so tests can
+#: force the warning branch deterministically on any platform.
+_WARN_ON_CHMOD_FAILURE = sys.platform != "win32"
 
 
 def _restrict_to_owner(path: Path, mode: int) -> None:
@@ -38,11 +44,14 @@ def _restrict_to_owner(path: Path, mode: int) -> None:
         os.chmod(path, mode)
     except OSError:
         # Mirror config._restrict_to_owner: POSIX failures get a stderr
-        # signal (path + platform only); Windows stays quiet (documented
-        # no-op there, not a failure).
-        if sys.platform != "win32":
+        # signal; Windows stays quiet (documented no-op there, not a
+        # failure).
+        if _WARN_ON_CHMOD_FAILURE:
             print(
-                f"warning: could not restrict permissions on {path}",
+                diagnostic_text(
+                    "warning: could not restrict permissions on a private profile file",
+                    f"warning: could not restrict permissions on {path}",
+                ),
                 file=sys.stderr,
             )
 
