@@ -4,7 +4,44 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## v0.7.0 automation candidate — CI/review green, not released
+## v0.7.1 Windows scheduler normalization candidate
+
+- v0.7.0 was published on 2026-08-10, then maintainer dogfood found that a
+  real Windows Task Scheduler registration normalizes the authored task into
+  a six-setting shape with `UseUnifiedSchedulingEngine=true`. The strict
+  v0.7.0 ownership validator rejected that legitimate installed task.
+- The v0.7.1 patch authors the observed six-setting shape directly and accepts
+  only exact registered enabled/disabled forms plus the two complete COM
+  round-trip variants. Registered principal normalization is bound to the
+  current process-token SID. Real Windows install/status/remove dogfood passes
+  and removes the temporary task. Existing v0.7.0 scheduler metadata is read
+  for status and direct reinstall, then a successful reinstall rewrites it as
+  v0.7.1; unrelated and future versions still fail closed. Removal now proves
+  the complete native XML ownership shape before deleting a same-name task.
+  ACE `0.3.0`, aggregation, `VizStats`, renderers, privacy policies, and all
+  eight output names remain unchanged.
+- PR #32 cross-platform CI run `31405185444` is green across all eight jobs,
+  and two independent committed-range reviews approved the candidate with no
+  P0--P2 findings. Merge, tag, publication, removing the maintainer Profile
+  repository itself from configured scan sources, and official-PyPI v0.7.1
+  scheduler byte-change/no-change dogfood remain open. The unaffected
+  public-only caller remains immutably pinned to its reviewed v0.7.0
+  reusable-workflow commit.
+- Current Windows evidence is **954 passed with 30 skipped**; the focused
+  scheduler suites pass **143 with 5 skipped** on both the current interpreter
+  and Python 3.11; WSL Python 3.12 passes **145 with 3 skipped**. The
+  release-focused candidate suite passes **89**. Ruff, bilingual README
+  parity, and sanctioned snapshot/sample drift are green. After the final two
+  red-first migration/removal regressions, a fresh mode-correct Ubuntu double
+  build at `SOURCE_DATE_EPOCH=1786320000` produced byte-identical candidate
+  wheels with SHA-256
+  `c941b547b41eccca7efdfc99bdf785c6d8c307da8bedace0a73a3d19036df005`.
+  Twine, artifact/notices/checksum validation, and clean-wheel refresh smoke
+  pass; the final source-distribution digest is retained in external review
+  evidence to avoid a self-referential archive. The branch is reviewed and CI
+  green but remains deliberately unmerged and unreleased.
+
+## v0.7.0 automation release record
 
 - ADR-030 adds an orchestration layer without changing ACE `0.3.0`,
   aggregation semantics, `VizStats`, renderer purity, or the eight-output

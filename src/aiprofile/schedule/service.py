@@ -22,7 +22,8 @@ from ..errors import AiProfileError, ConfigError, path_free_diagnostics
 from ..lockfile import acquire_home_lock
 from .adapters import AdapterPlan, ScheduleStatus
 
-SCHEDULER_VERSION = "0.7.0"
+SCHEDULER_VERSION = "0.7.1"
+_READABLE_SCHEDULER_VERSIONS = frozenset({"0.7.0", SCHEDULER_VERSION})
 SCHEDULER_DIRNAME = "scheduler"
 CONFIG_NAME = "config.json"
 LAUNCHER_NAME = "launcher.py"
@@ -382,7 +383,7 @@ def read_scheduler_config(home: Path, *, read_only: bool = False) -> SchedulerCo
         raise ConfigError("scheduler configuration is unavailable or invalid")
     if push and not remote:
         raise ConfigError("scheduler configuration is unavailable or invalid")
-    if installed_version != SCHEDULER_VERSION:
+    if installed_version not in _READABLE_SCHEDULER_VERSIONS:
         raise ConfigError("scheduler configuration is unavailable or invalid")
     return SchedulerConfig(
         profile_repo=Path(profile_repo),

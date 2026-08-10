@@ -463,9 +463,15 @@ This record is local state, not a public manifest or ninth output.
 Native status is an ownership proof, not merely a same-name/time lookup.
 Windows validates the task-schema namespace on every inspected descendant,
 the tool-authored principal, least-privilege/logon settings,
-single daily trigger and single action, plus either the exact authored settings
-or the exact harmless/default settings produced by an in-memory Task Scheduler
-COM round-trip. Any other value or setting is rejected. Launchd accepts only the exact
+single daily trigger and single action, plus only the complete exact Windows
+settings shapes authored, registered, disabled, or produced by the two
+versioned COM round trips. Registered principal normalization must match the
+current process-token SID. Any other value, setting, or principal is rejected.
+The same proof precedes native removal, so an unverifiable same-name task is
+never deleted. Scheduler-config readers accept the unchanged v0.7.0 schema for
+in-place migration and the current v0.7.1 form; successful installation always
+rewrites current metadata, while unrelated or future versions fail closed.
+Launchd accepts only the exact
 tool-owned four-key plist. Unverifiable native state blocks mutation.
 
 Public-API discovery, fine-grained PAT or GitHub App support, private hosted

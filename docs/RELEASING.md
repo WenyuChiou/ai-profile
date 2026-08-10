@@ -31,6 +31,10 @@ For an automation release, also verify that
 reviewed reusable-workflow commit, that the workflow's exact package version
 matches the candidate version, and that Pages consumes its immutable
 `published-sha`. Do not replace the full commit pin with a release tag.
+For a scheduler-only patch that does not change the hosted workflow, document
+that scope explicitly and keep its reviewed package/commit pair intact; the
+release must not silently rebind the immutable public caller. A later hosted
+workflow upgrade requires the same reviewed two-commit pin choreography.
 
 ## 2. Build and validate artifacts
 

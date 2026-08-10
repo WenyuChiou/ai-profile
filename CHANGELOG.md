@@ -25,6 +25,23 @@ below.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-08-10 (Public Beta)
+
+### Fixed
+
+- Make the Windows Task Scheduler payload use the exact six-setting form
+  observed after real registration, including
+  `UseUnifiedSchedulingEngine=true`, and recognize only the exact enabled,
+  disabled, and COM round-trip variants owned by the tool. Status now accepts
+  a legitimate installed task while continuing to reject principal, trigger,
+  action, namespace, or execution-setting drift. ACE schema `0.3.0`,
+  aggregation, rendering, privacy policy, and the eight generated filenames
+  are unchanged.
+- Preserve direct upgrades from v0.7.0 scheduler installations: status and
+  reinstall can read the unchanged v0.7.0 scheduler-config schema, while each
+  successful reinstall writes v0.7.1 metadata. Windows removal now validates
+  the complete native XML ownership contract before deleting a same-name task.
+
 ## [0.7.0] - 2026-08-10 (Public Beta)
 
 ### Added

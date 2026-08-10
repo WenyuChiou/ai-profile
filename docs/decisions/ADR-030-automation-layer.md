@@ -1,6 +1,7 @@
 # ADR-030: Automation layer boundary and security
 
-- Status: Accepted for the v0.7.0 candidate (2026-08-09)
+- Status: Accepted for v0.7.0; Windows normalization amended in v0.7.1
+  (2026-08-10)
 - Deciders: maintainer
 - Supersedes: the assumption that multi-repository refresh and a reusable
   GitHub Action are future-only
@@ -60,6 +61,25 @@ Windows Task Scheduler, macOS launchd, or a Linux systemd user timer. Platform
 adapters sit behind a narrow stdlib-only interface. Their native identity is
 derived from a one-way digest of the canonical home, so two homes do not own
 or remove each other's jobs; the digest and home path are never logged.
+
+On Windows, the authored task uses the exact six-setting shape observed after
+real `schtasks` registration: `IgnoreNew`, battery stop/start defaults,
+`StartWhenAvailable=true`, the two exact idle defaults, and
+`UseUnifiedSchedulingEngine=true`. A disabled registered task is the same
+shape plus `Enabled=false`. Status also recognizes the two complete
+16-setting COM in-memory round-trip variants produced by the v0.7.0 and v0.7.1
+authored payloads. These are explicit whole-shape allowlists, not per-field
+wildcards. The current process-token SID is required when Task Scheduler
+normalizes the principal and omits the default least-privilege node; any other
+principal, setting, value, namespace, trigger, or action fails closed.
+Removal performs the same full XML ownership proof before deleting a
+same-name task; an absent task remains an idempotent no-op, while an
+unverifiable or altered task is retained for explicit operator resolution.
+
+The scheduler-config schema did not change in v0.7.1. Readers accept exactly
+v0.7.0 and v0.7.1 metadata so an existing installation can be inspected and
+reinstalled in place; writers always emit v0.7.1. Earlier, unrelated, and
+future versions fail closed.
 
 The launcher and scheduler state live below `AIPROFILE_HOME`, not inside the
 public Profile repository. On POSIX, a temporary Git index is confined inside

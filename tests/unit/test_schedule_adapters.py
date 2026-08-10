@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import os
 import plistlib
+import re
 import stat
 import subprocess
 import sys
@@ -39,7 +40,7 @@ def _find_text(root, local_name):
     return node.text
 
 
-def _replace_with_com_normalized_settings(root):
+def _replace_with_com_normalized_settings(root, *, unified="false"):
     settings = next(
         node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "Settings"
     )
@@ -63,13 +64,65 @@ def _replace_with_com_normalized_settings(root):
         ("Hidden", "false"),
         ("RunOnlyIfIdle", "false"),
         ("DisallowStartOnRemoteAppSession", "false"),
-        ("UseUnifiedSchedulingEngine", "false"),
+        ("UseUnifiedSchedulingEngine", unified),
         ("WakeToRun", "false"),
         ("ExecutionTimeLimit", "PT72H"),
         ("Priority", "7"),
     ):
         ET.SubElement(settings, f"{{{windows._NS}}}{name}").text = value
     return settings
+
+
+def _replace_with_registered_windows_settings(root, *, enabled=True):
+    """Mirror the exact XML returned by schtasks after registration."""
+    settings = next(
+        node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "Settings"
+    )
+    settings.clear()
+    for name, value in (
+        ("DisallowStartIfOnBatteries", "true"),
+        ("StopIfGoingOnBatteries", "true"),
+    ):
+        ET.SubElement(settings, f"{{{windows._NS}}}{name}").text = value
+    if not enabled:
+        ET.SubElement(settings, f"{{{windows._NS}}}Enabled").text = "false"
+    for name, value in (
+        ("MultipleInstancesPolicy", "IgnoreNew"),
+        ("StartWhenAvailable", "true"),
+    ):
+        ET.SubElement(settings, f"{{{windows._NS}}}{name}").text = value
+    idle = ET.SubElement(settings, f"{{{windows._NS}}}IdleSettings")
+    ET.SubElement(idle, f"{{{windows._NS}}}StopOnIdleEnd").text = "true"
+    ET.SubElement(idle, f"{{{windows._NS}}}RestartOnIdle").text = "false"
+    ET.SubElement(
+        settings,
+        f"{{{windows._NS}}}UseUnifiedSchedulingEngine",
+    ).text = "true"
+    return settings
+
+
+def _replace_with_registered_windows_round_trip(root, *, enabled=True, sid):
+    _replace_with_registered_windows_settings(root, enabled=enabled)
+    principal = next(
+        node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "Principal"
+    )
+    user_id = next(
+        node for node in principal if node.tag.rsplit("}", 1)[-1] == "UserId"
+    )
+    user_id.text = sid
+    run_level = next(
+        node for node in principal if node.tag.rsplit("}", 1)[-1] == "RunLevel"
+    )
+    principal.remove(run_level)
+    trigger = next(
+        node
+        for node in root.iter()
+        if node.tag.rsplit("}", 1)[-1] == "CalendarTrigger"
+    )
+    trigger_enabled = next(
+        node for node in trigger if node.tag.rsplit("}", 1)[-1] == "Enabled"
+    )
+    trigger.remove(trigger_enabled)
 
 
 def test_windows_install_registers_via_xml_not_tr(tmp_path):
@@ -100,6 +153,22 @@ def test_windows_task_xml_contract(tmp_path):
     assert _find_text(root, "MultipleInstancesPolicy") == "IgnoreNew"
     assert _find_text(root, "StartWhenAvailable") == "true"
     assert _find_text(root, "StartBoundary").endswith("T07:30:00")
+    settings = next(
+        node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "Settings"
+    )
+    assert {node.tag.rsplit("}", 1)[-1] for node in settings} == {
+        "DisallowStartIfOnBatteries",
+        "StopIfGoingOnBatteries",
+        "MultipleInstancesPolicy",
+        "StartWhenAvailable",
+        "IdleSettings",
+        "UseUnifiedSchedulingEngine",
+    }
+    assert _find_text(settings, "DisallowStartIfOnBatteries") == "true"
+    assert _find_text(settings, "StopIfGoingOnBatteries") == "true"
+    assert _find_text(settings, "StopOnIdleEnd") == "true"
+    assert _find_text(settings, "RestartOnIdle") == "false"
+    assert _find_text(settings, "UseUnifiedSchedulingEngine") == "true"
 
 
 def test_windows_hostile_paths_stay_inert(tmp_path):
@@ -144,6 +213,30 @@ def test_windows_status_parses_query_and_remove_is_idempotent(tmp_path):
     )
 
 
+def test_windows_remove_refuses_unowned_same_name_task(tmp_path):
+    home = tmp_path / "home"
+    planned = windows.plan(home, "07:30").files[0]
+    planned.path.parent.mkdir(parents=True)
+    planned.path.write_bytes(planned.content)
+    root = ET.fromstring(planned.content.decode("utf-16"))
+    command = next(
+        node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "Command"
+    )
+    command.text = "private-command-canary.exe"
+    tampered = ET.tostring(root, encoding="unicode")
+    calls = []
+
+    def runner(argv, **_kwargs):
+        calls.append(argv)
+        return _completed(argv, stdout=tampered)
+
+    with pytest.raises(ConfigError, match="native scheduler removal failed"):
+        windows.remove(home, runner=runner)
+
+    assert not any("/Delete" in argv for argv in calls)
+    assert planned.path.exists()
+
+
 def test_windows_status_accepts_exact_com_normalized_defaults(tmp_path):
     home = tmp_path / "home"
     root = _xml_payload(windows.plan(home, "07:30"))
@@ -155,6 +248,135 @@ def test_windows_status_accepts_exact_com_normalized_defaults(tmp_path):
             argv, stdout=ET.tostring(root, encoding="unicode")
         ),
     ) == adapters.ScheduleStatus(installed=True, time="07:30", active=True)
+
+
+def test_windows_status_accepts_v071_com_normalized_defaults(tmp_path):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    _replace_with_com_normalized_settings(root, unified="true")
+
+    assert windows.status(
+        home,
+        runner=lambda argv, **_: _completed(
+            argv, stdout=ET.tostring(root, encoding="unicode")
+        ),
+    ) == adapters.ScheduleStatus(installed=True, time="07:30", active=True)
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_windows_status_accepts_exact_registered_settings(
+    tmp_path, monkeypatch, enabled
+):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    sid = "S-1-5-21-100-200-300-400"
+    _replace_with_registered_windows_round_trip(root, enabled=enabled, sid=sid)
+    monkeypatch.setattr(windows, "_current_user_sid", lambda: sid)
+
+    assert windows.status(
+        home,
+        runner=lambda argv, **_: _completed(
+            argv, stdout=ET.tostring(root, encoding="unicode")
+        ),
+    ) == adapters.ScheduleStatus(installed=True, time="07:30", active=enabled)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("UserId", "S-1-5-21-999"), ("LogonType", "Password")],
+)
+def test_windows_status_rejects_registered_principal_drift(
+    tmp_path, monkeypatch, field, value
+):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    sid = "S-1-5-21-100-200-300-400"
+    _replace_with_registered_windows_round_trip(root, sid=sid)
+    monkeypatch.setattr(windows, "_current_user_sid", lambda: sid)
+    node = next(
+        item for item in root.iter() if item.tag.rsplit("}", 1)[-1] == field
+    )
+    node.text = value
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv, stdout=ET.tostring(root, encoding="unicode")
+            ),
+        )
+
+
+def test_windows_status_sid_lookup_failure_is_path_free(tmp_path, monkeypatch):
+    home = tmp_path / "private-home-canary"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    sid = "S-1-5-21-100-200-300-400"
+    _replace_with_registered_windows_round_trip(root, sid=sid)
+
+    def unavailable():
+        raise OSError("private-sid-lookup-canary")
+
+    monkeypatch.setattr(windows, "_current_user_sid", unavailable)
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable") as exc:
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv, stdout=ET.tostring(root, encoding="unicode")
+            ),
+        )
+    assert "private" not in str(exc.value)
+    assert "sid" not in str(exc.value).lower()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows process-token SID only")
+def test_windows_current_user_sid_is_an_ascii_account_sid():
+    sid = windows._current_user_sid()
+
+    assert isinstance(sid, str)
+    assert re.fullmatch(r"S-1-5-(?:[0-9]+-)+[0-9]+", sid)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("DisallowStartIfOnBatteries", "false"),
+        ("StopIfGoingOnBatteries", "false"),
+        ("StartWhenAvailable", "false"),
+        ("RestartOnIdle", "true"),
+        ("UseUnifiedSchedulingEngine", "false"),
+    ],
+)
+def test_windows_status_rejects_registered_setting_drift(tmp_path, field, value):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    _replace_with_registered_windows_settings(root)
+    node = next(
+        item for item in root.iter() if item.tag.rsplit("}", 1)[-1] == field
+    )
+    node.text = value
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv, stdout=ET.tostring(root, encoding="unicode")
+            ),
+        )
+
+
+def test_windows_status_rejects_registered_setting_shape_drift(tmp_path):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    settings = _replace_with_registered_windows_settings(root)
+    ET.SubElement(settings, f"{{{windows._NS}}}ExecutionTimeLimit").text = "PT72H"
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv, stdout=ET.tostring(root, encoding="unicode")
+            ),
+        )
 
 
 def test_windows_status_reports_disabled_com_normalized_task(tmp_path):
@@ -201,6 +423,7 @@ def test_windows_status_rejects_task_root_drift(tmp_path, attribute, value):
         ("RestartOnIdle", "true"),
         ("ExecutionTimeLimit", "PT1S"),
         ("Priority", "9"),
+        ("UseUnifiedSchedulingEngine", "1"),
     ],
 )
 def test_windows_status_rejects_com_normalized_setting_drift(
@@ -286,13 +509,7 @@ def test_windows_task_xml_survives_real_com_in_memory_round_trip(tmp_path):
 def test_windows_status_reports_disabled_task_from_locale_independent_xml(tmp_path):
     home = tmp_path / "home"
     root = _xml_payload(windows.plan(home, "07:30"))
-    settings = next(
-        node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "Settings"
-    )
-    enabled = next(
-        node for node in settings if node.tag.rsplit("}", 1)[-1] == "Enabled"
-    )
-    enabled.text = "false"
+    _replace_with_registered_windows_settings(root, enabled=False)
     query_xml = ET.tostring(root, encoding="unicode")
 
     result = windows.status(
@@ -306,7 +523,7 @@ def test_windows_status_reports_disabled_task_from_locale_independent_xml(tmp_pa
         active=False,
     )
 
-    enabled.text = "true"
+    root = _xml_payload(windows.plan(home, "07:30"))
     trigger = next(
         node
         for node in root.iter()
@@ -790,7 +1007,7 @@ def test_remove_idempotence_does_not_depend_on_english_stderr(
         ),
     )
     assert windows_calls == [
-        ["schtasks", "/Query", "/TN", windows.task_name(home), "/FO", "LIST"]
+        ["schtasks", "/Query", "/TN", windows.task_name(home), "/XML"]
     ]
 
     monkeypatch.setattr(launchd, "_user_home", lambda: tmp_path / "user")
