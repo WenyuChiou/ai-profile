@@ -66,8 +66,12 @@ GitHub, and "aggregate-only" is not a claim that it is private.
   inside a git worktree. Still planned (ROADMAP): symlink refusal.
 - **Local scheduler state** — its launcher, configuration, temporary Git
   index, and last-run log live under `AIPROFILE_HOME`, never inside the public
-  Profile repository. POSIX enforces owner-only modes; Windows relies on the
-  user's inherited home ACL. Native task identity is an opaque per-home digest.
+  Profile repository. On POSIX, each temporary Git index is confined inside a
+  tool-owned `0700` directory, reset to `0600` after every Git operation, and
+  removed immediately; Git may briefly rewrite the index with the repository's
+  configured shared-file mode while the `0700` directory remains the
+  confidentiality boundary. Windows relies on the user's inherited home ACL.
+  Native task identity is an opaque per-home digest.
   The launcher uses argument lists, never shell evaluation, stores no token,
   and stages only the eight generated paths. `--no-push` still creates and
   advances the local exact-eight commit but skips the remote push; default mode

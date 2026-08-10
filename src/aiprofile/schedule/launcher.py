@@ -157,6 +157,39 @@ def _restore_tool_index_to_current_head(
     return False
 
 
+def _write_private_tree(
+    runner: Runner,
+    git: str,
+    profile_repo: Path,
+    *,
+    index_path: Path,
+    env: dict[str, str],
+    head_oid: str,
+) -> tuple[str | None, str | None]:
+    """Build a tree with the index confined beneath a POSIX 0700 directory."""
+    read_tree = _run_git(
+        runner, git, profile_repo, ["read-tree", head_oid], env=env
+    )
+    if read_tree.returncode != 0:
+        return None, f"git index setup failed (exit {read_tree.returncode})"
+    os.chmod(index_path, 0o600)
+
+    added = _run_git(runner, git, profile_repo, ["add", "--", *_PATHS], env=env)
+    if added.returncode != 0:
+        return (
+            None,
+            f"git staging failed (exit {added.returncode}); no commit was made",
+        )
+    os.chmod(index_path, 0o600)
+
+    written = _run_git(runner, git, profile_repo, ["write-tree"], env=env)
+    tree_oid = written.stdout.strip()
+    if written.returncode != 0 or not tree_oid:
+        return None, f"git tree creation failed (exit {written.returncode})"
+    os.chmod(index_path, 0o600)
+    return tree_oid, None
+
+
 def _prepare_commit(
     runner: Runner,
     git: str,
@@ -184,60 +217,44 @@ def _prepare_commit(
         env = os.environ.copy()
         env["GIT_INDEX_FILE"] = str(index_path)
 
-        read_tree = _run_git(
-            runner, git, profile_repo, ["read-tree", head_oid], env=env
+        tree_oid, failure = _write_private_tree(
+            runner,
+            git,
+            profile_repo,
+            index_path=index_path,
+            env=env,
+            head_oid=head_oid,
         )
-        if read_tree.returncode != 0:
-            failure = f"git index setup failed (exit {read_tree.returncode})"
-        else:
-            os.chmod(index_path, 0o600)
-            added = _run_git(
-                runner, git, profile_repo, ["add", "--", *_PATHS], env=env
+        if failure is None and tree_oid is not None:
+            base_tree = _run_git(
+                runner,
+                git,
+                profile_repo,
+                ["rev-parse", f"{head_oid}^{{tree}}"],
             )
-            if added.returncode != 0:
-                failure = (
-                    f"git staging failed (exit {added.returncode}); "
-                    "no commit was made"
-                )
+            base_tree_oid = base_tree.stdout.strip()
+            if base_tree.returncode != 0 or not base_tree_oid:
+                failure = f"git tree comparison failed (exit {base_tree.returncode})"
+            elif base_tree_oid == tree_oid:
+                unchanged = True
             else:
-                os.chmod(index_path, 0o600)
-                written = _run_git(
-                    runner, git, profile_repo, ["write-tree"], env=env
+                created = _run_git(
+                    runner,
+                    git,
+                    profile_repo,
+                    [
+                        "commit-tree",
+                        tree_oid,
+                        "-p",
+                        head_oid,
+                        "-m",
+                        "chore: refresh ai-profile outputs",
+                    ],
                 )
-                tree_oid = written.stdout.strip()
-                if written.returncode != 0 or not tree_oid:
-                    failure = f"git tree creation failed (exit {written.returncode})"
-                else:
-                    base_tree = _run_git(
-                        runner, git, profile_repo, ["rev-parse", f"{head_oid}^{{tree}}"]
-                    )
-                    base_tree_oid = base_tree.stdout.strip()
-                    if base_tree.returncode != 0 or not base_tree_oid:
-                        failure = (
-                            f"git tree comparison failed (exit {base_tree.returncode})"
-                        )
-                    elif base_tree_oid == tree_oid:
-                        unchanged = True
-                    else:
-                        created = _run_git(
-                            runner,
-                            git,
-                            profile_repo,
-                            [
-                                "commit-tree",
-                                tree_oid,
-                                "-p",
-                                head_oid,
-                                "-m",
-                                "chore: refresh ai-profile outputs",
-                            ],
-                        )
-                        commit_oid = created.stdout.strip()
-                        if created.returncode != 0 or not commit_oid:
-                            failure = (
-                                f"git commit creation failed (exit {created.returncode})"
-                            )
-                            commit_oid = None
+                commit_oid = created.stdout.strip()
+                if created.returncode != 0 or not commit_oid:
+                    failure = f"git commit creation failed (exit {created.returncode})"
+                    commit_oid = None
     except OSError:
         failure = "temporary publication state could not be prepared safely"
         commit_oid = None

@@ -57,11 +57,16 @@ derived from a one-way digest of the canonical home, so two homes do not own
 or remove each other's jobs; the digest and home path are never logged.
 
 The launcher and scheduler state live below `AIPROFILE_HOME`, not inside the
-public Profile repository. POSIX enforces owner-only modes; Windows relies on
-the inherited ACL of the user's home because chmod-style owner bits are not
-available. The launcher refreshes `<profile>/dist`.
+public Profile repository. On POSIX, a temporary Git index is confined inside
+a tool-owned `0700` directory, reset to `0600` after every Git operation, and
+removed immediately. Git may transiently rewrite the index with the
+repository's configured shared-file mode, so the enclosing `0700` directory is
+the confidentiality boundary. Git object creation keeps the repository's
+ambient permission policy. Windows relies on the inherited ACL of the user's
+home because chmod-style owner bits are not available. The launcher refreshes
+`<profile>/dist`.
 By default it publishes only byte changes: it builds a commit from the exact
-eight paths with a temporary index (0600 on POSIX; inherited user-home ACL on
+eight paths with that confined temporary index (inherited user-home ACL on
 Windows), uses `commit-tree`, advances
 the recorded branch with a compare-and-swap `update-ref`, and non-force pushes
 the captured immutable commit object to the recorded remote and branch. It

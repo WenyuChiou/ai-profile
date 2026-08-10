@@ -30,10 +30,13 @@ def _git(repo: Path, *args: str, check: bool = True):
     return result
 
 
-def _setup(tmp_path: Path, *, push: bool = True):
+def _setup(tmp_path: Path, *, push: bool = True, shared: bool = False):
     profile = tmp_path / "profile"
     profile.mkdir()
-    _git(profile, "init", "-q", "-b", "main")
+    init_args = ["init", "-q", "-b", "main"]
+    if shared:
+        init_args.append("--shared=group")
+    _git(profile, *init_args)
     _git(profile, "config", "user.name", "Fixture")
     _git(profile, "config", "user.email", "fixture@example.com")
     (profile / "README.md").write_text("profile\n", encoding="utf-8")
@@ -101,21 +104,113 @@ def test_commit_uses_exact_pathspec_and_ignores_prestaged_files(tmp_path, monkey
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits only")
-def test_private_index_is_owner_only_and_removed(tmp_path, monkeypatch):
-    home, profile, _bare = _setup(tmp_path, push=False)
+@pytest.mark.parametrize("shared", [False, True])
+def test_private_index_is_confined_and_removed(tmp_path, monkeypatch, shared):
+    home, profile, _bare = _setup(tmp_path, push=False, shared=shared)
     monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("private-index"))
-    observed_modes = []
+    observed_parent_modes = []
+    observed_final_index_modes = []
 
     def runner(argv, **kwargs):
         result = subprocess.run(argv, **kwargs)
-        if "add" in argv:
+        if any(operation in argv for operation in ("read-tree", "add", "write-tree")):
             index = Path(kwargs["env"]["GIT_INDEX_FILE"])
-            observed_modes.append(stat.S_IMODE(index.stat().st_mode))
+            observed_parent_modes.append(stat.S_IMODE(index.parent.stat().st_mode))
+        if "rev-parse" in argv and argv[-1].endswith("^{tree}"):
+            index = Path(next(iter(observed_index_paths)))
+            observed_final_index_modes.append(stat.S_IMODE(index.stat().st_mode))
         return result
 
-    assert launcher.run_launcher(home, runner=runner) == 0
-    assert observed_modes == [0o600]
+    observed_index_paths = set()
+
+    def recording_runner(argv, **kwargs):
+        if "env" in kwargs and "GIT_INDEX_FILE" in kwargs["env"]:
+            observed_index_paths.add(kwargs["env"]["GIT_INDEX_FILE"])
+        return runner(argv, **kwargs)
+
+    previous_umask = os.umask(0o022)
+    try:
+        assert launcher.run_launcher(home, runner=recording_runner) == 0
+        restored_umask = os.umask(0o022)
+        assert restored_umask == 0o022
+    finally:
+        os.umask(previous_umask)
+
+    assert observed_parent_modes == [0o700, 0o700, 0o700]
+    assert observed_final_index_modes == [0o600]
     assert not list((home / "scheduler").glob(".publication-index-*"))
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX umask only")
+def test_private_index_cleanup_preserves_umask_when_runner_raises(tmp_path):
+    home = tmp_path / "home"
+    (home / "scheduler").mkdir(parents=True)
+    profile = tmp_path / "profile"
+    profile.mkdir()
+
+    def runner(argv, **kwargs):
+        if "read-tree" in argv:
+            Path(kwargs["env"]["GIT_INDEX_FILE"]).touch()
+            return subprocess.CompletedProcess(argv, 0, "", "")
+        if "add" in argv:
+            raise RuntimeError("runner failure")
+        raise AssertionError(argv)
+
+    previous_umask = os.umask(0o022)
+    try:
+        with pytest.raises(RuntimeError, match="runner failure"):
+            launcher._prepare_commit(
+                runner,
+                "git",
+                profile,
+                home=home,
+                head_oid="a" * 40,
+            )
+        restored_umask = os.umask(0o022)
+        assert restored_umask == 0o022
+    finally:
+        os.umask(previous_umask)
+
+    assert not list((home / "scheduler").glob(".publication-index-*"))
+
+
+def _loose_object_modes(profile: Path) -> tuple[set[int], set[int]]:
+    objects = profile / ".git" / "objects"
+    directories: set[int] = set()
+    files: set[int] = set()
+    for directory in objects.iterdir():
+        if len(directory.name) != 2 or not directory.is_dir():
+            continue
+        try:
+            int(directory.name, 16)
+        except ValueError:
+            continue
+        directories.add(stat.S_IMODE(directory.stat().st_mode))
+        for item in directory.iterdir():
+            if item.is_file():
+                files.add(stat.S_IMODE(item.stat().st_mode))
+    return directories, files
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits only")
+@pytest.mark.parametrize("shared", [False, True])
+def test_private_index_preserves_repository_object_modes(tmp_path, monkeypatch, shared):
+    previous_umask = os.umask(0o022)
+    try:
+        home, profile, _bare = _setup(tmp_path, push=False, shared=shared)
+        baseline = _loose_object_modes(profile)
+        monkeypatch.setattr(
+            launcher.refresh,
+            "run_refresh",
+            _refresh_writer(f"object-modes-{shared}"),
+        )
+
+        assert launcher.run_launcher(home) == 0
+        assert _loose_object_modes(profile) == baseline
+        restored_umask = os.umask(0o022)
+        assert restored_umask == 0o022
+    finally:
+        os.umask(previous_umask)
 
 
 def test_scheduler_commit_does_not_execute_repository_hooks(tmp_path, monkeypatch):

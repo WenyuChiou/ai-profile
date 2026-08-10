@@ -32,13 +32,28 @@ which is authoritative).
   `SOURCE_DATE_EPOCH=1786233600`: two isolated Ubuntu builds from the same
   Git-mode source archive produced byte-identical wheel and sdist artifacts.
   The wheel is
-  `9d8b39a5d25f9100c671fda8a7945c6403ac67ead161b16bbe17e26d4bac3523`
+  `e8b568e011055c6cb8b3baaadb647cbd338bbcb82a37465c5ae46f6f41757740`
   and the synthetic dashboard remains
   `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
   Twine, artifact/checksum validation, clean-wheel refresh smoke, current and
-  Python 3.11 release-contract tests, the full **847 passed / 21 skipped**
+  Python 3.11 release-contract tests, the full **847 passed / 25 skipped**
   suite, Ruff, README parity, and snapshot zero-drift all passed. This is
   local candidate evidence only, not published or cross-platform CI evidence.
+- The first Ubuntu CI run exposed a private-index mode gap: Git's atomic
+  `add` rewrite inherited runner `umask 022` and produced `0644` before the
+  old post-command chmod. WSL reproduced that exact boundary red-first. A
+  broader adversarial replay then showed that `core.sharedRepository=group`
+  can rewrite the index as `0660`, and that changing the process umask during
+  `add`/`write-tree` also changes repository object modes. The corrected
+  boundary confines the temporary index inside a tool-owned POSIX `0700`
+  directory, resets the index to `0600` after each Git operation, removes the
+  directory immediately, and leaves repository object creation under its
+  ambient permission policy. Ordinary and shared-repository WSL launcher
+  probes passed **24/24**; current and Python 3.11 launcher suites each passed
+  **19 with 5 skipped**. The exact Python 3.11 E1 suite passed **169 with 21
+  skipped**, and the rebuilt candidate passed double-build byte equality,
+  Twine, artifact/checksum validation, and clean-wheel refresh smoke. A
+  cross-platform CI rerun remains required.
 - Release remains blocked on Phase E cross-platform PR gates, the committed-
   range independent review, the v0.7.0 tag/Public Beta publication, and
   post-release maintainer dogfood. The maintainer Profile will use the local
