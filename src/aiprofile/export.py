@@ -65,6 +65,12 @@ _ALLOWED_ASSET_NAMES = frozenset(
     }
 )
 
+# Public scheduler/workflow pathspec contract: the seven rendered assets
+# plus the validated aggregate JSON written by ``write_outputs``.  Export
+# remains the single owner of this closed allowlist so automation cannot
+# drift into broad staging.
+PUBLIC_ASSET_NAMES = _ALLOWED_ASSET_NAMES | {"profile.json"}
+
 
 def write_outputs(stats: VizStats, assets: dict[str, str], out_dir: Path) -> list[Path]:
     """Write the rendered ``assets`` (filename -> markup, names from

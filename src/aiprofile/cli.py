@@ -25,6 +25,7 @@ from .errors import AiProfileError
 from .export import write_outputs
 from .privacy import build_viz_stats, local_only_details
 from .scanner import scan_repository
+from .schedule import service as schedule_service
 from .storage.db import connect, migrate
 from .viz import VizStats
 
@@ -144,7 +145,97 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     p_refresh.set_defaults(func=_cmd_refresh)
+
+    p_schedule = sub.add_parser(
+        "schedule", help="manage automatic daily local profile refresh"
+    )
+    schedule_sub = p_schedule.add_subparsers(dest="schedule_command", required=True)
+    p_schedule_install = schedule_sub.add_parser(
+        "install", help="install or update the native user schedule"
+    )
+    p_schedule_install.add_argument("--profile-repo", required=True)
+    p_schedule_install.add_argument(
+        "--time",
+        required=True,
+        type=_schedule_time,
+        help="daily local time in HH:MM form",
+    )
+    p_schedule_install.add_argument("--no-push", action="store_true")
+    p_schedule_install.add_argument("--dry-run", action="store_true")
+    p_schedule_install.set_defaults(func=_cmd_schedule_install)
+
+    p_schedule_status = schedule_sub.add_parser(
+        "status", help="show native scheduler and last-run status"
+    )
+    p_schedule_status.add_argument("--dry-run", action="store_true")
+    p_schedule_status.set_defaults(func=_cmd_schedule_status)
+
+    p_schedule_remove = schedule_sub.add_parser(
+        "remove", help="remove only aiprofile-owned scheduler artifacts"
+    )
+    p_schedule_remove.add_argument("--dry-run", action="store_true")
+    p_schedule_remove.set_defaults(func=_cmd_schedule_remove)
     return parser
+
+
+def _schedule_time(value: str) -> str:
+    import re
+
+    if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value):
+        raise argparse.ArgumentTypeError("time must use 24-hour HH:MM form")
+    return value
+
+
+def _cmd_schedule_install(args: argparse.Namespace) -> int:
+    result = schedule_service.install(
+        aiprofile_home(),
+        Path(args.profile_repo),
+        args.time,
+        push=not args.no_push,
+        dry_run=args.dry_run,
+    )
+    if result.dry_run:
+        file_word = "file" if result.files == 1 else "files"
+        command_word = "command" if result.commands == 1 else "commands"
+        print(
+            f"dry run: would write {result.files} scheduler {file_word};"
+            f" would run {result.commands} registration {command_word}"
+        )
+        return 0
+    mode = "push enabled" if result.push else "push disabled"
+    print(f"daily schedule installed for {result.time} local time; {mode}")
+    return 0
+
+
+def _cmd_schedule_status(args: argparse.Namespace) -> int:
+    result = schedule_service.status(aiprofile_home(), dry_run=args.dry_run)
+    if result.dry_run:
+        print("dry run: would inspect native scheduler status")
+        return 0
+    if not result.installed:
+        print("schedule not installed")
+        return 0
+    mode = "enabled" if result.push else "disabled"
+    print(f"schedule installed; time {result.time} local; push {mode}")
+    print(f"branch {result.branch}; remote {result.remote or '(none)'}")
+    if result.active is not None:
+        print(f"native schedule active: {'yes' if result.active else 'no'}")
+    if result.last_run:
+        print(f"last run: {result.last_run}")
+    return 0
+
+
+def _cmd_schedule_remove(args: argparse.Namespace) -> int:
+    result = schedule_service.remove(aiprofile_home(), dry_run=args.dry_run)
+    if result.dry_run:
+        print(
+            "dry run: would remove scheduler registration and tool-owned artifacts"
+            if result.removed
+            else "dry run: schedule not installed"
+        )
+        return 0
+    print("schedule removed" if result.removed else "schedule not installed")
+    return 0
 
 
 def _cmd_init(args: argparse.Namespace) -> int:

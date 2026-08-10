@@ -54,6 +54,23 @@ def test_v01_levels_load(tmp_path, level):
     assert cfg.repositories[0].publication_level is PublicationLevel(level)
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"\xff",
+        json.dumps(
+            {"identities": [], "salt": "s" * 64, "repositories": 7}
+        ).encode("utf-8"),
+    ],
+)
+def test_malformed_encoding_and_repository_container_raise_config_error(
+    tmp_path, payload
+):
+    (tmp_path / "config.json").write_bytes(payload)
+    with pytest.raises(ConfigError):
+        load_config(tmp_path)
+
+
 def test_unconfigured_uid_is_excluded_fail_closed(tmp_path):
     cfg = Config(identities=["a@example.com"], salt="s" * 64, repositories=[])
     assert effective_level(cfg, "remote:v2:github.com/x/y") is PublicationLevel.EXCLUDED
