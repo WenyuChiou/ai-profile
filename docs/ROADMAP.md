@@ -273,16 +273,18 @@ renderers.
 - [x] Close the release gates: CI run `30984105485`, publish run `30984290387`,
       and staging run `30985228475` all passed.
 
-## v0.7.0 — Daily automation layer (candidate, Public Beta)
+## v0.7.x — Daily automation layer (released 2026-08-10, Public Beta)
 
-These boxes remain open until the release artifact and live checks complete;
-local candidate evidence alone is not a shipped release.
+v0.7.0 introduced the automation layer. v0.7.1 shipped the observed Windows
+Task Scheduler normalization needed for reliable native ownership validation.
+Final evidence is in `docs/reviews/v0.7.1-release-readiness.md` and
+`docs/reviews/v0.7.1-visual-qa.md`.
 
-- [ ] Release the application-level `refresh --out DIR [--dry-run]` path with
+- [x] Release the application-level `refresh --out DIR [--dry-run]` path with
       per-home concurrency, configured-path deduplication, excluded-policy
       preservation, exact-eight publication, deterministic change reporting,
       and honest incomplete-rollback diagnostics (ADR-030).
-- [ ] Release the stdlib-only native scheduler for Windows, macOS, and Linux:
+- [x] Release the stdlib-only native scheduler for Windows, macOS, and Linux:
       per-home opaque native identity, POSIX owner-only state (inherited
       user-home ACLs on Windows), exact-eight Git publication, no token
       storage, sanitized Git environment, remote-tip equality, target-repository
@@ -290,23 +292,25 @@ local candidate evidence alone is not a shipped release.
       remote confirmation against one captured symmetric fetch/push destination,
       destination-committed immutable pending-push retry,
       namespace-exact native ownership validation, and residual-honest rollback.
-- [ ] Release the public-only reusable GitHub Actions workflow and immutable
+- [x] Release the public-only reusable GitHub Actions workflow and immutable
       caller template. Keep identity emails secret, suppress raw output from
       workflow-owned visibility/clone/commit/push subprocesses, pin the
       reusable workflow by full commit SHA, and deploy Pages from the exact
       same-run `published-sha`.
-- [ ] Complete current/Python 3.11/full tests, Ruff, bilingual README parity,
+- [x] Complete current/Python 3.11/full tests, Ruff, bilingual README parity,
       snapshot zero-drift, artifact contract, clean-wheel refresh smoke, and
       Ubuntu/Windows/macOS candidate-wheel onboarding.
-- [ ] Publish v0.7.0 as Public Beta, verify PyPI/GitHub Release/live links, and
-      dogfood the maintainer Profile with the local scheduler so its existing
-      `aggregate_only` policy is preserved.
-- [ ] Merge the release PR with a merge commit; before branch deletion, prove
+- [x] Publish v0.7.1 as Public Beta, verify PyPI/GitHub Release/staging links,
+      and dogfood the maintainer Profile with the released local scheduler.
+      The Profile self-source is excluded while its other 10 policies remain
+      unchanged.
+- [x] Merge the release PR with a merge commit; before branch deletion, prove
       immutable workflow commit `9c4f276` is an ancestor of `origin/main` and
       resolves through the GitHub Contents API.
-- [ ] After PyPI publication, run the copied public caller against a disposable
+- [x] After PyPI publication, run the copied public caller against a disposable
       public Profile: one byte-changing exact-eight run, one no-change run,
       immutable `published-sha`, Pages HTTP 200, and no extra second commit.
+      Runs `31393816068` and `31394187257` closed this gate.
 
 ## Future capability milestone — GitHub integration
 

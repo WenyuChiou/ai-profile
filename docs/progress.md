@@ -4,7 +4,7 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## v0.7.1 Windows scheduler normalization candidate
+## v0.7.1 Public Beta — released and live
 
 - v0.7.0 was published on 2026-08-10, then maintainer dogfood found that a
   real Windows Task Scheduler registration normalizes the authored task into
@@ -20,13 +20,14 @@ which is authoritative).
   the complete native XML ownership shape before deleting a same-name task.
   ACE `0.3.0`, aggregation, `VizStats`, renderers, privacy policies, and all
   eight output names remain unchanged.
-- PR #32 cross-platform CI run `31405185444` is green across all eight jobs,
-  and two independent committed-range reviews approved the candidate with no
-  P0--P2 findings. Merge, tag, publication, removing the maintainer Profile
-  repository itself from configured scan sources, and official-PyPI v0.7.1
-  scheduler byte-change/no-change dogfood remain open. The unaffected
-  public-only caller remains immutably pinned to its reviewed v0.7.0
-  reusable-workflow commit.
+- PR #32 merged at `c88e330`; tag `v0.7.1`, PyPI, and the prerelease GitHub
+  Release are live. Main CI run `31407085892` passed all eight jobs, publish
+  run `31407221409` passed, and staging run `31407918920` deployed the pinned
+  dashboard. The released wheel is
+  `c941b547b41eccca7efdfc99bdf785c6d8c307da8bedace0a73a3d19036df005`;
+  the public sdist is
+  `9858657fd42fb72ac812926836896debd91b90080a8e3384b0b9c65af3bc7d9b`.
+  PyPI, GitHub Release, and staging URLs returned HTTP 200.
 - Current Windows evidence is **954 passed with 30 skipped**; the focused
   scheduler suites pass **143 with 5 skipped** on both the current interpreter
   and Python 3.11; WSL Python 3.12 passes **145 with 3 skipped**. The
@@ -37,9 +38,26 @@ which is authoritative).
   wheels with SHA-256
   `c941b547b41eccca7efdfc99bdf785c6d8c307da8bedace0a73a3d19036df005`.
   Twine, artifact/notices/checksum validation, and clean-wheel refresh smoke
-  pass; the final source-distribution digest is retained in external review
-  evidence to avoid a self-referential archive. The branch is reviewed and CI
-  green but remains deliberately unmerged and unreleased.
+  pass. The public release, not an out-of-tree self-digest, is the final sdist
+  authority. M-01, M-03, Profile scheduler dogfood, Profile Pages, and visual
+  QA are closed in
+  `docs/reviews/v0.7.1-release-readiness.md` and
+  `docs/reviews/v0.7.1-visual-qa.md`.
+
+- The public-only disposable caller passed a byte-changing exact-eight run
+  (`31393816068`, commit `497e741`) and a no-change run (`31394187257`);
+  Pages returned HTTP 200 and matched SHA-256 `657c4a38...3eaa3`. The immutable
+  workflow commit `9c4f276` is an ancestor of the release tag and resolves
+  through the GitHub Contents API.
+- The maintainer Profile uses the official PyPI v0.7.1 persistent scheduler on
+  `main` / `origin`, 12:37 local, with one active native task. Its audited
+  configuration retains 10 sources, 3 identities, and 10 `full` policies,
+  excludes the Profile repository itself, and keeps SHA-256
+  `77c14ce3...5795`. The first run created exact-eight commit `b06d7ea`; the
+  second was a no-op. Profile PR #19 / Pages run `31409289807` and LF-hygiene
+  PR #20 / Pages run `31411007440` passed. A real post-merge run at
+  `2026-08-10T16:52:52Z` was a clean no-op with local and remote HEAD fixed at
+  `7e14cb593`.
 
 ## v0.7.0 automation release record
 
@@ -92,12 +110,11 @@ which is authoritative).
   skipped**, and the rebuilt candidate passed double-build byte equality,
   Twine, artifact/checksum validation, and clean-wheel refresh smoke. That
   candidate required the cross-platform CI rerun recorded below.
-- Cross-platform PR gates and the committed-range independent review are now
-  closed. Release remains blocked on PR merge, the M-03 ancestry/Contents-API
-  pre-tag gate, the v0.7.0 tag/Public Beta publication, and the M-01 hosted
-  caller/Pages plus maintainer dogfood gates. The maintainer Profile will use
-  the local scheduler because its configured set includes an `aggregate_only`
-  source; it will not be migrated to the public-only Action.
+- Cross-platform PR gates and the committed-range independent review closed
+  before publication. The later v0.7.1 release record closes PR merge, M-03,
+  tag/Public Beta publication, M-01 hosted caller/Pages, and maintainer
+  scheduler dogfood. The public-only Action remains limited to all-public
+  inputs; the maintainer Profile continues to use the local scheduler.
 - PR CI run `31358621302` passed all eight jobs, including Python 3.11–3.14
   and Ubuntu/Windows/macOS onboarding of the same candidate wheel. The first
   E3 independent committed-range review nevertheless returned **NOT READY**:
@@ -172,8 +189,8 @@ which is authoritative).
   `84837d6b434c3a7ee692c36f8a80d1755caff003` received two independent final
   `APPROVE` verdicts. PR CI run `31390314352` passed all eight required jobs;
   every Linux Python 3.11–3.14 job reported **963 passed with 5 skipped**.
-  PR merge, M-03 ancestry/Contents-API verification, tag/publication, and M-01
-  post-PyPI hosted caller/Pages verification remain open.
+  Those candidate-stage gates later closed through the v0.7.1 release and the
+  live evidence recorded at the top of this file.
 
 ## Current v0.6.1 Public Beta (2026-08-05)
 
