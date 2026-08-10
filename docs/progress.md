@@ -4,6 +4,32 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## v0.7.0 automation candidate — local evidence only (not released)
+
+- ADR-030 adds an orchestration layer without changing ACE `0.3.0`,
+  aggregation semantics, `VizStats`, renderer purity, or the eight-output
+  contract. Phase A (`3b57ac6`) implements fail-closed configured-repository
+  refresh, logical-state-preserving dry-run, and per-home locking. Phase B (`18a17f1`)
+  implements the native scheduler and exact-eight Git publication with
+  per-home native identity and residual-honest rollback.
+- The reusable public-only workflow is frozen at commit
+  `9c4f276cb437f1866a2c1b407efe54d3790ce811`. The copyable caller at
+  `f92c5c4` pins that exact commit, consumes its immutable `published-sha`,
+  and serializes refresh through same-run Pages deployment. Identity emails
+  enter as a secret; public repository inputs are validated before
+  credential-disabled clone; raw output from workflow-owned visibility,
+  clone, commit, and push subprocesses is suppressed.
+- Frozen Phase C evidence: **840 passed, 21 skipped**, Ruff clean, README
+  parity pass, sanctioned snapshot/sample zero drift, and substantive WSL
+  workflow probes. Both independent security/code reviewers approved the
+  frozen bytes. This is candidate evidence, not evidence of a live scheduled
+  run, released wheel, tag, PyPI artifact, or Pages deployment.
+- Release remains blocked on Phase D documentation parity, Phase E artifact
+  and cross-platform gates, the v0.7.0 tag/Public Beta publication, and
+  post-release maintainer dogfood. The maintainer Profile will use the local
+  scheduler because its configured set includes an `aggregate_only` source;
+  it will not be migrated to the public-only Action.
+
 ## Current v0.6.1 Public Beta (2026-08-05)
 
 - The provider ledger is now the sole model/provider contribution visual in

@@ -77,7 +77,12 @@ src/aiprofile/
     dashboard_html.py  deterministic self-contained interactive dashboard
                        (post-v0.1 additive renderer; ADR-021)
   export.py            transactional public-asset + profile.json writer
-  cli.py               argparse wiring: init / scan / aggregate / render
+  refresh.py           configured-repository refresh application service
+  lockfile.py          cross-platform per-home advisory process lock
+  schedule/            local automation service, launcher, and isolated
+                       Windows / launchd / systemd user adapters
+  cli.py               argparse wiring: init / scan / aggregate / render /
+                       refresh / schedule
 ```
 
 Allowed dependency direction (→ = may import):
@@ -92,12 +97,19 @@ aggregate → storage, errors          # defines RepoAggregates
 privacy → aggregate, viz, config, registry*, errors
 render → viz, themes, errors          # NEVER storage, gitio, schema, sqlite3
 export → viz, errors                  # NEVER storage, gitio
+refresh → scanner, aggregate, privacy, render, export, config, schema.vocab,
+          storage, viz, lockfile, errors # orchestration; NEVER imported by render
+schedule → refresh, config, gitio, export**, lockfile, errors
+schedule adapters → stdlib, errors     # NEVER render, storage, network
 ```
 
 (*) The privacy → registry edge (gate M-08) is display-name resolution
 ONLY, applied strictly AFTER the canonical-slug collapse — registry
 fallback behavior can never become publication behavior for a
 non-canonical key (gate H-02).
+
+(**) The schedule → export edge imports only the closed public-asset filename
+allowlist; it does not call the exporter or a renderer.
 
 Enforced two ways (G2-16): a runtime test imports `render` and `export`
 in a fresh interpreter and asserts `sqlite3`, `subprocess`,
@@ -108,7 +120,9 @@ imports the runtime check could miss). Renderers consume validated
 see events.
 
 No hidden global state: configuration and database handles are constructed
-in `cli.py` and passed explicitly.
+by the CLI/application services and passed explicitly. Refresh and scheduler
+coordination uses a tool-owned lock scoped to the canonical
+`AIPROFILE_HOME`, not a renderer global.
 
 The presentation contract is documented in the repository-root `DESIGN.md`
 and governed by ADR-025 (Flat Evidence Ledger). This is a
@@ -315,8 +329,9 @@ per ADR-029. Future contract changes require the
 schema-version strategy in ADR-012/ADR-027. `generated_on` is date-only by
 design (a full
 timestamp would disclose timezone/working hours in a published artifact —
-supersedes the proposal §24 example). No `manifest.json` in v0.1 (nothing
-consumes it until the GitHub Action lands).
+supersedes the proposal §24 example). No `manifest.json` exists. The v0.7
+public workflow stages the same exact eight outputs directly and does not add
+a ninth file (ADR-030).
 
 ## 9. Rendering
 
@@ -364,21 +379,27 @@ link those cards to the HTML file on a static host.
 
 ## 10. Error handling and diagnostics hygiene
 
-- `errors.py`: `AiProfileError` → `ConfigError`, `GitError`,
-  `StorageError`, `SchemaValidationError`, `RenderError`.
+- `errors.py`: `AiProfileError` → `ConfigError`, `GitError`, `StorageError`,
+  `LockError`, structured `RefreshError`, `SchemaValidationError`, and
+  `RenderError` (including typed `IncompleteRollbackError`).
 - CLI: catches `AiProfileError`, prints one clear actionable line (plus
   stderr detail with `--verbose`), exits 1; usage errors exit 2; success 0.
 - Parse-level problems in commit messages are **warnings, not errors**
   (collected per scan, summarized at the end). A malformed trailer never
   aborts a scan and never invents data.
-- **Pinned diagnostics rule (privacy):** default-verbosity warnings may
+- **Pinned diagnostics rule (privacy):** default-verbosity scan warnings may
   reference a **scan-local commit ordinal** ("commit #17") and the
   trailer *key* only — never commit SHAs (stable cross-system
   correlators; G2-08), trailer values, commit-message text, repository
-  names, or paths. SHAs and trailer values appear only under
-  `--verbose`, which the future CI/Action mode must not enable (ADR-011). `GitError` messages may include the failing command
-  and paths — they go to the terminal only; nothing from the error/warning
-  path can reach `dist/`, whose writers accept `VizStats` alone (§3).
+  names, or paths. Local scan SHAs and trailer values appear only under
+  `--verbose` (ADR-011). Refresh and scheduler default messages and scheduler
+  `last-run.log` use fixed, path-free outcomes; verbose refresh chains local
+  causes without changing public assets. The v0.7 public workflow never
+  enables verbose mode; workflow-owned `gh api`, source clone, and publication
+  commit/push subprocesses suppress raw output and emit fixed ordinal- or
+  count-based failures. Pinned setup/checkout/Pages actions may emit ordinary
+  already-public caller/revision metadata. Nothing from any diagnostic path
+  can reach `dist/`, whose writers accept `VizStats` alone (§3).
 - Structured logging via stdlib `logging` (`aiprofile.*` loggers); `-v`
   raises verbosity; no log files by default.
 
@@ -392,11 +413,26 @@ same observable semantics (and must land together with the
 manual-event-preservation change noted in schema.md §14); measured
 performance, not speculation, will decide when.
 
-## 12. Optional future GitHub integration (not in v0.1)
+## 12. Automation and future GitHub integration
 
-Phase 4+ (proposal §11, §14, §30): public-API discovery, fine-grained PAT
-or GitHub App (read-only contents+metadata), incremental commit retrieval,
-and a reusable Action. The v0.1 design keeps this pluggable by making the
-collection layer the only place that knows where commits come from;
-everything from adapters down is source-agnostic. No auth code, no tokens,
-no network in v0.1 (and no network in any core unit test, ever).
+ADR-030 adds two post-v0.1 orchestration paths without changing collection or
+rendering semantics. Local `refresh` and the native scheduler reuse configured
+paths and publication policies. The reusable GitHub Actions workflow accepts
+only explicit repositories that GitHub already reports as public, clones them
+without credentials, scans them as `full` in an ephemeral home, and publishes
+the exact eight outputs. Identity emails enter only through a workflow secret;
+the workflow stores no PAT. Its workflow-owned visibility, clone, commit, and
+push subprocesses replace raw output with fixed diagnostics.
+
+Because `GITHUB_TOKEN` commits do not fan out to push-triggered CI or Pages,
+the copyable caller serializes refresh through deployment and checks out the
+workflow's immutable `published-sha` in a separate least-privilege Pages job.
+The reusable workflow itself is full-SHA pinned. The maintainer Profile uses
+the local scheduler because its configured set contains an
+`aggregate_only` source.
+
+Public-API discovery, fine-grained PAT or GitHub App support, private hosted
+scanning, and incremental commit retrieval remain future work. They must use
+official API/client behavior rather than bespoke auth or pagination. Core
+scan, aggregation, privacy, and render commands remain network-free, and no
+core unit test requires network access.

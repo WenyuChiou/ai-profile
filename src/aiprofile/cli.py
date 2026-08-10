@@ -127,10 +127,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="re-scan every configured repository and republish the dist bundle",
         description=(
             "Batch re-scan of every configured repository, then republish the"
-            " eight-file dist bundle as one atomic generation. Publishes"
-            " nothing on any scan failure. Runs one refresh at a time per"
-            " profile home (a second invocation fails fast). Never commits,"
-            " never pushes, never touches the network."
+            " eight-file dist bundle. A pre-publication failure publishes"
+            " nothing; an incomplete filesystem rollback is reported honestly."
+            " Runs one refresh at a time per profile home (a second invocation"
+            " fails fast). Never commits, never pushes, never touches the"
+            " network."
         ),
     )
     p_refresh.add_argument(
@@ -140,8 +141,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help=(
-            "report which of the eight outputs would change, without writing"
-            " to the profile home or the output directory"
+            "report which outputs would change without changing configuration,"
+            " recorded database content, or output assets; the advisory lock"
+            " and transient SQLite coordination state may change"
         ),
     )
     p_refresh.set_defaults(func=_cmd_refresh)
@@ -160,7 +162,11 @@ def _build_parser() -> argparse.ArgumentParser:
         type=_schedule_time,
         help="daily local time in HH:MM form",
     )
-    p_schedule_install.add_argument("--no-push", action="store_true")
+    p_schedule_install.add_argument(
+        "--no-push",
+        action="store_true",
+        help="create the local exact-eight commit but skip the remote push",
+    )
     p_schedule_install.add_argument("--dry-run", action="store_true")
     p_schedule_install.set_defaults(func=_cmd_schedule_install)
 

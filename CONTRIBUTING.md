@@ -13,7 +13,8 @@ python scripts/check_readme_parity.py
 ```
 
 Integration tests build throwaway git repositories under pytest tmp dirs;
-no network is used anywhere in the suite, ever.
+the suite uses no external network service. Workflow tests execute extracted
+scripts with fake `gh`/Git boundaries and privacy canaries.
 
 ## Ground rules
 
@@ -39,6 +40,16 @@ no network is used anywhere in the suite, ever.
   `docs/assets/`; never hand-edit or copy snapshots or samples.
 - Packaging or release changes must also pass the artifact and clean-wheel
   checks in [docs/RELEASING.md](docs/RELEASING.md).
+- Automation changes must preserve ADR-030: `refresh` is an application
+  service outside `render/`; the scheduler uses argv-only OS/Git adapters and
+  exact-eight pathspecs; the hosted workflow remains public-only, secret-safe,
+  full-SHA pinned, and bound to one immutable `published-sha`. Run
+  `python -m pytest tests/unit/test_profile_refresh_workflow.py
+  tests/unit/test_schedule_cli.py tests/unit/test_schedule_adapters.py
+  -p no:cacheprovider` in addition to the full suite.
+- Public README claims are English-canonical and Traditional-Chinese mirrored.
+  Run `python scripts/check_readme_parity.py`; changes to both locale variants
+  require the repository's multi-locale acceptance review before commit.
 
 ## Reporting privacy/security issues
 

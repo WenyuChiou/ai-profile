@@ -100,10 +100,17 @@ def test_parity_rejects_missing_privacy_contract(tmp_path):
         ("(#快速開始)", "(#其他段落)", "CTA"),
         ("一次 render 會產生支援主題的 SVG 卡片", "一次 render 會產生檔案", "claim"),
         (
-            "CLI 不會進行網路呼叫、不上傳 repository data，也不傳送 telemetry。",
-            "CLI 可能進行網路呼叫。",
+            "Scan、aggregate、refresh 與 render 不會進行網路呼叫，也不傳送 telemetry。",
+            "Scan、aggregate、refresh 與 render 可能進行網路呼叫。",
             "claim",
         ),
+        (
+            "9c4f276cb437f1866a2c1b407efe54d3790ce811",
+            "v0.7.0",
+            "missing",
+        ),
+        ("AIPROFILE_IDENTITIES", "IDENTITIES", "missing"),
+        ("暫時性的 `-shm`", "永久性的 `-shm`", "claim"),
     ],
 )
 def test_parity_rejects_cta_feature_and_privacy_drift(

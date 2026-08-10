@@ -28,6 +28,15 @@ from aiprofile.schedule.adapters import (
 )
 
 
+def test_schedule_install_help_defines_no_push_as_local_commit_only(capsys):
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["schedule", "install", "--help"])
+
+    assert raised.value.code == 0
+    output = " ".join(capsys.readouterr().out.split())
+    assert "create the local exact-eight commit but skip the remote push" in output
+
+
 def _git(repo: Path, *args: str):
     result = subprocess.run(
         ["git", *args], cwd=str(repo), capture_output=True, text=True, timeout=60

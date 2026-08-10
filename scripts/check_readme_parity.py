@@ -17,6 +17,16 @@ REQUIRED_CONTRACT_TOKENS = (
     "aiprofile scan .",
     "aiprofile aggregate",
     "aiprofile render",
+    "aiprofile refresh --out dist",
+    "aiprofile schedule install",
+    "aiprofile schedule status",
+    "aiprofile schedule remove",
+    "--dry-run",
+    "--no-push",
+    "AIPROFILE_IDENTITIES",
+    "profile-refresh-caller.yml",
+    "9c4f276cb437f1866a2c1b407efe54d3790ce811",
+    "published-sha",
     "aggregate_only",
     "full",
     "excluded",
@@ -40,7 +50,7 @@ HEADING_PAIRS = (
         "Configure identities and repository privacy",
         "設定 identities 與 repository 隱私",
     ),
-    ("Scan and refresh multiple repositories", "Scan 與更新多個 repositories"),
+    ("Automate daily updates", "每日自動更新"),
     ("Publish to your GitHub Profile", "發布到 GitHub Profile"),
     ("What gets generated", "會產生哪些內容"),
     ("Declare AI participation", "宣告 AI 參與"),
@@ -57,7 +67,13 @@ CODE_BLOCK_CONTRACTS = (
     ('"identities"', '"repositories"', '"salt"'),
     ('"path"', '"repository_uid"', '"publication_level": "aggregate_only"'),
     ("aiprofile aggregate", "aiprofile render"),
-    ("aiprofile scan /path/to/repository-one", "aiprofile render"),
+    (
+        "aiprofile refresh --out dist",
+        "aiprofile refresh --out dist --dry-run",
+        "aiprofile schedule install",
+        "aiprofile schedule status",
+        "aiprofile schedule remove",
+    ),
     ("<a href=", "dist/dashboard.html", "dist/summary-dark.svg"),
     ("AI-Provider:", "AI-Model:", "AI-Mode:"),
 )
@@ -68,8 +84,8 @@ REQUIRED_LOCALIZED_CLAIMS = (
         "attribution 來自 `AI-*` trailers 與已驗證的 AI\n  co-author identities",
     ),
     (
-        "scanning, aggregation, and rendering happen on\n  your machine",
-        "scan、aggregate 與 render 都在你的電腦執行",
+        "CLI scanning, aggregation, refresh, and rendering happen on\n  your machine",
+        "CLI 的 scan、aggregate、refresh 與 render 都在你的電腦執行",
     ),
     (
         "one render produces theme-aware SVG cards",
@@ -80,8 +96,20 @@ REQUIRED_LOCALIZED_CLAIMS = (
         "沒有證據的 commit 會維持\n`unknown`",
     ),
     (
-        "The CLI makes no network calls, uploads no repository data, and sends no\n  telemetry.",
-        "CLI 不會進行網路呼叫、不上傳 repository data，也不傳送 telemetry。",
+        "Scanning, aggregation, refresh, and rendering make no network calls "
+        "and\n  send no telemetry.",
+        "Scan、aggregate、refresh 與 render 不會進行網路呼叫，也不傳送 telemetry。",
+    ),
+    (
+        "recorded database/WAL content, or output assets. It may create or use the\n"
+        "advisory lock, and SQLite may update transient `-shm` coordination bytes",
+        "已記錄的 database/WAL content，\n也不會改變 output assets。它可能建立或使用 "
+        "advisory lock；\nSQLite 讀取已 commit 的 WAL content 時，也可能更新暫時性的 `-shm`",
+    ),
+    (
+        "`--no-push` to create and advance the local exact-eight commit without "
+        "pushing\nit to the remote",
+        "加入 `--no-push` 仍會建立並推進本機 exact-eight commit，\n但不會 push 到 remote",
     ),
     (
         "Public assets contain the UTC generation date",

@@ -25,7 +25,7 @@ attribution.
 
 - **Explicit evidence:** attribution comes from `AI-*` trailers and
   verified AI co-author identities—not source-code style.
-- **Local-first privacy:** scanning, aggregation, and rendering happen on
+- **Local-first privacy:** CLI scanning, aggregation, refresh, and rendering happen on
   your machine; repository identities stay out of public assets.
 - **Profile-ready:** one render produces theme-aware SVG cards, a
   self-contained dashboard, and a machine-readable public summary.
@@ -179,21 +179,84 @@ If configuration parsing fails, restore the previous valid JSON; do not
 delete or regenerate the `salt`, `path`, or `repository_uid`. Always review
 `aggregate` before publishing.
 
-## Scan and refresh multiple repositories
+## Automate daily updates
 
-Scan each repository once, then aggregate their local records together:
+Choose one path. Keep private and `aggregate_only` repositories on your own
+machine; use GitHub Actions only when every source repository is already
+public.
 
 ```bash
-aiprofile scan /path/to/repository-one
-aiprofile scan /path/to/repository-two
-aiprofile aggregate
-aiprofile render
+# Refresh every configured, non-excluded repository now.
+aiprofile refresh --out dist
+aiprofile refresh --out dist --dry-run
+
+# Or install one daily local job (05:37 in the machine's local time).
+aiprofile schedule install --profile-repo /path/to/USERNAME --time 05:37
+aiprofile schedule status
+aiprofile schedule remove
 ```
 
-There is no batch refresh command in this Public Beta. To update a
-multi-repository profile, rerun `scan` separately in every repository whose
-history changed, then rerun `aggregate` and `render`. Run only one `render`
-at a time for a given output directory.
+### Refresh every configured repository
+
+`refresh` rescans each configured path once, then aggregates and writes the
+same eight files. Aliases do not cause duplicate scans, and `excluded`
+repositories remain excluded. A scan, configuration, privacy, or rendering
+failure publishes no new generation. `--dry-run` lists which of the eight
+files would change without changing configuration, publication policy,
+recorded database/WAL content, or output assets. It may create or use the
+advisory lock, and SQLite may update transient `-shm` coordination bytes while
+reading committed WAL content; neither is published data.
+
+Only one refresh can use an `AIPROFILE_HOME` at a time. On the rare filesystem
+failure where output rollback is incomplete, the CLI says that partial assets
+or recovery backups may remain; inspect the output before committing it.
+
+### Private or local repositories: native scheduler
+
+`schedule install` creates an OS-native user job: Task Scheduler on Windows,
+launchd on macOS, or a systemd user timer on Linux. It refreshes
+`<profile-repo>/dist` daily and, by default, stages only the eight generated
+paths, commits only byte changes, and pushes without force through the
+repository's existing Git authentication. The tool stores no token. Add
+`--no-push` to create and advance the local exact-eight commit without pushing
+it to the remote; use `--dry-run` to preview installation without changing
+scheduler state.
+
+The user scheduler and machine must be available. Windows and systemd can
+recover missed runs according to their native settings; launchd does not
+replay a run missed while the machine was powered off. Detached branches,
+changed branch state, protected branches, and rejected pushes fail closed.
+Scheduler commits are mechanical and intentionally do not run user commit
+hooks or signing.
+
+### Public repositories: GitHub Actions
+
+For a Profile sourced entirely from public repositories:
+
+1. Copy [`docs/templates/profile-refresh-caller.yml`](docs/templates/profile-refresh-caller.yml)
+   to `.github/workflows/profile-refresh.yml` in the Profile repository.
+2. Edit the explicit public `owner/repo` list. Add the identity-email payload
+   as the repository secret `AIPROFILE_IDENTITIES`; never put it in `with:`.
+3. In **Settings → Pages**, choose **GitHub Actions** as the source, then run
+   the workflow once with **Actions → Daily ai-profile refresh → Run workflow**.
+
+The template runs daily at 05:37 UTC and also supports manual dispatch. It
+pins the reusable workflow to commit
+`9c4f276cb437f1866a2c1b407efe54d3790ce811`, installs exactly
+`ai-profile-cli==0.7.0`, rejects non-public sources before scanning, and
+deploys Pages from the exact `published-sha` produced in that run. It uses
+only `GITHUB_TOKEN`; no PAT fallback is provided. GitHub-hosted automation is
+not local-first processing: it clones only the public repositories you list
+and treats them as `full`. Use the local scheduler if any source is private or
+`aggregate_only`.
+
+Branch protection can reject the direct asset commit. Scheduled workflows in
+public repositories can be disabled after 60 days without repository
+activity, forks require Actions to be enabled, and organization Actions
+allowlists must permit the pinned actions and reusable workflow. A commit made
+with `GITHUB_TOKEN` does not trigger ordinary push workflows or a Pages build,
+so the caller performs an explicit, same-run Pages deployment. Use one caller,
+not a matrix of overlapping refresh jobs.
 
 ## Publish to your GitHub Profile
 
@@ -216,7 +279,9 @@ Add the heatmap with the same `<picture>` pattern using
 `heatmap-{light,dark}.svg`. GitHub READMEs do not execute JavaScript, so the
 SVG remains the Profile view and the link opens `dashboard.html`.
 
-To host the dashboard with GitHub Pages:
+For manual publication, host the dashboard with GitHub Pages as follows. If
+you use the daily Action above, keep **GitHub Actions** as the Pages source and
+skip these branch-source steps.
 
 1. Push `README.md` and `dist/` to the Profile repository's `main` branch.
 2. Open **Settings → Pages**.
@@ -296,8 +361,12 @@ active days remain separate measures. Missing model declarations stay
 
 ## Privacy
 
-- The CLI makes no network calls, uploads no repository data, and sends no
-  telemetry.
+- Scanning, aggregation, refresh, and rendering make no network calls and
+  send no telemetry. The optional local scheduler may run `git push` through
+  existing Git authentication; `ai-profile` stores no token.
+- The optional public Action runs on a GitHub-hosted runner and clones only
+  explicit public repositories. Identity emails are passed as a secret and
+  are not written to public assets or default workflow logs.
 - Public assets contain the UTC generation date. They may also contain
   aggregate counts, public provider names, and evidence totals; repository
   activity dates appear only for `full` repositories.

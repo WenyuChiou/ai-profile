@@ -49,6 +49,17 @@ EIGHT_NAMES = [
 ]
 
 
+def test_refresh_help_states_dry_run_coordination_exceptions(capsys):
+    with pytest.raises(SystemExit) as raised:
+        cli.main(["refresh", "--help"])
+
+    assert raised.value.code == 0
+    output = capsys.readouterr().out
+    assert "configuration, recorded database content, or output assets" in output
+    assert "lock and transient SQLite coordination state may change" in output
+    assert "without writing to the profile home" not in output
+
+
 def _entry(path: str, uid: str, level: PublicationLevel = PublicationLevel.FULL) -> RepoEntry:
     return RepoEntry(path=path, repository_uid=uid, publication_level=level)
 

@@ -273,14 +273,39 @@ renderers.
 - [x] Close the release gates: CI run `30984105485`, publish run `30984290387`,
       and staging run `30985228475` all passed.
 
+## v0.7.0 — Daily automation layer (candidate, Public Beta)
+
+These boxes remain open until the release artifact and live checks complete;
+local candidate evidence alone is not a shipped release.
+
+- [ ] Release the application-level `refresh --out DIR [--dry-run]` path with
+      per-home concurrency, configured-path deduplication, excluded-policy
+      preservation, exact-eight publication, deterministic change reporting,
+      and honest incomplete-rollback diagnostics (ADR-030).
+- [ ] Release the stdlib-only native scheduler for Windows, macOS, and Linux:
+      per-home opaque native identity, POSIX owner-only state (inherited
+      user-home ACLs on Windows), exact-eight Git publication, no token
+      storage, fail-closed branch/ref validation, and residual-honest rollback.
+- [ ] Release the public-only reusable GitHub Actions workflow and immutable
+      caller template. Keep identity emails secret, suppress raw output from
+      workflow-owned visibility/clone/commit/push subprocesses, pin the
+      reusable workflow by full commit SHA, and deploy Pages from the exact
+      same-run `published-sha`.
+- [ ] Complete current/Python 3.11/full tests, Ruff, bilingual README parity,
+      snapshot zero-drift, artifact contract, clean-wheel refresh smoke, and
+      Ubuntu/Windows/macOS candidate-wheel onboarding.
+- [ ] Publish v0.7.0 as Public Beta, verify PyPI/GitHub Release/live links, and
+      dogfood the maintainer Profile with the local scheduler so its existing
+      `aggregate_only` policy is preserved.
+
 ## Future capability milestone — GitHub integration
 
-Public-API discovery wrapping the official REST/GraphQL API (mature
-client or `gh api`; never ad hoc auth/pagination/rate-limit code —
-Gate 2 §7); verified-visibility labels become possible here (G2-04);
-fine-grained PAT posture per ADR-011; reusable Action (+ manifest.json)
-with CI log hygiene enforced; incremental scanning once a measured
-threshold justifies it (architecture §11).
+Public-API discovery must wrap the official REST/GraphQL API through a mature
+client or `gh api`, never ad hoc auth/pagination/rate-limit code (Gate 2 §7).
+Verified-visibility labels, fine-grained PAT or GitHub App support, and private
+hosted scanning remain future work under ADR-011. The v0.7 reusable Action is
+deliberately public-only, uses no PAT, and adds no `manifest.json`.
+Incremental scanning waits for a measured threshold (architecture §11).
 
 ## Explicit non-goals (any version)
 
