@@ -55,8 +55,6 @@ def test_static_ast_import_contract_for_render_and_export():
     forbidden-edge set from architecture.md section 2, including dynamic
     import calls (importlib.import_module / __import__) where the runtime
     module-graph test could be blind."""
-    import ast
-
     banned_roots = {
         "sqlite3",
         "subprocess",
@@ -77,8 +75,17 @@ def test_static_ast_import_contract_for_render_and_export():
     ]
     assert len(files) >= 4, "render module discovery looks broken"
 
+    violations = _import_violations(files, banned_roots)
+    assert not violations, violations
+
+
+def _import_violations(files, banned_roots):
+    """Static AST walk shared by the render/export and refresh/schedule
+    contracts: flags banned imports (absolute, relative-resolved) and any
+    dynamic import call the runtime module-graph test could be blind to."""
+    import ast
+
     def resolve_relative(module_file, node):
-        # level=1 -> package dir of the file, level=2 -> its parent, etc.
         parts = module_file.relative_to(REPO_ROOT / "src").parts[:-1]
         base = list(parts)[: len(parts) - (node.level - 1)]
         if node.module:
@@ -110,4 +117,22 @@ def test_static_ast_import_contract_for_render_and_export():
             for name in names:
                 if any(name == b or name.startswith(b + ".") for b in banned_roots):
                     violations.append(f"{f.name}: {name}")
+    return violations
+
+
+def test_refresh_lockfile_and_schedule_are_network_free():
+    """v0.7.0 (ADR-011 posture): refresh/lockfile/schedule are proven
+    network-free the same way render/export are proven storage-free - a
+    static AST walk over their import graphs. Placeholder-tolerant for
+    ``aiprofile.schedule`` until Phase B lands it; once the package
+    exists, every module in it is swept."""
+    banned_roots = {"urllib", "http", "socket", "requests"}
+    src = REPO_ROOT / "src" / "aiprofile"
+    files = [src / "refresh.py", src / "lockfile.py"]
+    schedule_dir = src / "schedule"
+    if schedule_dir.exists():
+        files.extend(sorted(schedule_dir.rglob("*.py")))
+    for f in files[:2]:
+        assert f.is_file(), f"{f} missing - refresh/lockfile contract broken"
+    violations = _import_violations(files, banned_roots)
     assert not violations, violations

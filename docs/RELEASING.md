@@ -26,6 +26,12 @@ git diff --exit-code -- tests/snapshots docs/assets
 
 The two regeneration commands must produce no unexplained diff.
 
+For an automation release, also verify that
+`tests/unit/test_profile_refresh_workflow.py` pins the copyable caller to the
+reviewed reusable-workflow commit, that the workflow's exact package version
+matches the candidate version, and that Pages consumes its immutable
+`published-sha`. Do not replace the full commit pin with a release tag.
+
 ## 2. Build and validate artifacts
 
 Build from a clean Linux checkout of the release commit. The canonical
@@ -52,8 +58,13 @@ python scripts/release_smoke.py \
   --expected-version X.Y.Z
 ```
 
-The smoke must report eight outputs, a network-closed CSP dashboard,
-byte-identical repeated renders, and zero privacy-canary hits.
+The smoke must run `refresh` from the installed wheel and report eight
+outputs, a network-closed CSP dashboard, byte-identical repeated refreshes,
+and zero privacy-canary hits. Dry-run must name only the allowlisted eight
+filenames and leave configuration, publication policy, recorded database/WAL
+content, and output assets unchanged. The advisory lock and transient SQLite
+`-shm` coordination bytes are permitted non-data exceptions and must not be
+misreported as publication changes.
 
 Before the release PR is submitted, run the frozen four-role dogfood against
 that exact wheel. Record its full digest in
@@ -81,6 +92,19 @@ Merge only after all pull-request checks are green, including:
 - `Wheel onboarding (ubuntu-latest / Python 3.12)`
 - `Wheel onboarding (windows-latest / Python 3.12)`
 - `Wheel onboarding (macos-latest / Python 3.12)`
+
+For v0.7.0, merge the release PR with a merge commit; squash/rebase would make
+the copyable caller's immutable C1 pin depend on temporary PR-object retention.
+Before deleting the feature branch, require both:
+
+```bash
+git fetch origin main
+git merge-base --is-ancestor 9c4f276cb437f1866a2c1b407efe54d3790ce811 origin/main
+gh api --method GET repos/WenyuChiou/ai-profile/contents/.github/workflows/profile-refresh.yml \
+  -f ref=9c4f276cb437f1866a2c1b407efe54d3790ce811 > /dev/null
+```
+
+Either failure blocks tagging and branch deletion.
 
 From a clean, up-to-date `main`:
 
@@ -127,6 +151,12 @@ Wait for the publish workflow to finish successfully. Create an empty
 5. The PyPI project, GitHub Release, repository homepage, live dashboard,
    README assets, changelog, security policy, and issue links return HTTP
    200.
+6. Copy the public caller into a disposable public Profile repository and run
+   it twice: first with a controlled byte change, then unchanged. Verify the
+   first commit contains exactly eight generated paths, Pages serves the exact
+   `published-sha` with HTTP 200, and the second run creates no commit. This
+   post-PyPI hosted E2E is a promotion blocker; static workflow tests do not
+   replace it.
 
 If any check fails, do not delete or overwrite the release. Stop promotion,
 document the defect, and prepare a new patch version.
@@ -136,9 +166,43 @@ document the defect, and prepare a new patch version.
 Only after the package gates pass:
 
 1. Install the released PyPI version in a clean environment.
-2. Rescan each intended repository.
-3. Review `aggregate`.
-4. Render the real Profile `dist/`.
-5. Run the privacy canary sweep and review the diff.
-6. Merge through the Profile repository's normal checks.
-7. Wait for GitHub Pages, then verify the live dashboard and Profile assets.
+2. Confirm there is one controlled, intended byte change for the scheduler to
+   publish—normally the newly released repository commit's explicit evidence.
+   If no configured source changed, use an isolated Profile fixture with its
+   own remote and Pages target; a no-change run does not prove commit/push.
+3. Install the local scheduler from the released wheel with the intended local
+   time, confirm `schedule status`, and trigger or wait for one real launcher
+   run. Do not manually refresh first: that would consume the change and turn
+   this scheduler proof into a no-op.
+4. Verify the launcher created one local commit containing only the eight
+   generated paths, pushed that commit with the exact-old lease and never an
+   unconditional force push, produced a path-free
+   last-run outcome, and reached green Pages deployment. Then confirm the next
+   no-change run creates no commit.
+5. Review `aggregate`, run the privacy canary sweep, inspect the exact-eight
+   diff, and confirm publication policies are unchanged. The maintainer home
+   contains an `aggregate_only` source, so do not migrate it to the public-only
+   Action.
+6. Verify the live dashboard and all eight Profile assets. If an isolated
+   fixture was necessary in step 2, record that limitation and do not claim a
+   maintainer-Profile scheduler E2E until a legitimate source change exercises
+   it.
+
+Install from a Python environment that will persist at the same executable
+path. After moving, removing, or upgrading that interpreter or virtual
+environment, rerun `schedule install` and confirm `schedule status` before
+waiting for the next native run.
+
+The scheduler uses an existing credential manager, askpass, or SSH agent and
+does not persist or log credentials. It rejects embedded-password/query/
+fragment destinations, resolves local paths from the Profile repository, and
+does not query or forward authorization headers, Git-config/ambient proxies,
+or URL rewrite rules into its isolated push context. Its
+mechanical `commit-tree` publication bypasses user commit hooks and signing;
+branch protection can reject the exact-old leased push. The lease is bound to
+the captured remote parent and is followed by remote-tip confirmation; it is
+never an unconditional force push. Push mode also requires one fetch
+destination and the same single push destination; multiple/different URLs are
+unsupported and fail closed before refresh. Do not claim daily automation
+is live until the native registration and one real Profile refresh have both
+been observed after release.

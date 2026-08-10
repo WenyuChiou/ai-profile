@@ -70,6 +70,44 @@ Semantics pinned:
   M-09 — the cache does not grow for a convenience readout).
 - All commands support `-v` and exit 0 / 1 (operational error) / 2 (usage).
 
+Post-v0.1, ADR-030 adds automation without changing these command semantics or
+the ACE/public contract:
+
+```bash
+aiprofile refresh --out DIR [--dry-run]
+aiprofile schedule install --profile-repo PATH --time HH:MM [--no-push] [--dry-run]
+aiprofile schedule status [--dry-run]
+aiprofile schedule remove [--dry-run]
+```
+
+`refresh` rescans configured non-excluded paths, deduplicates aliases, builds
+the existing `VizStats`, and transactionally renders the exact eight current
+outputs. Pre-export failure publishes no new generation; an incomplete
+filesystem rollback is reported honestly as a possible partial-output or
+backup residual. Dry-run leaves configuration, publication policy, recorded
+database/WAL content, and output assets unchanged. It may create/use the
+advisory lock, and a WAL-aware SQLite read may update transient `-shm`
+coordination bytes. The scheduler is local OS-native automation for private,
+local, and `aggregate_only` sources; the public Action accepts only explicitly
+listed public repositories and scans each as `full`.
+
+The scheduler's `--no-push` mode still creates and compare-and-swap advances
+the local exact-eight commit; it suppresses only the remote push. Scheduler
+files use owner-only modes on POSIX and inherit the user's home ACL on Windows.
+Real and dry refresh reject one resolved path mapped to different repository
+UIDs before scanning or reading cached aggregates.
+
+Push-capable scheduled runs remove ambient Git repository/config injection,
+require remote-tip equality before refresh, serialize per target Git common
+directory, and verify the private-index bytes against the completed refresh.
+A `0600` POSIX pending record binds immutable commit/parent/tree/branch/remote
+state across push retries. Retry repairs and verifies the exact-eight real
+index before any push; divergence or repair failure retains the record and
+stops before refresh or push. The local last-run log is also `0600` on POSIX,
+and linked/non-regular scheduler state is rejected before read or chmod.
+Native status must prove the complete tool-owned Windows or launchd execution
+semantics before mutation.
+
 ## 4. Expected files
 
 ```text
@@ -78,7 +116,14 @@ Semantics pinned:
                            #   [{path, repository_uid, publication_level}]
                            # — the ONLY home of publication policy (schema.md §9)
   aiprofile.db             # SQLite — disposable cache of scan results
+  scheduler/               # local launcher/config/log and Windows task.xml;
+                           # POSIX owner-only modes, Windows inherited
+                           # user-home ACL (post-v0.1, ADR-030)
 ```
+
+Native registrations live in their OS-owned locations: Task Scheduler on
+Windows, `~/Library/LaunchAgents` on macOS, and `~/.config/systemd/user` on
+Linux. Their opaque per-home identity keeps separate homes isolated.
 
 Do not sync `AIPROFILE_HOME` to dotfiles/backups you publish: config
 contains the salt and private repository paths (ADR-009).
@@ -92,8 +137,8 @@ dist/
   profile.json             # serialized VizStats (the viz data contract)
 ```
 
-(No `manifest.json` in v0.1 — nothing consumes it until the GitHub Action
-lands, post-v0.1.)
+(No `manifest.json`: the post-v0.1 public workflow stages the same exact eight
+current outputs and does not add a ninth file.)
 
 README embedding (documented in README):
 
@@ -273,6 +318,8 @@ pass; docs (README quickstart + this docs set) are consistent.
    (consuming the captured roles/mode/review fields), period filtering
    (`--from/--to` with the author-local-date rule), dedicated
    `privacy-preview` with per-repository views, `purge` helper.
-4. Multi-repo config scanning + incremental scan.
-5. GitHub public-API discovery, then Action packaging (+ `manifest.json`
-   when the Action consumes it).
+4. Multi-repository batch refresh is delivered by ADR-030; incremental scan
+   remains a measured future optimization.
+5. Public-only reusable Action packaging is delivered by ADR-030 without a
+   manifest. GitHub public-API discovery, private hosted scanning, and
+   fine-grained PAT/GitHub App support remain future work.

@@ -25,9 +25,68 @@ below.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-10 (Public Beta)
+
+### Added
+
+- Add `aiprofile refresh --out DIR [--dry-run]` to rescan configured,
+  non-excluded repositories and render the unchanged eight-output contract in
+  one fail-closed operation. Dry-run reports an ordered allowlisted change set
+  without changing configuration, publication policy, recorded database/WAL
+  content, or output assets; the advisory lock and transient SQLite `-shm`
+  coordination bytes remain explicit non-data exceptions.
+- Add `aiprofile schedule install|status|remove` for daily local automation
+  through Windows Task Scheduler, macOS launchd, or a Linux systemd user
+  timer. With `--no-push`, the launcher still creates and advances the local
+  exact-eight commit but skips the remote push; default mode uses existing
+  authentication for byte-change-gated publication.
+- Add a public-repository-only reusable GitHub Actions workflow and copyable
+  caller. The caller deploys Pages from the immutable `published-sha` produced
+  by the same serialized run.
+
 ### Changed
 
-- No unreleased changes.
+- Keep ACE/public schema `0.3.0`, aggregation units, `VizStats`, renderer
+  purity, and the exact eight filenames unchanged. Automation is an
+  orchestration layer; it adds no model-by-day inference, manifest, hosted
+  analytics service, or private-repository Action scanning.
+- Document daily refresh as a Public Beta capability rather than Stable/GA.
+  Private, local, and `aggregate_only` sources remain on the local scheduler;
+  the hosted workflow treats only explicit already-public sources as `full`.
+- Exercise `refresh` and logical-state-preserving dry-run from the built wheel
+  in release smoke, retaining the eight-output, determinism, CSP, and privacy
+  gates.
+
+### Security
+
+- Serialize refresh per canonical home, enforce owner-only scheduler modes on
+  POSIX (and inherited user-home ACLs on Windows), use a per-home opaque native
+  identity, refuse branch/ref drift, and reject a resolved repository path
+  mapped to different UIDs before real or dry refresh mutation. Scheduler Git
+  calls remove ambient repository/object/config injection state, require the
+  recorded remote tip to equal local `HEAD`, serialize per target repository,
+  verify raw staged blobs against the completed exact-eight generation, and
+  bind the actual immutable push to that parent with an exact expected-old
+  lease plus post-push remote verification. Publication requires one symmetric
+  fetch/push destination, uses the captured destination directly, and stores
+  only its SHA-256 commitment in private pending state. The scheduler retains a
+  private immutable pending commit for safe push retry. Retry repairs
+  and verifies the exact-eight real index before push, including recovery from
+  a crash after the branch CAS. Native status proves the complete tool-owned
+  Windows/launchd execution semantics, including exact task-schema namespaces
+  and the exact harmless/default
+  Settings emitted by a Task Scheduler COM in-memory round-trip.
+  Linked/non-regular scheduler state is
+  rejected before read/chmod; the pending record and `last-run.log` are `0600`
+  on POSIX. Never use
+  `shell=True` or broad Git staging, and disclose possible rollback residuals
+  without printing their private paths or object IDs.
+- Pass Action identity emails as a secret, reject non-public sources before
+  credential-disabled clone, suppress raw workflow-owned visibility/clone/
+  commit/push subprocess logs, pin the reusable workflow by full commit SHA,
+  stage exactly eight regular files, and grant write permissions only to the
+  publication/Pages jobs that need them. No PAT fallback or stored token is
+  introduced.
 
 ## [0.6.1] - 2026-08-05 (Public Beta)
 

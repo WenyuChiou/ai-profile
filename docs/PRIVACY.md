@@ -29,23 +29,33 @@ GitHub, and "aggregate-only" is not a claim that it is private.
 
 | data | where it lives | leaves the machine? |
 |---|---|---|
-| repo paths, display names, author emails, commit SHAs/dates, trailer values | `AIPROFILE_HOME` (config.json + aiprofile.db) | never (no network code exists in v0.1) |
+| repo paths, display names, author emails, commit SHAs/dates, trailer values | local `AIPROFILE_HOME` (config.json + aiprofile.db) | not through scan/aggregate/refresh/render; an optional local scheduler may push only generated assets |
 | salt (local uid derivation) | config.json | never; must never back future *published* anonymous IDs (ADR-009) |
 | counts, provider slugs, evidence totals, flags, UTC date | `dist/` assets | yes — that is the product |
 | prompts, transcripts, diffs, message bodies | **not collected at all** | — |
+| explicit public `owner/repo` inputs | checked-in public Action caller | already public; visible configuration, never copied into generated assets |
+| Action identity emails | GitHub Actions secret + ephemeral runner home | delivered to the runner for author matching; suppressed from default logs and public assets |
 
 ## Threat surfaces and mitigations
 
 - **Published assets** — structural `VizStats` boundary; unrecognized raw
   strings collapse to a reserved bucket; leak tests (mvp.md §7 tests
   9–10).
-- **stdout/stderr/logs** — default diagnostics carry scan-local ordinals
+- **stdout/stderr/logs** — default scan diagnostics carry scan-local ordinals
   and trailer keys only (never SHAs, values, paths — G2-08); SHAs/values
-  require `--verbose`; future CI/Action mode must run at default
-  verbosity (ADR-011). Crash tracebacks may contain paths — they go to
-  the terminal; do not paste them publicly unredacted.
-- **CI logs (future Action)** — treated as public output; same rules as
-  assets, enforced before the Action ships.
+  require local `--verbose`. Refresh and scheduler default failures, plus the
+  scheduler's local `last-run.log`, use a fixed path/name/OID-free
+  vocabulary. Local verbose tracebacks or chained causes can contain paths;
+  do not paste them publicly unredacted.
+- **Public Action logs** — treated as public output. The workflow never enables
+  verbose CLI output, passes identity emails only through a secret environment
+  value, and suppresses raw output from workflow-owned `gh api`, source clone,
+  and publication commit/push subprocesses; their failures become fixed
+  ordinal- or count-only messages. Pinned checkout/setup/Pages actions may emit
+  ordinary already-public caller/revision metadata. The public source
+  identifiers are necessarily visible in the checked-in caller configuration,
+  but generated assets and default workflow-owned command logs do not repeat
+  them.
 - **Local storage** — `AIPROFILE_HOME` holds private data by design:
   don't sync it into published dotfiles; deleting it deletes config+DB
   (generated `dist/` copies are yours to remove). Implemented hardening:
@@ -54,6 +64,55 @@ GitHub, and "aggregate-only" is not a claim that it is private.
   Windows has no equivalent bits so `os.chmod` there is a documented
   no-op) and a stderr warning at `init` time when `AIPROFILE_HOME` sits
   inside a git worktree. Still planned (ROADMAP): symlink refusal.
+- **Local scheduler state** — its launcher, configuration, temporary Git
+  index, pending-push record, and last-run log live under `AIPROFILE_HOME`,
+  never inside the public
+  Profile repository. On POSIX, each temporary Git index is confined inside a
+  tool-owned `0700` directory, reset to `0600` after every Git operation, and
+  removed immediately; Git may briefly rewrite the index with the repository's
+  configured shared-file mode while the `0700` directory remains the
+  confidentiality boundary. Windows relies on the user's inherited home ACL.
+  Native task identity is an opaque per-home digest.
+  Pending-push state and the log are `0600` on POSIX; Windows relies on the
+  inherited user-home ACL. The launcher uses argument lists, never shell
+  evaluation, does not persist or log credentials, removes ambient Git repository/object/config
+  injection state, and stages only the eight generated paths. Generated blobs
+  must match the completed refresh's private exact-eight byte commitment.
+  Push-capable runs require the remote branch to equal local `HEAD`; a failed
+  push may first complete an interrupted branch CAS only when local and remote
+  still equal its recorded parent, then repairs the exact-eight index and
+  retries only its immutable pending commit. The actual push is conditional on
+  an exact expected-old lease for that parent and success requires a fresh
+  remote-tip confirmation against the one destination captured before refresh.
+  Fetch and push destinations must be the same single URL; the private pending
+  record stores only its SHA-256 commitment, never the URL. Push and query use
+  a fixed alias in an isolated private Git context, so raw URLs never enter
+  argv and later URL rewrites cannot redirect publication. Only a frozen
+  credential-helper/TLS/SSH allowlist is queried key-by-key and forwarded;
+  authorization headers, Git-config proxies, and ambient proxy variables are
+  excluded. Relative local paths are resolved from the Profile repository
+  before isolation, including same-drive Windows drive-relative paths;
+  ambiguous cross-drive paths fail closed. Shallow and partial clones are
+  rejected before refresh or pending retry because the isolated publication
+  context requires complete local history. Multiple/different/credential-bearing destinations,
+  commitment drift, boundary drift, or repair failure
+  retains the pending record and
+  stops before refresh or push. Linked or non-regular scheduler state is
+  rejected before reading it or changing its mode, so mode hardening cannot
+  escape `AIPROFILE_HOME`. A target-repository lock serializes different homes.
+  `--no-push` still creates and
+  advances the local exact-eight commit but skips the remote push; default mode
+  uses the user's existing Git authentication to push.
+- **Ambiguous local repository identity** — if one resolved path appears with
+  different repository UIDs, real and dry refresh reject before scan/cache
+  mutation or aggregation. This prevents stale UID rows from being published
+  under a different path policy.
+- **Hosted automation boundary** — the reusable Action rejects non-public
+  repositories before scanning and never falls back to a PAT or broader
+  authentication. It scans listed repositories as `full` in an ephemeral
+  home; private or `aggregate_only` sources therefore belong on the local
+  scheduler. Pages deploys the exact immutable `published-sha` from the same
+  caller run (ADR-030).
 - **Snapshot differencing** — see the guarantee above; inherent to
   publishing exact counts.
 - **Future anonymous repo IDs** — must use a dedicated secret, never the

@@ -15,11 +15,17 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .errors import ConfigError
+from .errors import ConfigError, diagnostic_text
 from .schema.vocab import PUBLICATION_RESTRICTIVENESS, PublicationLevel
 
 CONFIG_NAME = "config.json"
 DB_NAME = "aiprofile.db"
+
+#: POSIX chmod failures get a stderr signal (a failing privacy feature
+#: deserves one); Windows stays quiet (os.chmod there is a documented
+#: no-op, not a failure). Module-level so tests can force the warning
+#: branch deterministically on any platform.
+_WARN_ON_CHMOD_FAILURE = sys.platform != "win32"
 
 
 @dataclass
@@ -69,12 +75,14 @@ def _restrict_to_owner(path: Path, mode: int) -> None:
         os.chmod(path, mode)
     except OSError:
         # On POSIX (where the bits are real) a failure deserves a signal,
-        # not silence - this is a privacy feature. Path + platform only
-        # (diagnostics hygiene, architecture.md section 10). Windows stays
-        # quiet: chmod there is a documented no-op, not a failure.
-        if sys.platform != "win32":
+        # not silence - this is a privacy feature. Windows stays quiet:
+        # chmod there is a documented no-op, not a failure.
+        if _WARN_ON_CHMOD_FAILURE:
             print(
-                f"warning: could not restrict permissions on {path}",
+                diagnostic_text(
+                    "warning: could not restrict permissions on a private profile file",
+                    f"warning: could not restrict permissions on {path}",
+                ),
                 file=sys.stderr,
             )
 
@@ -98,7 +106,7 @@ def init_home(home: Path, identities: list[str]) -> tuple[Config, bool]:
     return cfg, True
 
 
-def load_config(home: Path) -> Config:
+def _load_config(home: Path, *, restrict_permissions: bool) -> Config:
     path = config_path(home)
     if not path.exists():
         raise ConfigError(
@@ -109,11 +117,12 @@ def load_config(home: Path) -> Config:
     # never passes through init_home's creation path, so this is the
     # choke point that reaches existing users - mirroring db.connect's
     # restrict-on-every-call. Cheap and idempotent.
-    _restrict_to_owner(home, 0o700)
-    _restrict_to_owner(path, 0o600)
+    if restrict_permissions:
+        _restrict_to_owner(home, 0o700)
+        _restrict_to_owner(path, 0o600)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ConfigError(f"cannot read {path}: {exc}") from exc
 
     if not isinstance(data, dict):
@@ -127,8 +136,11 @@ def load_config(home: Path) -> Config:
     ):
         raise ConfigError(f"{path}: 'identities' must be a list of strings")
 
+    raw_repositories = data.get("repositories", [])
+    if not isinstance(raw_repositories, list):
+        raise ConfigError(f"{path}: 'repositories' must be a list")
     repos: list[RepoEntry] = []
-    for i, raw in enumerate(data.get("repositories", [])):
+    for i, raw in enumerate(raw_repositories):
         if not isinstance(raw, dict):
             raise ConfigError(f"{path}: repositories[{i}] must be an object")
         try:
@@ -160,6 +172,16 @@ def load_config(home: Path) -> Config:
     return Config(
         identities=[i.strip().lower() for i in identities], salt=salt, repositories=repos
     )
+
+
+def load_config(home: Path) -> Config:
+    """Load config and retrofit owner-only permissions where supported."""
+    return _load_config(home, restrict_permissions=True)
+
+
+def load_config_read_only(home: Path) -> Config:
+    """Validate and load config without changing any filesystem metadata."""
+    return _load_config(home, restrict_permissions=False)
 
 
 def save_config(home: Path, cfg: Config) -> None:

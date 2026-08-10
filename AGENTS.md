@@ -9,10 +9,11 @@ disagree, docs win and the code is the bug.
 ## Quality gates (must stay green after every change)
 
 - `python -m pytest tests -p no:cacheprovider` — full suite; state the
-  count you observe (as of 2026-08-04: 667 passed, 4 skipped — three
-  skips are POSIX-only permission fixtures on Windows and one requires
-  a case-sensitive filesystem; if your run differs, update this
-  line in the same commit).
+  platform and count you observe. Windows local (current candidate,
+  2026-08-10): 938 passed, 30 skipped. Linux CI (current candidate, run
+  31390314352): Python 3.11–3.14 each passed 963 tests with 5 skipped. Update
+  only the corresponding platform baseline, never overwrite one platform's
+  count with another's expected skip profile.
 - `python -m ruff check src tests scripts` — clean.
 - Privacy invariants are test-enforced; anything weakening `VizStats`
   structural redaction needs its own ADR. Snapshot/sample regeneration

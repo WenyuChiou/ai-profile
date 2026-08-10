@@ -14,7 +14,7 @@ import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import __version__
+from . import __version__, refresh
 from .aggregate import (
     compute_daily_commit_totals,
     compute_daily_provider_counts,
@@ -24,12 +24,8 @@ from .config import aiprofile_home, db_path, init_home, load_config
 from .errors import AiProfileError
 from .export import write_outputs
 from .privacy import build_viz_stats, local_only_details
-from .render.badge_svg import render_badge
-from .render.dashboard_html import render_dashboard
-from .render.heatmap_svg import render_heatmap
-from .render.summary_svg import render_summary
-from .render.themes import THEMES
 from .scanner import scan_repository
+from .schedule import service as schedule_service
 from .storage.db import connect, migrate
 from .viz import VizStats
 
@@ -125,7 +121,127 @@ def _build_parser() -> argparse.ArgumentParser:
         "--out", default="dist", help="output directory (default: ./dist)"
     )
     p_render.set_defaults(func=_cmd_render)
+
+    p_refresh = sub.add_parser(
+        "refresh",
+        help="re-scan every configured repository and republish the dist bundle",
+        description=(
+            "Batch re-scan of every configured repository, then republish the"
+            " eight-file dist bundle. A pre-publication failure publishes"
+            " nothing; an incomplete filesystem rollback is reported honestly."
+            " Runs one refresh at a time per profile home (a second invocation"
+            " fails fast). Never commits, never pushes, never touches the"
+            " network."
+        ),
+    )
+    p_refresh.add_argument(
+        "--out", default="dist", help="output directory (default: ./dist)"
+    )
+    p_refresh.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "report which outputs would change without changing configuration,"
+            " recorded database content, or output assets; the advisory lock"
+            " and transient SQLite coordination state may change"
+        ),
+    )
+    p_refresh.set_defaults(func=_cmd_refresh)
+
+    p_schedule = sub.add_parser(
+        "schedule", help="manage automatic daily local profile refresh"
+    )
+    schedule_sub = p_schedule.add_subparsers(dest="schedule_command", required=True)
+    p_schedule_install = schedule_sub.add_parser(
+        "install", help="install or update the native user schedule"
+    )
+    p_schedule_install.add_argument("--profile-repo", required=True)
+    p_schedule_install.add_argument(
+        "--time",
+        required=True,
+        type=_schedule_time,
+        help="daily local time in HH:MM form",
+    )
+    p_schedule_install.add_argument(
+        "--no-push",
+        action="store_true",
+        help="create the local exact-eight commit but skip the remote push",
+    )
+    p_schedule_install.add_argument("--dry-run", action="store_true")
+    p_schedule_install.set_defaults(func=_cmd_schedule_install)
+
+    p_schedule_status = schedule_sub.add_parser(
+        "status", help="show native scheduler and last-run status"
+    )
+    p_schedule_status.add_argument("--dry-run", action="store_true")
+    p_schedule_status.set_defaults(func=_cmd_schedule_status)
+
+    p_schedule_remove = schedule_sub.add_parser(
+        "remove", help="remove only aiprofile-owned scheduler artifacts"
+    )
+    p_schedule_remove.add_argument("--dry-run", action="store_true")
+    p_schedule_remove.set_defaults(func=_cmd_schedule_remove)
     return parser
+
+
+def _schedule_time(value: str) -> str:
+    import re
+
+    if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value):
+        raise argparse.ArgumentTypeError("time must use 24-hour HH:MM form")
+    return value
+
+
+def _cmd_schedule_install(args: argparse.Namespace) -> int:
+    result = schedule_service.install(
+        aiprofile_home(),
+        Path(args.profile_repo),
+        args.time,
+        push=not args.no_push,
+        dry_run=args.dry_run,
+    )
+    if result.dry_run:
+        file_word = "file" if result.files == 1 else "files"
+        command_word = "command" if result.commands == 1 else "commands"
+        print(
+            f"dry run: would write {result.files} scheduler {file_word};"
+            f" would run {result.commands} registration {command_word}"
+        )
+        return 0
+    mode = "push enabled" if result.push else "push disabled"
+    print(f"daily schedule installed for {result.time} local time; {mode}")
+    return 0
+
+
+def _cmd_schedule_status(args: argparse.Namespace) -> int:
+    result = schedule_service.status(aiprofile_home(), dry_run=args.dry_run)
+    if result.dry_run:
+        print("dry run: would inspect native scheduler status")
+        return 0
+    if not result.installed:
+        print("schedule not installed")
+        return 0
+    mode = "enabled" if result.push else "disabled"
+    print(f"schedule installed; time {result.time} local; push {mode}")
+    print(f"branch {result.branch}; remote {result.remote or '(none)'}")
+    if result.active is not None:
+        print(f"native schedule active: {'yes' if result.active else 'no'}")
+    if result.last_run:
+        print(f"last run: {result.last_run}")
+    return 0
+
+
+def _cmd_schedule_remove(args: argparse.Namespace) -> int:
+    result = schedule_service.remove(aiprofile_home(), dry_run=args.dry_run)
+    if result.dry_run:
+        print(
+            "dry run: would remove scheduler registration and tool-owned artifacts"
+            if result.removed
+            else "dry run: schedule not installed"
+        )
+        return 0
+    print("schedule removed" if result.removed else "schedule not installed")
+    return 0
 
 
 def _cmd_init(args: argparse.Namespace) -> int:
@@ -208,19 +324,50 @@ def _cmd_aggregate(args: argparse.Namespace) -> int:
 
 def _cmd_render(args: argparse.Namespace) -> int:
     stats, _, _ = _compute(args)
-    light, dark = THEMES["github-light"], THEMES["github-dark"]
-    assets = {
-        "summary-light.svg": render_summary(stats, light),
-        "summary-dark.svg": render_summary(stats, dark),
-        "heatmap-light.svg": render_heatmap(stats, light),
-        "heatmap-dark.svg": render_heatmap(stats, dark),
-        "badge-light.svg": render_badge(stats, light),
-        "badge-dark.svg": render_badge(stats, dark),
-        "dashboard.html": render_dashboard(stats),
-    }
-    paths = write_outputs(stats, assets, Path(args.out))
+    paths = write_outputs(stats, refresh.build_assets(stats), Path(args.out))
     for p in paths:
         print(f"wrote {p}")
+    return 0
+
+
+def _cmd_refresh(args: argparse.Namespace) -> int:
+    """Default-output privacy rule (v0.7.0 frozen scope guards): this
+    summary identifies repositories by config ordinal and aggregate
+    counts only - no paths, basenames, or display names; the allowlisted
+    output filenames are the only printable names."""
+    home = aiprofile_home()
+    result = refresh.run_refresh(
+        home,
+        Path(args.out),
+        dry_run=args.dry_run,
+        verbose=args.verbose,
+    )
+    total = result.plan.total_configured
+    for ordinal, summary in result.summaries:
+        print(
+            f"repository {ordinal}/{total}: {summary.commits_seen} commits seen,"
+            f" {summary.commits_kept} by configured identities"
+            f" ({summary.commits_skipped_identity} skipped),"
+            f" {summary.events_stored} records stored"
+        )
+        _print_warnings(summary.warnings, verbose=args.verbose)
+    skipped_excluded = len(result.plan.skipped_excluded)
+    skipped_duplicates = len(result.plan.skipped_duplicates)
+    if skipped_excluded or skipped_duplicates:
+        print(f"skipped: {skipped_excluded} excluded, {skipped_duplicates} duplicate")
+    if not result.ok:
+        for line in result.failure_messages():
+            print(f"error: {line}", file=sys.stderr)
+        print("error: no assets were published", file=sys.stderr)
+        return 1
+    if result.dry_run:
+        for name in result.changed:
+            print(f"would update: {name}")
+        if not result.changed:
+            print("no changes: published assets are up to date")
+        return 0
+    for p in result.written:
+        print(f"wrote {p.name}")
     return 0
 
 

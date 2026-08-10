@@ -23,10 +23,14 @@ WHAT IT DOES: creates a throwaway venv and installs either the exact
 non-editable build of the current working tree for local convenience. It
 then drives the INSTALLED `aiprofile` console script (not
 `python -m aiprofile`, so the packaging entry point itself is exercised)
-through init -> scan -> aggregate -> render against a synthetic git
-repository, and finally re-runs the same privacy canary byte-sweep the
-integration suite runs against every dist/ file (see
-tests/integration/test_end_to_end.py's leak tests and docs/PRIVACY.md).
+through init -> scan -> aggregate -> refresh against a synthetic git
+repository (asset production goes through the v0.7.0 batch refresh
+service, run twice for the byte-identical repeated-output check, plus a
+`refresh --dry-run` faithfulness proof: no reported changes and zero
+mtime/byte mutation right after a real refresh), and finally re-runs the
+same privacy canary byte-sweep the integration suite runs against every
+dist/ file (see tests/integration/test_end_to_end.py's leak tests and
+docs/PRIVACY.md).
 
 Usage:
 
@@ -52,6 +56,7 @@ import sys
 import tempfile
 import venv
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -393,6 +398,71 @@ def _assert_deterministic(first: Path, second: Path) -> None:
         raise SmokeFailure(f"repeat render was not byte-identical: {changed}")
 
 
+def _assert_no_change_output(stdout: str) -> None:
+    """Dry-run stdout contract right after a real refresh: it must say
+    "no changes" and must not report any pending update."""
+    if "would update:" in stdout:
+        raise SmokeFailure(f"dry-run reported pending changes:\n{stdout}")
+    if "no changes" not in stdout:
+        raise SmokeFailure(f"dry-run did not report the no-change state:\n{stdout}")
+
+
+def _dir_state(directory: Path) -> dict[str, tuple[int, bytes]]:
+    """(mtime_ns, bytes) per file directly under ``directory``, for the
+    dry-run zero-mutation check. The advisory lock file is exempted by
+    name: acquiring the lock touches it by design on every refresh."""
+    return {
+        p.name: (p.stat().st_mtime_ns, p.read_bytes())
+        for p in sorted(directory.iterdir())
+        if p.is_file() and p.name != ".refresh.lock"
+    }
+
+
+def _utc_today() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%d")
+
+
+def _check_dry_run_faithful(
+    exe: Path,
+    home: Path,
+    out_dir: Path,
+    repo: Path,
+    *,
+    max_retries: int = 2,
+) -> None:
+    """Wheel-level real-refresh/dry-run pair with bounded UTC retry.
+
+    The generated date is intentionally part of every public asset.  A pair
+    crossing midnight UTC must be retried rather than misdiagnosed as an
+    unfaithful dry-run.  Every attempt snapshots state only after its real
+    refresh, so the zero-mutation assertion still covers dry-run exactly.
+    """
+    for attempt in range(max_retries + 1):
+        _run_cli(exe, ["refresh", "--out", str(out_dir)], home=home, cwd=repo)
+        generated = _generated_on(out_dir)
+        home_before = _dir_state(home)
+        out_before = _dir_state(out_dir)
+        result = _run_cli(
+            exe,
+            ["refresh", "--out", str(out_dir), "--dry-run"],
+            home=home,
+            cwd=repo,
+        )
+        if "would update:" in result.stdout and _utc_today() != generated:
+            if attempt < max_retries:
+                print("    UTC date changed during refresh/dry-run pair; retrying")
+                continue
+            raise SmokeFailure(
+                "could not obtain a same-UTC-date refresh/dry-run pair"
+            )
+        _assert_no_change_output(result.stdout)
+        if _dir_state(home) != home_before:
+            raise SmokeFailure("dry-run mutated the profile home (mtime or bytes)")
+        if _dir_state(out_dir) != out_before:
+            raise SmokeFailure("dry-run mutated the output directory (mtime or bytes)")
+        return
+
+
 def _generated_on(out_dir: Path) -> str:
     profile = json.loads((out_dir / "profile.json").read_text(encoding="utf-8"))
     value = profile.get("generated_on")
@@ -461,32 +531,32 @@ def main() -> int:
         step("aiprofile scan", lambda: _run_cli(exe, ["scan", str(repo)], home=home, cwd=repo))
         step("aiprofile aggregate", lambda: _run_cli(exe, ["aggregate"], home=home, cwd=repo))
         step(
-            "aiprofile render",
-            lambda: _run_cli(exe, ["render", "--out", str(out_dir)], home=home, cwd=repo),
+            "aiprofile refresh",
+            lambda: _run_cli(exe, ["refresh", "--out", str(out_dir)], home=home, cwd=repo),
         )
         step(
-            "aiprofile repeat render",
+            "aiprofile repeat refresh",
             lambda: _run_cli(
                 exe,
-                ["render", "--out", str(repeat_dir)],
+                ["refresh", "--out", str(repeat_dir)],
                 home=home,
                 cwd=repo,
             ),
         )
         step(
-            "same-date render pair",
+            "same-date refresh pair",
             lambda: _stabilize_render_dates(
                 out_dir,
                 repeat_dir,
                 lambda: _run_cli(
                     exe,
-                    ["render", "--out", str(out_dir)],
+                    ["refresh", "--out", str(out_dir)],
                     home=home,
                     cwd=repo,
                 ),
                 lambda: _run_cli(
                     exe,
-                    ["render", "--out", str(repeat_dir)],
+                    ["refresh", "--out", str(repeat_dir)],
                     home=home,
                     cwd=repo,
                 ),
@@ -503,6 +573,10 @@ def main() -> int:
         step(
             "deterministic repeated output",
             lambda: _assert_deterministic(out_dir, repeat_dir),
+        )
+        step(
+            "faithful dry-run (no change, zero mutation)",
+            lambda: _check_dry_run_faithful(exe, home, out_dir, repo),
         )
     except SmokeFailure:
         print("\nRESULT: FAIL - see the FAIL step above", flush=True)

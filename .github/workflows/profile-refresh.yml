@@ -1,0 +1,316 @@
+# Reusable public-repository updater for one profile. Call it once per profile;
+# never matrix this workflow across profiles or repositories. It deliberately
+# has no dispatch trigger of its own and never fans out to another workflow.
+name: Refresh ai-profile outputs
+
+on:
+  workflow_call:
+    inputs:
+      repositories:
+        description: Whitespace-separated public owner/repository identifiers
+        required: true
+        type: string
+    secrets:
+      identities:
+        description: JSON array or newline-separated Git identity emails
+        required: true
+    outputs:
+      published-sha:
+        description: Immutable profile commit containing the generated bundle
+        value: ${{ jobs.commit.outputs.published-sha }}
+
+permissions: {}
+
+concurrency:
+  group: profile-refresh-update-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Validate repositories and identities
+        env:
+          REPOSITORIES_INPUT: ${{ inputs.repositories }}
+          AIPROFILE_IDENTITIES: ${{ secrets.identities }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          repository_pattern = re.compile(
+              r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9._-]{1,100}$"
+          )
+          repositories = os.environ.get("REPOSITORIES_INPUT", "").split()
+          if not repositories:
+              raise SystemExit("repository list is required")
+          seen = set()
+          for repository in repositories:
+              if not repository_pattern.fullmatch(repository):
+                  raise SystemExit("repository identifier is invalid")
+              owner, name = repository.split("/", 1)
+              if owner in {".", ".."} or name in {".", ".."}:
+                  raise SystemExit("repository identifier is invalid")
+              folded = repository.casefold()
+              if folded in seen:
+                  raise SystemExit("repository identifier is duplicated")
+              seen.add(folded)
+
+          raw_identities = os.environ.get("AIPROFILE_IDENTITIES", "").strip()
+          try:
+              identities = json.loads(raw_identities)
+          except json.JSONDecodeError:
+              identities = raw_identities.splitlines()
+          if not isinstance(identities, list) or not identities:
+              raise SystemExit("identity list is required")
+          for identity in identities:
+              if (
+                  not isinstance(identity, str)
+                  or not identity.strip()
+                  or len(identity.strip()) > 320
+                  or re.fullmatch(r"[^@\s]+@[^@\s]+", identity.strip()) is None
+              ):
+                  raise SystemExit("identity list is invalid")
+
+          target = Path(os.environ["RUNNER_TEMP"]) / "repositories.txt"
+          target.write_text("".join(f"{item}\n" for item in repositories), encoding="utf-8")
+          os.chmod(target, 0o600)
+          PY
+
+      - name: Verify every source repository is public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          index=0
+          while IFS= read -r entry; do
+            index=$((index + 1))
+            if ! visibility="$(gh api "repos/$entry" --jq .visibility 2>/dev/null)"; then
+              echo "Unable to verify public visibility for source repository $index." >&2
+              exit 1
+            fi
+            if ! [[ "$visibility" == "public" ]]; then
+              echo "Source repository $index is not public; refresh refused." >&2
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/repositories.txt"
+
+      - name: Clone public repositories without credentials
+        run: |
+          set -euo pipefail
+          repository_root="$RUNNER_TEMP/repositories"
+          mkdir -p "$repository_root"
+          index=0
+          while IFS= read -r entry; do
+            index=$((index + 1))
+            if ! GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false \
+              git -c credential.helper= clone --filter=blob:none --no-checkout \
+              "https://github.com/${entry}.git" "$repository_root/repo-$index" \
+              >/dev/null 2>&1; then
+              echo "Unable to clone source repository $index." >&2
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/repositories.txt"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install released ai-profile
+        run: |
+          python -m pip install "ai-profile-cli==0.7.0"
+
+      - name: Initialize private ephemeral configuration
+        env:
+          AIPROFILE_IDENTITIES: ${{ secrets.identities }}
+        run: |
+          set -euo pipefail
+          export AIPROFILE_HOME="$RUNNER_TEMP/aiprofile-home"
+          aiprofile init >/dev/null
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          raw = os.environ.get("AIPROFILE_IDENTITIES", "").strip()
+          try:
+              parsed = json.loads(raw)
+          except json.JSONDecodeError:
+              parsed = raw.splitlines()
+          if not isinstance(parsed, list):
+              raise SystemExit("identity list is invalid")
+          identities = []
+          for item in parsed:
+              if not isinstance(item, str):
+                  raise SystemExit("identity list is invalid")
+              identity = item.strip()
+              if (
+                  not identity
+                  or len(identity) > 320
+                  or re.fullmatch(r"[^@\s]+@[^@\s]+", identity) is None
+              ):
+                  raise SystemExit("identity list is invalid")
+              identities.append(identity)
+          if not identities:
+              raise SystemExit("identity list is required")
+
+          config_path = Path(os.environ["AIPROFILE_HOME"]) / "config.json"
+          config = json.loads(config_path.read_text(encoding="utf-8"))
+          config["identities"] = identities
+          temporary = config_path.with_suffix(".tmp")
+          temporary.write_text(
+              json.dumps(config, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          os.chmod(temporary, 0o600)
+          os.replace(temporary, config_path)
+          PY
+
+      - name: Register public repositories and refresh
+        run: |
+          set -euo pipefail
+          export AIPROFILE_HOME="$RUNNER_TEMP/aiprofile-home"
+          repository_root="$RUNNER_TEMP/repositories"
+          index=0
+          while IFS= read -r _entry; do
+            index=$((index + 1))
+            aiprofile scan "$repository_root/repo-$index" --full >/dev/null
+          done < "$RUNNER_TEMP/repositories.txt"
+          aiprofile refresh --out "$RUNNER_TEMP/dist"
+
+      - name: Retain exact generated bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ai-profile-public-assets-${{ github.run_id }}
+          path: ${{ runner.temp }}/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  commit:
+    needs: refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      published-sha: ${{ steps.publish.outputs.published-sha }}
+    steps:
+      - name: Check out updated profile branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Download generated bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ai-profile-public-assets-${{ github.run_id }}
+          path: ${{ runner.temp }}/generated
+      - name: Publish changed assets only
+        id: publish
+        env:
+          TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import shutil
+          from pathlib import Path
+
+          names = {
+              "badge-dark.svg",
+              "badge-light.svg",
+              "dashboard.html",
+              "heatmap-dark.svg",
+              "heatmap-light.svg",
+              "profile.json",
+              "summary-dark.svg",
+              "summary-light.svg",
+          }
+          source = Path(os.environ["RUNNER_TEMP"]) / "generated"
+          destination = Path("dist")
+          staging = Path(os.environ["RUNNER_TEMP"]) / "publish-ready"
+          if not source.is_dir() or source.is_symlink():
+              raise SystemExit("generated asset bundle is unavailable")
+          entries = list(source.iterdir())
+          if (
+              {entry.name for entry in entries} != names
+              or any(not entry.is_file() or entry.is_symlink() for entry in entries)
+          ):
+              raise SystemExit("generated asset bundle is invalid")
+          if destination.is_symlink() or (
+              destination.exists() and not destination.is_dir()
+          ):
+              raise SystemExit("destination asset bundle is invalid")
+          if destination.exists():
+              existing = list(destination.iterdir())
+              if (
+                  any(entry.name not in names for entry in existing)
+                  or any(not entry.is_file() or entry.is_symlink() for entry in existing)
+              ):
+                  raise SystemExit("destination asset bundle is invalid")
+          if staging.exists() or staging.is_symlink():
+              raise SystemExit("temporary asset staging is unavailable")
+          staging.mkdir()
+          for name in sorted(names):
+              shutil.copyfile(source / name, staging / name)
+          destination.mkdir(parents=True, exist_ok=True)
+          for name in sorted(names):
+              os.replace(staging / name, destination / name)
+          staging.rmdir()
+          PY
+          public_paths=(
+            "dist/badge-dark.svg"
+            "dist/badge-light.svg"
+            "dist/dashboard.html"
+            "dist/heatmap-dark.svg"
+            "dist/heatmap-light.svg"
+            "dist/profile.json"
+            "dist/summary-dark.svg"
+            "dist/summary-light.svg"
+          )
+          if ! git add -- "${public_paths[@]}" >/dev/null 2>&1; then
+            echo "Unable to stage refreshed ai-profile assets." >&2
+            exit 1
+          fi
+          if ! changed="$(git status --porcelain -- "${public_paths[@]}" 2>/dev/null)"; then
+            echo "Unable to inspect refreshed ai-profile assets." >&2
+            exit 1
+          fi
+          if [[ -z "$changed" ]]; then
+            echo "ai-profile assets are already current"
+            if ! published_commit="$(git rev-parse HEAD 2>/dev/null)"; then
+              echo "Unable to identify the current profile revision." >&2
+              exit 1
+            fi
+            printf 'published-sha=%s\n' "$published_commit" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git config user.name "github-actions[bot]" >/dev/null 2>&1 || \
+             ! git config user.email \
+               "41898282+github-actions[bot]@users.noreply.github.com" \
+               >/dev/null 2>&1; then
+            echo "Unable to configure the ai-profile publication identity." >&2
+            exit 1
+          fi
+          if ! git commit -q -m "Refresh ai-profile assets" -- "${public_paths[@]}" \
+            >/dev/null 2>&1; then
+            echo "Unable to commit refreshed ai-profile assets." >&2
+            exit 1
+          fi
+          if ! published_commit="$(git rev-parse HEAD 2>/dev/null)"; then
+            echo "Unable to identify the refreshed profile revision." >&2
+            exit 1
+          fi
+          if ! git push -q origin \
+            "$published_commit:refs/heads/$TARGET_BRANCH" >/dev/null 2>&1; then
+            echo "Unable to push refreshed ai-profile assets." >&2
+            exit 1
+          fi
+          printf 'published-sha=%s\n' "$published_commit" >> "$GITHUB_OUTPUT"

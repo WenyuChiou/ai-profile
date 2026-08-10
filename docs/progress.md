@@ -4,6 +4,140 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## v0.7.0 automation candidate — CI/review green, not released
+
+- ADR-030 adds an orchestration layer without changing ACE `0.3.0`,
+  aggregation semantics, `VizStats`, renderer purity, or the eight-output
+  contract. Phase A (`3b57ac6`) implements fail-closed configured-repository
+  refresh, logical-state-preserving dry-run, and per-home locking. Phase B (`18a17f1`)
+  implements the native scheduler and exact-eight Git publication with
+  per-home native identity and residual-honest rollback.
+- The reusable public-only workflow is frozen at commit
+  `9c4f276cb437f1866a2c1b407efe54d3790ce811`. The copyable caller at
+  `f92c5c4` pins that exact commit, consumes its immutable `published-sha`,
+  and serializes refresh through same-run Pages deployment. Identity emails
+  enter as a secret; public repository inputs are validated before
+  credential-disabled clone; raw output from workflow-owned visibility,
+  clone, commit, and push subprocesses is suppressed.
+- Frozen Phase C evidence: **840 passed, 21 skipped**, Ruff clean, README
+  parity pass, sanctioned snapshot/sample zero drift, and substantive WSL
+  workflow probes. Both independent security/code reviewers approved the
+  frozen bytes. This is candidate evidence, not evidence of a live scheduled
+  run, released wheel, tag, PyPI artifact, or Pages deployment.
+- Phase D synchronized the English/Traditional Chinese consumer guidance,
+  ADR-030, architecture, privacy, release, roadmap, and contributor contracts.
+  The multi-locale gate passed; the full suite passed **845 tests with 21
+  skipped**, with Ruff, README parity, and sanctioned snapshot drift checks
+  green. Phase E froze the local 0.7.0 candidate at
+  `SOURCE_DATE_EPOCH=1786233600`: two isolated Ubuntu builds from the same
+  Git-mode source archive produced byte-identical wheel and sdist artifacts.
+  The wheel is
+  `1ed1c0ee2efc2167ad39554545596caae1caa1e4b8ec2dad8c418f3a821adee4`
+  and the synthetic dashboard remains
+  `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
+  Twine, artifact/checksum validation, clean-wheel refresh smoke, current and
+  Python 3.11 release-contract tests, the full **847 passed / 25 skipped**
+  suite, Ruff, README parity, and snapshot zero-drift all passed. At that
+  checkpoint this was local candidate evidence only; later bullets record the
+  cross-platform CI and committed-range review results.
+- The first Ubuntu CI run exposed a private-index mode gap: Git's atomic
+  `add` rewrite inherited runner `umask 022` and produced `0644` before the
+  old post-command chmod. WSL reproduced that exact boundary red-first. A
+  broader adversarial replay then showed that `core.sharedRepository=group`
+  can rewrite the index as `0660`, and that changing the process umask during
+  `add`/`write-tree` also changes repository object modes. The corrected
+  boundary confines the temporary index inside a tool-owned POSIX `0700`
+  directory, resets the index to `0600` after each Git operation, removes the
+  directory immediately, and leaves repository object creation under its
+  ambient permission policy. Ordinary and shared-repository WSL launcher
+  probes passed **24/24**; current and Python 3.11 launcher suites each passed
+  **19 with 5 skipped**. The exact Python 3.11 E1 suite passed **169 with 21
+  skipped**, and the rebuilt candidate passed double-build byte equality,
+  Twine, artifact/checksum validation, and clean-wheel refresh smoke. That
+  candidate required the cross-platform CI rerun recorded below.
+- Cross-platform PR gates and the committed-range independent review are now
+  closed. Release remains blocked on PR merge, the M-03 ancestry/Contents-API
+  pre-tag gate, the v0.7.0 tag/Public Beta publication, and the M-01 hosted
+  caller/Pages plus maintainer dogfood gates. The maintainer Profile will use
+  the local scheduler because its configured set includes an `aggregate_only`
+  source; it will not be migrated to the public-only Action.
+- PR CI run `31358621302` passed all eight jobs, including Python 3.11–3.14
+  and Ubuntu/Windows/macOS onboarding of the same candidate wheel. The first
+  E3 independent committed-range review nevertheless returned **NOT READY**:
+  six High findings reproduced hostile ambient Git targeting, unpushed
+  ancestor publication, post-refresh byte substitution/cross-home collision,
+  lost push retry, same-path/different-UID stale-cache publication, and native
+  scheduler semantic drift. All six were accepted for red-first remediation;
+  the changed range subsequently passed the new independent review and
+  regenerated artifact/CI gates recorded below.
+- E3 remediation does not change ACE `0.3.0`, aggregation, `VizStats`,
+  renderers, or the eight filenames. It adds a sanitized scheduler Git
+  boundary, remote-tip equality, exact rendered-byte verification, a target
+  repository lock, immutable private pending-push retry, pre-mutation
+  ambiguous-UID rejection, exact Windows/launchd ownership validation, and
+  POSIX `0600` pending/log state. The disposable public caller/Pages E2E stays
+  a post-PyPI promotion gate; merge-commit ancestry and Contents-API resolution
+  of the immutable C1 pin stay pre-tag/branch-deletion gates.
+- Local E3 remediation evidence: the earlier exact E1 matrix passed **216 with
+  25 skipped** on both the current interpreter and Python 3.11. After the final
+  destination-isolation remediations, the broader scheduler suite passed **188
+  with 12 skipped** on Python 3.11, WSL passed **196 with 4 skipped**, and
+  the full Windows-local suite passed **938 with 30
+  skipped**. Renderer/dashboard clarity and determinism coverage passed
+  **104**; Ruff, README parity, and sanctioned snapshot/sample drift checks
+  are green. Canonical Ubuntu double builds produced the byte-identical
+  code/README candidate wheel
+  `1ed1c0ee2efc2167ad39554545596caae1caa1e4b8ec2dad8c418f3a821adee4`
+  at `SOURCE_DATE_EPOCH=1786233600`. Twine,
+  artifact/notices/checksum validation, and clean-wheel refresh smoke
+  passed. These candidate bytes subsequently received two independent
+  `APPROVE` verdicts and passed the fresh cross-platform PR CI run below.
+- A post-commit security replay found two further High findings. A remote could
+  rewind or delete the branch after preflight but before an ordinary push,
+  allowing removed history to be reintroduced; direct and pending publication
+  now bind the immutable OID to an exact expected-old parent lease and confirm
+  the remote tip before success or pending-state cleanup. Separately, Windows
+  Task Scheduler COM expands the authored three settings into a deterministic
+  harmless/default set; ownership validation now accepts only those two exact
+  canonical forms and rejects any other value or key. Real-Git rewind/advance/
+  deletion/no-op-success boundary matrices and a registration-free real COM
+  in-memory round-trip pin both fixes. The preceding artifact digest and CI
+  evidence were revoked, then rebuilt and rerun as recorded above; fresh PR CI
+  was still open at that checkpoint and is now closed. Focused H-07/H-08 red-green
+  evidence covered direct and pending rewind/advance/deletion/no-op-success
+  push boundaries, post-push verification, exact COM defaults and value drift,
+  plus the real Windows COM in-memory round-trip.
+- Final adversarial review then found two further ownership boundaries. Windows
+  descendant validation compared local XML names without proving the task
+  namespace, and a Git remote could expose multiple push destinations while
+  verification queried only its fetch destination. The red-first fix requires
+  the task namespace on every inspected descendant, captures exactly one
+  symmetric fetch/push destination before refresh, binds it to a fixed alias
+  in an isolated private Git context for push and verification, and stores only
+  its SHA-256 commitment in pending state. The actual argv never contains the
+  URL; later `insteadOf`, `pushInsteadOf`, remote-alias, or config swaps cannot
+  redirect the isolated transport. Multiple/different/credential-bearing
+  destinations and pending destination drift refuse before publication
+  mutation. Relative local destinations are canonicalized against the Profile
+  repository before capture. The private transport queries only eight exact
+  credential-helper, TLS, and SSH keys; authorization headers, proxies, and URL
+  rewrites are never read into the transport snapshot, ambient proxy variables
+  are removed, and supported HTTPS/SSH/SCP/Git/file/local destinations cannot
+  put raw URLs in argv. The final drive-relative and complete-history
+  regressions reject cross-drive ambiguity plus shallow/partial clones before
+  refresh or pending retry. The full Windows-local suite passed **938 with 30
+  skipped**, Python 3.11 scheduler coverage passed **188 with 12 skipped**, and
+  WSL passed **196 with 4 skipped**. Canonical Ubuntu double builds at the frozen epoch produced the
+  byte-identical candidate wheel
+  `1ed1c0ee2efc2167ad39554545596caae1caa1e4b8ec2dad8c418f3a821adee4`;
+  Twine, artifact/notices/checksum validation, and clean-wheel refresh smoke
+  pass; the release-focused candidate suite passes **89**. Commit
+  `84837d6b434c3a7ee692c36f8a80d1755caff003` received two independent final
+  `APPROVE` verdicts. PR CI run `31390314352` passed all eight required jobs;
+  every Linux Python 3.11–3.14 job reported **963 passed with 5 skipped**.
+  PR merge, M-03 ancestry/Contents-API verification, tag/publication, and M-01
+  post-PyPI hosted caller/Pages verification remain open.
+
 ## Current v0.6.1 Public Beta (2026-08-05)
 
 - The provider ledger is now the sole model/provider contribution visual in
@@ -18,8 +152,9 @@ which is authoritative).
   and fixture `synthetic-two-provider-fixture-v3-provider-ledger`.
 - Release evidence: tag `v0.6.1` at main merge `1be0c68`; CI run
   `30984105485`, publish run `30984290387`, and staging run `30985228475` all
-  passed. The frozen promotion-candidate manifest remains the byte-level
-  artifact record.
+  passed. The hashes and run identifiers above preserve its byte-level
+  artifact evidence; the single promotion-candidate manifest now authorizes
+  the v0.7.0 candidate.
 
 ## Historical v0.6.0 Public Beta (2026-08-04)
 
