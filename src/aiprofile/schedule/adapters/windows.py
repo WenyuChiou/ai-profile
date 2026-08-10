@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import getpass
+import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -147,7 +148,31 @@ def status(
     try:
         root = ET.fromstring(xml_text)
         settings = _only_descendant(root, "Settings")
+        if {_local_name(child) for child in settings} != {
+            "MultipleInstancesPolicy",
+            "StartWhenAvailable",
+            "Enabled",
+        }:
+            raise ValueError
         settings_enabled = _only_child(settings, "Enabled").text
+        if (
+            _only_child(settings, "MultipleInstancesPolicy").text != "IgnoreNew"
+            or _only_child(settings, "StartWhenAvailable").text != "true"
+        ):
+            raise ValueError
+        principals = _only_descendant(root, "Principals")
+        if len(principals) != 1:
+            raise ValueError
+        principal = _only_child(principals, "Principal")
+        if (
+            principal.get("id") != "Author"
+            or {_local_name(child) for child in principal}
+            != {"UserId", "LogonType", "RunLevel"}
+            or _only_child(principal, "UserId").text != getpass.getuser()
+            or _only_child(principal, "LogonType").text != "InteractiveToken"
+            or _only_child(principal, "RunLevel").text != "LeastPrivilege"
+        ):
+            raise ValueError
         triggers_container = _only_descendant(root, "Triggers")
         if len(triggers_container) != 1:
             raise ValueError
@@ -164,7 +189,7 @@ def status(
         if len(daily) != 1 or _only_child(daily, "DaysInterval").text != "1":
             raise ValueError
         actions = _only_descendant(root, "Actions")
-        if len(actions) != 1:
+        if len(actions) != 1 or actions.get("Context") != "Author":
             raise ValueError
         execute = _only_child(actions, "Exec")
         if {_local_name(child) for child in execute} != {"Command", "Arguments"}:
@@ -179,13 +204,15 @@ def status(
             settings_enabled not in {"true", "false"}
             or trigger_enabled not in {"true", "false"}
             or not isinstance(start, str)
-            or len(start) < 16
-            or start[10] != "T"
         ):
             raise ValueError
-        time = start[11:16]
-        if len(time) != 5 or time[2] != ":" or not time.replace(":", "").isdigit():
+        boundary = re.fullmatch(
+            r"2000-01-01T((?:[01][0-9]|2[0-3]):[0-5][0-9]):00",
+            start,
+        )
+        if boundary is None:
             raise ValueError
+        time = boundary.group(1)
         hour, minute = (int(part) for part in time.split(":"))
         if not 0 <= hour <= 23 or not 0 <= minute <= 59:
             raise ValueError

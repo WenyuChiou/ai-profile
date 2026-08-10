@@ -78,7 +78,7 @@ src/aiprofile/
                        (post-v0.1 additive renderer; ADR-021)
   export.py            transactional public-asset + profile.json writer
   refresh.py           configured-repository refresh application service
-  lockfile.py          cross-platform per-home advisory process lock
+  lockfile.py          cross-platform per-home and target-publication locks
   schedule/            local automation service, launcher, and isolated
                        Windows / launchd / systemd user adapters
   cli.py               argparse wiring: init / scan / aggregate / render /
@@ -99,7 +99,7 @@ render → viz, themes, errors          # NEVER storage, gitio, schema, sqlite3
 export → viz, errors                  # NEVER storage, gitio
 refresh → scanner, aggregate, privacy, render, export, config, schema.vocab,
           storage, viz, lockfile, errors # orchestration; NEVER imported by render
-schedule → refresh, config, gitio, export**, lockfile, errors
+schedule → refresh, config, export**, lockfile, errors
 schedule adapters → stdlib, errors     # NEVER render, storage, network
 ```
 
@@ -430,6 +430,26 @@ workflow's immutable `published-sha` in a separate least-privilege Pages job.
 The reusable workflow itself is full-SHA pinned. The maintainer Profile uses
 the local scheduler because its configured set contains an
 `aggregate_only` source.
+
+Refresh planning rejects one resolved repository path mapped to different
+UIDs before real/dry scan or cache access. The local scheduler removes ambient
+Git repository/object/config injection state from every Git subprocess,
+requires the recorded remote tip to equal local `HEAD` before a push-capable
+refresh, and serializes all cooperating homes through the target repository's
+Git common directory. Refresh returns an in-memory exact-eight byte commitment;
+the private-index raw blob bytes must match it before tree creation. A private
+immutable pending-push record is written before local ref advancement. Retry
+can complete an interrupted forward CAS only when both local and remote still
+equal the recorded parent. It then repairs and verifies the exact-eight real
+index, and proceeds only while the parent/tree/branch/remote contract remains
+exact; divergence or index-repair failure retains the record and fails closed.
+This record is local state, not a public manifest or ninth output.
+
+Native status is an ownership proof, not merely a same-name/time lookup.
+Windows validates the tool-authored principal, least-privilege/logon settings,
+single daily trigger and single action, plus exactly the three generated task
+settings. Launchd accepts only the exact
+tool-owned four-key plist. Unverifiable native state blocks mutation.
 
 Public-API discovery, fine-grained PAT or GitHub App support, private hosted
 scanning, and incremental commit retrieval remain future work. They must use

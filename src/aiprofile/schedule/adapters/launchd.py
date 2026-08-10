@@ -91,7 +91,11 @@ def status(
         hour = interval["Hour"]
         minute = interval["Minute"]
         if (
-            payload.get("Label") != home_label
+            set(payload)
+            != {"Label", "ProgramArguments", "StartCalendarInterval", "RunAtLoad"}
+            or not isinstance(interval, dict)
+            or set(interval) != {"Hour", "Minute"}
+            or payload.get("Label") != home_label
             or payload.get("ProgramArguments")
             != [
                 sys.executable,

@@ -355,6 +355,31 @@ Severity: Critical 0, High 0, Medium 0, Low 1.
 
 ---
 
+## v0.7.0 Gate E3 review round (2026-08-10; NOT READY)
+
+Independent verification of `cc69303..17822fe` reproduced six High and four
+Medium findings after the first all-green cross-platform candidate run. No
+schema, aggregation, `VizStats`, renderer, or exact-eight change is part of
+the accepted remediation.
+
+| Finding | Disposition | Resolution |
+|---|---|---|
+| H-01 — scheduler Git calls trust ambient repository-selection state | **Accepted** | One centralized environment boundary removes ambient repository/object/namespace/replacement/shallow/index/tracing/injected-config variables from install and launcher Git calls. Only explicit private-index state and ordinary credential transports remain. Hostile-environment install and end-to-end launcher regressions pin the boundary. |
+| H-02 — an unpushed local ancestor can reach the remote | **Accepted** | Before any push-capable refresh, suppressed `ls-remote` output must yield one exact recorded-branch OID equal to captured local `HEAD`. Missing/ahead/behind/diverged/unverifiable state stops before refresh or Git mutation with a fixed path-free message. |
+| H-03 — staged worktree bytes are not bound to refresh; homes can collide | **Accepted** | Refresh returns a private in-memory SHA-256 commitment for the exact eight rendered bytes. The private-index modes/paths/raw blob bytes must match it before `write-tree`; binary reads prevent Windows newline normalization from weakening the commitment. A lock in the target Git common directory serializes different homes targeting one Profile. This adds no public manifest or output. |
+| H-04 — failed push is not retried | **Accepted** | Push-capable publication writes a `0600` POSIX immutable commit/parent/tree/branch/remote pending record before the forward ref CAS, with atomic replacement as its final fallible step. If a process dies before CAS, a later run may complete that exact CAS only while both local and remote still equal the recorded parent. If CAS completed, retry repairs and verifies the exact-eight real index before pushing the recorded OID. Confirmed success clears the record; divergence or repair failure keeps it, refuses push, and reports every possible index/ref/pending residual. |
+| H-05 — same path/different UID can publish stale cached rows | **Accepted** | Planning resolves the entire config first and rejects a resolved path mapped to different UIDs before real/dry scan, cache access, or output mutation. Real/dry regressions retain stale canary rows and prove home/output bytes remain unchanged and path/name-free. |
+| H-06 — native status accepts execution-semantic drift | **Accepted** | Windows status now proves the tool principal, interactive token, least-privilege run level, single daily trigger/action, exact local `2000-01-01T<HH:MM>:00` boundary, the exact three tool-authored settings, and action context. Launchd requires its exact four-key owned payload. Altered privilege/identity/date/timezone/frequency or extra execution keys are unverifiable and block mutation. |
+| M-01 — no real hosted caller/Pages E2E | **Accepted as post-PyPI promotion gate** | Static tests cannot replace hosted behavior. `docs/RELEASING.md` now requires a disposable public Profile byte-changing run plus a no-change run, exact-eight commit, immutable `published-sha`, Pages HTTP 200, and no second commit before Public Beta promotion. |
+| M-02 — scheduler interpreter lifetime undocumented | **Accepted** | English and Traditional Chinese README guidance now says the installing interpreter/venv path must persist and instructs users to reinstall plus confirm status after moving, removing, or upgrading it. |
+| M-03 — immutable caller pin depends on merge ancestry | **Accepted as pre-tag gate** | v0.7.0 must merge with a merge commit. Before branch deletion/tagging, the runbook requires `merge-base --is-ancestor` for full C1 SHA `9c4f276...` against `origin/main` and GitHub Contents-API resolution of the pinned workflow blob. |
+| M-04 — `last-run.log` is `0644` under umask 022 | **Accepted** | The launcher creates/retrofits the log at `0600` on POSIX inside the existing `0700` scheduler directory, rejects linked/non-regular scheduler state before reading or changing modes, and keeps the closed path-free vocabulary. POSIX regressions cover umask 022 plus file/directory links without mutating external targets. |
+
+The review's **NOT READY** verdict remains current until the remediation range,
+rebuilt artifacts, cross-platform CI, and second independent review complete.
+
+---
+
 ## Gate-18 review round (gate-review.md, 2026-07-23; READY AFTER MINOR FIXES)
 
 Independent verification of `b70f3a5..63f00c6` (round D6 aesthetic

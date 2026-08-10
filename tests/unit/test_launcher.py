@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -14,6 +15,7 @@ from aiprofile.schedule import launcher, service
 
 
 def _write_config(home: Path, profile: Path, *, push: bool = True) -> None:
+    (profile / ".git").mkdir(exist_ok=True)
     service.write_scheduler_files(
         home,
         profile,
@@ -24,17 +26,55 @@ def _write_config(home: Path, profile: Path, *, push: bool = True) -> None:
     )
 
 
+def _refresh_ok():
+    digest = hashlib.sha256(b"").hexdigest()
+    return SimpleNamespace(
+        ok=True,
+        failures=(),
+        written=(),
+        asset_manifest=tuple(
+            launcher.AssetDigest(name=name, sha256=digest)
+            for name in sorted(PUBLIC_ASSET_NAMES)
+        ),
+    )
+
+
+def _security_prerequisite(argv):
+    if "--git-common-dir" in argv:
+        return subprocess.CompletedProcess(argv, 0, ".git\n", "")
+    if "ls-remote" in argv:
+        return subprocess.CompletedProcess(
+            argv, 0, f"{'a' * 40}\trefs/heads/main\n", ""
+        )
+    if "ls-files" in argv:
+        entries = "".join(
+            f"100644 {'e' * 40} 0\tdist/{name}\x00"
+            for name in sorted(PUBLIC_ASSET_NAMES)
+        )
+        return subprocess.CompletedProcess(argv, 0, entries, "")
+    if "cat-file" in argv:
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
+    return None
+
+
 def _runner(events: list[tuple[str, object]], *, push_rc: int = 0):
     def run(argv, **kwargs):
         events.append(("git", (argv, kwargs)))
         assert isinstance(argv, list)
         assert kwargs.get("shell") is False
+        prerequisite = _security_prerequisite(argv)
+        if prerequisite is not None:
+            return prerequisite
         if "symbolic-ref" in argv:
             return subprocess.CompletedProcess(argv, 0, "main\n", "")
         if "rev-parse" in argv:
             return subprocess.CompletedProcess(argv, 0, f"{'a' * 40}\n", "")
         if "status" in argv:
             return subprocess.CompletedProcess(argv, 0, "", "")
+        if "read-tree" in argv:
+            Path(kwargs["env"]["GIT_INDEX_FILE"]).touch()
+        if "write-tree" in argv:
+            return subprocess.CompletedProcess(argv, 0, f"{'a' * 40}\n", "")
         if "push" in argv:
             return subprocess.CompletedProcess(argv, push_rc, "", "private stderr canary")
         return subprocess.CompletedProcess(argv, 0, "", "")
@@ -96,7 +136,7 @@ def test_launcher_calls_refresh_into_profile_repo_dist(tmp_path, monkeypatch):
 
     def fake_refresh(call_home, out_dir):
         events.append(("refresh", (call_home, out_dir)))
-        return SimpleNamespace(ok=True, failures=(), written=())
+        return _refresh_ok()
 
     monkeypatch.setattr(launcher.refresh, "run_refresh", fake_refresh)
     monkeypatch.setattr(launcher.shutil, "which", lambda _name: "git")
@@ -143,7 +183,7 @@ def test_last_run_log_is_path_and_name_free(tmp_path, monkeypatch):
     monkeypatch.setattr(
         launcher.refresh,
         "run_refresh",
-        lambda *_a, **_k: SimpleNamespace(ok=True, failures=(), written=()),
+        lambda *_a, **_k: _refresh_ok(),
     )
     assert launcher.run_launcher(home, runner=_runner(events)) == 0
     log = (home / "scheduler" / "last-run.log").read_text(encoding="utf-8")
@@ -168,7 +208,7 @@ def test_git_commands_are_argv_no_shell_and_push_never_forces(tmp_path, monkeypa
     monkeypatch.setattr(launcher.shutil, "which", lambda _name: "git")
 
     def fake_refresh(*_args, **_kwargs):
-        return SimpleNamespace(ok=True, failures=(), written=())
+        return _refresh_ok()
 
     monkeypatch.setattr(launcher.refresh, "run_refresh", fake_refresh)
     ref_updated = False
@@ -178,6 +218,9 @@ def test_git_commands_are_argv_no_shell_and_push_never_forces(tmp_path, monkeypa
         events.append(("git", (argv, kwargs)))
         assert isinstance(argv, list)
         assert kwargs.get("shell") is False
+        prerequisite = _security_prerequisite(argv)
+        if prerequisite is not None:
+            return prerequisite
         if "symbolic-ref" in argv:
             return subprocess.CompletedProcess(argv, 0, "main\n", "")
         if "rev-parse" in argv:
@@ -231,13 +274,16 @@ def test_push_failure_is_reported_not_fatal_to_commit(tmp_path, monkeypatch):
     monkeypatch.setattr(
         launcher.refresh,
         "run_refresh",
-        lambda *_a, **_k: SimpleNamespace(ok=True, failures=(), written=()),
+        lambda *_a, **_k: _refresh_ok(),
     )
     ref_updated = False
 
     def runner(argv, **kwargs):
         nonlocal ref_updated
         events.append(("git", (argv, kwargs)))
+        prerequisite = _security_prerequisite(argv)
+        if prerequisite is not None:
+            return prerequisite
         if "symbolic-ref" in argv:
             return subprocess.CompletedProcess(argv, 0, "main\n", "")
         if "rev-parse" in argv:
@@ -312,7 +358,7 @@ def test_unlock_failure_preserves_primary_publication_outcome(
     monkeypatch.setattr(
         launcher.refresh,
         "run_refresh",
-        lambda *_a, **_k: SimpleNamespace(ok=True, failures=(), written=()),
+        lambda *_a, **_k: _refresh_ok(),
     )
 
     class FailingExitLock:
@@ -355,7 +401,7 @@ def test_branch_drift_after_private_staging_leaves_real_index_untouched(
     monkeypatch.setattr(
         launcher.refresh,
         "run_refresh",
-        lambda *_a, **_k: SimpleNamespace(ok=True, failures=(), written=()),
+        lambda *_a, **_k: _refresh_ok(),
     )
     events = []
     state_checks = 0
@@ -363,9 +409,12 @@ def test_branch_drift_after_private_staging_leaves_real_index_untouched(
     def runner(argv, **kwargs):
         nonlocal state_checks
         events.append(argv)
+        prerequisite = _security_prerequisite(argv)
+        if prerequisite is not None:
+            return prerequisite
         if "symbolic-ref" in argv:
             state_checks += 1
-            branch = "other" if state_checks >= 4 else "main"
+            branch = "other" if state_checks >= 5 else "main"
             return subprocess.CompletedProcess(argv, 0, f"{branch}\n", "")
         if "rev-parse" in argv:
             if argv[-1].endswith("^{tree}"):
@@ -398,7 +447,7 @@ def test_head_drift_immediately_before_push_retains_local_commit(
     monkeypatch.setattr(
         launcher.refresh,
         "run_refresh",
-        lambda *_a, **_k: SimpleNamespace(ok=True, failures=(), written=()),
+        lambda *_a, **_k: _refresh_ok(),
     )
     events = []
     oid_checks = 0
@@ -406,13 +455,16 @@ def test_head_drift_immediately_before_push_retains_local_commit(
     def runner(argv, **kwargs):
         nonlocal oid_checks
         events.append(argv)
+        prerequisite = _security_prerequisite(argv)
+        if prerequisite is not None:
+            return prerequisite
         if "symbolic-ref" in argv:
             return subprocess.CompletedProcess(argv, 0, "main\n", "")
         if "rev-parse" in argv:
             if argv[-1].endswith("^{tree}"):
                 return subprocess.CompletedProcess(argv, 0, f"{'e' * 40}\n", "")
             oid_checks += 1
-            if oid_checks <= 4:
+            if oid_checks <= 5:
                 oid = "a" * 40
             else:
                 oid = "c" * 40

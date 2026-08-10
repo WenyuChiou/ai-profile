@@ -9,7 +9,7 @@ disagree, docs win and the code is the bug.
 ## Quality gates (must stay green after every change)
 
 - `python -m pytest tests -p no:cacheprovider` — full suite; state the
-  count you observe (as of 2026-08-10: 847 passed, 25 skipped; if your
+  count you observe (as of 2026-08-10: 876 passed, 29 skipped; if your
   run differs, update this
   line in the same commit).
 - `python -m ruff check src tests scripts` — clean.

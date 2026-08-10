@@ -10,6 +10,7 @@ allowlisted changed filenames only.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -23,6 +24,7 @@ import pytest
 from helpers import FIXTURE_AUTHOR_EMAIL, FIXTURE_AUTHOR_NAME, build_repo
 
 import aiprofile.export as export_mod
+import aiprofile.scanner as scanner_mod
 from aiprofile import cli, gitio
 from aiprofile.config import RepoEntry, init_home, load_config, save_config
 from aiprofile.errors import (
@@ -192,6 +194,14 @@ def test_refresh_is_deterministic_across_reruns(tmp_path, monkeypatch, capsys):
     assert second.ok
     assert _read_all(out_dir) == first_bytes
     assert sorted(first_bytes) == EIGHT_NAMES
+    assert first.asset_manifest == second.asset_manifest
+    assert [item.name for item in first.asset_manifest] == EIGHT_NAMES
+    assert {
+        item.name: item.sha256 for item in first.asset_manifest
+    } == {
+        name: hashlib.sha256(payload).hexdigest()
+        for name, payload in first_bytes.items()
+    }
 
     # P1 reviewer regression: real write_outputs fault injection through
     # run_refresh.  A failed install plus failed restore leaves a partial
@@ -328,7 +338,22 @@ def test_dry_run_mutates_nothing(tmp_path):
     assert _read_all(out_dir) == out_before
 
 
-def test_dry_run_wal_committed_data_is_seen_and_source_untouched(tmp_path):
+def _keep_existing_rows_during_dry_run(monkeypatch) -> None:
+    """Replace the scan mutation only; snapshot/aggregate/render stay real."""
+
+    def no_op_scan(_home, cfg, _conn, repo_path, **_kwargs):
+        entry = next(repo for repo in cfg.repositories if repo.path == repo_path)
+        return scanner_mod.ScanSummary(
+            repository_uid=entry.repository_uid,
+            display_name="dry-run fixture",
+        )
+
+    monkeypatch.setattr(scanner_mod, "scan_repository", no_op_scan)
+
+
+def test_dry_run_wal_committed_data_is_seen_and_source_untouched(
+    tmp_path, monkeypatch
+):
     home, _, _ = _build_two_repo_home(tmp_path)
     out_dir = tmp_path / "dist"
     first = run_refresh(
@@ -336,35 +361,23 @@ def test_dry_run_wal_committed_data_is_seen_and_source_untouched(tmp_path):
     )
     assert first.ok
 
-    # A second config entry for the SAME path under a DIFFERENT uid: the
-    # planner skips it as a duplicate (never rescanned), but its uid is
-    # configured publishable - so DB rows under that uid flow into the
-    # rendered stats without being replaced by the dry-run's scan phase.
-    # Those rows are committed below into the -wal ONLY (checkpointing
-    # disabled, writer held open): the dry-run can see them if and only
-    # if its shadow snapshot is WAL-aware.
+    # Preserve the existing repository rows while exercising the real
+    # snapshot/aggregate/render path.  The marker commit below is committed
+    # into the -wal only; the dry-run can see it if and only if its shadow
+    # snapshot is WAL-aware.  This fixture intentionally avoids ambiguous
+    # same-path/different-uid configuration, which refresh rejects fail-closed.
     cfg = load_config(home)
-    cfg.repositories.append(
-        RepoEntry(
-            path=cfg.repositories[0].path,
-            repository_uid="wal-canary-uid-b",
-            publication_level=PublicationLevel.FULL,
-        )
-    )
-    save_config(home, cfg)
+    marker_uid = cfg.repositories[0].repository_uid
+    _keep_existing_rows_during_dry_run(monkeypatch)
 
     db = home / "aiprofile.db"
     writer = sqlite3.connect(str(db))
     try:
         assert writer.execute("PRAGMA journal_mode=WAL").fetchone()[0] == "wal"
         writer.execute("PRAGMA wal_autocheckpoint=0")
-        cur = writer.execute(
-            "INSERT INTO repositories"
-            " (repository_uid, display_name, local_path, last_scanned_at)"
-            " VALUES (?, ?, ?, ?)",
-            ("wal-canary-uid-b", "wal-canary-display", "wal-canary-path", RECORDED_AT),
-        )
-        repo_id = cur.lastrowid
+        repo_id = writer.execute(
+            "SELECT id FROM repositories WHERE repository_uid = ?", (marker_uid,)
+        ).fetchone()[0]
         cur = writer.execute(
             "INSERT INTO commits (repository_id, sha, author_email, author_date)"
             " VALUES (?, ?, ?, ?)",
@@ -658,18 +671,21 @@ def test_dry_run_preserves_relaxed_posix_modes(tmp_path):
 
 
 def _insert_marker_rows(db: Path, uid: str) -> None:
-    """Rows under a uid the dry-run scan phase never replaces (its config
-    entry is duplicate-skipped), so they reach the rendered stats if and
-    only if the shadow snapshot read the CORRECT database file."""
+    """Add a marker commit to an existing or deliberately stale uid."""
     conn = sqlite3.connect(str(db))
     try:
-        cur = conn.execute(
-            "INSERT INTO repositories"
-            " (repository_uid, display_name, local_path, last_scanned_at)"
-            " VALUES (?, ?, ?, ?)",
-            (uid, "marker-display", "marker-path", RECORDED_AT),
-        )
-        repo_id = cur.lastrowid
+        row = conn.execute(
+            "SELECT id FROM repositories WHERE repository_uid = ?", (uid,)
+        ).fetchone()
+        if row is None:
+            repo_id = conn.execute(
+                "INSERT INTO repositories"
+                " (repository_uid, display_name, local_path, last_scanned_at)"
+                " VALUES (?, ?, ?, ?)",
+                (uid, "private-stale-name-canary", "private-stale-path-canary", RECORDED_AT),
+            ).lastrowid
+        else:
+            repo_id = row[0]
         cur = conn.execute(
             "INSERT INTO commits (repository_id, sha, author_email, author_date)"
             " VALUES (?, ?, ?, ?)",
@@ -700,7 +716,55 @@ def _insert_marker_rows(db: Path, uid: str) -> None:
         conn.close()
 
 
-def _assert_dry_run_reads_correct_db(tmp_path: Path, home_name: str) -> None:
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_refresh_rejects_same_path_different_uid_before_cache_or_output_mutation(
+    tmp_path, dry_run, monkeypatch
+):
+    home, _, _ = _build_two_repo_home(tmp_path)
+    out_dir = tmp_path / "dist"
+    assert run_refresh(
+        home, out_dir, generated_on=GENERATED_ON, recorded_at=RECORDED_AT
+    ).ok
+
+    cfg = load_config(home)
+    cfg.repositories.append(
+        RepoEntry(
+            path=cfg.repositories[0].path,
+            repository_uid="private-stale-uid-canary",
+            publication_level=PublicationLevel.FULL,
+        )
+    )
+    save_config(home, cfg)
+    _insert_marker_rows(home / "aiprofile.db", "private-stale-uid-canary")
+    home_before = _home_files(home)
+    out_before = _read_all(out_dir)
+    if dry_run:
+        monkeypatch.setattr(
+            "aiprofile.refresh._snapshot_database",
+            lambda *_args: (_ for _ in ()).throw(
+                AssertionError("database snapshot must follow plan validation")
+            ),
+        )
+
+    with pytest.raises(RefreshError) as raised:
+        run_refresh(
+            home,
+            out_dir,
+            dry_run=dry_run,
+            generated_on=GENERATED_ON,
+            recorded_at=RECORDED_AT,
+        )
+
+    assert _home_files(home) == home_before
+    assert _read_all(out_dir) == out_before
+    message = str(raised.value)
+    assert "private-stale" not in message
+    assert AI_REPO_NAME not in message
+
+
+def _assert_dry_run_reads_correct_db(
+    tmp_path: Path, home_name: str, monkeypatch
+) -> None:
     home = tmp_path / home_name
     ai_repo = build_repo(tmp_path / AI_REPO_NAME, _ai_commits())
     plain_repo = build_repo(tmp_path / PLAIN_REPO_NAME, _plain_commits())
@@ -711,17 +775,10 @@ def _assert_dry_run_reads_correct_db(tmp_path: Path, home_name: str) -> None:
     )
     assert first.ok
 
-    marker_uid = "uri-marker-uid"
     cfg = load_config(home)
-    cfg.repositories.append(
-        RepoEntry(
-            path=cfg.repositories[0].path,
-            repository_uid=marker_uid,
-            publication_level=PublicationLevel.FULL,
-        )
-    )
-    save_config(home, cfg)
+    marker_uid = cfg.repositories[0].repository_uid
     _insert_marker_rows(home / "aiprofile.db", marker_uid)
+    _keep_existing_rows_during_dry_run(monkeypatch)
 
     siblings_before = sorted(p.name for p in tmp_path.iterdir())
     home_before = sorted(p.name for p in home.iterdir() if p.name != ".refresh.lock")
@@ -746,16 +803,16 @@ def _assert_dry_run_reads_correct_db(tmp_path: Path, home_name: str) -> None:
     )
 
 
-def test_dry_run_home_with_hash_character_reads_correct_db(tmp_path):
-    _assert_dry_run_reads_correct_db(tmp_path, "ai#profile home-42")
+def test_dry_run_home_with_hash_character_reads_correct_db(tmp_path, monkeypatch):
+    _assert_dry_run_reads_correct_db(tmp_path, "ai#profile home-42", monkeypatch)
 
 
 @pytest.mark.skipif(
     sys.platform == "win32",
     reason="'?' is not a legal Windows filename character",
 )
-def test_dry_run_home_with_question_mark_reads_correct_db(tmp_path):
-    _assert_dry_run_reads_correct_db(tmp_path, "ai?profile-home-43")
+def test_dry_run_home_with_question_mark_reads_correct_db(tmp_path, monkeypatch):
+    _assert_dry_run_reads_correct_db(tmp_path, "ai?profile-home-43", monkeypatch)
 
 
 def test_refresh_wal_home_database_is_supported(tmp_path):

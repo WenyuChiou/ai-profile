@@ -61,7 +61,17 @@ below.
 
 - Serialize refresh per canonical home, enforce owner-only scheduler modes on
   POSIX (and inherited user-home ACLs on Windows), use a per-home opaque native
-  identity, refuse branch/ref drift, never use
+  identity, refuse branch/ref drift, and reject a resolved repository path
+  mapped to different UIDs before real or dry refresh mutation. Scheduler Git
+  calls remove ambient repository/object/config injection state, require the
+  recorded remote tip to equal local `HEAD`, serialize per target repository,
+  verify raw staged blobs against the completed exact-eight generation, and
+  retain a private immutable pending commit for safe push retry. Retry repairs
+  and verifies the exact-eight real index before push, including recovery from
+  a crash after the branch CAS. Native status proves the complete tool-owned
+  Windows/launchd execution semantics. Linked/non-regular scheduler state is
+  rejected before read/chmod; the pending record and `last-run.log` are `0600`
+  on POSIX. Never use
   `shell=True` or broad Git staging, and disclose possible rollback residuals
   without printing their private paths or object IDs.
 - Pass Action identity emails as a secret, reject non-public sources before

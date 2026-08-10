@@ -20,6 +20,7 @@ import aiprofile.lockfile as lock_mod
 from aiprofile import cli
 from aiprofile.config import Config, RepoEntry, init_home, save_config
 from aiprofile.errors import (
+    ConfigError,
     IncompleteRollbackError,
     LockError,
     RefreshError,
@@ -121,6 +122,19 @@ def test_plan_dedupes_identical_resolved_paths(tmp_path):
     assert plan.items[0].ordinal == 1
     assert plan.skipped_duplicates == (2,)
     assert plan.skipped_excluded == ()
+
+
+def test_plan_rejects_same_path_with_different_repository_uids(tmp_path):
+    repo = tmp_path / "same-repo"
+    cfg = _config(
+        [
+            _entry(str(repo), "uid-current", PublicationLevel.AGGREGATE_ONLY),
+            _entry(str(repo), "uid-stale", PublicationLevel.FULL),
+        ]
+    )
+
+    with pytest.raises(ConfigError, match="one path to multiple identities"):
+        plan_refresh(cfg)
 
 
 def test_plan_dedupes_alias_paths_by_repository_uid(tmp_path):

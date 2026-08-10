@@ -10,6 +10,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -183,6 +184,40 @@ def test_install_requires_profile_repo_and_valid_time(tmp_path, monkeypatch, fak
         == 1
     )
     assert not (missing_home / "scheduler").exists()
+
+
+def test_install_sanitizes_every_git_repository_probe(
+    tmp_path, monkeypatch, fake_adapter
+):
+    home = _initialized_home(tmp_path / "home")
+    repo = _repo(tmp_path)
+    hostile = {
+        "GIT_DIR": str(tmp_path / "private-git-dir-canary"),
+        "GIT_WORK_TREE": str(tmp_path / "private-worktree-canary"),
+        "GIT_COMMON_DIR": str(tmp_path / "private-common-canary"),
+        "GIT_OBJECT_DIRECTORY": str(tmp_path / "private-objects-canary"),
+        "GIT_CONFIG_GLOBAL": str(tmp_path / "private-config-canary"),
+        "GIT_REPLACE_REF_BASE": "refs/private-canary/",
+    }
+    for name, value in hostile.items():
+        monkeypatch.setenv(name, value)
+
+    original_run = subprocess.run
+    observed: list[dict[str, str]] = []
+
+    def inspect_run(*args, **kwargs):
+        command = args[0] if args else kwargs.get("args", [])
+        if command and Path(command[0]).name.lower().startswith("git"):
+            observed.append(dict(kwargs.get("env") or {}))
+        return original_run(*args, **kwargs)
+
+    monkeypatch.setattr(service.subprocess, "run", inspect_run)
+    result = service.install(home, repo, "07:30", dry_run=True)
+
+    assert result.dry_run is True
+    assert observed
+    assert all(not (set(env) & set(hostile)) for env in observed)
+    assert fake_adapter.calls == [("status", None), ("plan", "07:30")]
 
 
 def test_install_requires_initialized_parseable_home_before_scheduler_work(
@@ -1019,6 +1054,61 @@ def test_status_invalid_utf8_last_run_is_unavailable_not_traceback(
     assert home.name not in combined
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink and mode semantics")
+@pytest.mark.parametrize("name", ["pending-push.json", "last-run.log"])
+def test_status_rejects_tool_state_symlink_without_mutating_target(
+    tmp_path, monkeypatch, fake_adapter, capsys, name
+):
+    home = _initialized_home(tmp_path / "private-home-canary")
+    repo = _repo(tmp_path)
+    service.write_scheduler_files(
+        home, repo, "07:30", True, branch="main", remote="origin"
+    )
+    outside = tmp_path / "outside-private-canary"
+    outside.write_text("outside-bytes", encoding="utf-8")
+    outside.chmod(0o644)
+    os.symlink(outside, home / "scheduler" / name)
+    before = (outside.read_bytes(), stat.S_IMODE(outside.stat().st_mode))
+    monkeypatch.setenv("AIPROFILE_HOME", str(home))
+
+    assert cli.main(["schedule", "status"]) == 1
+    captured = capsys.readouterr()
+    combined = captured.out + captured.err
+    assert "scheduler configuration is unavailable or invalid" in combined
+    assert str(home) not in combined
+    assert str(outside) not in combined
+    assert (outside.read_bytes(), stat.S_IMODE(outside.stat().st_mode)) == before
+    assert fake_adapter.calls == []
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink and mode semantics")
+def test_status_dry_run_rejects_scheduler_directory_symlink_without_mutation(
+    tmp_path, monkeypatch, fake_adapter, capsys
+):
+    home = _initialized_home(tmp_path / "private-home-canary")
+    outside_home = tmp_path / "outside-home"
+    repo = _repo(tmp_path)
+    service.write_scheduler_files(
+        outside_home, repo, "07:30", True, branch="main", remote="origin"
+    )
+    outside = outside_home / "scheduler"
+    outside.chmod(0o755)
+    os.symlink(outside, home / "scheduler", target_is_directory=True)
+    before = _tree_state(outside_home)
+    before_mode = stat.S_IMODE(outside.stat().st_mode)
+    monkeypatch.setenv("AIPROFILE_HOME", str(home))
+
+    assert cli.main(["schedule", "status", "--dry-run"]) == 1
+    captured = capsys.readouterr()
+    combined = captured.out + captured.err
+    assert "scheduler configuration is unavailable or invalid" in combined
+    assert str(home) not in combined
+    assert str(outside) not in combined
+    assert _tree_state(outside_home) == before
+    assert stat.S_IMODE(outside.stat().st_mode) == before_mode
+    assert fake_adapter.calls == []
+
+
 def test_remove_idempotent_and_cleans_home(tmp_path, monkeypatch, fake_adapter, capsys):
     home = _initialized_home(tmp_path / "home")
     repo = _repo(tmp_path)
@@ -1178,3 +1268,7 @@ def test_status_never_echoes_tampered_last_run_log(tmp_path, monkeypatch, fake_a
     captured = capsys.readouterr()
     assert canary not in captured.out + captured.err
     assert "last-run log is unavailable or invalid" in captured.out
+def test_scheduler_state_rejects_windows_reparse_points():
+    reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    info = SimpleNamespace(st_mode=stat.S_IFDIR, st_file_attributes=reparse)
+    assert service._is_link_or_reparse(info) is True

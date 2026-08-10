@@ -285,7 +285,9 @@ local candidate evidence alone is not a shipped release.
 - [ ] Release the stdlib-only native scheduler for Windows, macOS, and Linux:
       per-home opaque native identity, POSIX owner-only state (inherited
       user-home ACLs on Windows), exact-eight Git publication, no token
-      storage, fail-closed branch/ref validation, and residual-honest rollback.
+      storage, sanitized Git environment, remote-tip equality, target-repository
+      serialization, rendered-byte binding, immutable pending-push retry,
+      exact native ownership validation, and residual-honest rollback.
 - [ ] Release the public-only reusable GitHub Actions workflow and immutable
       caller template. Keep identity emails secret, suppress raw output from
       workflow-owned visibility/clone/commit/push subprocesses, pin the
@@ -297,6 +299,12 @@ local candidate evidence alone is not a shipped release.
 - [ ] Publish v0.7.0 as Public Beta, verify PyPI/GitHub Release/live links, and
       dogfood the maintainer Profile with the local scheduler so its existing
       `aggregate_only` policy is preserved.
+- [ ] Merge the release PR with a merge commit; before branch deletion, prove
+      immutable workflow commit `9c4f276` is an ancestor of `origin/main` and
+      resolves through the GitHub Contents API.
+- [ ] After PyPI publication, run the copied public caller against a disposable
+      public Profile: one byte-changing exact-eight run, one no-change run,
+      immutable `published-sha`, Pages HTTP 200, and no extra second commit.
 
 ## Future capability milestone — GitHub integration
 

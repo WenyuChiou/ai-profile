@@ -94,6 +94,19 @@ listed public repositories and scans each as `full`.
 The scheduler's `--no-push` mode still creates and compare-and-swap advances
 the local exact-eight commit; it suppresses only the remote push. Scheduler
 files use owner-only modes on POSIX and inherit the user's home ACL on Windows.
+Real and dry refresh reject one resolved path mapped to different repository
+UIDs before scanning or reading cached aggregates.
+
+Push-capable scheduled runs remove ambient Git repository/config injection,
+require remote-tip equality before refresh, serialize per target Git common
+directory, and verify the private-index bytes against the completed refresh.
+A `0600` POSIX pending record binds immutable commit/parent/tree/branch/remote
+state across push retries. Retry repairs and verifies the exact-eight real
+index before any push; divergence or repair failure retains the record and
+stops before refresh or push. The local last-run log is also `0600` on POSIX,
+and linked/non-regular scheduler state is rejected before read or chmod.
+Native status must prove the complete tool-owned Windows or launchd execution
+semantics before mutation.
 
 ## 4. Expected files
 

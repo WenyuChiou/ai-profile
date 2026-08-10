@@ -37,6 +37,10 @@ _UNAVAILABLE_MESSAGE = (
     "refresh locking is unavailable; verify profile-home access and filesystem"
     " locking support"
 )
+_PUBLICATION_CONTENTION_MESSAGE = (
+    "another aiprofile publication is running against this profile repository;"
+    " wait for it to finish and retry"
+)
 _CONTENTION_ERRNOS = frozenset(
     value
     for value in (
@@ -52,8 +56,9 @@ _CONTENTION_ERRNOS = frozenset(
 class _HomeLock:
     """Context manager holding the OS lock between __enter__ and __exit__."""
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, contention_message: str = _CONTENTION_MESSAGE) -> None:
         self._path = path
+        self._contention_message = contention_message
         self._fd: int | None = None
 
     def __enter__(self) -> _HomeLock:
@@ -70,7 +75,7 @@ class _HomeLock:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
             message = (
-                _CONTENTION_MESSAGE
+                self._contention_message
                 if exc.errno in _CONTENTION_ERRNOS
                 else _UNAVAILABLE_MESSAGE
             )
@@ -136,3 +141,11 @@ def acquire_home_lock(home: Path, name: str = ".refresh.lock") -> _HomeLock:
     Raises :class:`LockError` immediately if another invocation holds it.
     """
     return _HomeLock(home / name)
+
+
+def acquire_publication_lock(git_common_dir: Path) -> _HomeLock:
+    """Serialize cooperating publishers that target the same Git repository."""
+    return _HomeLock(
+        Path(git_common_dir) / "aiprofile-publication.lock",
+        contention_message=_PUBLICATION_CONTENTION_MESSAGE,
+    )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import stat
 import subprocess
@@ -60,8 +61,20 @@ def _refresh_writer(content: str):
     def refresh(_home, out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
         for name in PUBLIC_ASSET_NAMES:
-            (out_dir / name).write_text(f"{name}:{content}\n", encoding="utf-8")
-        return SimpleNamespace(ok=True, failures=(), written=tuple(out_dir.iterdir()))
+            (out_dir / name).write_bytes(f"{name}:{content}\n".encode())
+        manifest = tuple(
+            launcher.refresh.AssetDigest(
+                name=name,
+                sha256=hashlib.sha256((out_dir / name).read_bytes()).hexdigest(),
+            )
+            for name in sorted(PUBLIC_ASSET_NAMES)
+        )
+        return SimpleNamespace(
+            ok=True,
+            failures=(),
+            written=tuple(out_dir.iterdir()),
+            asset_manifest=manifest,
+        )
 
     return refresh
 
@@ -165,6 +178,7 @@ def test_private_index_cleanup_preserves_umask_when_runner_raises(tmp_path):
                 profile,
                 home=home,
                 head_oid="a" * 40,
+                expected_manifest=(),
             )
         restored_umask = os.umask(0o022)
         assert restored_umask == 0o022
@@ -424,7 +438,9 @@ def test_ref_advance_after_cas_cleans_index_and_refuses_push(tmp_path, monkeypat
     assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == remote_before
     log = (home / "scheduler" / "last-run.log").read_text(encoding="utf-8")
     assert "local scheduler commit or ref may remain" in log
+    assert "pending retry state remains" in log
     assert "push was refused" in log
+    assert (home / "scheduler" / "pending-push.json").is_file()
 
 
 def test_drift_cleanup_failure_reports_staged_residual(tmp_path, monkeypatch):
@@ -498,8 +514,10 @@ def test_cleanup_and_rollback_failure_reports_both_residuals(tmp_path, monkeypat
     log = (home / "scheduler" / "last-run.log").read_text(encoding="utf-8")
     assert "tool paths may remain staged" in log
     assert "local scheduler commit or ref may remain" in log
+    assert "pending retry state remains" in log
     assert "push was refused" in log
     assert "private-path-canary" not in log
+    assert (home / "scheduler" / "pending-push.json").is_file()
 
 
 def test_push_uses_captured_commit_when_head_advances_after_final_check(
@@ -567,3 +585,328 @@ def test_real_index_sync_failure_retains_local_commit_and_refuses_push(
     log = (home / "scheduler" / "last-run.log").read_text(encoding="utf-8")
     assert "tool paths may remain staged and push was refused" in log
     assert "private-path-canary" not in log
+
+
+def test_launcher_sanitizes_repository_selection_environment(
+    tmp_path, monkeypatch
+):
+    home, _profile, _bare = _setup(tmp_path)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("sanitized"))
+    hostile = {
+        "GIT_DIR": str(tmp_path / "wrong.git"),
+        "GIT_WORK_TREE": str(tmp_path / "wrong-tree"),
+        "GIT_OBJECT_DIRECTORY": str(tmp_path / "wrong-objects"),
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES": str(tmp_path / "alternate"),
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "core.bare",
+        "GIT_CONFIG_VALUE_0": "true",
+    }
+    for key, value in hostile.items():
+        monkeypatch.setenv(key, value)
+
+    def runner(argv, **kwargs):
+        env = kwargs.get("env")
+        assert env is not None
+        assert not (set(hostile) & set(env))
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=runner) == 0
+
+
+def test_launcher_refuses_unpushed_local_ancestor(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    remote_before = _git(bare, "rev-parse", "refs/heads/main").stdout.strip()
+    (profile / "private-canary.txt").write_text("private\n", encoding="utf-8")
+    _git(profile, "add", "private-canary.txt")
+    _git(profile, "commit", "-q", "-m", "local unrelated secret")
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("blocked"))
+
+    assert launcher.run_launcher(home) == 1
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == remote_before
+    assert _git(bare, "cat-file", "-e", "main:private-canary.txt", check=False).returncode != 0
+
+
+def test_private_index_rejects_bytes_substituted_after_refresh(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    remote_before = _git(bare, "rev-parse", "refs/heads/main").stdout.strip()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("expected"))
+    changed = False
+
+    def runner(argv, **kwargs):
+        nonlocal changed
+        if "add" in argv and not changed:
+            changed = True
+            (profile / "dist" / "profile.json").write_text(
+                "PRIVATE-RACE-CANARY\n", encoding="utf-8"
+            )
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=runner) == 1
+    assert changed is True
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == remote_before
+
+
+@pytest.mark.parametrize("replacement", [b"expected:profile.json\r\n", b"\xff\x00"])
+def test_private_index_hashes_raw_blob_bytes_without_text_normalization(
+    tmp_path, monkeypatch, replacement
+):
+    home, profile, bare = _setup(tmp_path)
+    remote_before = _git(bare, "rev-parse", "refs/heads/main").stdout.strip()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("expected"))
+    changed = False
+
+    def runner(argv, **kwargs):
+        nonlocal changed
+        if "add" in argv and not changed:
+            changed = True
+            (profile / "dist" / "profile.json").write_bytes(replacement)
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=runner) == 1
+    assert changed is True
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == remote_before
+
+
+def test_failed_push_is_retried_from_pending_immutable_commit(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    remote_before = _git(bare, "rev-parse", "refs/heads/main").stdout.strip()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("retry"))
+
+    def fail_push(argv, **kwargs):
+        if "push" in argv:
+            return subprocess.CompletedProcess(argv, 17, "", "private-path-canary")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=fail_push) == 1
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+    if os.name != "nt":
+        assert stat.S_IMODE(pending.stat().st_mode) == 0o600
+    local = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert local != remote_before
+    assert launcher.run_launcher(home) == 0
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == local
+    assert not pending.exists()
+
+
+def test_pending_state_write_failure_prevents_local_ref_advance(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    local_before = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    remote_before = _git(bare, "rev-parse", "refs/heads/main").stdout.strip()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("blocked"))
+    monkeypatch.setattr(launcher, "_write_pending", lambda *_args: False)
+
+    assert launcher.run_launcher(home) == 1
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_before
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == remote_before
+    assert not (home / "scheduler" / "pending-push.json").exists()
+    assert "no branch update or push was attempted" in (
+        home / "scheduler" / "last-run.log"
+    ).read_text(encoding="utf-8").splitlines()[-1]
+
+
+def test_pending_replace_is_the_final_fallible_publication_step(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("atomic"))
+    real_chmod = launcher.os.chmod
+
+    def reject_post_replace_chmod(path, mode):
+        if Path(path).name == "pending-push.json":
+            raise OSError("private-finalization-canary")
+        return real_chmod(path, mode)
+
+    monkeypatch.setattr(launcher.os, "chmod", reject_post_replace_chmod)
+    assert launcher.run_launcher(home) == 0
+    assert not (home / "scheduler" / "pending-push.json").exists()
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == _git(
+        profile, "rev-parse", "HEAD"
+    ).stdout.strip()
+
+
+def test_pending_retry_repairs_exact_eight_index_after_post_cas_crash(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    remote_before = _git(bare, "rev-parse", "refs/heads/main").stdout.strip()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("crash"))
+    cas_completed = False
+
+    def crash_before_index_sync(argv, **kwargs):
+        nonlocal cas_completed
+        if cas_completed and "reset" in argv:
+            raise SystemExit("simulated process death")
+        result = subprocess.run(argv, **kwargs)
+        if "update-ref" in argv and result.returncode == 0:
+            cas_completed = True
+        return result
+
+    with pytest.raises(SystemExit, match="simulated process death"):
+        launcher.run_launcher(home, runner=crash_before_index_sync)
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+    assert _git(profile, "diff", "--cached", "--name-only", "HEAD").stdout.splitlines() == [
+        f"dist/{name}" for name in sorted(launcher.PUBLIC_ASSET_NAMES)
+    ]
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == remote_before
+
+    assert launcher.run_launcher(home) == 0
+    assert _git(profile, "diff", "--cached", "--name-only", "HEAD").stdout == ""
+    assert not pending.exists()
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == _git(
+        profile, "rev-parse", "HEAD"
+    ).stdout.strip()
+
+
+def test_pending_retry_completes_forward_cas_after_pre_cas_crash(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    parent = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("pre-cas"))
+    crashed = False
+
+    def crash_before_forward_cas(argv, **kwargs):
+        nonlocal crashed
+        if "update-ref" in argv and not crashed:
+            crashed = True
+            raise SystemExit("simulated pre-CAS process death")
+        return subprocess.run(argv, **kwargs)
+
+    with pytest.raises(SystemExit, match="pre-CAS process death"):
+        launcher.run_launcher(home, runner=crash_before_forward_cas)
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == parent
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == parent
+
+    assert launcher.run_launcher(home) == 0
+    local = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert local != parent
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == local
+    assert _git(profile, "diff", "--cached", "--name-only", "HEAD").stdout == ""
+    assert not pending.exists()
+
+
+def test_pending_retry_refuses_push_when_index_repair_fails(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    remote_before = _git(bare, "rev-parse", "refs/heads/main").stdout.strip()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("crash"))
+    cas_completed = False
+
+    def crash_before_index_sync(argv, **kwargs):
+        nonlocal cas_completed
+        if cas_completed and "reset" in argv:
+            raise SystemExit("simulated process death")
+        result = subprocess.run(argv, **kwargs)
+        if "update-ref" in argv and result.returncode == 0:
+            cas_completed = True
+        return result
+
+    with pytest.raises(SystemExit):
+        launcher.run_launcher(home, runner=crash_before_index_sync)
+
+    def fail_repair(argv, **kwargs):
+        if "reset" in argv:
+            return subprocess.CompletedProcess(argv, 19, "", "private-path-canary")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=fail_repair) == 1
+    assert (home / "scheduler" / "pending-push.json").is_file()
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == remote_before
+    tail = (home / "scheduler" / "last-run.log").read_text(
+        encoding="utf-8"
+    ).splitlines()[-1]
+    assert "tool paths may remain staged" in tail
+    assert "push was refused" in tail
+    assert "private-path-canary" not in tail
+
+
+def test_pending_push_refuses_remote_divergence_without_refresh(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("retry"))
+
+    def fail_push(argv, **kwargs):
+        if "push" in argv:
+            return subprocess.CompletedProcess(argv, 17, "", "private-path-canary")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=fail_push) == 1
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+
+    other = tmp_path / "remote-writer"
+    _git(tmp_path, "clone", "-q", str(bare), str(other))
+    _git(other, "checkout", "-q", "-b", "main", "origin/main")
+    _git(other, "config", "user.name", "Fixture")
+    _git(other, "config", "user.email", "fixture@example.com")
+    (other / "README.md").write_text("remote divergence\n", encoding="utf-8")
+    _git(other, "add", "README.md")
+    _git(other, "commit", "-q", "-m", "remote divergence")
+    _git(other, "push", "-q", "origin", "main")
+    remote_advanced = _git(bare, "rev-parse", "refs/heads/main").stdout.strip()
+
+    def must_not_refresh(*_args, **_kwargs):
+        raise AssertionError("divergent pending state must fail before refresh")
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", must_not_refresh)
+    assert launcher.run_launcher(home) == 1
+    assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == remote_advanced
+    assert pending.is_file()
+    assert "pending publication state diverged" in (
+        home / "scheduler" / "last-run.log"
+    ).read_text(encoding="utf-8").splitlines()[-1]
+
+
+def test_invalid_pending_push_state_fails_before_refresh_without_leak(
+    tmp_path, monkeypatch
+):
+    home, _profile, _bare = _setup(tmp_path)
+    pending = home / "scheduler" / "pending-push.json"
+    pending.write_text('{"private-path-canary": true}\n', encoding="utf-8")
+
+    def must_not_refresh(*_args, **_kwargs):
+        raise AssertionError("invalid pending state must fail before refresh")
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", must_not_refresh)
+    assert launcher.run_launcher(home) == 1
+    line = (home / "scheduler" / "last-run.log").read_text(
+        encoding="utf-8"
+    ).splitlines()[-1]
+    assert "pending publication state is invalid" in line
+    assert "private-path-canary" not in line
+    assert pending.is_file()
+
+
+def test_two_homes_targeting_one_profile_are_serialized(tmp_path, monkeypatch):
+    home_a, profile, _bare = _setup(tmp_path)
+    home_b = tmp_path / "home-b"
+    service.write_scheduler_files(
+        home_b, profile, "07:30", True, branch="main", remote="origin"
+    )
+    nested_rc = None
+    home_b_refreshes = 0
+
+    def coordinated_refresh(call_home, out_dir):
+        nonlocal nested_rc, home_b_refreshes
+        if Path(call_home) == home_a:
+            nested_rc = launcher.run_launcher(home_b)
+            return _refresh_writer("home-a")(call_home, out_dir)
+        home_b_refreshes += 1
+        return _refresh_writer("home-b")(call_home, out_dir)
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", coordinated_refresh)
+    assert launcher.run_launcher(home_a) == 0
+    assert nested_rc == 0
+    assert home_b_refreshes == 0
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits only")
+def test_last_run_log_is_owner_only(tmp_path, monkeypatch):
+    home, _profile, _bare = _setup(tmp_path, push=False)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("log-mode"))
+    previous = os.umask(0o022)
+    try:
+        assert launcher.run_launcher(home) == 0
+    finally:
+        os.umask(previous)
+    assert stat.S_IMODE((home / "scheduler" / "last-run.log").stat().st_mode) == 0o600

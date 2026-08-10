@@ -151,6 +151,27 @@ def test_windows_status_reports_disabled_task_from_locale_independent_xml(tmp_pa
     ).active is False
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("UserId", "different-user"), ("RunLevel", "HighestAvailable")],
+)
+def test_windows_status_rejects_principal_security_drift(tmp_path, field, value):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    node = next(
+        item for item in root.iter() if item.tag.rsplit("}", 1)[-1] == field
+    )
+    node.text = value
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv, stdout=ET.tostring(root, encoding="unicode")
+            ),
+        )
+
+
 def test_windows_status_rejects_multiple_calendar_triggers(tmp_path):
     home = tmp_path / "home"
     root = _xml_payload(windows.plan(home, "07:30"))
@@ -170,6 +191,64 @@ def test_windows_status_rejects_multiple_calendar_triggers(tmp_path):
     )
     boundary.text = "2000-01-01T19:45:00"
     triggers.append(extra)
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv,
+                stdout=ET.tostring(root, encoding="unicode"),
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    "boundary",
+    [
+        "2000-01-01T07:30:00Z",
+        "2000-01-01T07:30:00+14:00",
+        "2099-12-31T07:30:59",
+        "2000-01-01T0\u0667:3\u0660:00",
+    ],
+)
+def test_windows_status_rejects_noncanonical_start_boundary(tmp_path, boundary):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    start = next(
+        node
+        for node in root.iter()
+        if node.tag.rsplit("}", 1)[-1] == "StartBoundary"
+    )
+    start.text = boundary
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv,
+                stdout=ET.tostring(root, encoding="unicode"),
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    "extra_name",
+    ["ExecutionTimeLimit", "RestartOnFailure"],
+)
+def test_windows_status_rejects_extra_execution_settings(tmp_path, extra_name):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    settings = next(
+        node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "Settings"
+    )
+    extra = ET.SubElement(settings, f"{{{windows._NS}}}{extra_name}")
+    if extra_name == "ExecutionTimeLimit":
+        extra.text = "PT1S"
+    else:
+        interval = ET.SubElement(extra, f"{{{windows._NS}}}Interval")
+        interval.text = "PT1M"
+        count = ET.SubElement(extra, f"{{{windows._NS}}}Count")
+        count.text = "999"
 
     with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
         windows.status(
@@ -301,6 +380,20 @@ def test_launchd_status_and_remove_idempotent(tmp_path, monkeypatch):
             argv, rc=1, stderr="Could not find specified service"
         ),
     )
+
+
+def test_launchd_status_rejects_additional_execution_keys(tmp_path, monkeypatch):
+    monkeypatch.setattr(launchd, "_user_home", lambda: tmp_path / "user")
+    monkeypatch.setattr(launchd, "_uid", lambda: 503)
+    home = tmp_path / "home"
+    planned = launchd.plan(home, "09:41").files[0]
+    payload = plistlib.loads(planned.content)
+    payload["KeepAlive"] = True
+    planned.path.parent.mkdir(parents=True)
+    planned.path.write_bytes(plistlib.dumps(payload))
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        launchd.status(home, runner=lambda argv, **_: _completed(argv))
 
 
 def test_systemd_plan_writes_unit_and_timer(tmp_path, monkeypatch):

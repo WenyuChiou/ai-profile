@@ -93,6 +93,19 @@ Merge only after all pull-request checks are green, including:
 - `Wheel onboarding (windows-latest / Python 3.12)`
 - `Wheel onboarding (macos-latest / Python 3.12)`
 
+For v0.7.0, merge the release PR with a merge commit; squash/rebase would make
+the copyable caller's immutable C1 pin depend on temporary PR-object retention.
+Before deleting the feature branch, require both:
+
+```bash
+git fetch origin main
+git merge-base --is-ancestor 9c4f276cb437f1866a2c1b407efe54d3790ce811 origin/main
+gh api --method GET repos/WenyuChiou/ai-profile/contents/.github/workflows/profile-refresh.yml \
+  -f ref=9c4f276cb437f1866a2c1b407efe54d3790ce811 > /dev/null
+```
+
+Either failure blocks tagging and branch deletion.
+
 From a clean, up-to-date `main`:
 
 ```bash
@@ -138,6 +151,12 @@ Wait for the publish workflow to finish successfully. Create an empty
 5. The PyPI project, GitHub Release, repository homepage, live dashboard,
    README assets, changelog, security policy, and issue links return HTTP
    200.
+6. Copy the public caller into a disposable public Profile repository and run
+   it twice: first with a controlled byte change, then unchanged. Verify the
+   first commit contains exactly eight generated paths, Pages serves the exact
+   `published-sha` with HTTP 200, and the second run creates no commit. This
+   post-PyPI hosted E2E is a promotion blocker; static workflow tests do not
+   replace it.
 
 If any check fails, do not delete or overwrite the release. Stop promotion,
 document the defect, and prepare a new patch version.
@@ -167,6 +186,11 @@ Only after the package gates pass:
    fixture was necessary in step 2, record that limitation and do not claim a
    maintainer-Profile scheduler E2E until a legitimate source change exercises
    it.
+
+Install from a Python environment that will persist at the same executable
+path. After moving, removing, or upgrading that interpreter or virtual
+environment, rerun `schedule install` and confirm `schedule status` before
+waiting for the next native run.
 
 The scheduler uses existing Git authentication and stores no token. Its
 mechanical `commit-tree` publication bypasses user commit hooks and signing;

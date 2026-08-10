@@ -200,6 +200,10 @@ aiprofile schedule remove
 SQLite 讀取已 commit 的 WAL content 時，也可能更新暫時性的 `-shm`
 coordination bytes；兩者都不是公開資料。
 
+若兩筆設定解析到相同路徑，卻使用不同的 `repository_uid`，refresh 會在
+scan 或讀取 cached aggregates 前拒絕整次執行。請保留 `scan` 建立的 UID；
+不要把 UID 複製到其他 entry，也不要自行建立替代值。
+
 同一時間只能有一個 refresh 使用某個 `AIPROFILE_HOME`。極少數 filesystem
 錯誤若造成輸出 rollback 不完整，CLI 會明確說明可能留下部分資產或 recovery
 backup；commit 前請先檢查輸出。
@@ -220,6 +224,17 @@ launchd 不會補跑電腦關機期間錯過的時間點。
 Detached branch、已改變的 branch state、protected branch 與被拒絕的 push
 都會 fail closed。Scheduler commit 是機械式 commit，
 刻意不執行使用者的 commit hooks 或 signing。
+
+可 push 的執行開始前，記錄的 remote branch 必須與本機 `HEAD` 完全一致；
+請先自行同步刻意建立的 local commits。Push 失敗後，會先安全復原中斷的
+branch update 與 exact-eight index；只有 branch、parent、tree 與 remote
+都未改變時，才會從同一個 private pending commit 重試。
+不同 homes 若指向同一個 Profile，會由該 Profile 的 Git metadata lock
+序列化；建立 commit 前也會核對產生檔案確實來自剛完成的 refresh。
+
+請從會持續保留的 Python environment 安裝 scheduler。若移動、移除或升級
+該 interpreter 或 virtual environment，請重新執行 `schedule install`，
+並以 `schedule status` 確認。
 
 ### Public repositories：GitHub Actions
 

@@ -10,13 +10,13 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
-from .. import gitio
 from ..config import load_config, load_config_read_only
 from ..errors import AiProfileError, ConfigError, path_free_diagnostics
 from ..lockfile import acquire_home_lock
@@ -27,12 +27,15 @@ SCHEDULER_DIRNAME = "scheduler"
 CONFIG_NAME = "config.json"
 LAUNCHER_NAME = "launcher.py"
 SCHEDULER_LOCK_NAME = ".schedule.lock"
+PENDING_PUSH_NAME = "pending-push.json"
+LAST_RUN_NAME = "last-run.log"
 _CONFIG_KEYS = frozenset(
     {"profile_repo", "time", "push", "branch", "remote", "installed_version"}
 )
 _LAST_RUN_LINE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00 "
     r"(?:scheduled refresh skipped; another run is active|"
+    r"scheduled refresh skipped; another publication is active|"
     r"recorded branch is no longer checked out; run refused|"
     r"refresh failed for configured repositories; no outputs published|"
     r"git status failed \(exit \d+\); no commit was made|"
@@ -45,6 +48,7 @@ _LAST_RUN_LINE = re.compile(
     r"git commit creation failed \(exit \d+\)|"
     r"refresh committed locally; push disabled|"
     r"push failed \(exit \d+\); local commit retained|"
+    r"push failed \(exit \d+\); pending commit retained|"
     r"refresh committed and pushed|"
     r"repository state changed during scheduled refresh; publication refused|"
     r"repository state changed after staging; publication refused|"
@@ -52,15 +56,38 @@ _LAST_RUN_LINE = re.compile(
     r"repository state changed before branch update; publication refused|"
     r"repository state changed after branch update; publication rolled back|"
     r"repository state changed after branch update; local scheduler commit or "
-    r"ref may remain and push was refused|"
+    r"ref may remain(?: and pending retry state remains)?; push was refused|"
     r"repository state changed after index synchronization; publication rolled "
     r"back but tool paths may remain staged and push was refused|"
     r"repository state changed after index synchronization; tool paths may remain "
-    r"staged and local scheduler commit or ref may remain; push was refused|"
+    r"staged and local scheduler commit or ref may remain(?: and pending retry "
+    r"state remains)?; push was refused|"
     r"repository state changed after commit; local commit retained and push refused|"
     r"local commit retained; tool paths may remain staged and push was refused|"
     r"temporary publication state could not be prepared safely|"
     r"temporary publication state may remain; no branch update or push was attempted|"
+    r"rendered generation manifest is unavailable; publication refused|"
+    r"generated asset verification failed; publication refused|"
+    r"generated asset bytes changed after refresh; publication refused|"
+    r"profile repository locking is unavailable; publication refused|"
+    r"remote branch does not match local HEAD; synchronize manually|"
+    r"pending publication state is invalid; synchronize manually|"
+    r"pending publication state diverged; synchronize manually|"
+    r"pending publication state diverged during index repair; tool paths were "
+    r"restored and push was refused|"
+    r"pending publication state diverged during index repair; tool paths may "
+    r"remain staged and push was refused|"
+    r"pending publication index could not be synchronized; tool paths may remain "
+    r"staged and push was refused|"
+    r"pending publication branch could not be advanced; pending retry state "
+    r"remains and push was refused|"
+    r"publication reached remote but pending retry state remains|"
+    r"pending publication state unavailable; no branch update or push was attempted|"
+    r"pending publication state remains; no branch update or push was attempted|"
+    r"publication rolled back but pending retry state remains|"
+    r"publication rolled back but tool paths may remain staged and pending retry state remains|"
+    r"local commit and pending retry state retained; "
+    r"tool paths may remain staged and push was refused|"
     r"refresh failed safely; no publication attempted|"
     r"scheduled refresh failed safely|"
     r"scheduled refresh failed because locking is unavailable)"
@@ -119,6 +146,35 @@ def scheduler_dir(home: Path) -> Path:
     return Path(home) / SCHEDULER_DIRNAME
 
 
+_GIT_CREDENTIAL_ENV = frozenset(
+    {
+        "GIT_ASKPASS",
+        "GIT_HTTP_USER_AGENT",
+        "GIT_SSH",
+        "GIT_SSH_COMMAND",
+        "GIT_TERMINAL_PROMPT",
+    }
+)
+
+
+def sanitized_git_env(extra: dict[str, str] | None = None) -> dict[str, str]:
+    """Copy the process environment without Git repository-selection state.
+
+    Authentication transports remain available, but repository, object,
+    namespace, replacement-ref, index, tracing, and injected-config variables
+    never cross the scheduler's Git boundary.
+    """
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.upper().startswith("GIT_")
+        or key.upper() in _GIT_CREDENTIAL_ENV
+    }
+    if extra:
+        env.update(extra)
+    return env
+
+
 def is_safe_last_run_message(message: str) -> bool:
     """Whether ``message`` belongs to the closed path-free log vocabulary."""
     return bool(
@@ -173,19 +229,69 @@ def _ensure_lock_parent(home: Path) -> None:
         raise ConfigError("scheduler storage is unavailable") from exc
 
 
+def _is_link_or_reparse(info: os.stat_result) -> bool:
+    """Recognize POSIX links and Windows reparse-backed links/junctions."""
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    attributes = getattr(info, "st_file_attributes", 0)
+    return stat.S_ISLNK(info.st_mode) or bool(reparse_flag and attributes & reparse_flag)
+
+
+def _validated_scheduler_state(home: Path) -> tuple[Path, bool]:
+    """Validate local scheduler nodes without following or mutating links."""
+    directory = scheduler_dir(home)
+    try:
+        directory_info = directory.lstat()
+    except FileNotFoundError:
+        return directory, False
+    except OSError as exc:
+        raise ConfigError("scheduler configuration is unavailable or invalid") from exc
+    if not stat.S_ISDIR(directory_info.st_mode) or _is_link_or_reparse(
+        directory_info
+    ):
+        raise ConfigError("scheduler configuration is unavailable or invalid")
+    try:
+        for path in directory.iterdir():
+            info = path.lstat()
+            if _is_link_or_reparse(info):
+                raise ConfigError("scheduler configuration is unavailable or invalid")
+            if stat.S_ISDIR(info.st_mode) and path.name.startswith(
+                ".publication-index-"
+            ):
+                # A hard process termination can strand the already-private
+                # 0700 temporary directory.  It is never traversed here.
+                continue
+            if not stat.S_ISREG(info.st_mode):
+                raise ConfigError("scheduler configuration is unavailable or invalid")
+    except ConfigError:
+        raise
+    except OSError as exc:
+        raise ConfigError("scheduler configuration is unavailable or invalid") from exc
+    return directory, True
+
+
 def _secure_scheduler_state(home: Path, *, create: bool) -> Path:
     _prepare_home(home)
-    directory = scheduler_dir(home)
+    directory, exists = _validated_scheduler_state(home)
     if create:
-        try:
-            directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        except OSError as exc:
-            raise ConfigError("scheduler storage is unavailable") from exc
-    if directory.exists():
+        if not exists:
+            try:
+                directory.mkdir(parents=True, exist_ok=False, mode=0o700)
+            except OSError as exc:
+                raise ConfigError("scheduler storage is unavailable") from exc
+            directory, exists = _validated_scheduler_state(home)
+    if exists:
         _restrict_to_owner(directory, 0o700)
-        for name in (LAUNCHER_NAME, CONFIG_NAME):
+        for name in (LAUNCHER_NAME, CONFIG_NAME, PENDING_PUSH_NAME, LAST_RUN_NAME):
             path = directory / name
-            if path.exists():
+            try:
+                path.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise ConfigError(
+                    "scheduler configuration is unavailable or invalid"
+                ) from exc
+            else:
                 _restrict_to_owner(path, 0o600)
     return directory
 
@@ -233,8 +339,9 @@ def write_scheduler_files(
 
 
 def read_scheduler_config(home: Path, *, read_only: bool = False) -> SchedulerConfig:
+    _directory, directory_exists = _validated_scheduler_state(Path(home))
     path = scheduler_dir(home) / CONFIG_NAME
-    if not path.exists():
+    if not directory_exists:
         raise ConfigError("scheduler configuration is unavailable or invalid")
     if not read_only:
         _secure_scheduler_state(Path(home), create=False)
@@ -311,6 +418,7 @@ def _run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
             encoding="utf-8",
             errors="replace",
             timeout=60,
+            env=sanitized_git_env(),
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise ConfigError("profile repository git metadata is unavailable") from exc
@@ -319,10 +427,12 @@ def _run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
 def _validate_repository(profile_repo: Path, push: bool) -> tuple[Path, str, str]:
     repo = Path(profile_repo)
     try:
-        gitio.assert_repository(repo)
-    except (AiProfileError, OSError) as exc:
+        repo = repo.resolve(strict=True)
+    except OSError as exc:
         raise ConfigError("profile repository is unavailable or invalid") from exc
-    repo = repo.resolve()
+    inside = _run_git(repo, ["rev-parse", "--is-inside-work-tree"])
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        raise ConfigError("profile repository is unavailable or invalid")
     branch_result = _run_git(
         repo, ["symbolic-ref", "--quiet", "--short", "HEAD"]
     )
@@ -569,9 +679,15 @@ def install(
 
 def status(home: Path, *, dry_run: bool = False) -> StatusResult:
     adapter = _adapter_for()
-    directory = scheduler_dir(home)
+    directory, directory_exists = _validated_scheduler_state(Path(home))
     config_path = directory / CONFIG_NAME
-    if not config_path.exists():
+    try:
+        config_info = config_path.lstat() if directory_exists else None
+    except FileNotFoundError:
+        config_info = None
+    except OSError as exc:
+        raise ConfigError("scheduler configuration is unavailable or invalid") from exc
+    if config_info is None or not stat.S_ISREG(config_info.st_mode):
         return StatusResult(installed=False, dry_run=dry_run)
     cfg = read_scheduler_config(home, read_only=dry_run)
     if dry_run:
@@ -611,12 +727,13 @@ def remove(home: Path, *, dry_run: bool = False) -> RemoveResult:
     adapter = _adapter_for()
     directory = scheduler_dir(home)
     if dry_run:
-        return RemoveResult(removed=directory.exists(), dry_run=True)
+        _directory, exists = _validated_scheduler_state(Path(home))
+        return RemoveResult(removed=exists, dry_run=True)
     home = Path(home)
     _ensure_lock_parent(home)
     with acquire_home_lock(home, SCHEDULER_LOCK_NAME):
         _prepare_home(home)
-        exists = directory.exists()
+        _directory, exists = _validated_scheduler_state(home)
         try:
             adapter.remove(home)
         except (OSError, ConfigError, subprocess.SubprocessError) as exc:

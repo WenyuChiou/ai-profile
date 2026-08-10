@@ -32,7 +32,7 @@ which is authoritative).
   `SOURCE_DATE_EPOCH=1786233600`: two isolated Ubuntu builds from the same
   Git-mode source archive produced byte-identical wheel and sdist artifacts.
   The wheel is
-  `e8b568e011055c6cb8b3baaadb647cbd338bbcb82a37465c5ae46f6f41757740`
+  `a9b5ceca305b4ec363ba8a1a11d0870f2f5ebf9aa3afac6d5a4d13632b468690`
   and the synthetic dashboard remains
   `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
   Twine, artifact/checksum validation, clean-wheel refresh smoke, current and
@@ -59,6 +59,36 @@ which is authoritative).
   post-release maintainer dogfood. The maintainer Profile will use the local
   scheduler because its configured set includes an `aggregate_only` source;
   it will not be migrated to the public-only Action.
+- PR CI run `31358621302` passed all eight jobs, including Python 3.11–3.14
+  and Ubuntu/Windows/macOS onboarding of the same candidate wheel. The first
+  E3 independent committed-range review nevertheless returned **NOT READY**:
+  six High findings reproduced hostile ambient Git targeting, unpushed
+  ancestor publication, post-refresh byte substitution/cross-home collision,
+  lost push retry, same-path/different-UID stale-cache publication, and native
+  scheduler semantic drift. All six are accepted for red-first remediation;
+  the candidate remains unreleasable until the changed range passes a new
+  independent review and regenerated artifact/CI gates.
+- E3 remediation does not change ACE `0.3.0`, aggregation, `VizStats`,
+  renderers, or the eight filenames. It adds a sanitized scheduler Git
+  boundary, remote-tip equality, exact rendered-byte verification, a target
+  repository lock, immutable private pending-push retry, pre-mutation
+  ambiguous-UID rejection, exact Windows/launchd ownership validation, and
+  POSIX `0600` pending/log state. The disposable public caller/Pages E2E stays
+  a post-PyPI promotion gate; merge-commit ancestry and Contents-API resolution
+  of the immutable C1 pin stay pre-tag/branch-deletion gates.
+- Local E3 remediation evidence: current and Python 3.11 focused
+  refresh/scheduler suites each passed **161 with 13 skipped**; the exact E1
+  matrix passed **197 with 25 skipped** on each interpreter; WSL exercised all
+  **137** launcher/adapter tests; the full current suite passed **876 with 29
+  skipped**. Renderer/dashboard clarity and determinism coverage passed
+  **104**; Ruff, README parity, and sanctioned snapshot/sample drift checks
+  are green. Canonical Ubuntu double builds produced the byte-identical
+  code/README candidate wheel
+  `a9b5ceca305b4ec363ba8a1a11d0870f2f5ebf9aa3afac6d5a4d13632b468690`
+  at `SOURCE_DATE_EPOCH=1786233600`. Twine,
+  artifact/notices/checksum validation, and clean-wheel refresh smoke
+  passed. These remain local candidate bytes: independent remediation review
+  and a fresh cross-platform PR CI run are still release blockers.
 
 ## Current v0.6.1 Public Beta (2026-08-05)
 

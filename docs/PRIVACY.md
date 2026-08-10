@@ -65,17 +65,34 @@ GitHub, and "aggregate-only" is not a claim that it is private.
   no-op) and a stderr warning at `init` time when `AIPROFILE_HOME` sits
   inside a git worktree. Still planned (ROADMAP): symlink refusal.
 - **Local scheduler state** — its launcher, configuration, temporary Git
-  index, and last-run log live under `AIPROFILE_HOME`, never inside the public
+  index, pending-push record, and last-run log live under `AIPROFILE_HOME`,
+  never inside the public
   Profile repository. On POSIX, each temporary Git index is confined inside a
   tool-owned `0700` directory, reset to `0600` after every Git operation, and
   removed immediately; Git may briefly rewrite the index with the repository's
   configured shared-file mode while the `0700` directory remains the
   confidentiality boundary. Windows relies on the user's inherited home ACL.
   Native task identity is an opaque per-home digest.
-  The launcher uses argument lists, never shell evaluation, stores no token,
-  and stages only the eight generated paths. `--no-push` still creates and
+  Pending-push state and the log are `0600` on POSIX; Windows relies on the
+  inherited user-home ACL. The launcher uses argument lists, never shell
+  evaluation, stores no token, removes ambient Git repository/object/config
+  injection state, and stages only the eight generated paths. Generated blobs
+  must match the completed refresh's private exact-eight byte commitment.
+  Push-capable runs require the remote branch to equal local `HEAD`; a failed
+  push may first complete an interrupted branch CAS only when local and remote
+  still equal its recorded parent, then repairs the exact-eight index and
+  retries only its immutable pending commit. Divergence or repair failure
+  retains the pending record and
+  stops before refresh or push. Linked or non-regular scheduler state is
+  rejected before reading it or changing its mode, so mode hardening cannot
+  escape `AIPROFILE_HOME`. A target-repository lock serializes different homes.
+  `--no-push` still creates and
   advances the local exact-eight commit but skips the remote push; default mode
   uses the user's existing Git authentication to push.
+- **Ambiguous local repository identity** — if one resolved path appears with
+  different repository UIDs, real and dry refresh reject before scan/cache
+  mutation or aggregation. This prevents stale UID rows from being published
+  under a different path policy.
 - **Hosted automation boundary** — the reusable Action rejects non-public
   repositories before scanning and never falls back to a PAT or broader
   authentication. It scans listed repositories as `full` in an ephemeral

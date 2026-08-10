@@ -16,6 +16,8 @@ printing summaries must use ordinals and counts.
 
 from __future__ import annotations
 
+import hashlib
+import os
 import shutil
 import sqlite3
 import tempfile
@@ -32,6 +34,7 @@ from .aggregate import (
 from .config import Config, config_path, db_path, load_config, resolve_publication_levels
 from .errors import (
     AiProfileError,
+    ConfigError,
     IncompleteRollbackError,
     LockError,
     RefreshError,
@@ -85,19 +88,33 @@ def plan_refresh(cfg: Config) -> RefreshPlan:
     an already-planned uid would atomically replace the first's rows -
     pointless churn - so the first config entry always wins.
     """
+    resolved_entries: list[Path] = []
+    path_uids: dict[str, str] = {}
+    for entry in cfg.repositories:
+        resolved = Path(entry.path).resolve()
+        key = os.path.normcase(str(resolved))
+        previous_uid = path_uids.get(key)
+        if previous_uid is not None and previous_uid != entry.repository_uid:
+            raise ConfigError(
+                "repository configuration maps one path to multiple identities"
+            )
+        path_uids[key] = entry.repository_uid
+        resolved_entries.append(resolved)
+
     levels = resolve_publication_levels(cfg)
     items: list[RefreshItem] = []
     skipped_excluded: list[int] = []
     skipped_duplicates: list[int] = []
     seen_paths: set[str] = set()
     seen_uids: set[str] = set()
-    for ordinal, entry in enumerate(cfg.repositories, start=1):
+    for ordinal, (entry, resolved) in enumerate(
+        zip(cfg.repositories, resolved_entries, strict=True), start=1
+    ):
         level = levels.get(entry.repository_uid, PublicationLevel.EXCLUDED)
         if level is PublicationLevel.EXCLUDED:
             skipped_excluded.append(ordinal)
             continue
-        resolved = Path(entry.path).resolve()
-        key = str(resolved)
+        key = os.path.normcase(str(resolved))
         if key in seen_paths or entry.repository_uid in seen_uids:
             skipped_duplicates.append(ordinal)
             continue
@@ -129,6 +146,14 @@ class RefreshFailure:
 
 
 @dataclass(frozen=True)
+class AssetDigest:
+    """One immutable rendered generation member (name + published bytes)."""
+
+    name: str
+    sha256: str
+
+
+@dataclass(frozen=True)
 class RefreshResult:
     """Outcome of one refresh run. ``summaries`` pairs each scanned
     repository's config ordinal with its ScanSummary (whose count fields
@@ -141,6 +166,8 @@ class RefreshResult:
     dry_run: bool = False
     #: dry-run only: allowlisted output names whose bytes would change.
     changed: tuple[str, ...] = field(default=())
+    #: successful real/dry generations only: exact rendered-byte commitment.
+    asset_manifest: tuple[AssetDigest, ...] = field(default=())
 
     @property
     def ok(self) -> bool:
@@ -167,6 +194,15 @@ def build_assets(stats: VizStats) -> dict[str, str]:
         "badge-dark.svg": render_badge(stats, dark),
         "dashboard.html": render_dashboard(stats),
     }
+
+
+def asset_manifest(stats: VizStats, assets: dict[str, str]) -> tuple[AssetDigest, ...]:
+    payloads = {name: value.encode("utf-8") for name, value in assets.items()}
+    payloads["profile.json"] = dumps_stats(stats).encode("utf-8")
+    return tuple(
+        AssetDigest(name=name, sha256=hashlib.sha256(payloads[name]).hexdigest())
+        for name in sorted(payloads)
+    )
 
 
 def run_refresh(
@@ -288,12 +324,15 @@ def _run_real(
         daily_rows=daily_rows,
         totals_rows=totals_rows,
     )
-    written = write_outputs(stats, build_assets(stats), out_dir)
+    assets = build_assets(stats)
+    manifest = asset_manifest(stats, assets)
+    written = write_outputs(stats, assets, out_dir)
     return RefreshResult(
         plan=plan,
         summaries=tuple(summaries),
         failures=(),
         written=tuple(written),
+        asset_manifest=manifest,
     )
 
 
@@ -332,11 +371,11 @@ def _run_dry(home: Path, out_dir: Path, generated: str, recorded: str) -> Refres
         shadow = Path(tmp) / "home"
         shadow.mkdir()
         shutil.copyfile(config_path(home), config_path(shadow))
+        cfg = load_config(shadow)
+        plan = plan_refresh(cfg)
         real_db = db_path(home)
         if real_db.exists():
             _snapshot_database(real_db, db_path(shadow))
-        cfg = load_config(shadow)
-        plan = plan_refresh(cfg)
         conn = connect(db_path(shadow))
         try:
             migrate(conn)
@@ -368,6 +407,7 @@ def _run_dry(home: Path, out_dir: Path, generated: str, recorded: str) -> Refres
         # published bytes). Missing file = changed. The report draws from
         # the closed eight-name set only.
         targets = build_assets(stats)
+        manifest = asset_manifest(stats, targets)
         targets["profile.json"] = dumps_stats(stats)
         changed = []
         for name in sorted(targets):
@@ -381,4 +421,5 @@ def _run_dry(home: Path, out_dir: Path, generated: str, recorded: str) -> Refres
             written=(),
             dry_run=True,
             changed=tuple(changed),
+            asset_manifest=manifest,
         )

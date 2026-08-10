@@ -15,6 +15,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_release_runbook_uses_get_for_immutable_workflow_probe():
+    text = (ROOT / "docs" / "RELEASING.md").read_text(encoding="utf-8")
+    assert "gh api --method GET repos/WenyuChiou/ai-profile/contents/" in text
+    assert "-f ref=9c4f276cb437f1866a2c1b407efe54d3790ce811" in text
+
+
 def _publish_workflow_sections() -> tuple[str, str, str, str, str]:
     workflow = (ROOT / ".github" / "workflows" / "publish.yml").read_text(
         encoding="utf-8"
