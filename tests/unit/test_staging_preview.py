@@ -1,6 +1,6 @@
 """Staging preview helper + manual-only Pages workflow guardrails.
 
-Pins the v0.6.1 candidate contract, inheriting the prior Gate S from
+Pins the v0.7.0 candidate contract, inheriting the prior Gate S from
 docs/reviews/promotion-eval-spec-v048.md: the helper is a
 deterministic pure function of the wheel bytes and the installed renderer,
 writes exactly two files with computed digests, and the staging workflow
@@ -29,8 +29,8 @@ assert SPEC is not None and SPEC.loader is not None
 staging = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(staging)
 
-#: The frozen v0.6.1 candidate digest (docs/reviews/promotion-candidate.json).
-PINNED_WHEEL_SHA256 = "6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f"
+#: The frozen v0.7.0 candidate digest (docs/reviews/promotion-candidate.json).
+PINNED_WHEEL_SHA256 = "9d8b39a5d25f9100c671fda8a7945c6403ac67ead161b16bbe17e26d4bac3523"
 PINNED_DASHBOARD_SHA256 = "8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1"
 
 _FAKE_WHEEL_BYTES = b"deterministic fake wheel bytes for staging preview tests\n"
@@ -197,6 +197,18 @@ def test_workflow_is_manual_only():
     assert "if: github.repository == 'WenyuChiou/ai-profile'" in text
 
 
+def test_workflow_build_and_deploy_are_main_only():
+    text = _workflow_text()
+    expected = (
+        "if: github.repository == 'WenyuChiou/ai-profile' && "
+        "github.ref == 'refs/heads/main'"
+    )
+
+    assert _job_block(text, "build").count(expected) == 1
+    assert _job_block(text, "deploy").count(expected) == 1
+    assert text.count(expected) == 2
+
+
 def test_workflow_uses_only_the_pinned_action_shas():
     uses = re.findall(r"uses: (\S+)", _workflow_text())
 
@@ -250,10 +262,10 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
     # The workflow's hardcoded expectations must be the frozen candidate.
     assert manifest["wheel_sha256"] == PINNED_WHEEL_SHA256
     assert manifest["dashboard_sha256"] == PINNED_DASHBOARD_SHA256
-    assert manifest["version"] == "0.6.1"
+    assert manifest["version"] == "0.7.0"
     assert text.count(PINNED_WHEEL_SHA256) == 3  # artifact check + both job boundaries
-    assert "--expected-version 0.6.1" in text
-    assert 'manifest["package_version"] == "0.6.1"' in text
+    assert "--expected-version 0.7.0" in text
+    assert 'manifest["package_version"] == "0.7.0"' in text
 
     # Both digest verifications happen before anything is uploaded to Pages.
     upload_at = text.index("actions/upload-pages-artifact")
@@ -270,12 +282,12 @@ def test_workflow_renders_in_and_uploads_only_a_fresh_verified_staging_root():
     assert 'pip install "$WHEEL"' in text
     assert "pip install -e" not in text
     assert 'scripts/render_staging_dashboard.py' in text
-    assert '--out "$STAGING_ROOT/v0.6.1"' in text
+    assert '--out "$STAGING_ROOT/v0.7.0"' in text
     assert "path: ${{ runner.temp }}/aiprofile-staging\n" in text
     assert text.count("assert root.is_dir() and not root.is_symlink()") == 2
-    assert text.count('("v0.6.1", "dir")') == 2
-    assert text.count('("v0.6.1/dashboard.html", "file")') == 2
-    assert text.count('("v0.6.1/staging-manifest.json", "file")') == 2
+    assert text.count('("v0.7.0", "dir")') == 2
+    assert text.count('("v0.7.0/dashboard.html", "file")') == 2
+    assert text.count('("v0.7.0/staging-manifest.json", "file")') == 2
     assert "assert not any(path.is_symlink()" in text
     assert text.count("json.dumps(manifest, indent=2, sort_keys=True)") == 2
     assert staging.FIXTURE_ID == "synthetic-two-provider-fixture-v3-provider-ledger"

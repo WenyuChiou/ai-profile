@@ -24,8 +24,23 @@ which is authoritative).
   workflow probes. Both independent security/code reviewers approved the
   frozen bytes. This is candidate evidence, not evidence of a live scheduled
   run, released wheel, tag, PyPI artifact, or Pages deployment.
-- Release remains blocked on Phase D documentation parity, Phase E artifact
-  and cross-platform gates, the v0.7.0 tag/Public Beta publication, and
+- Phase D synchronized the English/Traditional Chinese consumer guidance,
+  ADR-030, architecture, privacy, release, roadmap, and contributor contracts.
+  The multi-locale gate passed; the full suite passed **845 tests with 21
+  skipped**, with Ruff, README parity, and sanctioned snapshot drift checks
+  green. Phase E froze the local 0.7.0 candidate at
+  `SOURCE_DATE_EPOCH=1786233600`: two isolated Ubuntu builds from the same
+  Git-mode source archive produced byte-identical wheel and sdist artifacts.
+  The wheel is
+  `9d8b39a5d25f9100c671fda8a7945c6403ac67ead161b16bbe17e26d4bac3523`
+  and the synthetic dashboard remains
+  `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
+  Twine, artifact/checksum validation, clean-wheel refresh smoke, current and
+  Python 3.11 release-contract tests, the full **847 passed / 21 skipped**
+  suite, Ruff, README parity, and snapshot zero-drift all passed. This is
+  local candidate evidence only, not published or cross-platform CI evidence.
+- Release remains blocked on Phase E cross-platform PR gates, the committed-
+  range independent review, the v0.7.0 tag/Public Beta publication, and
   post-release maintainer dogfood. The maintainer Profile will use the local
   scheduler because its configured set includes an `aggregate_only` source;
   it will not be migrated to the public-only Action.
@@ -44,8 +59,9 @@ which is authoritative).
   and fixture `synthetic-two-provider-fixture-v3-provider-ledger`.
 - Release evidence: tag `v0.6.1` at main merge `1be0c68`; CI run
   `30984105485`, publish run `30984290387`, and staging run `30985228475` all
-  passed. The frozen promotion-candidate manifest remains the byte-level
-  artifact record.
+  passed. The hashes and run identifiers above preserve its byte-level
+  artifact evidence; the single promotion-candidate manifest now authorizes
+  the v0.7.0 candidate.
 
 ## Historical v0.6.0 Public Beta (2026-08-04)
 

@@ -25,6 +25,8 @@ below.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-10 (Public Beta)
+
 ### Added
 
 - Add `aiprofile refresh --out DIR [--dry-run]` to rescan configured,

@@ -1,4 +1,4 @@
-# Manual-only GitHub Pages staging preview for the pinned v0.6.1 candidate.
+# Manual-only GitHub Pages staging preview for the pinned v0.7.0 candidate.
 # It reuses the unchanged Gate S contract from
 # docs/reviews/promotion-eval-spec-v048.md. An unprivileged
 # build job rebuilds the candidate wheel with the
@@ -7,7 +7,7 @@
 # transfers only the recursively verified two-file staging root. A separate
 # least-privilege job deploys those already-verified bytes without checking
 # out or executing project code. The browser matrix runs at
-# https://wenyuchiou.github.io/ai-profile/v0.6.1/dashboard.html
+# https://wenyuchiou.github.io/ai-profile/v0.7.0/dashboard.html
 # Guardrails are pinned by tests/unit/test_staging_preview.py: never
 # triggered by push/pull_request/schedule, never from a fork, and no package
 # installation shares a job with Pages/OIDC authority.
@@ -24,10 +24,10 @@ concurrency:
 
 jobs:
   build:
-    name: Build and verify the v0.6.1 staging preview
+    name: Build and verify the v0.7.0 staging preview
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.repository == 'WenyuChiou/ai-profile'
+    if: github.repository == 'WenyuChiou/ai-profile' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
     steps:
@@ -46,8 +46,8 @@ jobs:
           python -m twine check dist/*
           python scripts/check_release_artifacts.py \
             --dist-dir dist \
-            --expected-version 0.6.1 \
-            --expected-wheel-sha256 6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f
+            --expected-version 0.7.0 \
+            --expected-wheel-sha256 9d8b39a5d25f9100c671fda8a7945c6403ac67ead161b16bbe17e26d4bac3523
       - name: Render the staging dashboard from the installed candidate wheel
         run: |
           STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
@@ -56,7 +56,7 @@ jobs:
           "$RUNNER_TEMP/staging-venv/bin/python" -m pip install "$WHEEL"
           "$RUNNER_TEMP/staging-venv/bin/python" scripts/render_staging_dashboard.py \
             --wheel "$WHEEL" \
-            --out "$STAGING_ROOT/v0.6.1"
+            --out "$STAGING_ROOT/v0.7.0"
       - name: Verify the exact staging tree and pinned output digests
         run: |
           STAGING_ROOT="$RUNNER_TEMP/aiprofile-staging"
@@ -77,12 +77,12 @@ jobs:
               for path in root.rglob("*")
           )
           assert entries == [
-              ("v0.6.1", "dir"),
-              ("v0.6.1/dashboard.html", "file"),
-              ("v0.6.1/staging-manifest.json", "file"),
+              ("v0.7.0", "dir"),
+              ("v0.7.0/dashboard.html", "file"),
+              ("v0.7.0/staging-manifest.json", "file"),
           ], entries
           assert not any(path.is_symlink() for path in root.rglob("*"))
-          staging = root / "v0.6.1"
+          staging = root / "v0.7.0"
           manifest = json.loads(
               (staging / "staging-manifest.json").read_text(encoding="utf-8")
           )
@@ -95,9 +95,9 @@ jobs:
           }, manifest
           assert manifest["format_version"] == "aiprofile-staging-manifest/1", manifest
           assert manifest["fixture_id"] == "synthetic-two-provider-fixture-v3-provider-ledger", manifest
-          assert manifest["package_version"] == "0.6.1", manifest
+          assert manifest["package_version"] == "0.7.0", manifest
           assert manifest["wheel_sha256"] == (
-              "6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f"
+              "9d8b39a5d25f9100c671fda8a7945c6403ac67ead161b16bbe17e26d4bac3523"
           ), manifest
           digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
           assert manifest["dashboard_sha256"] == digest, (manifest, digest)
@@ -119,11 +119,11 @@ jobs:
           retention-days: 1
 
   deploy:
-    name: Deploy the verified v0.6.1 staging preview
+    name: Deploy the verified v0.7.0 staging preview
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.repository == 'WenyuChiou/ai-profile'
+    if: github.repository == 'WenyuChiou/ai-profile' && github.ref == 'refs/heads/main'
     permissions:
       pages: write
       id-token: write
@@ -156,12 +156,12 @@ jobs:
               for path in root.rglob("*")
           )
           assert entries == [
-              ("v0.6.1", "dir"),
-              ("v0.6.1/dashboard.html", "file"),
-              ("v0.6.1/staging-manifest.json", "file"),
+              ("v0.7.0", "dir"),
+              ("v0.7.0/dashboard.html", "file"),
+              ("v0.7.0/staging-manifest.json", "file"),
           ], entries
           assert not any(path.is_symlink() for path in root.rglob("*"))
-          staging = root / "v0.6.1"
+          staging = root / "v0.7.0"
           manifest = json.loads(
               (staging / "staging-manifest.json").read_text(encoding="utf-8")
           )
@@ -174,9 +174,9 @@ jobs:
           }, manifest
           assert manifest["format_version"] == "aiprofile-staging-manifest/1", manifest
           assert manifest["fixture_id"] == "synthetic-two-provider-fixture-v3-provider-ledger", manifest
-          assert manifest["package_version"] == "0.6.1", manifest
+          assert manifest["package_version"] == "0.7.0", manifest
           assert manifest["wheel_sha256"] == (
-              "6ca24828fbba02024904028fa8fa5f96e97a8393d3f5e16bb6ff316cff477b9f"
+              "9d8b39a5d25f9100c671fda8a7945c6403ac67ead161b16bbe17e26d4bac3523"
           ), manifest
           digest = hashlib.sha256((staging / "dashboard.html").read_bytes()).hexdigest()
           assert manifest["dashboard_sha256"] == digest, (manifest, digest)

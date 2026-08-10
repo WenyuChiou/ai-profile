@@ -43,7 +43,19 @@ def test_candidate_manifest_matches_project_version_and_is_a_sha256():
     assert manifest["version"] == version.group(1)
     assert manifest["wheel"] == f"ai_profile_cli-{version.group(1)}-py3-none-any.whl"
     assert re.fullmatch(r"[0-9a-f]{64}", manifest["wheel_sha256"])
-    assert manifest["source_date_epoch"] == 1785888000
+    assert manifest["source_date_epoch"] == 1786233600
+
+
+def test_v0_7_release_notes_are_finalized_before_tagging():
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    unreleased, released = changelog.split(
+        "## [0.7.0] - 2026-08-10 (Public Beta)", 1
+    )
+
+    assert unreleased.rstrip().endswith("## [Unreleased]")
+    assert "aiprofile refresh --out DIR" in released
+    assert "aiprofile schedule install|status|remove" in released
+    assert "public-repository-only reusable GitHub Actions workflow" in released
 
 
 def test_publish_workflow_builds_once_fans_out_and_splits_authority():
