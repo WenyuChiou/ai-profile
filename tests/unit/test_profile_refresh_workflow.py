@@ -15,6 +15,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "profile-refresh.yml"
+CALLER = ROOT / "docs" / "templates" / "profile-refresh-caller.yml"
+COMMIT_A = "9c4f276cb437f1866a2c1b407efe54d3790ce811"
 
 ASSET_NAMES = (
     "badge-dark.svg",
@@ -37,6 +39,15 @@ UPLOAD_ARTIFACT_PIN = (
 )
 DOWNLOAD_ARTIFACT_PIN = (
     "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"
+)
+CONFIGURE_PAGES_PIN = (
+    "actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d"
+)
+UPLOAD_PAGES_PIN = (
+    "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9"
+)
+DEPLOY_PAGES_PIN = (
+    "actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128"
 )
 
 
@@ -683,3 +694,246 @@ def test_publication_command_failures_hide_git_canaries(
         "/private/runner/path",
     ):
         assert canary not in combined
+
+
+def test_caller_template_schedule_is_not_top_of_hour_and_has_dispatch():
+    text = _text(CALLER)
+
+    assert "workflow_dispatch:" in text
+    match = re.search(r"cron: ['\"](\d+) (\d+) \* \* \*['\"]", text)
+    assert match is not None
+    assert match.group(1) not in {"0", "*"}
+    assert match.group(0) == "cron: '37 5 * * *'"
+    assert "top-of-hour" in text
+
+
+def test_caller_template_passes_only_repositories_and_secret_identities():
+    text = _text(CALLER)
+    refresh = _job_block(text, "refresh-profile")
+    with_block = refresh.split("    with:\n", 1)[1].split("    secrets:\n", 1)[0]
+
+    assert re.findall(r"(?m)^      ([a-z][a-z0-9_-]*):", with_block) == [
+        "repositories"
+    ]
+    assert "public repositories only" in text
+    assert "OWNER/REPOSITORY" in with_block
+    assert "identities: ${{ secrets.AIPROFILE_IDENTITIES }}" in refresh
+    assert "package-version" not in text
+    assert "profile-dist-dir" not in text
+    for line in text.splitlines():
+        if "AIPROFILE_IDENTITIES" in line and "Add AIPROFILE_IDENTITIES" not in line:
+            assert line.strip() == "identities: ${{ secrets.AIPROFILE_IDENTITIES }}"
+
+
+def test_caller_uses_exact_immutable_workflow_pin_and_v070_contract():
+    text = _text(CALLER)
+    uses = re.search(
+        r"uses: WenyuChiou/ai-profile/\.github/workflows/"
+        r"profile-refresh\.yml@([0-9a-f]{40})",
+        text,
+    )
+
+    assert uses is not None
+    assert uses.group(1) == COMMIT_A
+    assert "hardcodes ai-profile-cli==0.7.0" in text
+    assert "@v0.7.0" not in text
+    assert "@main" not in text
+    assert "<COMMIT" not in text
+
+
+def test_caller_permissions_and_concurrency_cover_all_jobs():
+    text = _text(CALLER)
+    refresh = _job_block(text, "refresh-profile")
+    deploy = _job_block(text, "deploy-pages")
+
+    assert re.findall(r"(?m)^permissions: (.+)$", text) == ["{}"]
+    assert _permissions(refresh) == {"contents": "write"}
+    assert _permissions(deploy) == {
+        "contents": "read",
+        "pages": "write",
+        "id-token": "write",
+    }
+    assert "concurrency:\n  group: profile-refresh-pages-${{ github.repository }}" in text
+    assert "cancel-in-progress: false" in text
+    assert "profile-refresh-update-" not in text
+    assert text.index("concurrency:") < text.index("jobs:")
+
+
+def test_caller_pages_job_binds_checkout_to_validated_published_sha():
+    text = _text(CALLER)
+    deploy = _job_block(text, "deploy-pages")
+    validate = _step_script(text, "Validate immutable published revision")
+    uses = re.findall(r"(?m)^\s+uses: (\S+)(?:\s+#\s+v\S+)?$", deploy)
+
+    assert "needs: refresh-profile" in deploy
+    assert "PUBLISHED_SHA: ${{ needs.refresh-profile.outputs.published-sha }}" in deploy
+    assert 're.fullmatch(r"[0-9a-f]{40}", value)' in validate
+    assert "ref: ${{ needs.refresh-profile.outputs.published-sha }}" in deploy
+    assert "ref: ${{ github.sha }}" not in deploy
+    assert "ref: ${{ github.event.repository.default_branch }}" not in deploy
+    assert uses == [
+        CHECKOUT_PIN,
+        CONFIGURE_PAGES_PIN,
+        UPLOAD_PAGES_PIN,
+        DEPLOY_PAGES_PIN,
+    ]
+    assert "path: _site" in deploy
+    for line in deploy.splitlines():
+        if "uses:" in line:
+            assert re.search(r"uses: [^@\s]+@[0-9a-f]{40}\s+#\s+v\S+$", line)
+
+
+@pytest.mark.parametrize(
+    "value",
+    ("", "g" * 40, "a" * 39, "a" * 41, "a" * 40 + "\nref: main", "${{ github.sha }}"),
+)
+def test_caller_published_sha_validation_rejects_hostile_values(
+    value,
+    monkeypatch,
+    capsys,
+):
+    script = _heredoc_python(
+        _step_script(_text(CALLER), "Validate immutable published revision")
+    )
+    monkeypatch.setenv("PUBLISHED_SHA", value)
+
+    with pytest.raises(SystemExit, match="published revision is invalid"):
+        exec(compile(script, "profile-refresh-published-sha", "exec"), {})
+    captured = capsys.readouterr()
+    if value:
+        assert value not in captured.out + captured.err
+
+
+def test_caller_published_sha_validation_accepts_commit_a(monkeypatch, capsys):
+    script = _heredoc_python(
+        _step_script(_text(CALLER), "Validate immutable published revision")
+    )
+    monkeypatch.setenv("PUBLISHED_SHA", COMMIT_A)
+
+    exec(compile(script, "profile-refresh-published-sha", "exec"), {})
+
+    captured = capsys.readouterr()
+    assert captured.out + captured.err == ""
+
+
+def test_caller_pages_builder_copies_exact_eight_and_rejects_extra(
+    tmp_path,
+    monkeypatch,
+):
+    script = _heredoc_python(_step_script(_text(CALLER), "Build exact Pages artifact"))
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    for name in ASSET_NAMES:
+        (dist / name).write_text(f"asset:{name}\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    exec(compile(script, "profile-refresh-pages", "exec"), {})
+
+    target = tmp_path / "_site" / "dist"
+    assert sorted(path.name for path in target.iterdir()) == list(ASSET_NAMES)
+    assert all(path.is_file() and not path.is_symlink() for path in target.iterdir())
+    shutil.rmtree(tmp_path / "_site")
+    (dist / "private-canary.txt").write_text("private", encoding="utf-8")
+    with pytest.raises(SystemExit, match="unexpected dist asset set"):
+        exec(compile(script, "profile-refresh-pages", "exec"), {})
+    assert not (tmp_path / "_site").exists()
+
+
+def test_caller_pages_builder_rejects_nonregular_source_without_output(
+    tmp_path,
+    monkeypatch,
+):
+    script = _heredoc_python(_step_script(_text(CALLER), "Build exact Pages artifact"))
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    for name in ASSET_NAMES:
+        (dist / name).write_text(f"asset:{name}\n", encoding="utf-8")
+    (dist / "profile.json").unlink()
+    (dist / "profile.json").mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(SystemExit, match="unexpected dist asset set"):
+        exec(compile(script, "profile-refresh-pages", "exec"), {})
+    assert not (tmp_path / "_site").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink probe runs on POSIX CI")
+def test_caller_pages_builder_rejects_source_symlink_without_touching_canary(
+    tmp_path,
+    monkeypatch,
+):
+    script = _heredoc_python(_step_script(_text(CALLER), "Build exact Pages artifact"))
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    canary = tmp_path / "private-canary"
+    canary.write_text("private\n", encoding="utf-8")
+    for name in ASSET_NAMES:
+        (dist / name).write_text(f"asset:{name}\n", encoding="utf-8")
+    (dist / "profile.json").unlink()
+    (dist / "profile.json").symlink_to(canary)
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(SystemExit, match="unexpected dist asset set"):
+        exec(compile(script, "profile-refresh-pages", "exec"), {})
+    assert canary.read_bytes() == b"private\n"
+    assert not (tmp_path / "_site").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink probe runs on POSIX CI")
+def test_caller_pages_builder_rejects_linked_source_directory(
+    tmp_path,
+    monkeypatch,
+):
+    script = _heredoc_python(_step_script(_text(CALLER), "Build exact Pages artifact"))
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    for name in ASSET_NAMES:
+        (outside / name).write_text(f"asset:{name}\n", encoding="utf-8")
+    (tmp_path / "dist").symlink_to(outside, target_is_directory=True)
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(SystemExit, match="dist asset bundle is unavailable"):
+        exec(compile(script, "profile-refresh-pages", "exec"), {})
+    assert not (tmp_path / "_site").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink probe runs on POSIX CI")
+def test_caller_pages_builder_rejects_linked_destination_without_touching_canary(
+    tmp_path,
+    monkeypatch,
+):
+    script = _heredoc_python(_step_script(_text(CALLER), "Build exact Pages artifact"))
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    for name in ASSET_NAMES:
+        (dist / name).write_text(f"asset:{name}\n", encoding="utf-8")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    canary = outside / "private-canary"
+    canary.write_text("private\n", encoding="utf-8")
+    (tmp_path / "_site").symlink_to(outside, target_is_directory=True)
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(SystemExit, match="Pages staging directory already exists"):
+        exec(compile(script, "profile-refresh-pages", "exec"), {})
+    assert canary.read_bytes() == b"private\n"
+    assert sorted(path.name for path in outside.iterdir()) == ["private-canary"]
+
+
+def test_caller_template_documents_operational_facts():
+    text = _text(CALLER)
+
+    for phrase in (
+        "protected default branch",
+        "Actions bot",
+        "PR flow",
+        "60 days",
+        "workflow_dispatch",
+        "ONE caller per profile",
+        "never a matrix",
+        "Allow all actions and reusable workflows",
+        "WenyuChiou/ai-profile/.github/workflows/profile-refresh.yml",
+        "commits pushed with GITHUB_TOKEN do not trigger",
+        "immutable published-sha",
+    ):
+        assert phrase in text
