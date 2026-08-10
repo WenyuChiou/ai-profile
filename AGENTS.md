@@ -10,11 +10,10 @@ disagree, docs win and the code is the bug.
 
 - `python -m pytest tests -p no:cacheprovider` — full suite; state the
   platform and count you observe. Windows local (current candidate,
-  2026-08-10): 938 passed, 30 skipped. Linux CI (last committed candidate,
-  run 31369704694): 904 passed, 1 skipped; the current uncommitted security
-  regressions will change that count at the next CI run. Update only the
-  corresponding platform baseline, never overwrite one platform's count with
-  another's expected skip profile.
+  2026-08-10): 938 passed, 30 skipped. Linux CI (current candidate, run
+  31390314352): Python 3.11–3.14 each passed 963 tests with 5 skipped. Update
+  only the corresponding platform baseline, never overwrite one platform's
+  count with another's expected skip profile.
 - `python -m ruff check src tests scripts` — clean.
 - Privacy invariants are test-enforced; anything weakening `VizStats`
   structural redaction needs its own ADR. Snapshot/sample regeneration

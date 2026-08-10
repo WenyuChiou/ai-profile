@@ -4,7 +4,7 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## v0.7.0 automation candidate — local evidence only (not released)
+## v0.7.0 automation candidate — CI/review green, not released
 
 - ADR-030 adds an orchestration layer without changing ACE `0.3.0`,
   aggregation semantics, `VizStats`, renderer purity, or the eight-output
@@ -37,8 +37,9 @@ which is authoritative).
   `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
   Twine, artifact/checksum validation, clean-wheel refresh smoke, current and
   Python 3.11 release-contract tests, the full **847 passed / 25 skipped**
-  suite, Ruff, README parity, and snapshot zero-drift all passed. This is
-  local candidate evidence only, not published or cross-platform CI evidence.
+  suite, Ruff, README parity, and snapshot zero-drift all passed. At that
+  checkpoint this was local candidate evidence only; later bullets record the
+  cross-platform CI and committed-range review results.
 - The first Ubuntu CI run exposed a private-index mode gap: Git's atomic
   `add` rewrite inherited runner `umask 022` and produced `0644` before the
   old post-command chmod. WSL reproduced that exact boundary red-first. A
@@ -52,22 +53,23 @@ which is authoritative).
   probes passed **24/24**; current and Python 3.11 launcher suites each passed
   **19 with 5 skipped**. The exact Python 3.11 E1 suite passed **169 with 21
   skipped**, and the rebuilt candidate passed double-build byte equality,
-  Twine, artifact/checksum validation, and clean-wheel refresh smoke. A
-  cross-platform CI rerun remains required.
-- Release remains blocked on Phase E cross-platform PR gates, the committed-
-  range independent review, the v0.7.0 tag/Public Beta publication, and
-  post-release maintainer dogfood. The maintainer Profile will use the local
-  scheduler because its configured set includes an `aggregate_only` source;
-  it will not be migrated to the public-only Action.
+  Twine, artifact/checksum validation, and clean-wheel refresh smoke. That
+  candidate required the cross-platform CI rerun recorded below.
+- Cross-platform PR gates and the committed-range independent review are now
+  closed. Release remains blocked on PR merge, the M-03 ancestry/Contents-API
+  pre-tag gate, the v0.7.0 tag/Public Beta publication, and the M-01 hosted
+  caller/Pages plus maintainer dogfood gates. The maintainer Profile will use
+  the local scheduler because its configured set includes an `aggregate_only`
+  source; it will not be migrated to the public-only Action.
 - PR CI run `31358621302` passed all eight jobs, including Python 3.11–3.14
   and Ubuntu/Windows/macOS onboarding of the same candidate wheel. The first
   E3 independent committed-range review nevertheless returned **NOT READY**:
   six High findings reproduced hostile ambient Git targeting, unpushed
   ancestor publication, post-refresh byte substitution/cross-home collision,
   lost push retry, same-path/different-UID stale-cache publication, and native
-  scheduler semantic drift. All six are accepted for red-first remediation;
-  the candidate remains unreleasable until the changed range passes a new
-  independent review and regenerated artifact/CI gates.
+  scheduler semantic drift. All six were accepted for red-first remediation;
+  the changed range subsequently passed the new independent review and
+  regenerated artifact/CI gates recorded below.
 - E3 remediation does not change ACE `0.3.0`, aggregation, `VizStats`,
   renderers, or the eight filenames. It adds a sanitized scheduler Git
   boundary, remote-tip equality, exact rendered-byte verification, a target
@@ -88,8 +90,8 @@ which is authoritative).
   `1ed1c0ee2efc2167ad39554545596caae1caa1e4b8ec2dad8c418f3a821adee4`
   at `SOURCE_DATE_EPOCH=1786233600`. Twine,
   artifact/notices/checksum validation, and clean-wheel refresh smoke
-  passed. These remain local candidate bytes: independent remediation review
-  and a fresh cross-platform PR CI run are still release blockers.
+  passed. These candidate bytes subsequently received two independent
+  `APPROVE` verdicts and passed the fresh cross-platform PR CI run below.
 - A post-commit security replay found two further High findings. A remote could
   rewind or delete the branch after preflight but before an ordinary push,
   allowing removed history to be reintroduced; direct and pending publication
@@ -101,7 +103,7 @@ which is authoritative).
   deletion/no-op-success boundary matrices and a registration-free real COM
   in-memory round-trip pin both fixes. The preceding artifact digest and CI
   evidence were revoked, then rebuilt and rerun as recorded above; fresh PR CI
-  remains open. Focused H-07/H-08 red-green
+  was still open at that checkpoint and is now closed. Focused H-07/H-08 red-green
   evidence covered direct and pending rewind/advance/deletion/no-op-success
   push boundaries, post-push verification, exact COM defaults and value drift,
   plus the real Windows COM in-memory round-trip.
@@ -129,8 +131,12 @@ which is authoritative).
   byte-identical candidate wheel
   `1ed1c0ee2efc2167ad39554545596caae1caa1e4b8ec2dad8c418f3a821adee4`;
   Twine, artifact/notices/checksum validation, and clean-wheel refresh smoke
-  pass; the release-focused candidate suite passes **89**. Fresh PR CI remains
-  required.
+  pass; the release-focused candidate suite passes **89**. Commit
+  `84837d6b434c3a7ee692c36f8a80d1755caff003` received two independent final
+  `APPROVE` verdicts. PR CI run `31390314352` passed all eight required jobs;
+  every Linux Python 3.11–3.14 job reported **963 passed with 5 skipped**.
+  PR merge, M-03 ancestry/Contents-API verification, tag/publication, and M-01
+  post-PyPI hosted caller/Pages verification remain open.
 
 ## Current v0.6.1 Public Beta (2026-08-05)
 
