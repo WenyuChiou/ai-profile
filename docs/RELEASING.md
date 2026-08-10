@@ -175,7 +175,8 @@ Only after the package gates pass:
    run. Do not manually refresh first: that would consume the change and turn
    this scheduler proof into a no-op.
 4. Verify the launcher created one local commit containing only the eight
-   generated paths, pushed that commit without force, produced a path-free
+   generated paths, pushed that commit with the exact-old lease and never an
+   unconditional force push, produced a path-free
    last-run outcome, and reached green Pages deployment. Then confirm the next
    no-change run creates no commit.
 5. Review `aggregate`, run the privacy canary sweep, inspect the exact-eight
@@ -192,8 +193,16 @@ path. After moving, removing, or upgrading that interpreter or virtual
 environment, rerun `schedule install` and confirm `schedule status` before
 waiting for the next native run.
 
-The scheduler uses existing Git authentication and stores no token. Its
+The scheduler uses an existing credential manager, askpass, or SSH agent and
+does not persist or log credentials. It rejects embedded-password/query/
+fragment destinations, resolves local paths from the Profile repository, and
+does not query or forward authorization headers, Git-config/ambient proxies,
+or URL rewrite rules into its isolated push context. Its
 mechanical `commit-tree` publication bypasses user commit hooks and signing;
-branch protection can reject the non-force push. Do not claim daily automation
+branch protection can reject the exact-old leased push. The lease is bound to
+the captured remote parent and is followed by remote-tip confirmation; it is
+never an unconditional force push. Push mode also requires one fetch
+destination and the same single push destination; multiple/different URLs are
+unsupported and fail closed before refresh. Do not claim daily automation
 is live until the native registration and one real Profile refresh have both
 been observed after release.

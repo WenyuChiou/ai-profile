@@ -214,8 +214,19 @@ backup；commit 前請先檢查輸出。
 Windows 使用 Task Scheduler、macOS 使用 launchd，
 Linux 使用 systemd user timer。它每天更新 `<profile-repo>/dist`；
 預設只 stage 八個產生路徑，只在 bytes 改變時 commit，
-再使用 repository 既有的 Git authentication 進行非 force push。
-本工具不儲存 token。加入 `--no-push` 仍會建立並推進本機 exact-eight commit，
+再使用 repository 既有的 Git authentication；只有 remote 仍等於記錄的
+parent 時才會 push。
+Push mode 要求單一 fetch destination 與相同的單一 push destination；
+多個或不同的 push URL 會在 refresh 前 fail closed。已捕捉的 destination
+會綁定到 private、isolated Git context 內的固定 alias；push 與驗證不會把
+URL 放進 argv，也不受稍後 repository、global、`insteadOf` 或
+`pushInsteadOf` 變更改向。支援不含 credentials、query 或 fragment 的
+HTTPS、SSH/SCP、Git、file URL 或 local path。Local path 會先以 Profile
+repository 為基準解析，再建立 isolated context。Shallow 與 partial clone
+會在 refresh 前被拒絕，因為排程發布需要完整的本機 Git history。
+請使用 credential manager、askpass 或 SSH agent；刻意不支援 embedded password
+與 authorization header，也不轉送 ambient proxy variables。
+本工具不會持久保存或記錄 credentials。加入 `--no-push` 仍會建立並推進本機 exact-eight commit，
 但不會 push 到 remote；`--dry-run` 可預覽安裝而不改變 scheduler state。
 
 User scheduler 與電腦必須可用。
@@ -228,7 +239,10 @@ Detached branch、已改變的 branch state、protected branch 與被拒絕的 p
 可 push 的執行開始前，記錄的 remote branch 必須與本機 `HEAD` 完全一致；
 請先自行同步刻意建立的 local commits。Push 失敗後，會先安全復原中斷的
 branch update 與 exact-eight index；只有 branch、parent、tree 與 remote
-都未改變時，才會從同一個 private pending commit 重試。
+都未改變時，才會從同一個 private pending commit 重試。實際 push 使用綁定
+該 parent 的 exact-old lease，並在回報成功或清除 retry state 前重新確認
+remote 已位於 immutable commit。Private retry record 只保存 destination 的
+SHA-256 commitment，不保存 URL 本身。
 不同 homes 若指向同一個 Profile，會由該 Profile 的 Git metadata lock
 序列化；建立 commit 前也會核對產生檔案確實來自剛完成的 refresh。
 
@@ -367,8 +381,8 @@ actor presences 與 active days 仍是分開的指標。沒有 model 宣告會�
 ## 隱私
 
 - Scan、aggregate、refresh 與 render 不會進行網路呼叫，也不傳送 telemetry。
-  選用的本機 scheduler 可能透過既有 Git authentication 執行 `git push`；
-  `ai-profile` 不儲存 token。
+  選用的本機 scheduler 可能透過 credential manager、askpass 或 SSH agent
+  執行 `git push`；`ai-profile` 不會持久保存或記錄 credentials。
 - 選用的 public Action 在 GitHub-hosted runner 執行，只 clone 明確列出的
   public repositories。Identity emails 透過 secret 傳入，不會寫入公開資產或
   default workflow logs。

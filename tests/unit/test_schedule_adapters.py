@@ -39,6 +39,39 @@ def _find_text(root, local_name):
     return node.text
 
 
+def _replace_with_com_normalized_settings(root):
+    settings = next(
+        node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "Settings"
+    )
+    settings.clear()
+    values = (
+        ("MultipleInstancesPolicy", "IgnoreNew"),
+        ("DisallowStartIfOnBatteries", "true"),
+        ("StopIfGoingOnBatteries", "true"),
+        ("AllowHardTerminate", "true"),
+        ("StartWhenAvailable", "true"),
+        ("RunOnlyIfNetworkAvailable", "false"),
+    )
+    for name, value in values:
+        ET.SubElement(settings, f"{{{windows._NS}}}{name}").text = value
+    idle = ET.SubElement(settings, f"{{{windows._NS}}}IdleSettings")
+    ET.SubElement(idle, f"{{{windows._NS}}}StopOnIdleEnd").text = "true"
+    ET.SubElement(idle, f"{{{windows._NS}}}RestartOnIdle").text = "false"
+    for name, value in (
+        ("AllowStartOnDemand", "true"),
+        ("Enabled", "true"),
+        ("Hidden", "false"),
+        ("RunOnlyIfIdle", "false"),
+        ("DisallowStartOnRemoteAppSession", "false"),
+        ("UseUnifiedSchedulingEngine", "false"),
+        ("WakeToRun", "false"),
+        ("ExecutionTimeLimit", "PT72H"),
+        ("Priority", "7"),
+    ):
+        ET.SubElement(settings, f"{{{windows._NS}}}{name}").text = value
+    return settings
+
+
 def test_windows_install_registers_via_xml_not_tr(tmp_path):
     home = tmp_path / "home"
     plan = windows.plan(home, "07:30")
@@ -109,6 +142,145 @@ def test_windows_status_parses_query_and_remove_is_idempotent(tmp_path):
             argv, rc=1, stderr="task does not exist"
         ),
     )
+
+
+def test_windows_status_accepts_exact_com_normalized_defaults(tmp_path):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    _replace_with_com_normalized_settings(root)
+
+    assert windows.status(
+        home,
+        runner=lambda argv, **_: _completed(
+            argv, stdout=ET.tostring(root, encoding="unicode")
+        ),
+    ) == adapters.ScheduleStatus(installed=True, time="07:30", active=True)
+
+
+def test_windows_status_reports_disabled_com_normalized_task(tmp_path):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    settings = _replace_with_com_normalized_settings(root)
+    next(
+        node for node in settings if node.tag.rsplit("}", 1)[-1] == "Enabled"
+    ).text = "false"
+
+    assert windows.status(
+        home,
+        runner=lambda argv, **_: _completed(
+            argv, stdout=ET.tostring(root, encoding="unicode")
+        ),
+    ).active is False
+
+
+@pytest.mark.parametrize(
+    ("attribute", "value"),
+    [("version", "1.3"), ("namespace", "urn:private-task-canary")],
+)
+def test_windows_status_rejects_task_root_drift(tmp_path, attribute, value):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    if attribute == "version":
+        root.set("version", value)
+    else:
+        root.tag = f"{{{value}}}Task"
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv, stdout=ET.tostring(root, encoding="unicode")
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("DisallowStartIfOnBatteries", "false"),
+        ("RestartOnIdle", "true"),
+        ("ExecutionTimeLimit", "PT1S"),
+        ("Priority", "9"),
+    ],
+)
+def test_windows_status_rejects_com_normalized_setting_drift(
+    tmp_path, field, value
+):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    _replace_with_com_normalized_settings(root)
+    node = next(
+        item for item in root.iter() if item.tag.rsplit("}", 1)[-1] == field
+    )
+    node.text = value
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv, stdout=ET.tostring(root, encoding="unicode")
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    "tag",
+    [
+        "StartWhenAvailable",
+        "{urn:private-task-canary}StartWhenAvailable",
+    ],
+)
+def test_windows_status_rejects_noncanonical_settings_namespace(tmp_path, tag):
+    home = tmp_path / "home"
+    root = _xml_payload(windows.plan(home, "07:30"))
+    node = next(
+        item
+        for item in root.iter()
+        if item.tag.rsplit("}", 1)[-1] == "StartWhenAvailable"
+    )
+    node.tag = tag
+    if tag == "StartWhenAvailable":
+        node.set("xmlns", "")
+
+    with pytest.raises(ConfigError, match="native scheduler status is unavailable"):
+        windows.status(
+            home,
+            runner=lambda argv, **_: _completed(
+                argv, stdout=ET.tostring(root, encoding="unicode")
+            ),
+        )
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Task Scheduler COM only")
+def test_windows_task_xml_survives_real_com_in_memory_round_trip(tmp_path):
+    home = tmp_path / "home"
+    planned = windows.plan(home, "07:30").files[0]
+    xml_path = tmp_path / "task-input.xml"
+    output_path = tmp_path / "task-normalized.xml"
+    xml_path.write_bytes(planned.content)
+    script = (
+        "$service = New-Object -ComObject 'Schedule.Service'; "
+        "$task = $service.NewTask(0); "
+        "$task.XmlText = [IO.File]::ReadAllText($env:AIPROFILE_TASK_XML); "
+        "[IO.File]::WriteAllText($env:AIPROFILE_OUTPUT_XML, $task.XmlText, "
+        "[Text.Encoding]::Unicode)"
+    )
+    env = os.environ.copy()
+    env["AIPROFILE_TASK_XML"] = str(xml_path)
+    env["AIPROFILE_OUTPUT_XML"] = str(output_path)
+    subprocess.run(
+        ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+        check=True,
+        capture_output=True,
+        env=env,
+        timeout=60,
+    )
+    normalized = output_path.read_text(encoding="utf-16")
+
+    assert windows.status(
+        home,
+        runner=lambda argv, **_: _completed(argv, stdout=normalized),
+    ) == adapters.ScheduleStatus(installed=True, time="07:30", active=True)
 
 
 def test_windows_status_reports_disabled_task_from_locale_independent_xml(tmp_path):

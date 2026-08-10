@@ -75,13 +75,27 @@ GitHub, and "aggregate-only" is not a claim that it is private.
   Native task identity is an opaque per-home digest.
   Pending-push state and the log are `0600` on POSIX; Windows relies on the
   inherited user-home ACL. The launcher uses argument lists, never shell
-  evaluation, stores no token, removes ambient Git repository/object/config
+  evaluation, does not persist or log credentials, removes ambient Git repository/object/config
   injection state, and stages only the eight generated paths. Generated blobs
   must match the completed refresh's private exact-eight byte commitment.
   Push-capable runs require the remote branch to equal local `HEAD`; a failed
   push may first complete an interrupted branch CAS only when local and remote
   still equal its recorded parent, then repairs the exact-eight index and
-  retries only its immutable pending commit. Divergence or repair failure
+  retries only its immutable pending commit. The actual push is conditional on
+  an exact expected-old lease for that parent and success requires a fresh
+  remote-tip confirmation against the one destination captured before refresh.
+  Fetch and push destinations must be the same single URL; the private pending
+  record stores only its SHA-256 commitment, never the URL. Push and query use
+  a fixed alias in an isolated private Git context, so raw URLs never enter
+  argv and later URL rewrites cannot redirect publication. Only a frozen
+  credential-helper/TLS/SSH allowlist is queried key-by-key and forwarded;
+  authorization headers, Git-config proxies, and ambient proxy variables are
+  excluded. Relative local paths are resolved from the Profile repository
+  before isolation, including same-drive Windows drive-relative paths;
+  ambiguous cross-drive paths fail closed. Shallow and partial clones are
+  rejected before refresh or pending retry because the isolated publication
+  context requires complete local history. Multiple/different/credential-bearing destinations,
+  commitment drift, boundary drift, or repair failure
   retains the pending record and
   stops before refresh or push. Linked or non-regular scheduler state is
   rejected before reading it or changing its mode, so mode hardening cannot

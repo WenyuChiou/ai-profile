@@ -32,7 +32,7 @@ which is authoritative).
   `SOURCE_DATE_EPOCH=1786233600`: two isolated Ubuntu builds from the same
   Git-mode source archive produced byte-identical wheel and sdist artifacts.
   The wheel is
-  `a9b5ceca305b4ec363ba8a1a11d0870f2f5ebf9aa3afac6d5a4d13632b468690`
+  `1ed1c0ee2efc2167ad39554545596caae1caa1e4b8ec2dad8c418f3a821adee4`
   and the synthetic dashboard remains
   `8172a3eac4c61232a2a0331edce4435b91a124b230a37a55505b11a5ba4f4eb1`.
   Twine, artifact/checksum validation, clean-wheel refresh smoke, current and
@@ -76,19 +76,61 @@ which is authoritative).
   POSIX `0600` pending/log state. The disposable public caller/Pages E2E stays
   a post-PyPI promotion gate; merge-commit ancestry and Contents-API resolution
   of the immutable C1 pin stay pre-tag/branch-deletion gates.
-- Local E3 remediation evidence: current and Python 3.11 focused
-  refresh/scheduler suites each passed **161 with 13 skipped**; the exact E1
-  matrix passed **197 with 25 skipped** on each interpreter; WSL exercised all
-  **137** launcher/adapter tests; the full current suite passed **876 with 29
+- Local E3 remediation evidence: the earlier exact E1 matrix passed **216 with
+  25 skipped** on both the current interpreter and Python 3.11. After the final
+  destination-isolation remediations, the broader scheduler suite passed **188
+  with 12 skipped** on Python 3.11, WSL passed **196 with 4 skipped**, and
+  the full Windows-local suite passed **938 with 30
   skipped**. Renderer/dashboard clarity and determinism coverage passed
   **104**; Ruff, README parity, and sanctioned snapshot/sample drift checks
   are green. Canonical Ubuntu double builds produced the byte-identical
   code/README candidate wheel
-  `a9b5ceca305b4ec363ba8a1a11d0870f2f5ebf9aa3afac6d5a4d13632b468690`
+  `1ed1c0ee2efc2167ad39554545596caae1caa1e4b8ec2dad8c418f3a821adee4`
   at `SOURCE_DATE_EPOCH=1786233600`. Twine,
   artifact/notices/checksum validation, and clean-wheel refresh smoke
   passed. These remain local candidate bytes: independent remediation review
   and a fresh cross-platform PR CI run are still release blockers.
+- A post-commit security replay found two further High findings. A remote could
+  rewind or delete the branch after preflight but before an ordinary push,
+  allowing removed history to be reintroduced; direct and pending publication
+  now bind the immutable OID to an exact expected-old parent lease and confirm
+  the remote tip before success or pending-state cleanup. Separately, Windows
+  Task Scheduler COM expands the authored three settings into a deterministic
+  harmless/default set; ownership validation now accepts only those two exact
+  canonical forms and rejects any other value or key. Real-Git rewind/advance/
+  deletion/no-op-success boundary matrices and a registration-free real COM
+  in-memory round-trip pin both fixes. The preceding artifact digest and CI
+  evidence were revoked, then rebuilt and rerun as recorded above; fresh PR CI
+  remains open. Focused H-07/H-08 red-green
+  evidence covered direct and pending rewind/advance/deletion/no-op-success
+  push boundaries, post-push verification, exact COM defaults and value drift,
+  plus the real Windows COM in-memory round-trip.
+- Final adversarial review then found two further ownership boundaries. Windows
+  descendant validation compared local XML names without proving the task
+  namespace, and a Git remote could expose multiple push destinations while
+  verification queried only its fetch destination. The red-first fix requires
+  the task namespace on every inspected descendant, captures exactly one
+  symmetric fetch/push destination before refresh, binds it to a fixed alias
+  in an isolated private Git context for push and verification, and stores only
+  its SHA-256 commitment in pending state. The actual argv never contains the
+  URL; later `insteadOf`, `pushInsteadOf`, remote-alias, or config swaps cannot
+  redirect the isolated transport. Multiple/different/credential-bearing
+  destinations and pending destination drift refuse before publication
+  mutation. Relative local destinations are canonicalized against the Profile
+  repository before capture. The private transport queries only eight exact
+  credential-helper, TLS, and SSH keys; authorization headers, proxies, and URL
+  rewrites are never read into the transport snapshot, ambient proxy variables
+  are removed, and supported HTTPS/SSH/SCP/Git/file/local destinations cannot
+  put raw URLs in argv. The final drive-relative and complete-history
+  regressions reject cross-drive ambiguity plus shallow/partial clones before
+  refresh or pending retry. The full Windows-local suite passed **938 with 30
+  skipped**, Python 3.11 scheduler coverage passed **188 with 12 skipped**, and
+  WSL passed **196 with 4 skipped**. Canonical Ubuntu double builds at the frozen epoch produced the
+  byte-identical candidate wheel
+  `1ed1c0ee2efc2167ad39554545596caae1caa1e4b8ec2dad8c418f3a821adee4`;
+  Twine, artifact/notices/checksum validation, and clean-wheel refresh smoke
+  pass; the release-focused candidate suite passes **89**. Fresh PR CI remains
+  required.
 
 ## Current v0.6.1 Public Beta (2026-08-05)
 

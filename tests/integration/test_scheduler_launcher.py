@@ -31,9 +31,15 @@ def _git(repo: Path, *args: str, check: bool = True):
     return result
 
 
-def _setup(tmp_path: Path, *, push: bool = True, shared: bool = False):
-    profile = tmp_path / "profile"
-    profile.mkdir()
+def _setup(
+    tmp_path: Path,
+    *,
+    push: bool = True,
+    shared: bool = False,
+    profile_name: str = "profile",
+):
+    profile = tmp_path / profile_name
+    profile.mkdir(parents=True)
     init_args = ["init", "-q", "-b", "main"]
     if shared:
         init_args.append("--shared=group")
@@ -53,6 +59,52 @@ def _setup(tmp_path: Path, *, push: bool = True, shared: bool = False):
     home = tmp_path / "home"
     service.write_scheduler_files(
         home, profile, "07:30", push, branch="main", remote="origin"
+    )
+    return home, profile, bare
+
+
+def _setup_shallow(tmp_path: Path):
+    source = tmp_path / "source"
+    source.mkdir()
+    _git(source, "init", "-q", "-b", "main")
+    _git(source, "config", "user.name", "Fixture")
+    _git(source, "config", "user.email", "fixture@example.com")
+    for index in range(3):
+        (source / "README.md").write_text(f"profile {index}\n", encoding="utf-8")
+        _git(source, "add", "README.md")
+        _git(source, "commit", "-q", "-m", f"seed {index}")
+
+    bare = tmp_path / "remote.git"
+    bare.mkdir()
+    _git(bare, "init", "-q", "--bare")
+    _git(source, "remote", "add", "origin", bare.resolve().as_uri())
+    _git(source, "push", "-q", "origin", "main")
+
+    profile = tmp_path / "profile"
+    result = subprocess.run(
+        [
+            "git",
+            "clone",
+            "-q",
+            "--depth=1",
+            "-b",
+            "main",
+            bare.resolve().as_uri(),
+            str(profile),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    _git(profile, "config", "user.name", "Fixture")
+    _git(profile, "config", "user.email", "fixture@example.com")
+    assert _git(profile, "rev-parse", "--is-shallow-repository").stdout.strip() == "true"
+
+    home = tmp_path / "home"
+    service.write_scheduler_files(
+        home, profile, "07:30", True, branch="main", remote="origin"
     )
     return home, profile, bare
 
@@ -95,6 +147,54 @@ def _advance_current_ref_atomically(profile: Path, subject: str) -> str:
     new_oid = created.stdout.strip()
     _git(profile, "update-ref", "refs/heads/main", new_oid, old)
     return new_oid
+
+
+def _prepare_remote_parent(profile: Path) -> tuple[str, str]:
+    prior = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    (profile / "README.md").write_text("published parent\n", encoding="utf-8")
+    _git(profile, "add", "README.md")
+    _git(profile, "commit", "-q", "-m", "published parent")
+    expected = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    _git(profile, "push", "-q", "origin", "main")
+    return expected, prior
+
+
+def _remote_boundary_change(
+    profile: Path,
+    bare: Path,
+    *,
+    expected: str,
+    prior: str,
+    change: str,
+) -> str | None:
+    if change == "rewind":
+        _git(bare, "update-ref", "refs/heads/main", prior, expected)
+        return prior
+    if change == "missing":
+        _git(bare, "update-ref", "-d", "refs/heads/main", expected)
+        return None
+    if change == "advance":
+        tree = _git(profile, "rev-parse", f"{expected}^{{tree}}").stdout.strip()
+        created = subprocess.run(
+            ["git", "commit-tree", tree, "-p", expected, "-m", "remote advance"],
+            cwd=str(profile),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=60,
+        )
+        assert created.returncode == 0, created.stderr
+        advanced = created.stdout.strip()
+        _git(profile, "push", "-q", "origin", f"{advanced}:refs/heads/main")
+        return advanced
+    if change == "no-op-success":
+        return expected
+    raise AssertionError(f"unexpected boundary change: {change}")
+
+
+def _remote_main(bare: Path) -> str | None:
+    result = _git(bare, "rev-parse", "--verify", "refs/heads/main", check=False)
+    return result.stdout.strip() if result.returncode == 0 else None
 
 
 def test_commit_uses_exact_pathspec_and_ignores_prestaged_files(tmp_path, monkeypatch):
@@ -564,6 +664,532 @@ def test_push_default_and_no_push(tmp_path, monkeypatch):
     assert _git(bare, "rev-parse", "refs/heads/main").stdout.strip() == pushed
 
 
+@pytest.mark.parametrize("change", ["rewind", "advance", "missing", "no-op-success"])
+def test_direct_push_uses_exact_remote_parent_lease(
+    tmp_path, monkeypatch, change
+):
+    home, profile, bare = _setup(tmp_path)
+    expected, prior = _prepare_remote_parent(profile)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("leased"))
+    changed = False
+    boundary_tip = None
+
+    def runner(argv, **kwargs):
+        nonlocal changed, boundary_tip
+        if "push" in argv and not changed:
+            changed = True
+            boundary_tip = _remote_boundary_change(
+                profile,
+                bare,
+                expected=expected,
+                prior=prior,
+                change=change,
+            )
+            if change == "no-op-success":
+                return subprocess.CompletedProcess(argv, 0, "", "")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=runner) == 1
+    assert changed is True
+    assert _remote_main(bare) == boundary_tip
+    assert (home / "scheduler" / "pending-push.json").is_file()
+    tail = (home / "scheduler" / "last-run.log").read_text(
+        encoding="utf-8"
+    ).splitlines()[-1]
+    assert "pending commit retained" in tail
+    assert "refresh committed and pushed" not in tail
+
+
+@pytest.mark.parametrize("change", ["rewind", "advance", "missing", "no-op-success"])
+def test_pending_retry_push_uses_exact_remote_parent_lease(
+    tmp_path, monkeypatch, change
+):
+    home, profile, bare = _setup(tmp_path)
+    expected, prior = _prepare_remote_parent(profile)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("retry-lease"))
+
+    def fail_first_push(argv, **kwargs):
+        if "push" in argv:
+            return subprocess.CompletedProcess(argv, 17, "", "private-path-canary")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=fail_first_push) == 1
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+    changed = False
+    boundary_tip = None
+
+    def retry_runner(argv, **kwargs):
+        nonlocal changed, boundary_tip
+        if "push" in argv and not changed:
+            changed = True
+            boundary_tip = _remote_boundary_change(
+                profile,
+                bare,
+                expected=expected,
+                prior=prior,
+                change=change,
+            )
+            if change == "no-op-success":
+                return subprocess.CompletedProcess(argv, 0, "", "")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=retry_runner) == 1
+    assert changed is True
+    assert _remote_main(bare) == boundary_tip
+    assert pending.is_file()
+    tail = (home / "scheduler" / "last-run.log").read_text(
+        encoding="utf-8"
+    ).splitlines()[-1]
+    assert "pending commit retained" in tail
+    assert "refresh committed and pushed" not in tail
+
+
+def test_verified_remote_commit_wins_over_uncertain_push_exit(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("verified"))
+
+    def runner(argv, **kwargs):
+        result = subprocess.run(argv, **kwargs)
+        if "push" in argv and result.returncode == 0:
+            return subprocess.CompletedProcess(argv, 17, "", "private-path-canary")
+        return result
+
+    assert launcher.run_launcher(home, runner=runner) == 0
+    assert _remote_main(bare) == _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert not (home / "scheduler" / "pending-push.json").exists()
+
+
+def test_post_push_remote_advance_is_not_reported_as_success(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("post-push"))
+    advanced = None
+
+    def runner(argv, **kwargs):
+        nonlocal advanced
+        result = subprocess.run(argv, **kwargs)
+        if "push" in argv and result.returncode == 0:
+            commit_oid = argv[-1].split(":", 1)[0]
+            advanced = _remote_boundary_change(
+                profile,
+                bare,
+                expected=commit_oid,
+                prior=_git(profile, "rev-parse", f"{commit_oid}^").stdout.strip(),
+                change="advance",
+            )
+        return result
+
+    assert launcher.run_launcher(home, runner=runner) == 1
+    assert advanced is not None and _remote_main(bare) == advanced
+    assert (home / "scheduler" / "pending-push.json").is_file()
+    tail = (home / "scheduler" / "last-run.log").read_text(
+        encoding="utf-8"
+    ).splitlines()[-1]
+    assert "remote publication is not confirmed" in tail
+    assert "refresh committed and pushed" not in tail
+
+
+def _add_second_push_destination(profile: Path, destination: Path) -> None:
+    destination.mkdir()
+    _git(destination, "init", "-q", "--bare")
+    fetch_url = _git(
+        profile, "remote", "get-url", "origin"
+    ).stdout.strip()
+    _git(profile, "config", "--add", "remote.origin.pushurl", fetch_url)
+    _git(
+        profile,
+        "config",
+        "--add",
+        "remote.origin.pushurl",
+        destination.resolve().as_uri(),
+    )
+
+
+def test_direct_publication_rejects_multiple_push_destinations_before_mutation(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    second = tmp_path / "second-remote.git"
+    _add_second_push_destination(profile, second)
+    local_before = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    remote_before = _remote_main(bare)
+    index_before = _git(profile, "diff", "--cached", "--name-only").stdout
+    refresh_called = False
+
+    def forbidden_refresh(*_args, **_kwargs):
+        nonlocal refresh_called
+        refresh_called = True
+        raise AssertionError("refresh must not run for unsupported remote topology")
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", forbidden_refresh)
+
+    assert launcher.run_launcher(home) == 1
+    assert refresh_called is False
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_before
+    assert _remote_main(bare) == remote_before
+    assert _git(profile, "diff", "--cached", "--name-only").stdout == index_before
+    assert not (home / "scheduler" / "pending-push.json").exists()
+
+
+def test_pending_retry_rejects_multiple_push_destinations_before_mutation(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("pending"))
+
+    def fail_push(argv, **kwargs):
+        if "push" in argv:
+            return subprocess.CompletedProcess(argv, 17, "", "private-path-canary")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=fail_push) == 1
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+    second = tmp_path / "second-remote.git"
+    _add_second_push_destination(profile, second)
+    local_before = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    remote_before = _remote_main(bare)
+    index_before = _git(profile, "diff", "--cached", "--name-only").stdout
+
+    monkeypatch.setattr(
+        launcher.refresh,
+        "run_refresh",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("refresh must not run while pending publication is blocked")
+        ),
+    )
+
+    assert launcher.run_launcher(home) == 1
+    assert pending.is_file()
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_before
+    assert _remote_main(bare) == remote_before
+    assert _git(profile, "diff", "--cached", "--name-only").stdout == index_before
+
+
+def _seed_second_remote(profile: Path, destination: Path, oid: str) -> None:
+    destination.mkdir()
+    _git(destination, "init", "-q", "--bare")
+    _git(profile, "push", "-q", destination.resolve().as_uri(), f"{oid}:refs/heads/main")
+
+
+def test_direct_push_uses_captured_destination_when_remote_config_changes(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    parent = _remote_main(bare)
+    second = tmp_path / "second-remote.git"
+    _seed_second_remote(profile, second, parent)
+    second_url = second.resolve().as_uri()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("captured"))
+    changed = False
+
+    def runner(argv, **kwargs):
+        nonlocal changed
+        if "push" in argv and not changed:
+            changed = True
+            _git(profile, "remote", "set-url", "origin", second_url)
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=runner) == 0
+    committed = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert changed is True
+    assert _remote_main(bare) == committed
+    assert _remote_main(second) == parent
+
+
+@pytest.mark.parametrize("rewrite_key", ["insteadOf", "pushInsteadOf"])
+def test_direct_push_isolated_from_late_url_rewrite(
+    tmp_path, monkeypatch, rewrite_key
+):
+    home, profile, bare = _setup(tmp_path)
+    parent = _remote_main(bare)
+    second = tmp_path / "rewrite-target.git"
+    _seed_second_remote(profile, second, parent)
+    original_url = bare.resolve().as_uri()
+    second_url = second.resolve().as_uri()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("rewrite"))
+    changed = False
+
+    def runner(argv, **kwargs):
+        nonlocal changed
+        if "push" in argv and not changed:
+            changed = True
+            _git(profile, "config", f"url.{second_url}.{rewrite_key}", original_url)
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=runner) == 0
+    committed = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert changed is True
+    assert _remote_main(bare) == committed
+    assert _remote_main(second) == parent
+
+
+def test_isolated_transport_supports_profile_path_with_path_separator(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(
+        tmp_path, profile_name=f"profile{os.pathsep}separator"
+    )
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("separator"))
+    objects = profile / ".git" / "objects"
+    def object_manifest():
+        return {
+            path.relative_to(objects).as_posix(): hashlib.sha256(
+                path.read_bytes()
+            ).hexdigest()
+            for path in objects.rglob("*")
+            if path.is_file()
+        }
+
+    push_checked = False
+
+    def runner(argv, **kwargs):
+        nonlocal push_checked
+        if "push" not in argv:
+            return subprocess.run(argv, **kwargs)
+        before = object_manifest()
+        result = subprocess.run(argv, **kwargs)
+        assert object_manifest() == before
+        push_checked = True
+        return result
+
+    assert launcher.run_launcher(home, runner=runner) == 0
+    assert push_checked is True
+    assert _remote_main(bare) == _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert not list((home / "scheduler").glob(".publication-transport-*"))
+
+
+@pytest.mark.parametrize("pending_retry", [False, True])
+def test_relative_local_destination_is_bound_to_profile_repo(
+    tmp_path, monkeypatch, pending_retry
+):
+    home, profile, intended = _setup(tmp_path, profile_name="nested/profile")
+    parent = _remote_main(intended)
+    wrong = home / "remote.git"
+    _seed_second_remote(profile, wrong, parent)
+    _git(profile, "config", "remote.origin.url", "../../remote.git")
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("relative"))
+
+    if pending_retry:
+        def fail_push(argv, **kwargs):
+            if "push" in argv:
+                return subprocess.CompletedProcess(argv, 17, "", "private-canary")
+            return subprocess.run(argv, **kwargs)
+
+        assert launcher.run_launcher(home, runner=fail_push) == 1
+        assert (home / "scheduler" / "pending-push.json").is_file()
+
+    assert launcher.run_launcher(home) == 0
+    committed = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert _remote_main(intended) == committed
+    assert _remote_main(wrong) == parent
+    assert not (home / "scheduler" / "pending-push.json").exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows drive-relative path semantics")
+@pytest.mark.parametrize("pending_retry", [False, True])
+def test_windows_drive_relative_destination_is_bound_to_profile_repo(
+    tmp_path, monkeypatch, pending_retry
+):
+    home, profile, intended = _setup(tmp_path, profile_name="nested/profile")
+    parent = _remote_main(intended)
+    wrong = home / "remote.git"
+    _seed_second_remote(profile, wrong, parent)
+    _git(profile, "config", "remote.origin.url", f"{profile.drive}../../remote.git")
+    monkeypatch.setattr(
+        launcher.refresh, "run_refresh", _refresh_writer("drive-relative")
+    )
+
+    if pending_retry:
+        def fail_push(argv, **kwargs):
+            if "push" in argv:
+                return subprocess.CompletedProcess(argv, 17, "", "private-canary")
+            return subprocess.run(argv, **kwargs)
+
+        assert launcher.run_launcher(home, runner=fail_push) == 1
+        assert (home / "scheduler" / "pending-push.json").is_file()
+
+    assert launcher.run_launcher(home) == 0
+    committed = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert _remote_main(intended) == committed
+    assert _remote_main(wrong) == parent
+    assert not (home / "scheduler" / "pending-push.json").exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX SCP syntax")
+def test_posix_one_letter_host_scp_uses_fixed_alias_without_raw_destination(
+    tmp_path, monkeypatch
+):
+    home, profile, _bare = _setup(tmp_path)
+    destination = "x:owner/repo.git"
+    _git(profile, "config", "remote.origin.url", destination)
+    parent = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("scp"))
+    pushed_oid = None
+
+    def runner(argv, **kwargs):
+        nonlocal pushed_oid
+        if "push" in argv:
+            assert destination not in argv
+            pushed_oid = argv[-1].split(":", 1)[0]
+            return subprocess.CompletedProcess(argv, 0, "", "")
+        if "ls-remote" in argv:
+            assert destination not in argv
+            oid = pushed_oid or parent
+            return subprocess.CompletedProcess(
+                argv, 0, f"{oid}\trefs/heads/main\n", ""
+            )
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=runner) == 0
+    assert pushed_oid == _git(profile, "rev-parse", "HEAD").stdout.strip()
+
+
+def test_shallow_repository_is_rejected_before_refresh_or_publication(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup_shallow(tmp_path)
+    parent = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    refreshed = False
+
+    def refresh_writer(*_args, **_kwargs):
+        nonlocal refreshed
+        refreshed = True
+        return _refresh_writer("shallow")(*_args, **_kwargs)
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", refresh_writer)
+
+    assert launcher.run_launcher(home) == 1
+    assert refreshed is False
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == parent
+    assert _remote_main(bare) == parent
+    assert not (home / "scheduler" / "pending-push.json").exists()
+    assert not (profile / "dist").exists()
+
+
+def test_pending_retry_refuses_repository_that_became_shallow(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    parent = _remote_main(bare)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("pending"))
+
+    def fail_push(argv, **kwargs):
+        if "push" in argv:
+            return subprocess.CompletedProcess(argv, 17, "", "private-canary")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=fail_push) == 1
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+    local_commit = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    (profile / ".git" / "shallow").write_text(f"{parent}\n", encoding="ascii")
+    assert _git(profile, "rev-parse", "--is-shallow-repository").stdout.strip() == "true"
+
+    assert launcher.run_launcher(home) == 1
+    assert pending.is_file()
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_commit
+    assert _remote_main(bare) == parent
+
+
+@pytest.mark.parametrize("rewrite_key", ["insteadOf", "pushInsteadOf"])
+def test_pending_retry_rejects_late_url_rewrite_without_publication(
+    tmp_path, monkeypatch, rewrite_key
+):
+    home, profile, bare = _setup(tmp_path)
+    parent = _remote_main(bare)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("pending"))
+
+    def fail_push(argv, **kwargs):
+        if "push" in argv:
+            return subprocess.CompletedProcess(argv, 17, "", "private-path-canary")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=fail_push) == 1
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+    second = tmp_path / "rewrite-target.git"
+    _seed_second_remote(profile, second, parent)
+    _git(
+        profile,
+        "config",
+        f"url.{second.resolve().as_uri()}.{rewrite_key}",
+        bare.resolve().as_uri(),
+    )
+
+    assert launcher.run_launcher(home) == 1
+    assert pending.is_file()
+    assert _remote_main(bare) == parent
+    assert _remote_main(second) == parent
+
+
+@pytest.mark.parametrize(
+    "unsupported_url",
+    [
+        "--receive-pack=private-option-canary",
+        "https://user:private-token-canary@example.test/repo.git",
+        "https://example.test/repo.git?private-token-canary",
+    ],
+)
+def test_unsupported_destination_refuses_before_refresh_or_git_mutation(
+    tmp_path, monkeypatch, unsupported_url
+):
+    home, profile, bare = _setup(tmp_path)
+    _git(profile, "config", "remote.origin.url", unsupported_url)
+    local_before = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    remote_before = _remote_main(bare)
+    index_before = _git(profile, "diff", "--cached", "--name-only").stdout
+    refresh_called = False
+
+    def forbidden_refresh(*_args, **_kwargs):
+        nonlocal refresh_called
+        refresh_called = True
+        raise AssertionError("unsupported destination must fail before refresh")
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", forbidden_refresh)
+    assert launcher.run_launcher(home) == 1
+    assert refresh_called is False
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_before
+    assert _remote_main(bare) == remote_before
+    assert _git(profile, "diff", "--cached", "--name-only").stdout == index_before
+    log = (home / "scheduler" / "last-run.log").read_text(encoding="utf-8")
+    assert "private-token-canary" not in log
+    assert "private-option-canary" not in log
+
+
+def test_pending_retry_rejects_changed_single_destination_with_same_parent(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    parent = _remote_main(bare)
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("pending"))
+
+    def fail_push(argv, **kwargs):
+        if "push" in argv:
+            return subprocess.CompletedProcess(argv, 17, "", "private-path-canary")
+        return subprocess.run(argv, **kwargs)
+
+    assert launcher.run_launcher(home, runner=fail_push) == 1
+    pending = home / "scheduler" / "pending-push.json"
+    assert pending.is_file()
+    second = tmp_path / "second-remote.git"
+    _seed_second_remote(profile, second, parent)
+    _git(profile, "remote", "set-url", "origin", second.resolve().as_uri())
+    local_before = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    index_before = _git(profile, "diff", "--cached", "--name-only").stdout
+
+    assert launcher.run_launcher(home) == 1
+    assert pending.is_file()
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_before
+    assert _git(profile, "diff", "--cached", "--name-only").stdout == index_before
+    assert _remote_main(bare) == parent
+    assert _remote_main(second) == parent
+    tail = (home / "scheduler" / "last-run.log").read_text(
+        encoding="utf-8"
+    ).splitlines()[-1]
+    assert tail.endswith(
+        "pending publication destination diverged; synchronize manually"
+    )
+
+
 def test_real_index_sync_failure_retains_local_commit_and_refuses_push(
     tmp_path, monkeypatch
 ):
@@ -604,11 +1230,11 @@ def test_launcher_sanitizes_repository_selection_environment(
     for key, value in hostile.items():
         monkeypatch.setenv(key, value)
 
-    def runner(argv, **kwargs):
-        env = kwargs.get("env")
-        assert env is not None
-        assert not (set(hostile) & set(env))
-        return subprocess.run(argv, **kwargs)
+        def runner(argv, **kwargs):
+            env = kwargs.get("env")
+            assert env is not None
+            assert all(env.get(key) != value for key, value in hostile.items())
+            return subprocess.run(argv, **kwargs)
 
     assert launcher.run_launcher(home, runner=runner) == 0
 

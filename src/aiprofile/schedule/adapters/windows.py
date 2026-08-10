@@ -23,6 +23,33 @@ from . import (
 
 _NS = "http://schemas.microsoft.com/windows/2004/02/mit/task"
 
+_AUTHORED_SETTINGS = {
+    "MultipleInstancesPolicy": "IgnoreNew",
+    "StartWhenAvailable": "true",
+    "Enabled": "true",
+}
+_COM_NORMALIZED_SETTINGS = {
+    "MultipleInstancesPolicy": "IgnoreNew",
+    "DisallowStartIfOnBatteries": "true",
+    "StopIfGoingOnBatteries": "true",
+    "AllowHardTerminate": "true",
+    "StartWhenAvailable": "true",
+    "RunOnlyIfNetworkAvailable": "false",
+    "AllowStartOnDemand": "true",
+    "Enabled": "true",
+    "Hidden": "false",
+    "RunOnlyIfIdle": "false",
+    "DisallowStartOnRemoteAppSession": "false",
+    "UseUnifiedSchedulingEngine": "false",
+    "WakeToRun": "false",
+    "ExecutionTimeLimit": "PT72H",
+    "Priority": "7",
+}
+_COM_NORMALIZED_IDLE_SETTINGS = {
+    "StopOnIdleEnd": "true",
+    "RestartOnIdle": "false",
+}
+
 
 def task_name(home: Path) -> str:
     return f"aiprofile-refresh-{home_identity(home)}"
@@ -35,7 +62,13 @@ def _node(parent: ET.Element, name: str, text: str | None = None) -> ET.Element:
 
 
 def _local_name(node: ET.Element) -> str:
-    return node.tag.rsplit("}", 1)[-1]
+    prefix = f"{{{_NS}}}"
+    if not isinstance(node.tag, str) or not node.tag.startswith(prefix):
+        raise ValueError
+    local_name = node.tag[len(prefix) :]
+    if not local_name:
+        raise ValueError
+    return local_name
 
 
 def _only_descendant(root: ET.Element, name: str) -> ET.Element:
@@ -50,6 +83,42 @@ def _only_child(parent: ET.Element, name: str) -> ET.Element:
     if len(matches) != 1:
         raise ValueError
     return matches[0]
+
+
+def _validate_owned_settings(settings: ET.Element) -> str:
+    names = [_local_name(child) for child in settings]
+    name_set = set(names)
+    if len(names) != len(name_set):
+        raise ValueError
+    if name_set == set(_AUTHORED_SETTINGS):
+        for name, expected in _AUTHORED_SETTINGS.items():
+            actual = _only_child(settings, name).text
+            if name == "Enabled":
+                if actual not in {"true", "false"}:
+                    raise ValueError
+            elif actual != expected:
+                raise ValueError
+        return _only_child(settings, "Enabled").text or ""
+    expected_names = set(_COM_NORMALIZED_SETTINGS) | {"IdleSettings"}
+    if name_set != expected_names:
+        raise ValueError
+    for name, expected in _COM_NORMALIZED_SETTINGS.items():
+        actual = _only_child(settings, name).text
+        if name == "Enabled":
+            if actual not in {"true", "false"}:
+                raise ValueError
+        elif actual != expected:
+            raise ValueError
+    idle = _only_child(settings, "IdleSettings")
+    idle_names = [_local_name(child) for child in idle]
+    if len(idle_names) != len(set(idle_names)) or set(idle_names) != set(
+        _COM_NORMALIZED_IDLE_SETTINGS
+    ):
+        raise ValueError
+    for name, expected in _COM_NORMALIZED_IDLE_SETTINGS.items():
+        if _only_child(idle, name).text != expected:
+            raise ValueError
+    return _only_child(settings, "Enabled").text or ""
 
 
 def _task_xml(home: Path, time: str) -> bytes:
@@ -147,19 +216,10 @@ def status(
         xml_text = raw
     try:
         root = ET.fromstring(xml_text)
+        if root.tag != f"{{{_NS}}}Task" or root.attrib != {"version": "1.4"}:
+            raise ValueError
         settings = _only_descendant(root, "Settings")
-        if {_local_name(child) for child in settings} != {
-            "MultipleInstancesPolicy",
-            "StartWhenAvailable",
-            "Enabled",
-        }:
-            raise ValueError
-        settings_enabled = _only_child(settings, "Enabled").text
-        if (
-            _only_child(settings, "MultipleInstancesPolicy").text != "IgnoreNew"
-            or _only_child(settings, "StartWhenAvailable").text != "true"
-        ):
-            raise ValueError
+        settings_enabled = _validate_owned_settings(settings)
         principals = _only_descendant(root, "Principals")
         if len(principals) != 1:
             raise ValueError

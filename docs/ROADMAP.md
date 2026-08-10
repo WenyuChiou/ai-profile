@@ -286,8 +286,10 @@ local candidate evidence alone is not a shipped release.
       per-home opaque native identity, POSIX owner-only state (inherited
       user-home ACLs on Windows), exact-eight Git publication, no token
       storage, sanitized Git environment, remote-tip equality, target-repository
-      serialization, rendered-byte binding, immutable pending-push retry,
-      exact native ownership validation, and residual-honest rollback.
+      serialization, rendered-byte binding, exact expected-old push lease with
+      remote confirmation against one captured symmetric fetch/push destination,
+      destination-committed immutable pending-push retry,
+      namespace-exact native ownership validation, and residual-honest rollback.
 - [ ] Release the public-only reusable GitHub Actions workflow and immutable
       caller template. Keep identity emails secret, suppress raw output from
       workflow-owned visibility/clone/commit/push subprocesses, pin the

@@ -323,6 +323,41 @@ def test_install_rejects_detached_head(tmp_path, monkeypatch, fake_adapter, caps
     assert not (home / "scheduler").exists()
 
 
+@pytest.mark.parametrize("dry_run", [False, True])
+@pytest.mark.parametrize("history_kind", ["shallow", "partial"])
+def test_install_rejects_incomplete_repository_before_mutation(
+    tmp_path, monkeypatch, fake_adapter, capsys, dry_run, history_kind
+):
+    home = _initialized_home(tmp_path / "home")
+    repo = _repo(tmp_path)
+    if history_kind == "shallow":
+        head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+        (repo / ".git" / "shallow").write_text(f"{head}\n", encoding="ascii")
+    else:
+        _git(repo, "config", "extensions.partialClone", "origin")
+    before = _tree_state(home)
+    monkeypatch.setenv("AIPROFILE_HOME", str(home))
+    args = [
+        "schedule",
+        "install",
+        "--profile-repo",
+        str(repo),
+        "--time",
+        "07:30",
+    ]
+    if dry_run:
+        args.append("--dry-run")
+
+    assert cli.main(args) == 1
+    captured = capsys.readouterr()
+    assert "complete local history" in captured.err
+    assert str(repo) not in captured.err
+    assert repo.name not in captured.err
+    assert "Traceback" not in captured.err
+    assert _tree_state(home) == before
+    assert fake_adapter.calls == []
+
+
 def test_install_records_branch_and_remote(tmp_path, monkeypatch, fake_adapter):
     home = _initialized_home(tmp_path / "home")
     repo = _repo(tmp_path)

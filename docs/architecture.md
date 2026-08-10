@@ -443,12 +443,29 @@ can complete an interrupted forward CAS only when both local and remote still
 equal the recorded parent. It then repairs and verifies the exact-eight real
 index, and proceeds only while the parent/tree/branch/remote contract remains
 exact; divergence or index-repair failure retains the record and fails closed.
+The immutable push uses an exact expected-old lease bound to the recorded
+parent, so remote rewind, advance, or deletion after preflight cannot be
+overwritten. Push mode requires one fetch destination and the same single push
+destination. It captures that destination before refresh, binds it to a fixed
+alias inside an isolated private Git context for push and verification, and
+binds only its SHA-256 commitment into pending state. The actual argv never
+contains the URL. A narrow frozen credential-helper/TLS/SSH config allowlist
+is queried key-by-key and retained; URL rewrites, authorization headers,
+Git-config and ambient proxies, and later
+repository/global config are not. Multiple/different/credential-bearing
+destinations or a changed pending destination fail
+closed. A post-push query of the captured destination must confirm the
+immutable commit before success is reported or pending retry state is cleared.
+Shallow and partial clones are rejected before refresh or pending retry because
+the isolated private Git directory requires a complete local object graph.
 This record is local state, not a public manifest or ninth output.
 
 Native status is an ownership proof, not merely a same-name/time lookup.
-Windows validates the tool-authored principal, least-privilege/logon settings,
-single daily trigger and single action, plus exactly the three generated task
-settings. Launchd accepts only the exact
+Windows validates the task-schema namespace on every inspected descendant,
+the tool-authored principal, least-privilege/logon settings,
+single daily trigger and single action, plus either the exact authored settings
+or the exact harmless/default settings produced by an in-memory Task Scheduler
+COM round-trip. Any other value or setting is rejected. Launchd accepts only the exact
 tool-owned four-key plist. Unverifiable native state blocks mutation.
 
 Public-API discovery, fine-grained PAT or GitHub App support, private hosted

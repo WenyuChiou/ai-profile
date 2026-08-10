@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
 
 from aiprofile.errors import LockError, RefreshError, RefreshFailureState
 from aiprofile.export import PUBLIC_ASSET_NAMES
@@ -42,6 +45,14 @@ def _refresh_ok():
 def _security_prerequisite(argv):
     if "--git-common-dir" in argv:
         return subprocess.CompletedProcess(argv, 0, ".git\n", "")
+    if "--is-shallow-repository" in argv:
+        return subprocess.CompletedProcess(argv, 0, "false\n", "")
+    if "config" in argv and argv[-2:] == ["--get", "extensions.partialClone"]:
+        return subprocess.CompletedProcess(argv, 1, "", "")
+    if "get-url" in argv:
+        return subprocess.CompletedProcess(argv, 0, "file:///single-remote.git\n", "")
+    if "config" in argv and "--null" in argv:
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
     if "ls-remote" in argv:
         return subprocess.CompletedProcess(
             argv, 0, f"{'a' * 40}\trefs/heads/main\n", ""
@@ -199,7 +210,9 @@ def test_last_run_log_is_path_and_name_free(tmp_path, monkeypatch):
         assert canary not in log
 
 
-def test_git_commands_are_argv_no_shell_and_push_never_forces(tmp_path, monkeypatch):
+def test_git_commands_are_argv_no_shell_and_push_uses_exact_old_lease(
+    tmp_path, monkeypatch
+):
     home = tmp_path / "home"
     profile = tmp_path / "profile with spaces & symbols"
     profile.mkdir()
@@ -212,12 +225,18 @@ def test_git_commands_are_argv_no_shell_and_push_never_forces(tmp_path, monkeypa
 
     monkeypatch.setattr(launcher.refresh, "run_refresh", fake_refresh)
     ref_updated = False
+    pushed = False
 
     def changed_runner(argv, **kwargs):
-        nonlocal ref_updated
+        nonlocal ref_updated, pushed
         events.append(("git", (argv, kwargs)))
         assert isinstance(argv, list)
         assert kwargs.get("shell") is False
+        if "ls-remote" in argv:
+            oid = "b" * 40 if pushed else "a" * 40
+            return subprocess.CompletedProcess(
+                argv, 0, f"{oid}\trefs/heads/main\n", ""
+            )
         prerequisite = _security_prerequisite(argv)
         if prerequisite is not None:
             return prerequisite
@@ -238,15 +257,13 @@ def test_git_commands_are_argv_no_shell_and_push_never_forces(tmp_path, monkeypa
             return subprocess.CompletedProcess(argv, 0, f"{'b' * 40}\n", "")
         if "update-ref" in argv:
             ref_updated = True
+        if "push" in argv:
+            pushed = True
         return subprocess.CompletedProcess(argv, 0, "", "")
 
     assert launcher.run_launcher(home, runner=changed_runner) == 0
     argvs = [event[1][0] for event in events]
-    assert all(
-        flag not in argv
-        for argv in argvs
-        for flag in ("--force", "--force-with-lease", "-f")
-    )
+    assert all(flag not in argv for argv in argvs for flag in ("--force", "-f"))
     add = next(argv for argv in argvs if "add" in argv)
     commit = next(argv for argv in argvs if "commit-tree" in argv)
     push = next(argv for argv in argvs if "push" in argv)
@@ -261,7 +278,242 @@ def test_git_commands_are_argv_no_shell_and_push_never_forces(tmp_path, monkeypa
         "-m",
         "chore: refresh ai-profile outputs",
     ]
-    assert push == ["git", "push", "origin", f"{'b' * 40}:refs/heads/main"]
+    assert push == [
+        "git",
+        "push",
+        f"--force-with-lease=refs/heads/main:{'a' * 40}",
+        "--",
+        "aiprofile-publication",
+        f"{'b' * 40}:refs/heads/main",
+    ]
+    assert "file:///single-remote.git" not in push
+    push_event = next(event for event in events if event[1][0] == push)
+    push_env = push_event[1][1]["env"]
+    assert "file:///single-remote.git" in push_env.values()
+    assert push_env["GIT_CONFIG_GLOBAL"] == launcher.os.devnull
+    assert push_env["GIT_CONFIG_NOSYSTEM"] == "1"
+
+
+@pytest.mark.parametrize(
+    ("fetch_rc", "fetch_out", "push_rc", "push_out"),
+    [
+        (1, "private-fetch-canary\n", 0, "file:///one.git\n"),
+        (0, "file:///one.git\nfile:///two.git\n", 0, "file:///one.git\n"),
+        (0, "file:///one.git\n", 0, "file:///two.git\n"),
+        (0, "file:///one.git\x00suffix\n", 0, "file:///one.git\x00suffix\n"),
+        (0, "--receive-pack=private-option-canary\n", 0, "--receive-pack=private-option-canary\n"),
+        (0, "https://user:private-token@example.test/repo.git\n", 0, "https://user:private-token@example.test/repo.git\n"),
+        (0, "ssh://user:private-token@example.test/repo.git\n", 0, "ssh://user:private-token@example.test/repo.git\n"),
+        (0, "https://example.test/repo.git?private-token\n", 0, "https://example.test/repo.git?private-token\n"),
+        (0, "ext::private-helper-command\n", 0, "ext::private-helper-command\n"),
+        (0, "file:///one.git\rprivate-option-canary\n", 0, "file:///one.git\rprivate-option-canary\n"),
+    ],
+)
+def test_remote_destination_discovery_fails_closed(
+    tmp_path, fetch_rc, fetch_out, push_rc, push_out
+):
+    def runner(argv, **_kwargs):
+        is_push = "--push" in argv
+        return subprocess.CompletedProcess(
+            argv,
+            push_rc if is_push else fetch_rc,
+            push_out if is_push else fetch_out,
+            "private-path-canary",
+        )
+
+    assert (
+        launcher._single_symmetric_remote_destination(
+            runner,
+            "git",
+            tmp_path,
+            remote="origin",
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    "destination",
+    [
+        "https://example.test/owner/repo.git",
+        "ssh://git@example.test/owner/repo.git",
+        "git@example.test:owner/repo.git",
+        "file:///tmp/profile.git",
+    ],
+)
+def test_supported_remote_destination_forms(destination, tmp_path):
+    def runner(argv, **_kwargs):
+        assert "get-url" in argv
+        return subprocess.CompletedProcess(argv, 0, f"{destination}\n", "")
+
+    assert (
+        launcher._single_symmetric_remote_destination(
+            runner,
+            "git",
+            tmp_path,
+            remote="origin",
+        )
+        == destination
+    )
+
+
+def test_transport_config_snapshot_queries_only_allowlisted_keys(tmp_path):
+    queried: list[str] = []
+    def runner(argv, **kwargs):
+        assert kwargs["text"] is False
+        assert "--list" not in argv
+        assert argv[-2] == "--get-all"
+        key = argv[-1]
+        queried.append(key)
+        values = {
+            "credential.helper": b"manager\x00second-helper\x00",
+            "credential.usehttppath": b"true\x00",
+            "http.sslverify": b"true\x00",
+        }
+        if key in values:
+            return subprocess.CompletedProcess(argv, 0, values[key], b"")
+        return subprocess.CompletedProcess(argv, 1, b"", b"")
+
+    assert launcher._transport_config_snapshot(runner, "git", tmp_path) == (
+        ("credential.helper", "manager"),
+        ("credential.helper", "second-helper"),
+        ("credential.usehttppath", "true"),
+        ("http.sslverify", "true"),
+    )
+    assert queried == list(launcher._TRANSPORT_CONFIG_KEYS)
+    assert "http.extraheader" not in queried
+    assert "http.proxy" not in queried
+    assert all(not key.startswith("url.") for key in queried)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows path classification")
+def test_windows_remote_destination_classification_is_unambiguous(tmp_path):
+    profile = tmp_path / "profile"
+    profile.mkdir()
+    relative = f"{profile.drive}..\\remote.git"
+    assert launcher._canonical_remote_destination(relative, profile) == (
+        profile / ".." / "remote.git"
+    ).resolve().as_uri()
+
+    other_drive = "D:" if profile.drive.casefold() != "d:" else "C:"
+    assert (
+        launcher._canonical_remote_destination(
+            f"{other_drive}..\\remote.git", profile
+        )
+        is None
+    )
+    assert launcher._canonical_remote_destination(
+        str((tmp_path / "absolute.git").resolve()), profile
+    ) == (tmp_path / "absolute.git").resolve().as_uri()
+    assert launcher._supported_remote_destination(r"\\server\share\repo.git")
+    assert launcher._canonical_remote_destination("git@example.test:repo.git", profile) == (
+        "git@example.test:repo.git"
+    )
+    assert launcher._canonical_remote_destination(
+        "ssh://git@[::1]/repo.git", profile
+    ) == "ssh://git@[::1]/repo.git"
+    assert not launcher._supported_remote_destination("[::1]:repo.git")
+    assert not launcher._supported_remote_destination("git@[::1]:repo.git")
+
+
+def test_posix_one_letter_host_scp_destination_remains_opaque(tmp_path, monkeypatch):
+    monkeypatch.setattr(launcher.os, "name", "posix")
+    assert launcher._canonical_remote_destination(
+        "x:owner/repo.git", tmp_path
+    ) == "x:owner/repo.git"
+
+
+def test_transport_environment_excludes_ambient_proxy_variables(tmp_path, monkeypatch):
+    for key in ("HTTP_PROXY", "https_proxy", "All_Proxy", "NO_PROXY"):
+        monkeypatch.setenv(key, f"https://private-proxy-canary.invalid/{key}")
+
+    def runner(argv, **kwargs):
+        if "config" in argv:
+            return subprocess.CompletedProcess(argv, 1, b"", b"")
+        return subprocess.CompletedProcess(argv, 0, "file:///remote.git\n", "")
+
+    home = tmp_path / "home"
+    (home / "scheduler").mkdir(parents=True)
+    common = tmp_path / "common.git"
+    (common / "objects").mkdir(parents=True)
+    with launcher._publication_transport(
+        runner,
+        "git",
+        tmp_path,
+        home=home,
+        common_dir=common,
+        destination="file:///remote.git",
+    ) as transport:
+        assert transport is not None
+        assert all(
+            key.upper() not in {"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"}
+            for key in transport.env
+        )
+        assert "private-proxy-canary" not in repr(transport.env)
+
+
+def test_transport_argv_never_contains_destination_or_filtered_secret(
+    tmp_path, monkeypatch
+):
+    home = tmp_path / "home"
+    profile = tmp_path / "profile"
+    profile.mkdir()
+    _write_config(home, profile)
+    events: list[tuple[list[str], dict]] = []
+    monkeypatch.setattr(launcher.shutil, "which", lambda _name: "git")
+    monkeypatch.setattr(launcher.refresh, "run_refresh", lambda *_a, **_k: _refresh_ok())
+    ref_updated = False
+    pushed = False
+    destination = "https://example.test/owner/repo.git"
+    secret = "private-header-canary"
+
+    def runner(argv, **kwargs):
+        nonlocal ref_updated, pushed
+        events.append((argv, kwargs))
+        if "get-url" in argv:
+            return subprocess.CompletedProcess(argv, 0, f"{destination}\n", "")
+        if "config" in argv and "--null" in argv:
+            assert "--list" not in argv
+            assert argv[-1] != "http.extraheader"
+            if argv[-1] == "credential.helper":
+                return subprocess.CompletedProcess(argv, 0, b"manager\x00", b"")
+            return subprocess.CompletedProcess(argv, 1, b"", b"")
+        if "ls-remote" in argv:
+            oid = "b" * 40 if pushed else "a" * 40
+            return subprocess.CompletedProcess(
+                argv, 0, f"{oid}\trefs/heads/main\n", ""
+            )
+        prerequisite = _security_prerequisite(argv)
+        if prerequisite is not None:
+            return prerequisite
+        if "symbolic-ref" in argv:
+            return subprocess.CompletedProcess(argv, 0, "main\n", "")
+        if "rev-parse" in argv:
+            if argv[-1].endswith("^{tree}"):
+                return subprocess.CompletedProcess(argv, 0, f"{'d' * 40}\n", "")
+            return subprocess.CompletedProcess(
+                argv, 0, f"{('b' if ref_updated else 'a') * 40}\n", ""
+            )
+        if "status" in argv:
+            return subprocess.CompletedProcess(argv, 0, " M dist/profile.json\n", "")
+        if "read-tree" in argv:
+            Path(kwargs["env"]["GIT_INDEX_FILE"]).touch()
+        if "write-tree" in argv:
+            return subprocess.CompletedProcess(argv, 0, f"{'c' * 40}\n", "")
+        if "commit-tree" in argv:
+            return subprocess.CompletedProcess(argv, 0, f"{'b' * 40}\n", "")
+        if "update-ref" in argv:
+            ref_updated = True
+        if "push" in argv:
+            pushed = True
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    assert launcher.run_launcher(home, runner=runner) == 0
+    transport_events = [event for event in events if "push" in event[0] or "ls-remote" in event[0]]
+    assert transport_events
+    assert all(destination not in argv and secret not in argv for argv, _ in transport_events)
+    assert all(secret not in kwargs["env"].values() for _, kwargs in transport_events)
+    assert all("--" in argv and "aiprofile-publication" in argv for argv, _ in transport_events)
 
 
 def test_push_failure_is_reported_not_fatal_to_commit(tmp_path, monkeypatch):

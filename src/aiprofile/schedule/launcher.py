@@ -16,6 +16,7 @@ import stat
 import subprocess
 import tempfile
 from collections.abc import Callable
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -40,6 +41,19 @@ from .service import (
 Runner = Callable[..., subprocess.CompletedProcess]
 _PATHS = tuple(f"dist/{name}" for name in sorted(PUBLIC_ASSET_NAMES))
 _OID = re.compile(r"[0-9a-f]{40}")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+_TRANSPORT_ALIAS = "aiprofile-publication"
+_TRANSPORT_CONFIG_KEYS = (
+    "core.sshcommand",
+    "credential.helper",
+    "credential.usehttppath",
+    "http.sslbackend",
+    "http.sslcainfo",
+    "http.sslverify",
+    "http.version",
+    "ssh.variant",
+)
+_PROXY_ENV_KEYS = frozenset({"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"})
 
 
 def _append_log(home: Path, message: str) -> None:
@@ -150,6 +164,21 @@ def _repository_state(
     return branch, head_oid
 
 
+def _repository_has_complete_history(
+    runner: Runner, git: str, profile_repo: Path
+) -> bool:
+    """Require a complete object graph before private-Git publication."""
+    shallow = _run_git(
+        runner, git, profile_repo, ["rev-parse", "--is-shallow-repository"]
+    )
+    if shallow.returncode != 0 or shallow.stdout.strip() != "false":
+        return False
+    partial = _run_git(
+        runner, git, profile_repo, ["config", "--get", "extensions.partialClone"]
+    )
+    return partial.returncode == 1
+
+
 def _git_common_dir(runner: Runner, git: str, profile_repo: Path) -> Path | None:
     result = _run_git(runner, git, profile_repo, ["rev-parse", "--git-common-dir"])
     value = result.stdout.strip()
@@ -170,15 +199,16 @@ def _remote_tip(
     git: str,
     profile_repo: Path,
     *,
-    remote: str,
+    transport: _PublicationTransport,
     branch: str,
 ) -> str | None:
     reference = f"refs/heads/{branch}"
     result = _run_git(
         runner,
         git,
-        profile_repo,
-        ["ls-remote", "--exit-code", remote, reference],
+        transport.git_dir,
+        ["ls-remote", "--exit-code", "--", _TRANSPORT_ALIAS, reference],
+        env=transport.env,
     )
     lines = result.stdout.splitlines()
     if result.returncode != 0 or len(lines) != 1:
@@ -189,6 +219,275 @@ def _remote_tip(
     return fields[0]
 
 
+def _single_symmetric_remote_destination(
+    runner: Runner,
+    git: str,
+    profile_repo: Path,
+    *,
+    remote: str,
+) -> str | None:
+    fetch = _run_git(
+        runner,
+        git,
+        profile_repo,
+        ["remote", "get-url", "--all", remote],
+    )
+    push = _run_git(
+        runner,
+        git,
+        profile_repo,
+        ["remote", "get-url", "--push", "--all", remote],
+    )
+    if fetch.returncode != 0 or push.returncode != 0:
+        return None
+    fetch_urls = fetch.stdout.splitlines()
+    push_urls = push.stdout.splitlines()
+    if (
+        len(fetch_urls) != 1
+        or len(push_urls) != 1
+        or not fetch_urls[0]
+        or fetch_urls[0] != push_urls[0]
+        or not _supported_remote_destination(fetch_urls[0])
+    ):
+        return None
+    return _canonical_remote_destination(fetch_urls[0], profile_repo)
+
+
+def _supported_remote_destination(destination: str) -> bool:
+    """Accept supported credential-free remote forms as opaque data."""
+    if (
+        not destination
+        or destination.startswith("-")
+        or any(char in destination for char in ("\x00", "\r", "\n"))
+        or any(ord(char) < 0x20 for char in destination)
+        or "?" in destination
+        or "#" in destination
+        or re.match(r"^(?:[^@]+@)?\[[^]]+\]:", destination) is not None
+    ):
+        return False
+    if re.match(r"^[A-Za-z]:[\\/]", destination):
+        return True
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*::", destination):
+        return False
+    scheme_match = re.match(r"^([A-Za-z][A-Za-z0-9+.-]*)://", destination)
+    if scheme_match is None:
+        return True
+    scheme = scheme_match.group(1).lower()
+    if scheme not in {"file", "git", "http", "https", "ssh"}:
+        return False
+    authority = destination[scheme_match.end() :].split("/", 1)[0]
+    if scheme != "file" and not authority:
+        return False
+    if "@" in authority:
+        userinfo = authority.rsplit("@", 1)[0]
+        if scheme in {"http", "https", "git"} or ":" in userinfo:
+            return False
+    return True
+
+
+def _canonical_remote_destination(destination: str, profile_repo: Path) -> str | None:
+    """Resolve local paths before publication moves into its private Git dir."""
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", destination):
+        return destination
+    drive_relative = re.match(r"^([A-Za-z]):(?![\\/])(.*)$", destination)
+    if drive_relative is not None and os.name == "nt":
+        drive = f"{drive_relative.group(1)}:"
+        if profile_repo.drive.casefold() != drive.casefold():
+            return None
+        try:
+            return (profile_repo / drive_relative.group(2)).resolve().as_uri()
+        except (OSError, ValueError):
+            return None
+    if re.match(r"^(?:[^@/\\:]+@)?[^/\\:]+:.+", destination) and not (
+        os.name == "nt" and re.match(r"^[A-Za-z]:", destination)
+    ):
+        return destination
+    try:
+        path = Path(destination)
+        if not path.is_absolute():
+            path = profile_repo / path
+        return path.resolve().as_uri()
+    except (OSError, ValueError):
+        return None
+
+
+def _transport_config_snapshot(
+    runner: Runner, git: str, profile_repo: Path
+) -> tuple[tuple[str, str], ...] | None:
+    """Freeze only authentication/transport settings; exclude URL rewrites."""
+    captured: list[tuple[str, str]] = []
+    for key in _TRANSPORT_CONFIG_KEYS:
+        result = _run_git_bytes(
+            runner,
+            git,
+            profile_repo,
+            ["config", "--null", "--get-all", key],
+        )
+        if result.returncode == 1:
+            continue
+        if result.returncode != 0 or not isinstance(result.stdout, bytes):
+            return None
+        if result.stdout and not result.stdout.endswith(b"\x00"):
+            return None
+        values = result.stdout.split(b"\x00")
+        if values and values[-1] == b"":
+            values.pop()
+        try:
+            for raw_value in values:
+                value = raw_value.decode("utf-8", errors="strict")
+                captured.append((key, value))
+        except UnicodeError:
+            return None
+    return tuple(captured)
+
+
+@dataclass(frozen=True)
+class _PublicationTransport:
+    git_dir: Path
+    env: dict[str, str]
+    destination_sha256: str
+
+
+def _write_private_transport_file(path: Path, content: bytes) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            fd = -1
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(path, 0o600)
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
+@contextmanager
+def _publication_transport(
+    runner: Runner,
+    git: str,
+    profile_repo: Path,
+    *,
+    home: Path,
+    common_dir: Path,
+    destination: str,
+):
+    """Isolate a captured destination from later Git config rewrites."""
+    config = _transport_config_snapshot(runner, git, profile_repo)
+    if config is None:
+        yield None
+        return
+    private_dir: Path | None = None
+    try:
+        private_dir = Path(
+            tempfile.mkdtemp(prefix=".publication-transport-", dir=scheduler_dir(home))
+        )
+        os.chmod(private_dir, 0o700)
+        for relative in ("objects", "objects/info", "objects/pack", "refs", "refs/heads"):
+            directory = private_dir / relative
+            directory.mkdir(mode=0o700)
+            os.chmod(directory, 0o700)
+        _write_private_transport_file(
+            private_dir / "HEAD", b"ref: refs/heads/aiprofile-publication\n"
+        )
+        _write_private_transport_file(
+            private_dir / "config",
+            b"[core]\n\trepositoryformatversion = 0\n\tbare = true\n",
+        )
+        injected = [
+            (f"remote.{_TRANSPORT_ALIAS}.url", destination),
+            (f"remote.{_TRANSPORT_ALIAS}.pushurl", destination),
+            *config,
+        ]
+        extra = {
+            "GIT_DIR": str(private_dir),
+            "GIT_OBJECT_DIRECTORY": str(common_dir / "objects"),
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_SYSTEM": os.devnull,
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_COUNT": str(len(injected)),
+        }
+        for index, (key, value) in enumerate(injected):
+            extra[f"GIT_CONFIG_KEY_{index}"] = key
+            extra[f"GIT_CONFIG_VALUE_{index}"] = value
+        transport_env = sanitized_git_env(extra)
+        for key in tuple(transport_env):
+            if key.upper() in _PROXY_ENV_KEYS:
+                del transport_env[key]
+        transport = _PublicationTransport(
+            git_dir=private_dir,
+            env=transport_env,
+            destination_sha256=_destination_sha256(destination),
+        )
+    except OSError:
+        yield None
+        if private_dir is not None:
+            try:
+                shutil.rmtree(private_dir)
+            except OSError:
+                pass
+        return
+    try:
+        yield transport
+    finally:
+        if private_dir is not None:
+            try:
+                shutil.rmtree(private_dir)
+            except OSError:
+                pass
+
+
+def _destination_sha256(destination: str) -> str:
+    return hashlib.sha256(destination.encode("utf-8")).hexdigest()
+
+
+def _push_exact_remote_parent(
+    runner: Runner,
+    git: str,
+    profile_repo: Path,
+    *,
+    transport: _PublicationTransport,
+    branch: str,
+    commit_oid: str,
+    parent_oid: str,
+) -> tuple[bool, str | None]:
+    reference = f"refs/heads/{branch}"
+    pushed = _run_git(
+        runner,
+        git,
+        transport.git_dir,
+        [
+            "push",
+            f"--force-with-lease={reference}:{parent_oid}",
+            "--",
+            _TRANSPORT_ALIAS,
+            f"{commit_oid}:{reference}",
+        ],
+        env=transport.env,
+    )
+    remote_tip = _remote_tip(
+        runner,
+        git,
+        profile_repo,
+        transport=transport,
+        branch=branch,
+    )
+    if remote_tip == commit_oid:
+        return True, None
+    if remote_tip is None:
+        return False, "push outcome could not be verified; pending commit retained"
+    if pushed.returncode != 0:
+        return (
+            False,
+            f"push failed (exit {pushed.returncode}); pending commit retained",
+        )
+    return (
+        False,
+        "push reported success but remote publication is not confirmed; "
+        "pending commit retained",
+    )
+
+
 @dataclass(frozen=True)
 class _PendingPush:
     commit_oid: str
@@ -196,10 +495,18 @@ class _PendingPush:
     tree_oid: str
     branch: str
     remote: str
+    destination_sha256: str
 
 
 _PENDING_KEYS = frozenset(
-    {"commit_oid", "parent_oid", "tree_oid", "branch", "remote"}
+    {
+        "commit_oid",
+        "parent_oid",
+        "tree_oid",
+        "branch",
+        "remote",
+        "destination_sha256",
+    }
 )
 
 
@@ -215,6 +522,7 @@ def _write_pending(home: Path, pending: _PendingPush) -> bool:
             {
                 "branch": pending.branch,
                 "commit_oid": pending.commit_oid,
+                "destination_sha256": pending.destination_sha256,
                 "parent_oid": pending.parent_oid,
                 "remote": pending.remote,
                 "tree_oid": pending.tree_oid,
@@ -266,6 +574,7 @@ def _read_pending(home: Path) -> tuple[_PendingPush | None, bool]:
         pending = _PendingPush(**raw)
         if (
             not _OID.fullmatch(pending.commit_oid)
+            or not _SHA256.fullmatch(pending.destination_sha256)
             or not _OID.fullmatch(pending.parent_oid)
             or not _OID.fullmatch(pending.tree_oid)
             or not pending.branch
@@ -545,6 +854,7 @@ def _retry_pending_push(
     home: Path,
     branch: str,
     remote: str,
+    transport: _PublicationTransport,
 ) -> tuple[bool, tuple[int, str] | None]:
     pending, invalid = _read_pending(home)
     if invalid:
@@ -559,6 +869,11 @@ def _retry_pending_push(
             1,
             "pending publication state diverged; synchronize manually",
         )
+    if pending.destination_sha256 != transport.destination_sha256:
+        return False, (
+            1,
+            "pending publication destination diverged; synchronize manually",
+        )
     if not _pending_commit_matches(runner, git, profile_repo, pending):
         return False, (
             1,
@@ -570,7 +885,7 @@ def _retry_pending_push(
             runner,
             git,
             profile_repo,
-            remote=remote,
+            transport=transport,
             branch=branch,
         )
         if remote_before_cas != pending.parent_oid:
@@ -670,7 +985,7 @@ def _retry_pending_push(
         runner,
         git,
         profile_repo,
-        remote=remote,
+        transport=transport,
         branch=branch,
     )
     if remote_tip == pending.commit_oid:
@@ -685,17 +1000,17 @@ def _retry_pending_push(
             1,
             "pending publication state diverged; synchronize manually",
         )
-    pushed = _run_git(
+    published, push_failure = _push_exact_remote_parent(
         runner,
         git,
         profile_repo,
-        ["push", remote, f"{pending.commit_oid}:refs/heads/{branch}"],
+        transport=transport,
+        branch=branch,
+        commit_oid=pending.commit_oid,
+        parent_oid=pending.parent_oid,
     )
-    if pushed.returncode != 0:
-        return False, (
-            1,
-            f"push failed (exit {pushed.returncode}); pending commit retained",
-        )
+    if not published:
+        return False, (1, push_failure or "push outcome is uncertain")
     if not _clear_pending(home):
         return False, (
             1,
@@ -711,6 +1026,7 @@ def _publish(
     *,
     push: bool,
     remote: str,
+    transport: _PublicationTransport | None,
     branch: str,
     head_oid: str,
     home: Path,
@@ -749,12 +1065,14 @@ def _publish(
         return 1, preparation_failure or "git commit creation failed"
     pending_written = False
     if push:
+        assert transport is not None
         pending = _PendingPush(
             commit_oid=committed_oid,
             parent_oid=head_oid,
             tree_oid=tree_oid,
             branch=branch,
             remote=remote,
+            destination_sha256=transport.destination_sha256,
         )
         if not _write_pending(home, pending):
             return (
@@ -894,14 +1212,17 @@ def _publish(
         )
     if not push:
         return 0, "refresh committed locally; push disabled"
-    pushed = _run_git(
+    published, push_failure = _push_exact_remote_parent(
         runner,
         git,
         profile_repo,
-        ["push", remote, f"{committed_oid}:refs/heads/{branch}"],
+        transport=transport,
+        branch=branch,
+        commit_oid=committed_oid,
+        parent_oid=head_oid,
     )
-    if pushed.returncode != 0:
-        return 1, f"push failed (exit {pushed.returncode}); pending commit retained"
+    if not published:
+        return 1, push_failure or "push outcome is uncertain"
     if not _clear_pending(home):
         return 1, "publication reached remote but pending retry state remains"
     return 0, "refresh committed and pushed"
@@ -917,54 +1238,97 @@ def _run_target_locked(
         initial_state = _repository_state(runner, git, cfg.profile_repo)
         if initial_state is None or initial_state[0] != cfg.branch:
             return 1, "recorded branch is no longer checked out; run refused"
+        if not _repository_has_complete_history(runner, git, cfg.profile_repo):
+            return (
+                1,
+                "profile repository history is incomplete; "
+                "scheduled publication is unsupported",
+            )
 
-        pending, invalid_pending = _read_pending(home)
-        if not cfg.push and (invalid_pending or pending is not None):
-            return 1, "pending publication state diverged; synchronize manually"
+        destination = None
         if cfg.push:
-            _retried, retry_failure = _retry_pending_push(
+            destination = _single_symmetric_remote_destination(
+                runner,
+                git,
+                cfg.profile_repo,
+                remote=cfg.remote,
+            )
+            if destination is None:
+                return (
+                    1,
+                    "remote publication destination is unsupported; "
+                    "no publication attempted",
+                )
+
+        transport_context = (
+            _publication_transport(
                 runner,
                 git,
                 cfg.profile_repo,
                 home=home,
-                branch=cfg.branch,
-                remote=cfg.remote,
+                common_dir=common_dir,
+                destination=destination,
             )
-            if retry_failure is not None:
-                return retry_failure
-            initial_state = _repository_state(runner, git, cfg.profile_repo)
-            if initial_state is None or initial_state[0] != cfg.branch:
-                return 1, "recorded branch is no longer checked out; run refused"
-            remote_tip = _remote_tip(
+            if destination is not None
+            else nullcontext(None)
+        )
+        with transport_context as transport:
+            if cfg.push and transport is None:
+                return (
+                    1,
+                    "remote publication destination is unsupported; "
+                    "no publication attempted",
+                )
+            pending, invalid_pending = _read_pending(home)
+            if not cfg.push and (invalid_pending or pending is not None):
+                return 1, "pending publication state diverged; synchronize manually"
+            if cfg.push:
+                assert transport is not None
+                _retried, retry_failure = _retry_pending_push(
+                    runner,
+                    git,
+                    cfg.profile_repo,
+                    home=home,
+                    branch=cfg.branch,
+                    remote=cfg.remote,
+                    transport=transport,
+                )
+                if retry_failure is not None:
+                    return retry_failure
+                initial_state = _repository_state(runner, git, cfg.profile_repo)
+                if initial_state is None or initial_state[0] != cfg.branch:
+                    return 1, "recorded branch is no longer checked out; run refused"
+                remote_tip = _remote_tip(
+                    runner,
+                    git,
+                    cfg.profile_repo,
+                    transport=transport,
+                    branch=cfg.branch,
+                )
+                if remote_tip != initial_state[1]:
+                    return (
+                        1,
+                        "remote branch does not match local HEAD; synchronize manually",
+                    )
+
+            result = refresh.run_refresh(home, cfg.profile_repo / "dist")
+            if not result.ok:
+                return (
+                    1,
+                    "refresh failed for configured repositories; no outputs published",
+                )
+            return _publish(
                 runner,
                 git,
                 cfg.profile_repo,
+                push=cfg.push,
                 remote=cfg.remote,
+                transport=transport,
                 branch=cfg.branch,
+                head_oid=initial_state[1],
+                home=home,
+                expected_manifest=result.asset_manifest,
             )
-            if remote_tip != initial_state[1]:
-                return (
-                    1,
-                    "remote branch does not match local HEAD; synchronize manually",
-                )
-
-        result = refresh.run_refresh(home, cfg.profile_repo / "dist")
-        if not result.ok:
-            return (
-                1,
-                "refresh failed for configured repositories; no outputs published",
-            )
-        return _publish(
-            runner,
-            git,
-            cfg.profile_repo,
-            push=cfg.push,
-            remote=cfg.remote,
-            branch=cfg.branch,
-            head_oid=initial_state[1],
-            home=home,
-            expected_manifest=result.asset_manifest,
-        )
 
 
 def run_launcher(

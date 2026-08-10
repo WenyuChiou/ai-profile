@@ -49,6 +49,9 @@ _LAST_RUN_LINE = re.compile(
     r"refresh committed locally; push disabled|"
     r"push failed \(exit \d+\); local commit retained|"
     r"push failed \(exit \d+\); pending commit retained|"
+    r"push outcome could not be verified; pending commit retained|"
+    r"push reported success but remote publication is not confirmed; "
+    r"pending commit retained|"
     r"refresh committed and pushed|"
     r"repository state changed during scheduled refresh; publication refused|"
     r"repository state changed after staging; publication refused|"
@@ -71,8 +74,10 @@ _LAST_RUN_LINE = re.compile(
     r"generated asset bytes changed after refresh; publication refused|"
     r"profile repository locking is unavailable; publication refused|"
     r"remote branch does not match local HEAD; synchronize manually|"
+    r"remote publication destination is unsupported; no publication attempted|"
     r"pending publication state is invalid; synchronize manually|"
     r"pending publication state diverged; synchronize manually|"
+    r"pending publication destination diverged; synchronize manually|"
     r"pending publication state diverged during index repair; tool paths were "
     r"restored and push was refused|"
     r"pending publication state diverged during index repair; tool paths may "
@@ -433,6 +438,17 @@ def _validate_repository(profile_repo: Path, push: bool) -> tuple[Path, str, str
     inside = _run_git(repo, ["rev-parse", "--is-inside-work-tree"])
     if inside.returncode != 0 or inside.stdout.strip() != "true":
         raise ConfigError("profile repository is unavailable or invalid")
+    shallow = _run_git(repo, ["rev-parse", "--is-shallow-repository"])
+    partial = _run_git(repo, ["config", "--get", "extensions.partialClone"])
+    if (
+        shallow.returncode != 0
+        or shallow.stdout.strip() != "false"
+        or partial.returncode != 1
+    ):
+        raise ConfigError(
+            "profile repository must have complete local history; "
+            "shallow and partial clones are unsupported"
+        )
     branch_result = _run_git(
         repo, ["symbolic-ref", "--quiet", "--short", "HEAD"]
     )

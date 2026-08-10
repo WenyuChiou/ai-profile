@@ -66,10 +66,17 @@ below.
   calls remove ambient repository/object/config injection state, require the
   recorded remote tip to equal local `HEAD`, serialize per target repository,
   verify raw staged blobs against the completed exact-eight generation, and
-  retain a private immutable pending commit for safe push retry. Retry repairs
+  bind the actual immutable push to that parent with an exact expected-old
+  lease plus post-push remote verification. Publication requires one symmetric
+  fetch/push destination, uses the captured destination directly, and stores
+  only its SHA-256 commitment in private pending state. The scheduler retains a
+  private immutable pending commit for safe push retry. Retry repairs
   and verifies the exact-eight real index before push, including recovery from
   a crash after the branch CAS. Native status proves the complete tool-owned
-  Windows/launchd execution semantics. Linked/non-regular scheduler state is
+  Windows/launchd execution semantics, including exact task-schema namespaces
+  and the exact harmless/default
+  Settings emitted by a Task Scheduler COM in-memory round-trip.
+  Linked/non-regular scheduler state is
   rejected before read/chmod; the pending record and `last-run.log` are `0600`
   on POSIX. Never use
   `shell=True` or broad Git staging, and disclose possible rollback residuals
