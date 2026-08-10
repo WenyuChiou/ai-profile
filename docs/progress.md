@@ -20,10 +20,13 @@ which is authoritative).
   the complete native XML ownership shape before deleting a same-name task.
   ACE `0.3.0`, aggregation, `VizStats`, renderers, privacy policies, and all
   eight output names remain unchanged.
-- Fresh PR cross-platform CI, independent reviews, publication, and
-  post-release maintainer Profile scheduler dogfood remain release gates. The
-  unaffected public-only caller remains immutably pinned to its reviewed
-  v0.7.0 reusable-workflow commit.
+- PR #32 cross-platform CI run `31405185444` is green across all eight jobs,
+  and two independent committed-range reviews approved the candidate with no
+  P0--P2 findings. Merge, tag, publication, removing the maintainer Profile
+  repository itself from configured scan sources, and official-PyPI v0.7.1
+  scheduler byte-change/no-change dogfood remain open. The unaffected
+  public-only caller remains immutably pinned to its reviewed v0.7.0
+  reusable-workflow commit.
 - Current Windows evidence is **954 passed with 30 skipped**; the focused
   scheduler suites pass **143 with 5 skipped** on both the current interpreter
   and Python 3.11; WSL Python 3.12 passes **145 with 3 skipped**. The
@@ -35,8 +38,8 @@ which is authoritative).
   `c941b547b41eccca7efdfc99bdf785c6d8c307da8bedace0a73a3d19036df005`.
   Twine, artifact/notices/checksum validation, and clean-wheel refresh smoke
   pass; the final source-distribution digest is retained in external review
-  evidence to avoid a self-referential archive. Independent reviews, PR CI,
-  publication, and live Profile dogfood remain open.
+  evidence to avoid a self-referential archive. The branch is reviewed and CI
+  green but remains deliberately unmerged and unreleased.
 
 ## v0.7.0 automation release record
 
