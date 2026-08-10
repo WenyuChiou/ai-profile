@@ -23,10 +23,16 @@ from . import (
 
 _NS = "http://schemas.microsoft.com/windows/2004/02/mit/task"
 
-_AUTHORED_SETTINGS = {
+_REGISTERED_SETTINGS = {
+    "DisallowStartIfOnBatteries": "true",
+    "StopIfGoingOnBatteries": "true",
     "MultipleInstancesPolicy": "IgnoreNew",
     "StartWhenAvailable": "true",
-    "Enabled": "true",
+    "UseUnifiedSchedulingEngine": "true",
+}
+_REGISTERED_IDLE_SETTINGS = {
+    "StopOnIdleEnd": "true",
+    "RestartOnIdle": "false",
 }
 _COM_NORMALIZED_SETTINGS = {
     "MultipleInstancesPolicy": "IgnoreNew",
@@ -40,7 +46,6 @@ _COM_NORMALIZED_SETTINGS = {
     "Hidden": "false",
     "RunOnlyIfIdle": "false",
     "DisallowStartOnRemoteAppSession": "false",
-    "UseUnifiedSchedulingEngine": "false",
     "WakeToRun": "false",
     "ExecutionTimeLimit": "PT72H",
     "Priority": "7",
@@ -49,6 +54,15 @@ _COM_NORMALIZED_IDLE_SETTINGS = {
     "StopOnIdleEnd": "true",
     "RestartOnIdle": "false",
 }
+_COM_NORMALIZED_SETTING_VARIANTS = tuple(
+    {
+        **_COM_NORMALIZED_SETTINGS,
+        "Enabled": enabled,
+        "UseUnifiedSchedulingEngine": unified,
+    }
+    for unified in ("false", "true")
+    for enabled in ("true", "false")
+)
 
 
 def task_name(home: Path) -> str:
@@ -85,30 +99,149 @@ def _only_child(parent: ET.Element, name: str) -> ET.Element:
     return matches[0]
 
 
+def _current_user_sid() -> str | None:
+    if sys.platform != "win32":
+        return None
+
+    import ctypes
+    from ctypes import wintypes
+
+    class SidAndAttributes(ctypes.Structure):
+        _fields_ = [("sid", ctypes.c_void_p), ("attributes", wintypes.DWORD)]
+
+    class TokenUser(ctypes.Structure):
+        _fields_ = [("user", SidAndAttributes)]
+
+    token_query = 0x0008
+    token_user_class = 1
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    advapi32.OpenProcessToken.argtypes = (
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.HANDLE),
+    )
+    advapi32.OpenProcessToken.restype = wintypes.BOOL
+    advapi32.GetTokenInformation.argtypes = (
+        wintypes.HANDLE,
+        ctypes.c_uint,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    )
+    advapi32.GetTokenInformation.restype = wintypes.BOOL
+    advapi32.ConvertSidToStringSidW.argtypes = (
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    )
+    advapi32.ConvertSidToStringSidW.restype = wintypes.BOOL
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.LocalFree.argtypes = (ctypes.c_void_p,)
+    kernel32.LocalFree.restype = ctypes.c_void_p
+
+    token = wintypes.HANDLE()
+    if not advapi32.OpenProcessToken(
+        kernel32.GetCurrentProcess(), token_query, ctypes.byref(token)
+    ):
+        raise OSError(ctypes.get_last_error())
+    try:
+        size = wintypes.DWORD()
+        advapi32.GetTokenInformation(
+            token, token_user_class, None, 0, ctypes.byref(size)
+        )
+        if size.value == 0:
+            raise OSError(ctypes.get_last_error())
+        buffer = ctypes.create_string_buffer(size.value)
+        if not advapi32.GetTokenInformation(
+            token,
+            token_user_class,
+            buffer,
+            size,
+            ctypes.byref(size),
+        ):
+            raise OSError(ctypes.get_last_error())
+        token_user = ctypes.cast(buffer, ctypes.POINTER(TokenUser)).contents
+        sid_string = ctypes.c_void_p()
+        if not advapi32.ConvertSidToStringSidW(
+            token_user.user.sid, ctypes.byref(sid_string)
+        ):
+            raise OSError(ctypes.get_last_error())
+        try:
+            return ctypes.wstring_at(sid_string.value)
+        finally:
+            kernel32.LocalFree(sid_string)
+    finally:
+        kernel32.CloseHandle(token)
+
+
+def _validate_owned_principal(principal: ET.Element) -> None:
+    names = [_local_name(child) for child in principal]
+    if len(names) != len(set(names)) or principal.get("id") != "Author":
+        raise ValueError
+    if set(names) == {"UserId", "LogonType", "RunLevel"}:
+        if (
+            _only_child(principal, "UserId").text != getpass.getuser()
+            or _only_child(principal, "LogonType").text != "InteractiveToken"
+            or _only_child(principal, "RunLevel").text != "LeastPrivilege"
+        ):
+            raise ValueError
+        return
+    if set(names) != {"UserId", "LogonType"}:
+        raise ValueError
+    try:
+        expected_sid = _current_user_sid()
+    except OSError as exc:
+        raise ValueError from exc
+    if (
+        expected_sid is None
+        or _only_child(principal, "UserId").text != expected_sid
+        or _only_child(principal, "LogonType").text != "InteractiveToken"
+    ):
+        raise ValueError
+
+
 def _validate_owned_settings(settings: ET.Element) -> str:
     names = [_local_name(child) for child in settings]
     name_set = set(names)
     if len(names) != len(name_set):
         raise ValueError
-    if name_set == set(_AUTHORED_SETTINGS):
-        for name, expected in _AUTHORED_SETTINGS.items():
-            actual = _only_child(settings, name).text
-            if name == "Enabled":
-                if actual not in {"true", "false"}:
-                    raise ValueError
-            elif actual != expected:
+    registered_names = set(_REGISTERED_SETTINGS) | {"IdleSettings"}
+    if frozenset(name_set) in {
+        frozenset(registered_names),
+        frozenset(registered_names | {"Enabled"}),
+    }:
+        for name, expected in _REGISTERED_SETTINGS.items():
+            if _only_child(settings, name).text != expected:
                 raise ValueError
-        return _only_child(settings, "Enabled").text or ""
-    expected_names = set(_COM_NORMALIZED_SETTINGS) | {"IdleSettings"}
+        idle = _only_child(settings, "IdleSettings")
+        idle_names = [_local_name(child) for child in idle]
+        if len(idle_names) != len(set(idle_names)) or set(idle_names) != set(
+            _REGISTERED_IDLE_SETTINGS
+        ):
+            raise ValueError
+        for name, expected in _REGISTERED_IDLE_SETTINGS.items():
+            if _only_child(idle, name).text != expected:
+                raise ValueError
+        if "Enabled" not in name_set:
+            return "true"
+        if _only_child(settings, "Enabled").text != "false":
+            raise ValueError
+        return "false"
+    expected_names = set(_COM_NORMALIZED_SETTINGS) | {
+        "IdleSettings",
+        "UseUnifiedSchedulingEngine",
+    }
     if name_set != expected_names:
         raise ValueError
-    for name, expected in _COM_NORMALIZED_SETTINGS.items():
-        actual = _only_child(settings, name).text
-        if name == "Enabled":
-            if actual not in {"true", "false"}:
-                raise ValueError
-        elif actual != expected:
-            raise ValueError
+    actual_settings = {
+        name: _only_child(settings, name).text
+        for name in expected_names
+        if name != "IdleSettings"
+    }
+    if actual_settings not in _COM_NORMALIZED_SETTING_VARIANTS:
+        raise ValueError
     idle = _only_child(settings, "IdleSettings")
     idle_names = [_local_name(child) for child in idle]
     if len(idle_names) != len(set(idle_names)) or set(idle_names) != set(
@@ -118,7 +251,7 @@ def _validate_owned_settings(settings: ET.Element) -> str:
     for name, expected in _COM_NORMALIZED_IDLE_SETTINGS.items():
         if _only_child(idle, name).text != expected:
             raise ValueError
-    return _only_child(settings, "Enabled").text or ""
+    return actual_settings["Enabled"] or ""
 
 
 def _task_xml(home: Path, time: str) -> bytes:
@@ -139,9 +272,14 @@ def _task_xml(home: Path, time: str) -> bytes:
     _node(principal, "LogonType", "InteractiveToken")
     _node(principal, "RunLevel", "LeastPrivilege")
     settings = _node(root, "Settings")
+    _node(settings, "DisallowStartIfOnBatteries", "true")
+    _node(settings, "StopIfGoingOnBatteries", "true")
     _node(settings, "MultipleInstancesPolicy", "IgnoreNew")
     _node(settings, "StartWhenAvailable", "true")
-    _node(settings, "Enabled", "true")
+    idle = _node(settings, "IdleSettings")
+    _node(idle, "StopOnIdleEnd", "true")
+    _node(idle, "RestartOnIdle", "false")
+    _node(settings, "UseUnifiedSchedulingEngine", "true")
     actions = _node(root, "Actions")
     actions.set("Context", "Author")
     execute = _node(actions, "Exec")
@@ -224,26 +362,22 @@ def status(
         if len(principals) != 1:
             raise ValueError
         principal = _only_child(principals, "Principal")
-        if (
-            principal.get("id") != "Author"
-            or {_local_name(child) for child in principal}
-            != {"UserId", "LogonType", "RunLevel"}
-            or _only_child(principal, "UserId").text != getpass.getuser()
-            or _only_child(principal, "LogonType").text != "InteractiveToken"
-            or _only_child(principal, "RunLevel").text != "LeastPrivilege"
-        ):
-            raise ValueError
+        _validate_owned_principal(principal)
         triggers_container = _only_descendant(root, "Triggers")
         if len(triggers_container) != 1:
             raise ValueError
         trigger = _only_child(triggers_container, "CalendarTrigger")
-        if {_local_name(child) for child in trigger} != {
-            "StartBoundary",
-            "Enabled",
-            "ScheduleByDay",
-        }:
+        trigger_names = [_local_name(child) for child in trigger]
+        if len(trigger_names) != len(set(trigger_names)) or set(trigger_names) not in (
+            {"StartBoundary", "ScheduleByDay"},
+            {"StartBoundary", "Enabled", "ScheduleByDay"},
+        ):
             raise ValueError
-        trigger_enabled = _only_child(trigger, "Enabled").text
+        trigger_enabled = (
+            _only_child(trigger, "Enabled").text
+            if "Enabled" in trigger_names
+            else "true"
+        )
         start = _only_child(trigger, "StartBoundary").text
         daily = _only_child(trigger, "ScheduleByDay")
         if len(daily) != 1 or _only_child(daily, "DaysInterval").text != "1":
@@ -287,13 +421,11 @@ def remove(
 ) -> None:
     local_definition = Path(home) / "scheduler" / "task.xml"
     name = task_name(home)
-    query = run_command(
-        runner,
-        PlannedCommand(("schtasks", "/Query", "/TN", name, "/FO", "LIST")),
-    )
-    if query.returncode != 0 and local_definition.exists():
-        raise ConfigError("native scheduler removal failed")
-    if query.returncode == 0:
+    try:
+        native_status = status(home, runner=runner)
+    except ConfigError as exc:
+        raise ConfigError("native scheduler removal failed") from exc
+    if native_status.installed:
         result = run_command(
             runner,
             PlannedCommand(("schtasks", "/Delete", "/TN", name, "/F")),

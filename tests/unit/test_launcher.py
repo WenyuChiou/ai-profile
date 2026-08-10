@@ -115,7 +115,7 @@ def test_write_scheduler_files_creates_launcher_and_config(tmp_path):
         "push": True,
         "branch": "main",
         "remote": "origin",
-        "installed_version": "0.7.0",
+        "installed_version": "0.7.1",
     }
     assert service.read_scheduler_config(home).profile_repo == profile.resolve()
 

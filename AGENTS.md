@@ -10,7 +10,7 @@ disagree, docs win and the code is the bug.
 
 - `python -m pytest tests -p no:cacheprovider` — full suite; state the
   platform and count you observe. Windows local (current candidate,
-  2026-08-10): 938 passed, 30 skipped. Linux CI (current candidate, run
+  2026-08-10): 954 passed, 30 skipped. Linux CI (current v0.7.0 release, run
   31390314352): Python 3.11–3.14 each passed 963 tests with 5 skipped. Update
   only the corresponding platform baseline, never overwrite one platform's
   count with another's expected skip profile.
