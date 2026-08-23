@@ -394,13 +394,15 @@ def test_role_img_on_root_svg():
         assert root.get("role") == "img"
 
 
-def test_all_font_sizes_at_least_11px():
+def test_all_font_sizes_at_least_12px():
+    # v0.8.0 Signal Console raised the summary-card floor from 11px to 12px
+    # for README-scale legibility (ADR-031).
     for stats in CASES.values():
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             sizes = [int(n) for n in re.findall(r'font-size="(\d+)"', svg)]
             assert sizes, "expected at least one font-size attribute"
-            assert all(size >= 11 for size in sizes), sizes
+            assert all(size >= 12 for size in sizes), sizes
 
 
 # ---------------------------------------------------------------------------

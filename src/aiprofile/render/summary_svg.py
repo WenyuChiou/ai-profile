@@ -13,6 +13,15 @@ keeps its header + period, hero AI-attributed-commit figure with share of
 scanned commits, secondary metric ledger, top-six provider ledger with an
 explicit non-exclusive note, and compact evidence rail.
 
+v0.8.0 (ADR-031, Signal Console) recomposes the card for README-scale
+legibility: the header becomes a status line carrying the period and an
+explicit *snapshot* date, the hero + right-hand ledger become one metric
+console strip (hero cell plus four hairline-separated secondary cells on a
+shared baseline), the daily matrix is left-aligned on the card margin with
+wider cells, and the type floor rises from 11px to 12px on the fixed
+12/13/18/40 scale. Semantics, bins, provider/evidence meanings, the
+publishable-only rule, and the deterministic-height contract are unchanged.
+
 Layout is dynamic-but-deterministic: the card height is a pure function of
 the data (number of provider rows, overflow line, published daily series,
 zero state) so sparse profiles never show a dead band — see `card_height`.
@@ -46,11 +55,11 @@ _UNRECOGNIZED_PROVIDER = "unrecognized"
 
 # ---------------------------------------------------------------------------
 # Layout constants (ADR-010: fixed constants, no template engine).
-# Shared spacing system (introduced in v0.4.8 and retained in v0.4.9): 4px
-# scale, 24px outer padding, 8-12px
-# within-group gaps, 20-24px between sections. Fixed type sizes
-# 11/12/13/16/38; weights 400 for labels, 600 for values/section labels,
-# 700 for the hero figure.
+# Shared spacing system (introduced in v0.4.8 and retained since): 4px
+# scale, 24px outer padding, 8-12px within-group gaps, 20-24px between
+# sections. Fixed type sizes 12/13/18/40 (v0.8.0 Signal Console; the 11px
+# floor was retired for README-scale legibility); weights 400 for labels,
+# 600 for values/section labels, 700 for the hero figure.
 # ---------------------------------------------------------------------------
 
 WIDTH = 830
@@ -74,26 +83,41 @@ FONT_STACK_MONO = (
 TITLE_TEXT = "AI Collaboration Record"
 MAX_PROVIDER_ROWS = 6
 
-# Header: accent commit-node glyph + title + right-aligned period label.
+# Header: accent commit-node glyph + title + right-aligned status line
+# ("<period> · snapshot <generated_on>"; ADR-031 — the date is a snapshot
+# label, never a freshness or live-data claim).
 HEADER_TEXT_Y = 36
 GLYPH_CX = 32
 GLYPH_CY = 32
 TITLE_X = 48
+TITLE_FONT_SIZE = 18
 DIVIDER1_Y = 56
+STATUS_SEPARATOR = " · snapshot "
 
-# Hero metric + secondary ledger.
-HERO_VALUE_Y = 112
+# Metric console strip (ADR-031): one hero cell (AI-attributed commits,
+# share line, share bar) plus four hairline-separated secondary cells on a
+# shared baseline — sustained use, provider breadth, multi-actor depth, and
+# the honest unattributed remainder, in that recruiter-facing order.
+METRIC_STRIP_TOP = 72  # divider + 16: top of the hairline separators
+METRIC_STRIP_BOTTOM = 176
+HERO_CELL_WIDTH = 246  # hero cell: PADDING .. PADDING + HERO_CELL_WIDTH
+HERO_VALUE_Y = 116
 HERO_LABEL_Y = 140
-HERO_RELATION_Y = 160
-HERO_VALUE_SIZE = 38
+HERO_RELATION_Y = 158
+HERO_VALUE_SIZE = 40
 SHARE_BAR_X = PADDING
-SHARE_BAR_Y = 172
-SHARE_BAR_WIDTH = 360
-SHARE_BAR_HEIGHT = 7
-LEDGER_LABEL_X = 512
-LEDGER_VALUE_X = WIDTH - PADDING
-LEDGER_FIRST_Y = 88
-LEDGER_ROW_STEP = 24
+SHARE_BAR_Y = 166
+SHARE_BAR_WIDTH = HERO_CELL_WIDTH - 24  # 222: clears the first separator
+SHARE_BAR_HEIGHT = 6
+METRIC_CELL_COUNT = 4
+METRIC_CELL_PAD_X = 14  # separator -> cell text
+METRIC_VALUE_Y = 116  # secondary values share the hero's baseline
+METRIC_LABEL_Y = 140
+METRIC_SUBLABEL_Y = 156  # optional second label line (e.g. the day unit)
+METRIC_VALUE_SIZE = 18
+#: Left edge (separator x) of each secondary cell; the four cells share
+#: the width right of the hero cell equally.
+METRIC_CELL_WIDTH = (WIDTH - 2 * PADDING - HERO_CELL_WIDTH) // METRIC_CELL_COUNT  # 134
 
 # Provider ledger (rendered BELOW the daily matrix — the matrix
 # is the card's recruiter-facing centerpiece, ADR-022). The table's top
@@ -120,7 +144,7 @@ GLYPH_INSET = (GLYPH_TILE_SIZE - GLYPH_RENDER_SIZE) // 2  # 3 - centers the glyp
 GLYPH_SCALE = "0.583333"
 LETTER_TILE_CX = GLYPH_TILE_X + GLYPH_TILE_SIZE // 2  # 34 - horizontal tile center
 LETTER_TILE_TEXT_DY = 14  # baseline offset from the tile's top y
-LETTER_TILE_FONT_SIZE = 11
+LETTER_TILE_FONT_SIZE = 12
 
 NAME_X = GLYPH_TILE_X + GLYPH_TILE_SIZE + 8  # 52 (spec: tile + 8px gap)
 NAME_WIDTH = 120  # 4px scale: keeps the lockup column predictable
@@ -165,6 +189,7 @@ EVIDENCE_CHIP_PAD_X = 8
 EVIDENCE_CHIP_RADIUS = 4
 EVIDENCE_FONT_SIZE = 12
 EVIDENCE_LABEL_SIZE = 12
+FOOTER_FONT_SIZE = 12
 EVIDENCE_PREFIX_TEMPLATE = "Evidence (all records: {n})"
 EVIDENCE_BAR_Y_OFFSET = 36
 EVIDENCE_BAR_HEIGHT = 8
@@ -222,16 +247,16 @@ CAL_UNPUBLISHED_TEXT = "Daily activity is not published for this profile"
 CAL_NOTICE_MESSAGE_Y = 38  # local baseline of the unpublished-daily message
 CAL_NOTICE_HEIGHT = 44  # total footprint of the unpublished-daily notice
 
-#: Fixed y where the matrix block starts: the hero/ledger block above it
-#: is fixed-height (share bar bottom 179 / ledger baseline 160), plus a
-#: 24px section gap on the 4px scale.
-CAL_TOP = 204
+#: Fixed y where the matrix block starts: the metric console strip above
+#: it is fixed-height (METRIC_STRIP_BOTTOM = 176), plus a 24px section gap
+#: on the 4px scale.
+CAL_TOP = METRIC_STRIP_BOTTOM + 24
 
 # Round D3 P2: month-boundary labels sit in their own row between the band
 # header and the flat cell grid. CAL_GRID_TOP_Y (below) derives from these so
 # bumping either constant here re-flows the whole grid/legend/CAL_HEIGHT
 # automatically.
-CAL_MONTH_LABEL_SIZE = 11
+CAL_MONTH_LABEL_SIZE = 12
 CAL_MONTH_LABEL_BASELINE_Y = 30  # local y of the month-label row's text baseline
 CAL_MONTH_LABEL_GRID_GAP = 10  # month-label baseline -> grid top
 
@@ -240,7 +265,7 @@ CAL_DAYS = 7
 CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- the matrix's OWN newest-anchored
 # slice of the (D4: 365-day) viz.DAILY_WINDOW_DAYS series; gate-17 L-01
 
-CAL_CELL_W = 38
+CAL_CELL_W = 52  # v0.8.0: widened from 38 for README-scale legibility
 CAL_CELL_H = 20
 CAL_CELL_GAP = 6
 CAL_BAR_INSET = 4
@@ -261,7 +286,10 @@ CAL_CAP_COMMITS = VOLUME_CAP
 CAL_GRID_TOP_Y = CAL_MONTH_LABEL_BASELINE_Y + CAL_MONTH_LABEL_GRID_GAP  # 40
 CAL_GRID_WIDTH = CAL_WEEKS * CAL_CELL_W + (CAL_WEEKS - 1) * CAL_CELL_GAP
 CAL_GRID_HEIGHT = CAL_DAYS * CAL_CELL_H + (CAL_DAYS - 1) * CAL_CELL_GAP
-CAL_GRID_X = (WIDTH - CAL_GRID_WIDTH) // 2
+#: The matrix is left-aligned on the card margin (ADR-031 precision
+#: alignment): a 24px weekday-label gutter after PADDING, never centered.
+CAL_GUTTER = 24
+CAL_GRID_X = PADDING + CAL_GUTTER
 CAL_GRID_BOTTOM_Y = CAL_GRID_TOP_Y + CAL_GRID_HEIGHT
 
 # A few quiet editorial rails give the matrix a visible reading rhythm without
@@ -277,7 +305,7 @@ CAL_RAIL_OPACITY = 0.35
 # volume-bar bins, the five-step neutral-to-accent AI-share ramp, and the
 # standing "publishable repos only" cue.
 CAL_LEGEND_SWATCH = 10
-CAL_LEGEND_LABEL_SIZE = 11
+CAL_LEGEND_LABEL_SIZE = 12
 CAL_LEGEND_LABEL_GAP = 4
 CAL_LEGEND_ITEM_GAP = 10
 CAL_LEGEND_TOP_GAP = 18  # grid bottom -> legend baseline
@@ -587,31 +615,58 @@ def _desc_text(stats: VizStats, zero_state: bool) -> str:
 
 
 def _ledger_svg(stats: VizStats, theme: Theme) -> str:
-    # Secondary metric order is the recruiter-facing priority (ADR-022):
-    # sustained use first, provider breadth second, then the multi-actor
-    # depth metric, then the honest unattributed remainder.
+    """The four secondary metric cells of the console strip (ADR-031).
+
+    Order is the recruiter-facing priority (ADR-022): sustained use first,
+    provider breadth second, then the multi-actor depth metric, then the
+    honest unattributed remainder. Each cell is a hairline separator (border
+    token, never accent), a mono value on the hero baseline, and a muted
+    label; geometry is integer arithmetic on METRIC_CELL_WIDTH.
+    """
     rows = (
-        ("Active AI days (author dates)", stats.totals.active_ai_days),
-        ("AI providers", stats.provider_count),
-        ("AI actor presences", stats.totals.ai_actor_presences),
-        ("Unattributed commits", stats.totals.unknown_commits),
+        ("Active AI days", "(author dates)", stats.totals.active_ai_days),
+        ("AI providers", "", stats.provider_count),
+        ("AI actor presences", "", stats.totals.ai_actor_presences),
+        ("Unattributed commits", "", stats.totals.unknown_commits),
     )
+    label_width = METRIC_CELL_WIDTH - METRIC_CELL_PAD_X
     parts = []
-    for index, (label, value) in enumerate(rows):
-        y = LEDGER_FIRST_Y + index * LEDGER_ROW_STEP
-        parts.append(_text(LEDGER_LABEL_X, y, label, size=12, fill=theme.muted))
+    for index, (label, sublabel, value) in enumerate(rows):
+        sep_x = PADDING + HERO_CELL_WIDTH + index * METRIC_CELL_WIDTH
+        text_x = sep_x + METRIC_CELL_PAD_X
+        parts.append(
+            _line(sep_x, METRIC_STRIP_TOP, sep_x, METRIC_STRIP_BOTTOM, stroke=theme.border)
+        )
         parts.append(
             _text(
-                LEDGER_VALUE_X,
-                y,
+                text_x,
+                METRIC_VALUE_Y,
                 str(value),
-                size=13,
+                size=METRIC_VALUE_SIZE,
                 fill=theme.text,
                 weight=600,
-                anchor="end",
                 family=FONT_STACK_MONO,
             )
         )
+        parts.append(
+            _text(
+                text_x,
+                METRIC_LABEL_Y,
+                _truncate(label, label_width, 12),
+                size=12,
+                fill=theme.muted,
+            )
+        )
+        if sublabel:
+            parts.append(
+                _text(
+                    text_x,
+                    METRIC_SUBLABEL_Y,
+                    _truncate(sublabel, label_width, 12),
+                    size=12,
+                    fill=theme.muted,
+                )
+            )
     return "\n".join(parts)
 
 
@@ -881,7 +936,7 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
         _rect(inner_x, marker_y, EVIDENCE_SWATCH, EVIDENCE_SWATCH, fill=theme.muted, rx=1)
     )
     parts.append(
-        _text(inner_x + 12, top + PRIVACY_Y_OFFSET, privacy_text, size=11, fill=theme.muted)
+        _text(inner_x + 12, top + PRIVACY_Y_OFFSET, privacy_text, size=12, fill=theme.muted)
     )
     return "\n".join(parts)
 
@@ -974,7 +1029,7 @@ def _calendar_weekday_labels_svg(stats: VizStats, theme: Theme, top: int) -> str
             CAL_GRID_X - 8,
             top + CAL_GRID_TOP_Y + row * (CAL_CELL_H + CAL_CELL_GAP) + CAL_CELL_H // 2 + 4,
             label,
-            size=11,
+            size=12,
             fill=theme.muted,
             anchor="end",
         )
@@ -1229,20 +1284,24 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
             TITLE_X,
             HEADER_TEXT_Y,
             TITLE_TEXT,
-            size=16,
+            size=TITLE_FONT_SIZE,
             weight=600,
             fill=theme.title,
             family=FONT_STACK_DISPLAY,
         )
     )
+    # Status line (ADR-031): period + explicit snapshot date. The date is
+    # the generation date already carried by VizStats; labelling it
+    # "snapshot" states what it is without implying live data.
     parts.append(
         _text(
             WIDTH - PADDING,
             HEADER_TEXT_Y,
-            stats.period.label,
+            f"{stats.period.label}{STATUS_SEPARATOR}{stats.generated_on}",
             size=12,
             fill=theme.muted,
             anchor="end",
+            family=FONT_STACK_MONO,
         )
     )
     parts.append(_line(PADDING, DIVIDER1_Y, WIDTH - PADDING, DIVIDER1_Y, stroke=theme.border))
@@ -1289,7 +1348,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
                     WIDTH - PADDING,
                     table_label_y,
                     f"% of {stats.totals.ai_attributed_commits} AI-attributed commits",
-                    size=11,
+                    size=12,
                     fill=theme.muted,
                     anchor="end",
                 )
@@ -1318,7 +1377,7 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
                 PADDING,
                 _rows_bottom(stats) + PROVIDER_NOTE_BASELINE,
                 PROVIDER_NOTE_TEXT,
-                size=11,
+                size=12,
                 fill=theme.muted,
             )
         )
@@ -1334,12 +1393,20 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
             PADDING,
             divider2_y + FOOTER1_OFFSET,
             f"Generated {stats.generated_on} · aiprofile",
-            size=11,
+            size=FOOTER_FONT_SIZE,
             fill=theme.muted,
             family=FONT_STACK_MONO,
         )
     )
-    parts.append(_text(PADDING, divider2_y + FOOTER2_OFFSET, FOOTNOTE, size=11, fill=theme.muted))
+    parts.append(
+        _text(
+            PADDING,
+            divider2_y + FOOTER2_OFFSET,
+            FOOTNOTE,
+            size=FOOTER_FONT_SIZE,
+            fill=theme.muted,
+        )
+    )
 
     parts.append("</svg>")
     return "\n".join(parts) + "\n"

@@ -19,6 +19,12 @@ network, fixed integer arithmetic for the bin math (no float-equality
 edges), FULLY STATIC output (the SMIL ban from the D2 postmortem applies
 to every card in this repo).
 
+v0.8.0 (ADR-031, Signal Console): the header is the same status line the
+summary card uses (display title at 18px, "<period> · snapshot <date>" in
+mono on the right), the 10px label floor rises to 11px, and month labels
+sit at 12px. Grid geometry (11px cells on a 14px step, 53 columns inside
+the 830px card) is unchanged — it already fills the card width.
+
 Shares the summary card's private text/geometry helpers deliberately —
 one family of cards, one set of text-metric conventions; a divergence in
 font stacks or escaping between sibling cards would be a bug, not a
@@ -40,8 +46,12 @@ from ._bins import (
     _volume_bin,
 )
 from .summary_svg import (
+    FONT_STACK_DISPLAY,
+    FONT_STACK_MONO,
     PADDING,
     RADIUS,
+    STATUS_SEPARATOR,
+    TITLE_FONT_SIZE,
     TITLE_X,
     WIDTH,
     _commit_mark,
@@ -61,6 +71,8 @@ from .themes import Theme
 
 HM_TITLE_TEXT = "Commit Activity × AI Collaboration"
 HM_HEADER_TEXT_Y = 36
+HM_LABEL_SIZE = 11  # weekday / legend floor (v0.8.0: raised from 10)
+HM_MONTH_LABEL_SIZE = 12
 HM_DIVIDER1_Y = 56
 HM_GLYPH_CX = 32
 HM_GLYPH_CY = 31
@@ -185,8 +197,8 @@ def _month_labels(daily: tuple[DayCell, ...], theme: Theme) -> str:
         if previous_month is not None and monday.month != previous_month:
             x = HM_GRID_X + col * HM_STEP
             parts.append(
-                _text(x, HM_MONTH_LABEL_Y, _MONTH_NAMES[monday.month - 1], size=11,
-                      fill=theme.muted)
+                _text(x, HM_MONTH_LABEL_Y, _MONTH_NAMES[monday.month - 1],
+                      size=HM_MONTH_LABEL_SIZE, fill=theme.muted)
             )
         previous_month = monday.month
     return "\n".join(parts)
@@ -206,7 +218,7 @@ def _weekday_labels(theme: Theme) -> str:
             PADDING,
             HM_GRID_TOP + row * HM_STEP + HM_CELL - 1,
             label,
-            size=10,
+            size=HM_LABEL_SIZE,
             fill=theme.muted,
         )
         for row, label in _WEEKDAY_LABELS
@@ -223,31 +235,31 @@ def _legend(theme: Theme) -> str:
     parts: list[str] = []
     y_text = HM_LEGEND_Y + HM_LEGEND_TEXT_DY
     x = float(PADDING)
-    parts.append(_text(x, y_text, "Volume", size=10, fill=theme.muted))
-    x += 46
+    parts.append(_text(x, y_text, "Volume", size=HM_LABEL_SIZE, fill=theme.muted))
+    x += 50
     for volume_bin, label in enumerate(HM_VOLUME_LABELS):
         parts.append(
             _rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=_cell_fill(theme, 0, volume_bin), rx=3)
         )
         x += HM_CELL + 4
-        parts.append(_text(x, y_text, label, size=10, fill=theme.muted))
+        parts.append(_text(x, y_text, label, size=HM_LABEL_SIZE, fill=theme.muted))
         x += 10 + 6 * len(label)
     x += 26
-    parts.append(_text(x, y_text, "AI share", size=10, fill=theme.muted))
-    x += 52
-    parts.append(_text(x, y_text, "0%", size=10, fill=theme.muted))
+    parts.append(_text(x, y_text, "AI share", size=HM_LABEL_SIZE, fill=theme.muted))
+    x += 56
+    parts.append(_text(x, y_text, "0%", size=HM_LABEL_SIZE, fill=theme.muted))
     x += 20
     for color in colors:
         parts.append(_rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=color, rx=3))
         x += HM_CELL + 3
     x += 5
-    parts.append(_text(x, y_text, "100%", size=10, fill=theme.muted))
+    parts.append(_text(x, y_text, "100%", size=HM_LABEL_SIZE, fill=theme.muted))
     parts.append(
         _text(
             WIDTH - PADDING,
             y_text,
             HM_CUE_TEXT,
-            size=10,
+            size=HM_LABEL_SIZE,
             fill=theme.muted,
             anchor="end",
         )
@@ -304,14 +316,25 @@ def render_heatmap(stats: VizStats, theme: Theme) -> str:
         f'<rect x="0.5" y="0.5" width="{WIDTH - 1}" height="{height - 1}" rx="{RADIUS}" '
         f'fill="{theme.bg}" stroke="{theme.border}" stroke-width="1"/>',
         _commit_mark(HM_GLYPH_CX, HM_GLYPH_CY, theme),
-        _text(TITLE_X, HM_HEADER_TEXT_Y, HM_TITLE_TEXT, size=16, weight=600, fill=theme.title),
+        _text(
+            TITLE_X,
+            HM_HEADER_TEXT_Y,
+            HM_TITLE_TEXT,
+            size=TITLE_FONT_SIZE,
+            weight=600,
+            fill=theme.title,
+            family=FONT_STACK_DISPLAY,
+        ),
+        # Status line (ADR-031): period + explicit snapshot date, same
+        # grammar as the summary card — never a live-data claim.
         _text(
             WIDTH - PADDING,
             HM_HEADER_TEXT_Y,
-            stats.period.label,
+            f"{stats.period.label}{STATUS_SEPARATOR}{stats.generated_on}",
             size=12,
             fill=theme.muted,
             anchor="end",
+            family=FONT_STACK_MONO,
         ),
         _line(PADDING, HM_DIVIDER1_Y, WIDTH - PADDING, HM_DIVIDER1_Y, stroke=theme.border),
     ]
@@ -343,9 +366,10 @@ def render_heatmap(stats: VizStats, theme: Theme) -> str:
                 WIDTH - PADDING,
                 HM_STAT_Y,
                 f"{start} → {end}",
-                size=11,
+                size=12,
                 fill=theme.muted,
                 anchor="end",
+                family=FONT_STACK_MONO,
             )
         )
         parts.append(_month_labels(stats.daily, theme))
@@ -360,8 +384,9 @@ def render_heatmap(stats: VizStats, theme: Theme) -> str:
             PADDING,
             divider2_y + 24,
             f"Generated {stats.generated_on} · aiprofile",
-            size=11,
+            size=12,
             fill=theme.muted,
+            family=FONT_STACK_MONO,
         )
     )
     parts.append("</svg>")

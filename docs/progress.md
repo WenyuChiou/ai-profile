@@ -4,7 +4,41 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## v0.7.2 scheduler remote-sync candidate — built and verified locally, not released
+## v0.8.0 Signal Console candidate — built and verified locally, not released
+
+- Branch `codex/v080-signal-console` from `63c108d` (released v0.7.2 main).
+  Coordinated redesign of the dashboard, summary card, heatmap card, and
+  badge (ADR-031): compact status line that labels `generated_on` as a
+  snapshot, four-cell core metric strip, provider toolbar, primary commit
+  map, provider/evidence sidebar that stacks below 54rem, native `<details>`
+  definitions, one token system for system/light/dark, transform/opacity-only
+  motion off under reduced motion. Summary: status-line header, metric
+  console strip, left-aligned 52px-cell matrix, 12px floor; heatmap: shared
+  header, 11px floor; badge: canvas plate with the commit-node mark.
+  `DESIGN.md`, `.impeccable.md`, README (both locales), CHANGELOG, schema
+  status, architecture, ADR-030 read-set, staging workflow, and candidate
+  manifest updated. ACE `0.3.0`, `VizStats`, aggregation, privacy, the eight
+  outputs, CLI, and the hosted workflow pin are unchanged.
+- Scheduler metadata tracks the package: readers accept v0.7.0–v0.8.0
+  `installed_version`; reinstall writes v0.8.0.
+- Local evidence (2026-08-23): red-first `tests/unit/test_signal_console.py`
+  (17 tests) plus updated dashboard/summary/heatmap/release/scheduler
+  contracts; Windows Python 3.14 full suite **977 passed, 30 skipped** with
+  the candidate wheel digest pinned; Ruff, bilingual README parity, and
+  `git diff --check` clean; summary and heatmap/badge snapshot families and
+  README sample assets regenerated only through the sanctioned commands.
+  `npx impeccable detect --json` on the rendered dashboard: `[]` (the v0.7.2
+  page reported layout-transition, hero-eyebrow-chip, all-caps-body,
+  gpt-thin-border-wide-shadow ×2, flat-type-hierarchy). Playwright evidence:
+  `docs/reviews/v0.8.0-visual-qa.md`, screenshots under
+  `.ai/v080-preview/` (task keep root, expires 2026-08-24).
+- Candidate wheel digest, WSL suite counts, Twine/artifact/smoke/dogfood
+  results: recorded in `docs/reviews/gate-disposition.md` once the clean
+  Ubuntu git-clone build completes. Still open: green CI on the candidate
+  commit, independent Codex review, merge, tag, PyPI, staging deploy,
+  Profile refresh.
+
+## v0.7.2 scheduler remote-sync candidate — released 2026-08-23
 
 - PR #34 (`codex/scheduler-remote-sync`, `afd01c0`) lets the scheduler
   launcher fast-forward a clean Profile checkout when the configured remote

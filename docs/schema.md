@@ -1,6 +1,6 @@
 # ACE v0.3 — AI Collaboration Event Schema and public aggregate contract
 
-Status: **current for the v0.7.2 Public Beta candidate** (2026-08-23; unchanged
+Status: **current for the v0.8.0 Public Beta candidate** (2026-08-23; unchanged
 from the released v0.6.1 schema; the v0.1 event
 field semantics remain the historical input contract, while ADR-027 adds the
 public model-family aggregate).
