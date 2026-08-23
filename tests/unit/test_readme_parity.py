@@ -105,8 +105,8 @@ def test_parity_rejects_missing_privacy_contract(tmp_path):
             "claim",
         ),
         (
-            "9c4f276cb437f1866a2c1b407efe54d3790ce811",
-            "v0.7.0",
+            "d74a3efdf27310162fc8c54b29b8e2782ea66b46",
+            "v0.8.0",
             "missing",
         ),
         ("AIPROFILE_IDENTITIES", "IDENTITIES", "missing"),

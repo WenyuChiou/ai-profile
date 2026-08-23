@@ -1,8 +1,8 @@
 """Security and operational contract for public profile automation.
 
-Commit A of the v0.8.0 hosted pin: the reusable workflow installs exactly
-``ai-profile-cli==0.8.0``; the caller template still pins the immutable
-v0.7.0-era commit A (``9c4f276``) until commit B repins it.
+Commit B of the v0.8.0 hosted pin: the reusable workflow installs exactly
+``ai-profile-cli==0.8.0``, and the caller template pins the immutable
+commit A (``d74a3ef``) that carries that package contract.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "profile-refresh.yml"
 CALLER = ROOT / "docs" / "templates" / "profile-refresh-caller.yml"
-COMMIT_A = "9c4f276cb437f1866a2c1b407efe54d3790ce811"
+COMMIT_A = "d74a3efdf27310162fc8c54b29b8e2782ea66b46"
 
 ASSET_NAMES = (
     "badge-dark.svg",
@@ -732,7 +732,7 @@ def test_caller_template_passes_only_repositories_and_secret_identities():
             assert line.strip() == "identities: ${{ secrets.AIPROFILE_IDENTITIES }}"
 
 
-def test_caller_uses_exact_immutable_workflow_pin_and_v070_contract():
+def test_caller_uses_exact_immutable_workflow_pin_and_v080_contract():
     text = _text(CALLER)
     uses = re.search(
         r"uses: WenyuChiou/ai-profile/\.github/workflows/"
@@ -742,8 +742,10 @@ def test_caller_uses_exact_immutable_workflow_pin_and_v070_contract():
 
     assert uses is not None
     assert uses.group(1) == COMMIT_A
-    assert "hardcodes ai-profile-cli==0.7.0" in text
-    assert "@v0.7.0" not in text
+    assert "hardcodes ai-profile-cli==0.8.0" in text
+    assert "ai-profile-cli==0.7.0" not in text
+    assert "9c4f276" not in text
+    assert "@v0.8.0" not in text
     assert "@main" not in text
     assert "<COMMIT" not in text
 

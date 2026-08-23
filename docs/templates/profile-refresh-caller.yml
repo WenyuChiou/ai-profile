@@ -31,9 +31,9 @@ jobs:
   refresh-profile:
     permissions:
       contents: write
-    # Immutable commit 9c4f276 hardcodes ai-profile-cli==0.7.0 in the reusable
+    # Immutable commit d74a3ef hardcodes ai-profile-cli==0.8.0 in the reusable
     # workflow; do not replace this full pin with a tag or branch.
-    uses: WenyuChiou/ai-profile/.github/workflows/profile-refresh.yml@9c4f276cb437f1866a2c1b407efe54d3790ce811
+    uses: WenyuChiou/ai-profile/.github/workflows/profile-refresh.yml@d74a3efdf27310162fc8c54b29b8e2782ea66b46
     with:
       # public repositories only - the reusable workflow rejects anything else.
       repositories: |
