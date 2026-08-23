@@ -397,3 +397,26 @@ Severity: Critical 0, High 0, Medium 0, Low 2.
 | L-02 - stale fill-opacity wording in the module docstring and _cell_rects docstring | **Accepted** | Both rewritten to describe the solid background-mix encoding. |
 
 **Round D6 is closed.**
+
+---
+
+## v0.7.2 candidate self-verification (2026-08-23; CANDIDATE — awaiting CI and independent review)
+
+Scope: the uncommitted v0.7.2 release diff on `codex/scheduler-remote-sync`
+(version bump, scheduler metadata read-set, staging workflow and manifest
+repin, changelog/ADR/architecture/schema status). Verified by the Fable
+implementer only; no Codex round has reviewed this range yet and no GitHub
+CI has run on it.
+
+| Check | Result |
+|---|---|
+| Windows Python 3.14 full suite | 960 passed, 30 skipped |
+| Windows focused release/staging/scheduler suites | 129 passed, 4 skipped |
+| WSL Ubuntu Python 3.12 full suite | 984 passed, 6 skipped |
+| Ruff (`src tests scripts`), README parity, `git diff --check` | clean |
+| Ubuntu double build, `SOURCE_DATE_EPOCH=1786320000`, hatchling 1.31.0 | byte-identical wheel `551e8dd6…4a44f7`; manifest/workflow/test pins match |
+| Twine, `check_release_artifacts.py --expected-wheel-sha256`, `release_smoke.py` | PASS |
+| Regression coverage | `test_candidate_manifest_is_the_v0_7_2_candidate_not_a_released_digest`, `test_scheduler_metadata_version_tracks_the_package_version`, v0.7.0/v0.7.1 migration test |
+
+Disposition: **candidate only**. Release gates (PR CI on the bumped commit,
+independent review, merge, tag, publish, dogfood) remain open.

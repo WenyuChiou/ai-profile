@@ -9,8 +9,9 @@ disagree, docs win and the code is the bug.
 ## Quality gates (must stay green after every change)
 
 - `python -m pytest tests -p no:cacheprovider` — full suite; state the
-  platform and count you observe. Windows local (current candidate,
-  2026-08-10): 954 passed, 30 skipped. Linux CI (v0.7.1 candidate, run
+  platform and count you observe. Windows local (v0.7.2 candidate,
+  2026-08-23): 960 passed, 30 skipped; WSL Ubuntu Python 3.12 local: 984
+  passed, 6 skipped. Linux CI (v0.7.1 candidate, run
   31405185444): Python 3.11–3.14 each passed 978 tests with 6 skipped; the
   release-candidate build and three platform wheel-onboarding jobs also passed
   (**8/8** total). Update only the corresponding platform baseline, never

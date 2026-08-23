@@ -4,6 +4,40 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## v0.7.2 scheduler remote-sync candidate — built and verified locally, not released
+
+- PR #34 (`codex/scheduler-remote-sync`, `afd01c0`) lets the scheduler
+  launcher fast-forward a clean Profile checkout when the configured remote
+  branch has advanced as a verified descendant of the captured local parent;
+  dirty, rewound, deleted, diverged, and unstable remote states still fail
+  closed, and a partial checkout failure restores branch, index, and
+  worktree. Its first CI run (`32648197333`) passed Python 3.11–3.14 but the
+  release-candidate build failed because the manifest still authorized the
+  released v0.7.1 wheel while package bytes had changed.
+- This candidate bumps the runtime, scheduler metadata, staging workflow,
+  changelog, ADR-030, architecture, and schema status to v0.7.2; scheduler
+  readers accept v0.7.0/v0.7.1/v0.7.2 `installed_version` and reinstall
+  writes v0.7.2. ACE `0.3.0`, aggregation, `VizStats`, renderers, privacy
+  policy, the hosted workflow pin, and the eight output names are unchanged.
+  A new contract test pins released wheel digests so a manifest can never
+  again carry a published digest for a different version.
+- Local evidence (2026-08-23): Windows Python 3.14 full suite **960 passed,
+  30 skipped**; focused release/staging/scheduler suites **129 passed, 4
+  skipped**; WSL Ubuntu Python 3.12 full suite **984 passed, 6 skipped**.
+  Ruff, bilingual README parity, and `git diff --check` are clean. A
+  mode-correct Ubuntu double build of the exact candidate tree at
+  `SOURCE_DATE_EPOCH=1786320000` (hatchling 1.31.0) produced byte-identical
+  wheels with SHA-256
+  `551e8dd682765614b81d1083e23405e79e78347004c7d711a8c303658e4a44f7`, which
+  the candidate manifest, staging workflow, and staging tests pin; the
+  first clean-tree sdist was
+  `a60ea8f19dc7ae0a220ac0acf4da5baf596355b5062eed9af1c0a375e39f0cd4` (not
+  authoritative; the public release is). Twine, artifact/notices/checksum
+  validation, and the clean-wheel refresh smoke pass.
+- Still open: fresh PR cross-platform CI on the bumped commit, independent
+  review, merge, tag, PyPI, staging deploy, and Profile scheduler dogfood.
+  No GitHub CI result exists yet for the v0.7.2 commit.
+
 ## v0.7.1 Public Beta — released and live
 
 - v0.7.0 was published on 2026-08-10, then maintainer dogfood found that a
