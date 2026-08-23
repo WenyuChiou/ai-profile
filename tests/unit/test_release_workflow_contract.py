@@ -38,12 +38,27 @@ def _pypi_verifier_script(pypi_job: str) -> str:
     return textwrap.dedent(verifier)
 
 
-def test_candidate_manifest_matches_project_version_and_is_a_sha256():
-    manifest = json.loads(
+#: Immutable digests of wheels already published to PyPI. A candidate manifest
+#: for a released version must pin exactly that digest; a manifest for any
+#: other version must never carry one of them (PR #34 changed package bytes
+#: after v0.7.1 while the manifest still authorized the v0.7.1 wheel, so the
+#: candidate build skipped onboarding — this pin makes that drift a test
+#: failure instead of a CI surprise).
+RELEASED_WHEEL_SHA256 = {
+    "0.7.1": "c941b547b41eccca7efdfc99bdf785c6d8c307da8bedace0a73a3d19036df005",
+}
+
+
+def _candidate_manifest() -> dict:
+    return json.loads(
         (ROOT / "docs" / "reviews" / "promotion-candidate.json").read_text(
             encoding="utf-8"
         )
     )
+
+
+def test_candidate_manifest_matches_project_version_and_is_a_sha256():
+    manifest = _candidate_manifest()
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     version = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE)
 
@@ -54,14 +69,30 @@ def test_candidate_manifest_matches_project_version_and_is_a_sha256():
     assert manifest["source_date_epoch"] == 1786320000
 
 
-def test_v0_7_1_release_notes_are_finalized_before_tagging():
+def test_candidate_manifest_is_the_v0_7_2_candidate_not_a_released_digest():
+    manifest = _candidate_manifest()
+    import aiprofile
+
+    assert manifest["version"] == aiprofile.__version__ == "0.7.2"
+    released = RELEASED_WHEEL_SHA256.get(manifest["version"])
+    if released is not None:
+        assert manifest["wheel_sha256"] == released
+    else:
+        assert manifest["wheel_sha256"] not in RELEASED_WHEEL_SHA256.values()
+
+
+def test_v0_7_2_release_notes_are_finalized_before_tagging():
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     unreleased, released = changelog.split(
-        "## [0.7.1] - 2026-08-10 (Public Beta)", 1
+        "## [0.7.2] - 2026-08-23 (Public Beta)", 1
     )
 
     assert unreleased.rstrip().endswith("## [Unreleased]")
-    release_071 = released.split("## [0.7.0]", 1)[0]
+    release_072, rest = released.split("## [0.7.1] - 2026-08-10 (Public Beta)", 1)
+    assert "fast-forward" in release_072
+    assert "fail closed" in release_072
+    assert "ACE schema" in release_072
+    release_071 = rest.split("## [0.7.0]", 1)[0]
     assert "Task Scheduler" in release_071
     assert "UseUnifiedSchedulingEngine" in release_071
 

@@ -25,6 +25,25 @@ below.
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-08-23 (Public Beta)
+
+### Fixed
+
+- Let the local scheduler launcher fast-forward a clean Profile checkout when
+  the configured remote branch has advanced as a verified descendant of the
+  captured local parent (for example, after a hosted workflow or another
+  machine published first). The fetch goes through the already-captured
+  isolated transport, then a branch compare-and-swap and hook-free
+  worktree/index update run before refresh; a partial checkout failure
+  restores branch, index, and worktree. Dirty, rewound, deleted, diverged,
+  and unstable remote states still fail closed for manual resolution, and a
+  new path-free last-run outcome names the synchronization rollback case.
+- Scheduler metadata: status and reinstall read v0.7.0, v0.7.1, and v0.7.2
+  `installed_version` values; each successful reinstall writes v0.7.2.
+  ACE schema `0.3.0`, aggregation, `VizStats`, renderers, privacy policy,
+  the hosted workflow contract, and the eight generated filenames are
+  unchanged.
+
 ## [0.7.1] - 2026-08-10 (Public Beta)
 
 ### Fixed

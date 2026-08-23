@@ -192,6 +192,32 @@ def _remote_boundary_change(
     raise AssertionError(f"unexpected boundary change: {change}")
 
 
+def _remote_boundary_change_with_content(
+    profile: Path,
+    *,
+    expected: str,
+) -> str:
+    original = (profile / "README.md").read_text(encoding="utf-8")
+    (profile / "README.md").write_text("remote advance\n", encoding="utf-8")
+    _git(profile, "add", "README.md")
+    tree = _git(profile, "write-tree").stdout.strip()
+    (profile / "README.md").write_text(original, encoding="utf-8")
+    _git(profile, "reset", "-q", "HEAD", "--", "README.md")
+    assert (profile / "README.md").read_text(encoding="utf-8") == original
+    created = subprocess.run(
+        ["git", "commit-tree", tree, "-p", expected, "-m", "remote advance"],
+        cwd=str(profile),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+    )
+    assert created.returncode == 0, created.stderr
+    advanced = created.stdout.strip()
+    _git(profile, "push", "-q", "origin", f"{advanced}:refs/heads/main")
+    return advanced
+
+
 def _remote_main(bare: Path) -> str | None:
     result = _git(bare, "rev-parse", "--verify", "refs/heads/main", check=False)
     return result.stdout.strip() if result.returncode == 0 else None
@@ -393,6 +419,119 @@ def test_launcher_refuses_on_branch_drift(tmp_path, monkeypatch, detached):
     assert "recorded branch is no longer checked out" in (
         home / "scheduler" / "last-run.log"
     ).read_text(encoding="utf-8")
+
+
+def test_launcher_fast_forwards_clean_checkout_when_remote_is_ahead(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    local_parent = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    remote_tip = _remote_boundary_change_with_content(
+        profile,
+        expected=local_parent,
+    )
+    assert remote_tip is not None
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_parent
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("remote-ahead"))
+
+    assert launcher.run_launcher(home) == 0
+    scheduler_commit = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    assert _git(profile, "rev-parse", "HEAD^").stdout.strip() == remote_tip
+    assert scheduler_commit == _remote_main(bare)
+    assert (profile / "README.md").read_text(encoding="utf-8") == "remote advance\n"
+    assert _git(profile, "status", "--porcelain").stdout == ""
+
+
+def test_launcher_keeps_dirty_checkout_fail_closed_when_remote_is_ahead(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    local_parent = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    remote_tip = _remote_boundary_change(
+        profile,
+        bare,
+        expected=local_parent,
+        prior=local_parent,
+        change="advance",
+    )
+    assert remote_tip is not None
+    (profile / "local-notes.txt").write_text("keep me\n", encoding="utf-8")
+    refreshed = False
+
+    def forbidden_refresh(*_args, **_kwargs):
+        nonlocal refreshed
+        refreshed = True
+        raise AssertionError("dirty remote-ahead checkout must not refresh")
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", forbidden_refresh)
+    assert launcher.run_launcher(home) == 1
+    assert refreshed is False
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_parent
+    assert _remote_main(bare) == remote_tip
+    assert (profile / "local-notes.txt").read_text(encoding="utf-8") == "keep me\n"
+    assert "remote branch does not match local HEAD" in (
+        home / "scheduler" / "last-run.log"
+    ).read_text(encoding="utf-8")
+
+
+def test_launcher_refuses_diverged_local_and_remote_history(tmp_path, monkeypatch):
+    home, profile, bare = _setup(tmp_path)
+    common_parent = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    local_tip = _advance_current_ref_atomically(profile, "local deliberate change")
+    remote_tip = _remote_boundary_change(
+        profile,
+        bare,
+        expected=common_parent,
+        prior=common_parent,
+        change="advance",
+    )
+    assert remote_tip is not None and remote_tip != local_tip
+    refreshed = False
+
+    def forbidden_refresh(*_args, **_kwargs):
+        nonlocal refreshed
+        refreshed = True
+        raise AssertionError("diverged checkout must not refresh")
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", forbidden_refresh)
+    assert launcher.run_launcher(home) == 1
+    assert refreshed is False
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_tip
+    assert _remote_main(bare) == remote_tip
+
+
+def test_launcher_rolls_back_fast_forward_when_checkout_update_fails(
+    tmp_path, monkeypatch
+):
+    home, profile, bare = _setup(tmp_path)
+    local_parent = _git(profile, "rev-parse", "HEAD").stdout.strip()
+    remote_tip = _remote_boundary_change(
+        profile,
+        bare,
+        expected=local_parent,
+        prior=local_parent,
+        change="advance",
+    )
+    assert remote_tip is not None
+    failed = False
+
+    def runner(argv, **kwargs):
+        nonlocal failed
+        if "read-tree" in argv and "-u" in argv and not failed:
+            result = subprocess.run(argv, **kwargs)
+            failed = True
+            return subprocess.CompletedProcess(
+                argv, 17, result.stdout, "checkout failed after mutation"
+            )
+        return subprocess.run(argv, **kwargs)
+
+    monkeypatch.setattr(launcher.refresh, "run_refresh", _refresh_writer("rollback"))
+    assert launcher.run_launcher(home, runner=runner) == 1
+    assert failed is True
+    assert _git(profile, "rev-parse", "HEAD").stdout.strip() == local_parent
+    assert _git(profile, "status", "--porcelain").stdout == ""
+    assert (profile / "README.md").read_text(encoding="utf-8") == "profile\n"
+    assert _remote_main(bare) == remote_tip
 
 
 def test_launcher_refuses_branch_switch_during_refresh_before_git_mutation(

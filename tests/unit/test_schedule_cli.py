@@ -514,7 +514,7 @@ def test_install_twice_is_idempotent(tmp_path, monkeypatch, fake_adapter):
     assert [call[0] for call in fake_adapter.calls].count("install") == 2
 
 
-def test_v071_status_and_reinstall_migrate_v070_scheduler_config(
+def test_v072_status_and_reinstall_migrate_v070_and_v071_scheduler_config(
     tmp_path, monkeypatch, fake_adapter
 ):
     home = _initialized_home(tmp_path / "home")
@@ -522,19 +522,24 @@ def test_v071_status_and_reinstall_migrate_v070_scheduler_config(
     monkeypatch.setenv("AIPROFILE_HOME", str(home))
     assert service.install(home, repo, "07:30").time == "07:30"
     config_path = home / "scheduler" / "config.json"
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
-    payload["installed_version"] = "0.7.0"
-    config_path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
 
-    assert service.status(home).installed is True
-    assert service.read_scheduler_config(home).installed_version == "0.7.0"
-    assert service.install(home, repo, "08:31").time == "08:31"
-    assert service.read_scheduler_config(home).installed_version == "0.7.1"
+    for readable_version in ("0.7.0", "0.7.1"):
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+        payload["installed_version"] = readable_version
+        config_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
 
-    for unsupported_version in ("0.6.1", "0.7.2"):
+        assert service.status(home).installed is True
+        assert (
+            service.read_scheduler_config(home).installed_version
+            == readable_version
+        )
+        assert service.install(home, repo, "08:31").time == "08:31"
+        assert service.read_scheduler_config(home).installed_version == "0.7.2"
+
+    for unsupported_version in ("0.6.1", "0.7.3"):
         payload = json.loads(config_path.read_text(encoding="utf-8"))
         payload["installed_version"] = unsupported_version
         config_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -542,6 +547,16 @@ def test_v071_status_and_reinstall_migrate_v070_scheduler_config(
             ConfigError, match="scheduler configuration is unavailable"
         ):
             service.read_scheduler_config(home)
+
+
+def test_scheduler_metadata_version_tracks_the_package_version():
+    """v0.7.0 and v0.7.1 each wrote their own package version as
+    ``installed_version``; a v0.7.2 wheel must not keep stamping v0.7.1
+    metadata (written red-first against the un-bumped constant)."""
+    import aiprofile
+
+    assert service.SCHEDULER_VERSION == aiprofile.__version__
+    assert service.SCHEDULER_VERSION == "0.7.2"
 
 
 def test_failed_reinstall_restores_previous_files_and_native_registration(

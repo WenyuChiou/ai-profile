@@ -22,8 +22,8 @@ from ..errors import AiProfileError, ConfigError, path_free_diagnostics
 from ..lockfile import acquire_home_lock
 from .adapters import AdapterPlan, ScheduleStatus
 
-SCHEDULER_VERSION = "0.7.1"
-_READABLE_SCHEDULER_VERSIONS = frozenset({"0.7.0", SCHEDULER_VERSION})
+SCHEDULER_VERSION = "0.7.2"
+_READABLE_SCHEDULER_VERSIONS = frozenset({"0.7.0", "0.7.1", SCHEDULER_VERSION})
 SCHEDULER_DIRNAME = "scheduler"
 CONFIG_NAME = "config.json"
 LAUNCHER_NAME = "launcher.py"
@@ -92,6 +92,7 @@ _LAST_RUN_LINE = re.compile(
     r"pending publication state remains; no branch update or push was attempted|"
     r"publication rolled back but pending retry state remains|"
     r"publication rolled back but tool paths may remain staged and pending retry state remains|"
+    r"remote branch synchronization rollback failed; manual synchronization required|"
     r"local commit and pending retry state retained; "
     r"tool paths may remain staged and push was refused|"
     r"refresh failed safely; no publication attempted|"

@@ -9,8 +9,9 @@ disagree, docs win and the code is the bug.
 ## Quality gates (must stay green after every change)
 
 - `python -m pytest tests -p no:cacheprovider` — full suite; state the
-  platform and count you observe. Windows local (current candidate,
-  2026-08-10): 954 passed, 30 skipped. Linux CI (v0.7.1 candidate, run
+  platform and count you observe. Windows local (v0.7.2 candidate,
+  2026-08-23): 960 passed, 30 skipped; WSL Ubuntu Python 3.12 local: 984
+  passed, 6 skipped. Linux CI (v0.7.1 candidate, run
   31405185444): Python 3.11–3.14 each passed 978 tests with 6 skipped; the
   release-candidate build and three platform wheel-onboarding jobs also passed
   (**8/8** total). Update only the corresponding platform baseline, never
@@ -22,6 +23,59 @@ disagree, docs win and the code is the bug.
   `python tests/unit/test_render_summary.py` (summary family) and
   `python tests/unit/test_heatmap_svg.py` (heatmap/badge family, D4).
 - Contract changes need an ADR under `docs/decisions/` + schema bump.
+
+## Dogfood and disposable-output cleanup
+
+Dogfood, release-probe, and review-probe directories are disposable artifacts,
+not project data. Every dogfood/release task MUST finish with a cleanup sweep of
+the disposable roots declared by that task. On Windows, declare the exact
+values of `$env:TEMP`, `$env:TMP` when distinct, and every task-created scratch
+root; on POSIX, declare `/tmp` or its equivalent plus every scratch root.
+
+- Determine the current release from **both** `pyproject.toml` (`[project].version`)
+  and `src/aiprofile/__init__.py` (`__version__`). Normalize only an optional
+  leading `v`; abort the sweep if either value is missing, unparsable, or does
+  not match the other. Never infer the current version from a directory name.
+- Discovery is candidate generation, not deletion authorization. Match semantic
+  families, not just the literal word `dogfood`: include `ai-profile-*` /
+  `aiprofile-*` versioned forms. Normalize only these version-token forms:
+  `vMAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH`, and compact three-digit
+  `vXYZ` or `XYZ` where `XYZ` means `X.Y.Z` (`v046` = `0.4.6`, `046` =
+  `0.4.6`). Reject ambiguous or missing tokens as UNKNOWN. Labels may include
+  `dogfood`, `build`, `live`, `final`, `candidate`, `review`, `staging`,
+  `publisher`, `profile`, `home`, `repo`, `venv`, `pypi`, or `CI artifact`.
+  The 046–050 incident examples include `aiprofile-v046-*`,
+  `aiprofile-046-*`, `aiprofile-staging-v049-*`,
+  `aiprofile-profile-v050-*`, `aiprofile-dogfood-046-*`, and
+  `aiprofile_dogfood_dist*`. A date is supporting evidence only; it is never
+  the sole deletion selector.
+- A path may be classified DELETE only when it is either (a) an explicitly
+  enumerated absolute path in the task handoff, or (b) a direct child of a
+  declared disposable root containing the task marker
+  `.aiprofile-dogfood.json` with version, owner, creation time, and expiry.
+  Unmarked matches are UNKNOWN and MUST NOT be deleted by a broad glob.
+- Keep exceptions require an owner, reason, and expiry. Current-release
+  evidence may be kept only while its release checklist is open; after expiry
+  it becomes stale. Resolve `AIPROFILE_HOME`, source repositories, and worktree
+  paths to canonical absolute paths (case-insensitive on Windows) before
+  comparing them. If `AIPROFILE_HOME` cannot be resolved or
+  `git worktree list --porcelain` cannot be read, stop. Never delete a current
+  `AIPROFILE_HOME`, source repository, active worktree, published/current-
+  release artifact, or a path listed by `git worktree list --porcelain`.
+- Before deletion, resolve each absolute path and verify that it is a direct
+  child of its declared root, is not the root itself or a reparse point/symlink,
+  and is not a Git worktree (`git -C <path> rev-parse --is-inside-work-tree`
+  must not succeed). Do not use recursive globs from the user profile or repo
+  root.
+- Delete one verified absolute path at a time with a literal-path operation;
+  verify that path is gone before moving to the next item. If a path is locked,
+  unexpected, unmarked, or changes between enumeration and deletion, stop and
+  report it rather than widening the selector.
+- After the sweep, rescan the exact declared roots with the same classifier.
+  Report `DELETE candidates remaining = 0`, the KEEP paths with their expiry,
+  all UNKNOWN paths, and every failure. Also verify `git status --short` and
+  `git worktree list --porcelain` so cleanup did not touch the repository or an
+  active worktree.
 
 ## Collaboration contract (Fable ↔ Codex gate loop)
 

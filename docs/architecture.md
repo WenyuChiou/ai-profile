@@ -468,8 +468,8 @@ settings shapes authored, registered, disabled, or produced by the two
 versioned COM round trips. Registered principal normalization must match the
 current process-token SID. Any other value, setting, or principal is rejected.
 The same proof precedes native removal, so an unverifiable same-name task is
-never deleted. Scheduler-config readers accept the unchanged v0.7.0 schema for
-in-place migration and the current v0.7.1 form; successful installation always
+never deleted. Scheduler-config readers accept the unchanged v0.7.0 and v0.7.1 schema for
+in-place migration and the current v0.7.2 form; successful installation always
 rewrites current metadata, while unrelated or future versions fail closed.
 Launchd accepts only the exact
 tool-owned four-key plist. Unverifiable native state blocks mutation.

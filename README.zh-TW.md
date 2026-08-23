@@ -236,13 +236,16 @@ Detached branch、已改變的 branch state、protected branch 與被拒絕的 p
 都會 fail closed。Scheduler commit 是機械式 commit，
 刻意不執行使用者的 commit hooks 或 signing。
 
-可 push 的執行開始前，記錄的 remote branch 必須與本機 `HEAD` 完全一致；
-請先自行同步刻意建立的 local commits。Push 失敗後，會先安全復原中斷的
-branch update 與 exact-eight index；只有 branch、parent、tree 與 remote
-都未改變時，才會從同一個 private pending commit 重試。實際 push 使用綁定
-該 parent 的 exact-old lease，並在回報成功或清除 retry state 前重新確認
-remote 已位於 immutable commit。Private retry record 只保存 destination 的
-SHA-256 commitment，不保存 URL 本身。
+可 push 的執行開始前，若本機 checkout 乾淨，且記錄的 remote branch
+確認是本機 `HEAD` 的 descendant，scheduler 會透過與發布相同的隔離
+destination transport 安全 fast-forward。本機刻意建立的 commits、dirty
+checkout、rewind、刪除、diverged 或不穩定的 remote tip，仍會 fail closed，
+要求手動同步。Push 失敗後，會先安全復原中斷的 branch update 與
+exact-eight index；只有 branch、parent、tree 與 remote 都未改變時，才會從
+同一個 private pending commit 重試。實際 push 使用綁定該 parent 的
+exact-old lease，並在回報成功或清除 retry state 前重新確認 remote 已位於
+immutable commit。Private retry record 只保存 destination 的 SHA-256
+commitment，不保存 URL 本身。
 不同 homes 若指向同一個 Profile，會由該 Profile 的 Git metadata lock
 序列化；建立 commit 前也會核對產生檔案確實來自剛完成的 refresh。
 

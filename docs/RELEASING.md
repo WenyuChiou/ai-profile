@@ -178,6 +178,9 @@ Only after the package gates pass:
    time, confirm `schedule status`, and trigger or wait for one real launcher
    run. Do not manually refresh first: that would consume the change and turn
    this scheduler proof into a no-op.
+   If another actor has advanced the recorded remote branch, the launcher may
+   fast-forward a clean local checkout through its isolated transport; dirty,
+   ahead, or diverged state must still fail closed for manual resolution.
 4. Verify the launcher created one local commit containing only the eight
    generated paths, pushed that commit with the exact-old lease and never an
    unconditional force push, produced a path-free

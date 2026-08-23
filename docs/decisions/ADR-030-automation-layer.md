@@ -1,6 +1,7 @@
 # ADR-030: Automation layer boundary and security
 
-- Status: Accepted for v0.7.0; Windows normalization amended in v0.7.1
+- Status: Accepted for v0.7.0; Windows normalization amended in v0.7.1;
+  clean remote-ahead fast-forward amended in v0.7.2
   (2026-08-10)
 - Deciders: maintainer
 - Supersedes: the assumption that multi-repository refresh and a reusable
@@ -76,10 +77,10 @@ Removal performs the same full XML ownership proof before deleting a
 same-name task; an absent task remains an idempotent no-op, while an
 unverifiable or altered task is retained for explicit operator resolution.
 
-The scheduler-config schema did not change in v0.7.1. Readers accept exactly
-v0.7.0 and v0.7.1 metadata so an existing installation can be inspected and
-reinstalled in place; writers always emit v0.7.1. Earlier, unrelated, and
-future versions fail closed.
+The scheduler-config schema did not change in v0.7.1 or v0.7.2. Readers
+accept exactly v0.7.0, v0.7.1, and v0.7.2 metadata so an existing installation
+can be inspected and reinstalled in place; writers always emit v0.7.2. Earlier,
+unrelated, and future versions fail closed.
 
 The launcher and scheduler state live below `AIPROFILE_HOME`, not inside the
 public Profile repository. On POSIX, a temporary Git index is confined inside
@@ -110,10 +111,15 @@ shallow/graft, alternate-index, tracing, and injected-config variables are
 removed; only explicit private-index state and ordinary credential transports
 needed by the user's configured remote are allowed. Shallow and partial
 repositories are rejected before refresh or pending retry because the isolated
-private Git directory requires a complete local object graph. Before a push-capable
-refresh, the actual remote branch must resolve to exactly the captured local
-parent OID. Missing, ahead, behind, diverged, or unverifiable tips reject the
-run before refresh. The remote must resolve to exactly one fetch destination
+private Git directory requires a complete local object graph. Before a
+push-capable refresh, a clean checkout may be fast-forwarded when the actual
+remote branch is a verified descendant of the captured local parent OID. The
+fetch occurs through the already-captured isolated destination transport, then
+a branch compare-and-swap and hook-free worktree/index update are required
+before refresh. Missing, behind, dirty, diverged, or unverifiable tips still
+reject the run before refresh; a remote that changes while it is being fetched
+is retried only within a bounded probe and must resolve to a locally present
+commit. The remote must resolve to exactly one fetch destination
 and the same one push destination; multiple, different, or unverifiable
 destinations reject before refresh. That destination is captured once and
 bound to a fixed alias in a private bare Git context. Relative local paths are
