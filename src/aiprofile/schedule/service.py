@@ -92,6 +92,7 @@ _LAST_RUN_LINE = re.compile(
     r"pending publication state remains; no branch update or push was attempted|"
     r"publication rolled back but pending retry state remains|"
     r"publication rolled back but tool paths may remain staged and pending retry state remains|"
+    r"remote branch synchronization rollback failed; manual synchronization required|"
     r"local commit and pending retry state retained; "
     r"tool paths may remain staged and push was refused|"
     r"refresh failed safely; no publication attempted|"

@@ -43,6 +43,7 @@ _PATHS = tuple(f"dist/{name}" for name in sorted(PUBLIC_ASSET_NAMES))
 _OID = re.compile(r"[0-9a-f]{40}")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _TRANSPORT_ALIAS = "aiprofile-publication"
+_REMOTE_SYNC_ATTEMPTS = 3
 _TRANSPORT_CONFIG_KEYS = (
     "core.sshcommand",
     "credential.helper",
@@ -54,6 +55,12 @@ _TRANSPORT_CONFIG_KEYS = (
     "ssh.variant",
 )
 _PROXY_ENV_KEYS = frozenset({"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"})
+
+
+@dataclass(frozen=True)
+class _RemoteSyncResult:
+    state: tuple[str, str] | None
+    failure: str | None = None
 
 
 def _append_log(home: Path, message: str) -> None:
@@ -217,6 +224,193 @@ def _remote_tip(
     if len(fields) != 2 or fields[1] != reference or not _OID.fullmatch(fields[0]):
         return None
     return fields[0]
+
+
+def _worktree_is_clean(
+    runner: Runner, git: str, profile_repo: Path
+) -> bool:
+    """Return whether a fast-forward can update the checkout safely.
+
+    Remote synchronization is deliberately limited to a clean checkout.  The
+    scheduler must never overwrite a user's staged, unstaged, or untracked
+    work merely because another actor pushed the recorded branch.
+    """
+    status = _run_git(
+        runner,
+        git,
+        profile_repo,
+        ["status", "--porcelain", "--untracked-files=all"],
+    )
+    return status.returncode == 0 and not status.stdout
+
+
+def _restore_fast_forward_checkout(
+    runner: Runner,
+    git: str,
+    profile_repo: Path,
+    *,
+    branch: str,
+    head_oid: str,
+) -> bool:
+    """Restore the index and worktree after the branch ref is rolled back."""
+    for _attempt in range(_REMOTE_SYNC_ATTEMPTS):
+        restored = _run_git(
+            runner,
+            git,
+            profile_repo,
+            ["read-tree", "-m", "-u", head_oid],
+        )
+        state = _repository_state(runner, git, profile_repo)
+        if (
+            restored.returncode == 0
+            and state == (branch, head_oid)
+            and _worktree_is_clean(runner, git, profile_repo)
+        ):
+            return True
+    return False
+
+
+def _fast_forward_remote_checkout(
+    runner: Runner,
+    git: str,
+    profile_repo: Path,
+    *,
+    transport: _PublicationTransport,
+    branch: str,
+    local_state: tuple[str, str],
+) -> _RemoteSyncResult:
+    """Fast-forward a clean local checkout when the remote is ahead.
+
+    The remote is fetched through the already-isolated publication transport,
+    so no repository URL/config rewrite can redirect this synchronization.  A
+    local branch that is ahead or diverged, a dirty checkout, a missing tip, or
+    an unstable/unverifiable fetch remains fail-closed for manual resolution.
+    """
+    if not _worktree_is_clean(runner, git, profile_repo):
+        return _RemoteSyncResult(None)
+
+    local_branch, local_oid = local_state
+    if local_branch != branch:
+        return _RemoteSyncResult(None)
+    remote_tip = _remote_tip(
+        runner,
+        git,
+        profile_repo,
+        transport=transport,
+        branch=branch,
+    )
+    if remote_tip is None:
+        return _RemoteSyncResult(None)
+    if remote_tip == local_oid:
+        return _RemoteSyncResult(local_state)
+
+    # Fetch only the recorded branch into the private transport.  The object
+    # directory is shared with the real repository, but no real ref/index is
+    # touched until the ancestry and checkout checks below pass.
+    fetched_tip: str | None = None
+    for _attempt in range(_REMOTE_SYNC_ATTEMPTS):
+        fetched = _run_git(
+            runner,
+            git,
+            profile_repo,
+            [
+                "fetch",
+                "--no-tags",
+                "--quiet",
+                "--",
+                _TRANSPORT_ALIAS,
+                f"refs/heads/{branch}",
+            ],
+            env=transport.env,
+        )
+        if fetched.returncode != 0:
+            return _RemoteSyncResult(None)
+        observed = _remote_tip(
+            runner,
+            git,
+            profile_repo,
+            transport=transport,
+            branch=branch,
+        )
+        if observed is None:
+            return _RemoteSyncResult(None)
+        commit = _run_git(
+            runner,
+            git,
+            profile_repo,
+            ["cat-file", "-e", f"{observed}^{{commit}}"],
+        )
+        if commit.returncode == 0:
+            fetched_tip = observed
+            break
+    if fetched_tip is None:
+        return _RemoteSyncResult(None)
+
+    if fetched_tip == local_oid:
+        return _RemoteSyncResult(local_state)
+    ancestor = _run_git(
+        runner,
+        git,
+        profile_repo,
+        ["merge-base", "--is-ancestor", local_oid, fetched_tip],
+    )
+    if ancestor.returncode != 0:
+        return _RemoteSyncResult(None)
+
+    # Compare-and-swap the recorded branch so a concurrent local change cannot
+    # be silently replaced.  The checkout is still required to be clean after
+    # the final preflight; read-tree then updates only the ordinary worktree
+    # and index for the verified fast-forward commit, without running hooks.
+    if not _state_matches(
+        runner,
+        git,
+        profile_repo,
+        branch=branch,
+        head_oid=local_oid,
+    ) or not _worktree_is_clean(runner, git, profile_repo):
+        return _RemoteSyncResult(None)
+    updated = _run_git(
+        runner,
+        git,
+        profile_repo,
+        ["update-ref", f"refs/heads/{branch}", fetched_tip, local_oid],
+    )
+    if updated.returncode != 0:
+        return _RemoteSyncResult(None)
+    checked_out = _run_git(
+        runner,
+        git,
+        profile_repo,
+        ["read-tree", "-m", "-u", fetched_tip],
+    )
+    if checked_out.returncode != 0:
+        rolled_back = _rollback_branch(
+            runner,
+            git,
+            profile_repo,
+            branch=branch,
+            from_oid=fetched_tip,
+            to_oid=local_oid,
+        )
+        if not rolled_back or not _restore_fast_forward_checkout(
+            runner,
+            git,
+            profile_repo,
+            branch=branch,
+            head_oid=local_oid,
+        ):
+            return _RemoteSyncResult(
+                None,
+                "remote branch synchronization rollback failed; "
+                "manual synchronization required",
+            )
+        return _RemoteSyncResult(None)
+    synchronized = _repository_state(runner, git, profile_repo)
+    if synchronized != (branch, fetched_tip):
+        return _RemoteSyncResult(None)
+    if not _worktree_is_clean(runner, git, profile_repo):
+        return _RemoteSyncResult(None)
+    return _RemoteSyncResult(synchronized)
 
 
 def _single_symmetric_remote_destination(
@@ -1306,10 +1500,22 @@ def _run_target_locked(
                     branch=cfg.branch,
                 )
                 if remote_tip != initial_state[1]:
-                    return (
-                        1,
-                        "remote branch does not match local HEAD; synchronize manually",
+                    sync_result = _fast_forward_remote_checkout(
+                        runner,
+                        git,
+                        cfg.profile_repo,
+                        transport=transport,
+                        branch=cfg.branch,
+                        local_state=initial_state,
                     )
+                    if sync_result.state is None:
+                        return (
+                            1,
+                            sync_result.failure
+                            or "remote branch does not match local HEAD; "
+                            "synchronize manually",
+                        )
+                    initial_state = sync_result.state
 
             result = refresh.run_refresh(home, cfg.profile_repo / "dist")
             if not result.ok:

@@ -110,10 +110,15 @@ shallow/graft, alternate-index, tracing, and injected-config variables are
 removed; only explicit private-index state and ordinary credential transports
 needed by the user's configured remote are allowed. Shallow and partial
 repositories are rejected before refresh or pending retry because the isolated
-private Git directory requires a complete local object graph. Before a push-capable
-refresh, the actual remote branch must resolve to exactly the captured local
-parent OID. Missing, ahead, behind, diverged, or unverifiable tips reject the
-run before refresh. The remote must resolve to exactly one fetch destination
+private Git directory requires a complete local object graph. Before a
+push-capable refresh, a clean checkout may be fast-forwarded when the actual
+remote branch is a verified descendant of the captured local parent OID. The
+fetch occurs through the already-captured isolated destination transport, then
+a branch compare-and-swap and hook-free worktree/index update are required
+before refresh. Missing, behind, dirty, diverged, or unverifiable tips still
+reject the run before refresh; a remote that changes while it is being fetched
+is retried only within a bounded probe and must resolve to a locally present
+commit. The remote must resolve to exactly one fetch destination
 and the same one push destination; multiple, different, or unverifiable
 destinations reject before refresh. That destination is captured once and
 bound to a fixed alias in a private bare Git context. Relative local paths are
