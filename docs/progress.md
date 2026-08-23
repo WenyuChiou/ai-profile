@@ -4,14 +4,21 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## v0.8.0 hosted workflow pin — commit A in review
+## v0.8.0 hosted workflow pin — commit A merged, commit B in review
 
-- Commit A (branch `codex/v080-hosted-pin-a`) upgrades the hosted package
-  contract: the reusable `.github/workflows/profile-refresh.yml` now installs
-  exactly `ai-profile-cli==0.8.0` from PyPI, and the workflow test suite pins
-  that literal. The caller template, its immutable commit-A SHA constant
-  (`9c4f276`), and the maintainer Profile repository move only in commit B,
-  after this commit's SHA is known and CI is green.
+- Commit A (`d74a3ef`, PR #36) upgraded the hosted package contract: the
+  reusable `.github/workflows/profile-refresh.yml` installs exactly
+  `ai-profile-cli==0.8.0` from PyPI, and the workflow test suite pins that
+  literal. PR CI run `32664943030` and main CI run `32664998531` each passed
+  all eight jobs, and `d74a3ef` is an ancestor of `origin/main` (`5b60156`).
+- Commit B (branch `codex/v080-hosted-pin-b`) repins the public caller
+  contract to immutable commit A
+  `d74a3efdf27310162fc8c54b29b8e2782ea66b46`: the caller template
+  `docs/templates/profile-refresh-caller.yml`, the test-suite `COMMIT_A`
+  constant, both README guides, and ADR-030 now state that SHA with
+  `ai-profile-cli==0.8.0`. Historical v0.7.0 release records and plan
+  evidence are unchanged. The maintainer Profile repository moves only after
+  commit B passes CI; Codex owns that separate repository.
 
 ## v0.8.0 Signal Console candidate — built and verified locally, not released
 

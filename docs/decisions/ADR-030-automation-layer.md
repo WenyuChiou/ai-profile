@@ -194,8 +194,8 @@ immutable published commit as `published-sha` on both changed and unchanged
 paths.
 
 The caller template pins the reusable workflow to the full commit
-`9c4f276cb437f1866a2c1b407efe54d3790ce811`, whose package contract is exactly
-`ai-profile-cli==0.7.0`. Caller-level concurrency spans refresh through Pages
+`d74a3efdf27310162fc8c54b29b8e2782ea66b46`, whose package contract is exactly
+`ai-profile-cli==0.8.0`. Caller-level concurrency spans refresh through Pages
 deployment. Pages checks out the exact `published-sha` and uses separately
 pinned official Pages actions with `contents: read`, `pages: write`, and
 `id-token: write`. This explicit same-run deployment is required because a
