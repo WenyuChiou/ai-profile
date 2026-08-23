@@ -19,6 +19,41 @@ which is authoritative).
   `ai-profile-cli==0.8.0`. Historical v0.7.0 release records and plan
   evidence are unchanged. The maintainer Profile repository moves only after
   commit B passes CI; Codex owns that separate repository.
+- Commit B moves the current candidate wheel digest, because the README is
+  `project.readme` and therefore wheel `METADATA`. PR #37 run `32665735830`
+  passed Python 3.11-3.14 but failed the release-candidate build: the build
+  produced `e1f869a9ed59ab5bc3d35867bf6d0915b740bd8d6d6394713502e3c81a34d8f7`
+  while `docs/reviews/promotion-candidate.json` still authorized the released
+  v0.8.0 wheel. Two clean Ubuntu 24.04 git-clone builds (Python 3.12.3,
+  hatchling 1.31.0, build 1.4.3, `SOURCE_DATE_EPOCH=1786320000`) reproduce
+  `e1f869a9...` byte-identically at commit B, and the same command at commit A
+  still reproduces `9cc06f20...`; the only differing wheel members between the
+  two are `METADATA` and `RECORD`, and the only `METADATA` change is the caller
+  pin paragraph. The manifest now authorizes the commit-B digest so CI builds
+  what the branch actually contains.
+- The published v0.8.0 wheel digest
+  `9cc06f2052a642bd198fa00d728c75b72fce061dad24c51b72feddf84b07c89e` is
+  unchanged everywhere it records history: the gate review, the gate
+  disposition, and the manual `staging-preview.yml` pins. Those describe the
+  released artifact, not the branch, so `tests/unit/test_staging_preview.py`
+  now asserts the manifest digest and the workflow pin separately instead of
+  for equality. The dashboard digest is still asserted equal, because it is
+  renderer output and the renderers are untouched. Consequence to carry
+  forward: a manual staging-preview run from `main` after commit B merges will
+  rebuild `e1f869a9...` and fail its `9cc06f20...` pin, so the next candidate
+  must re-pin that workflow (or read the manifest) before staging is used
+  again.
+- Second consequence, recorded so it is not mistaken for an oversight:
+  `RELEASED_WHEEL_SHA256` in `tests/unit/test_release_workflow_contract.py`
+  is the guard added after PR #34 to make post-release byte drift a test
+  failure, and it deliberately does not list `0.8.0`. Listing the published
+  digest there would force the manifest back onto it and permanently red the
+  `ci.yml` candidate job, which rebuilds and compares against that same
+  manifest. For v0.8.0 that guard is therefore inactive, and the real fix is
+  the next version bump: a post-release commit that changes wheel-affecting
+  files (the README is `project.readme`) should carry a new version rather
+  than re-authorize the released one. That bump closes both this gap and the
+  staging-preview pin above.
 
 ## v0.8.0 Signal Console candidate — built and verified locally, not released
 

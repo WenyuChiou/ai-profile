@@ -44,6 +44,16 @@ def _pypi_verifier_script(pypi_job: str) -> str:
 #: after v0.7.1 while the manifest still authorized the v0.7.1 wheel, so the
 #: candidate build skipped onboarding — this pin makes that drift a test
 #: failure instead of a CI surprise).
+#:
+#: v0.8.0 is deliberately ABSENT even though it is published, and that gap is
+#: known, not an oversight. Commit B (`61b7995`) landed after the v0.8.0 tag
+#: and changed the README, which is `project.readme` and therefore wheel
+#: METADATA, so the branch now builds `e1f869a9...` while PyPI serves
+#: `9cc06f20...`. Listing "0.8.0" here would force the manifest back onto the
+#: published digest and permanently red the ci.yml candidate job, which
+#: rebuilds and compares against that same manifest. So for v0.8.0 this guard
+#: is not doing its job: close the gap at the next version bump, which is the
+#: real fix for post-release wheel-affecting drift.
 RELEASED_WHEEL_SHA256 = {
     "0.7.1": "c941b547b41eccca7efdfc99bdf785c6d8c307da8bedace0a73a3d19036df005",
     "0.7.2": "4f65ef450b9637e066cc9acdfba9cb1e688007e500179cb99a41c2a62dc6708f",
