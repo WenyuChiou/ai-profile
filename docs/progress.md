@@ -24,19 +24,30 @@ which is authoritative).
 - Local evidence (2026-08-23): Windows Python 3.14 full suite **960 passed,
   30 skipped**; focused release/staging/scheduler suites **129 passed, 4
   skipped**; WSL Ubuntu Python 3.12 full suite **984 passed, 6 skipped**.
-  Ruff, bilingual README parity, and `git diff --check` are clean. A
-  mode-correct Ubuntu double build of the exact candidate tree at
-  `SOURCE_DATE_EPOCH=1786320000` (hatchling 1.31.0) produced byte-identical
-  wheels with SHA-256
-  `551e8dd682765614b81d1083e23405e79e78347004c7d711a8c303658e4a44f7`, which
-  the candidate manifest, staging workflow, and staging tests pin; the
-  first clean-tree sdist was
+  Ruff, bilingual README parity, and `git diff --check` are clean.
+- Canonical candidate wheel digest (corrected 2026-08-23): the first Ubuntu
+  double build reported `551e8dd6…4a44f7` and the manifest, staging
+  workflow, and staging tests pinned it. GitHub Actions run 32657558104
+  (PR #34, `refs/pull/34/merge` of `63cd0ae`) built the same tree at
+  `SOURCE_DATE_EPOCH=1786320000` with hatchling 1.31.0 and observed
+  `4f65ef450b9637e066cc9acdfba9cb1e688007e500179cb99a41c2a62dc6708f`, so the
+  candidate-build job failed and the wheel-onboarding jobs were skipped.
+  Root cause: the `551e…` build ran in WSL on a copy of the Windows
+  worktree, which kept CRLF bytes in the packaged sources even after file
+  modes were normalized; it was never a git-bytes build. A clean git clone of
+  `63cd0ae` inside WSL (no Windows filesystem copy, no uncommitted changes),
+  built with the same epoch and hatchling, reproduces `4f65ef45…6708f`
+  exactly, matching CI. `4f65ef45…` is the canonical v0.7.2 candidate digest;
+  `551e8dd6…` is superseded and must not be pinned anywhere. The first
+  clean-tree sdist was
   `a60ea8f19dc7ae0a220ac0acf4da5baf596355b5062eed9af1c0a375e39f0cd4` (not
   authoritative; the public release is). Twine, artifact/notices/checksum
   validation, and the clean-wheel refresh smoke pass.
-- Still open: fresh PR cross-platform CI on the bumped commit, independent
-  review, merge, tag, PyPI, staging deploy, and Profile scheduler dogfood.
-  No GitHub CI result exists yet for the v0.7.2 commit.
+- GitHub CI on `63cd0ae` (run 32657558104): Python 3.11–3.14 test jobs
+  passed; the release-candidate build failed only on the superseded pin and
+  onboarding was skipped. Still open: green CI on the repinned commit,
+  independent review, merge, tag, PyPI, staging deploy, and Profile
+  scheduler dogfood.
 
 ## v0.7.1 Public Beta — released and live
 

@@ -405,8 +405,10 @@ Severity: Critical 0, High 0, Medium 0, Low 2.
 Scope: the uncommitted v0.7.2 release diff on `codex/scheduler-remote-sync`
 (version bump, scheduler metadata read-set, staging workflow and manifest
 repin, changelog/ADR/architecture/schema status). Verified by the Fable
-implementer only; no Codex round has reviewed this range yet and no GitHub
-CI has run on it.
+implementer only; no Codex round has reviewed this range yet. GitHub run
+32657558104 on `63cd0ae` (PR #34) passed the Python 3.11–3.14 test jobs and
+failed only the release-candidate build, on the superseded `551e…` wheel pin
+corrected below; CI on the repinned commit is still pending.
 
 | Check | Result |
 |---|---|
@@ -414,7 +416,7 @@ CI has run on it.
 | Windows focused release/staging/scheduler suites | 129 passed, 4 skipped |
 | WSL Ubuntu Python 3.12 full suite | 984 passed, 6 skipped |
 | Ruff (`src tests scripts`), README parity, `git diff --check` | clean |
-| Ubuntu double build, `SOURCE_DATE_EPOCH=1786320000`, hatchling 1.31.0 | byte-identical wheel `551e8dd6…4a44f7`; manifest/workflow/test pins match |
+| Ubuntu double build, `SOURCE_DATE_EPOCH=1786320000`, hatchling 1.31.0 | first build reported `551e8dd6…4a44f7`, but it was a WSL build of a copied Windows worktree that retained CRLF bytes — superseded. GitHub run 32657558104 on `refs/pull/34/merge` and a clean WSL git clone of `63cd0ae` both produce `4f65ef45…6708f`; manifest/workflow/test pins now carry `4f65ef45…` |
 | Twine, `check_release_artifacts.py --expected-wheel-sha256`, `release_smoke.py` | PASS |
 | Regression coverage | `test_candidate_manifest_is_the_v0_7_2_candidate_not_a_released_digest`, `test_scheduler_metadata_version_tracks_the_package_version`, v0.7.0/v0.7.1 migration test |
 
