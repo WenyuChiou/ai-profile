@@ -4,6 +4,15 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## v0.8.0 hosted workflow pin — commit A in review
+
+- Commit A (branch `codex/v080-hosted-pin-a`) upgrades the hosted package
+  contract: the reusable `.github/workflows/profile-refresh.yml` now installs
+  exactly `ai-profile-cli==0.8.0` from PyPI, and the workflow test suite pins
+  that literal. The caller template, its immutable commit-A SHA constant
+  (`9c4f276`), and the maintainer Profile repository move only in commit B,
+  after this commit's SHA is known and CI is green.
+
 ## v0.8.0 Signal Console candidate — built and verified locally, not released
 
 - Branch `codex/v080-signal-console` from `63c108d` (released v0.7.2 main).

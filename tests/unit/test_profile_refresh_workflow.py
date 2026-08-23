@@ -1,4 +1,9 @@
-"""Security and operational contract for public profile automation (v0.7.0)."""
+"""Security and operational contract for public profile automation.
+
+Commit A of the v0.8.0 hosted pin: the reusable workflow installs exactly
+``ai-profile-cli==0.8.0``; the caller template still pins the immutable
+v0.7.0-era commit A (``9c4f276``) until commit B repins it.
+"""
 
 from __future__ import annotations
 
@@ -202,7 +207,9 @@ def test_repositories_is_the_only_input_and_version_dest_hardcoded():
     assert re.findall(r"(?m)^      ([a-z][a-z0-9_-]*):\s*$", inputs) == [
         "repositories"
     ]
-    assert 'python -m pip install "ai-profile-cli==0.7.0"' in text
+    assert text.count("ai-profile-cli==") == 1
+    assert 'python -m pip install "ai-profile-cli==0.8.0"' in text
+    assert "ai-profile-cli==0.7.0" not in text
     assert "package-version" not in text
     assert "profile-dist-dir" not in text
     assert 'AIPROFILE_HOME="$RUNNER_TEMP/aiprofile-home"' in text
