@@ -1,9 +1,18 @@
-"""Self-contained interactive dashboard renderer.
+"""Self-contained interactive dashboard renderer — the v0.8.0 Signal Console
+(ADR-021 contract, ADR-031 presentation).
 
 The dashboard is a pure function of the validated, privacy-safe ``VizStats``
 contract. It never reads Git, SQLite, configuration, the clock, or the
 network. All CSS, JavaScript, and aggregate data are embedded in one HTML
 document so users may open it locally or publish it as a static page.
+
+Presentation grammar (ADR-031): a compact status line carrying the
+*snapshot* date, a four-cell core metric strip, a provider toolbar, the
+primary commit map, and a provider/evidence sidebar that collapses under the
+map on narrow screens; definitions live in a native ``<details>``
+disclosure. One token system drives light, dark, and system themes; motion is
+limited to short transform/opacity state changes and is fully disabled under
+``prefers-reduced-motion``.
 """
 
 from __future__ import annotations
@@ -29,7 +38,7 @@ _HTML_PREFIX = """<!doctype html>
         content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';
                  img-src data:; font-src 'none'; connect-src 'none'; object-src 'none';
                  base-uri 'none'; form-action 'none'">
-  <title>AI collaboration evidence ledger</title>
+  <title>AI Collaboration Record</title>
   <style>
     :root {
       color-scheme: light;
@@ -37,17 +46,14 @@ _HTML_PREFIX = """<!doctype html>
       --surface: #fbfdff;
       --surface-raised: #ffffff;
       --surface-subtle: #edf4fb;
-      --surface-blue: #d9eaff;
       --border: #c2d3e5;
       --border-strong: #7590aa;
       --text: #172033;
       --muted: #52647a;
-      --faint: #65758a;
       --accent: #005cc5;
-      --success: #1a7f37;
-      --warning: #9a6700;
-      --warning-strong: #7d4e00;
-      --shadow: 0 16px 40px rgba(42, 76, 102, 0.10);
+      --accent-soft: #d9eaff;
+      --evidence: #9a6700;
+      --evidence-surface: #fff0bd;
       --grid-empty: #e5eef7;
       --calendar-active-border: #52647a;
       --focus: #005cc5;
@@ -57,6 +63,11 @@ _HTML_PREFIX = """<!doctype html>
         "DejaVu Sans", sans-serif;
       --mono: "IBM Plex Mono", "Cascadia Mono", "SFMono-Regular",
         "DejaVu Sans Mono", Consolas, monospace;
+      --text-1: 0.8125rem;
+      --text-2: 0.9375rem;
+      --text-3: 1.125rem;
+      --text-4: 1.75rem;
+      --text-5: 2.25rem;
       --space-1: 0.25rem;
       --space-2: 0.5rem;
       --space-3: 0.75rem;
@@ -64,11 +75,8 @@ _HTML_PREFIX = """<!doctype html>
       --space-5: 1.25rem;
       --space-6: 1.5rem;
       --space-8: 2rem;
-      --space-10: 2.5rem;
-      --space-12: 3rem;
       --radius-sm: 0.25rem;
-      --radius-md: 0.5rem;
-      --radius-lg: 0.75rem;
+      --radius-md: 0.375rem;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -78,17 +86,14 @@ _HTML_PREFIX = """<!doctype html>
         --surface: #111923;
         --surface-raised: #142b45;
         --surface-subtle: #122a43;
-        --surface-blue: #153756;
         --border: #34526f;
         --border-strong: #6683a0;
         --text: #eff6ff;
         --muted: #b5c7da;
-        --faint: #9fb2c6;
         --accent: #8bc8ff;
-        --success: #3fb950;
-        --warning: #eac54f;
-        --warning-strong: #fae17d;
-        --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+        --accent-soft: #153756;
+        --evidence: #eac54f;
+        --evidence-surface: #3b331e;
         --grid-empty: #111923;
         --calendar-active-border: #b5ddff;
         --focus: #8bc8ff;
@@ -101,17 +106,14 @@ _HTML_PREFIX = """<!doctype html>
       --surface: #111923;
       --surface-raised: #142b45;
       --surface-subtle: #122a43;
-      --surface-blue: #153756;
       --border: #34526f;
       --border-strong: #6683a0;
       --text: #eff6ff;
       --muted: #b5c7da;
-      --faint: #9fb2c6;
       --accent: #8bc8ff;
-      --success: #3fb950;
-      --warning: #eac54f;
-      --warning-strong: #fae17d;
-      --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+      --accent-soft: #153756;
+      --evidence: #eac54f;
+      --evidence-surface: #3b331e;
       --grid-empty: #111923;
       --calendar-active-border: #b5ddff;
       --focus: #8bc8ff;
@@ -136,6 +138,8 @@ _HTML_PREFIX = """<!doctype html>
       margin: 0;
       overflow-x: clip;
       background: var(--canvas);
+      font-size: var(--text-2);
+      line-height: 1.5;
     }
 
     button {
@@ -150,186 +154,204 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     button:focus-visible,
+    summary:focus-visible,
     [tabindex="0"]:focus-visible {
-      outline: 0.1875rem solid color-mix(in srgb, var(--focus) 55%, transparent);
-      outline-offset: 0.1875rem;
+      outline: 0.1875rem solid var(--focus);
+      outline-offset: 0.125rem;
     }
 
-    .shell {
+    .console {
       width: min(100% - 2rem, 76rem);
       min-width: 0;
       margin: 0 auto;
-      padding: clamp(2rem, 6vw, 5rem) 0 5rem;
+      padding: var(--space-4) 0 var(--space-8);
     }
 
-    .masthead {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: var(--space-12);
-      align-items: start;
-      margin-bottom: var(--space-12);
-      padding-top: var(--space-5);
-      border-top: 1px solid var(--border-strong);
-    }
-
-    .masthead > *,
-    .hero-grid > *,
-    .dashboard-grid > * {
+    .console > *,
+    .console-grid > *,
+    .sidebar > *,
+    .metrics > * {
       min-width: 0;
     }
 
-    .eyebrow,
-    .section-kicker {
+    .statusbar {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: "title meta controls";
+      gap: var(--space-2) var(--space-5);
+      align-items: baseline;
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--border-strong);
+    }
+
+    .statusbar-title {
+      grid-area: title;
+      margin: 0;
+      font-family: var(--display);
+      font-size: var(--text-3);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+    }
+
+    .statusbar-meta {
+      grid-area: meta;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1) var(--space-3);
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .status-item {
+      display: inline-flex;
+      gap: var(--space-1);
+      align-items: baseline;
+    }
+
+    .status-item + .status-item::before {
+      content: "·";
+      margin-right: var(--space-1);
+      color: var(--border-strong);
+    }
+
+    .status-value {
+      color: var(--text);
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+
+    .statusbar-controls {
+      grid-area: controls;
       display: flex;
       gap: var(--space-2);
       align-items: center;
-      margin: 0 0 var(--space-3);
-      color: var(--muted);
-      font-family: var(--mono);
-      font-size: 0.8125rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      line-height: 1.4;
-      text-transform: uppercase;
-    }
-
-    .eyebrow::before,
-    .section-kicker::before {
-      content: "";
-      flex: 0 0 auto;
-      width: 0.25rem;
-      height: 0.75rem;
-      border-radius: 0.125rem;
-      background: var(--border-strong);
-    }
-
-    .eyebrow::after,
-    .section-kicker::after {
-      content: "";
-      flex: 0 0 auto;
-      width: 0.75rem;
-      height: 1px;
-      margin-left: -0.25rem;
-      background: var(--border-strong);
-    }
-
-    .title {
-      max-width: 17ch;
-      margin: 0;
-      font-family: var(--display);
-      font-size: clamp(2.6rem, 5.8vw, 4.85rem);
-      font-stretch: condensed;
-      font-weight: 680;
-      letter-spacing: -0.035em;
-      line-height: 0.98;
-      text-wrap: balance;
-    }
-
-    .lede {
-      max-width: 44rem;
-      margin: var(--space-5) 0 0;
-      color: var(--muted);
-      font-size: clamp(1rem, 1.8vw, 1.125rem);
-      line-height: 1.68;
-    }
-
-    .utility {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: var(--space-3);
+      justify-content: flex-end;
     }
 
     .theme-toggle {
-      min-height: 2.75rem;
-      padding: 0 var(--space-4);
+      min-height: 2.25rem;
+      padding: 0 var(--space-3);
       border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: var(--surface-blue);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
       color: var(--text);
       cursor: pointer;
-      font-family: var(--mono);
-      font-size: 0.8125rem;
-      font-weight: 650;
-      letter-spacing: 0.03em;
+      font-size: var(--text-1);
+      font-weight: 600;
     }
 
     .theme-toggle:hover {
       border-color: var(--border-strong);
-      background: var(--surface-raised);
     }
 
-    .generated {
-      color: var(--muted);
-      padding-left: var(--space-4);
-      border-left: 1px solid var(--border);
-      font-family: var(--mono);
-      font-size: 0.8125rem;
-      line-height: 1.5;
-      text-align: right;
-    }
-
-    .control-deck {
-      position: sticky;
-      z-index: 10;
-      top: var(--space-3);
-      display: flex;
-      gap: var(--space-4);
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--space-8);
-      padding: var(--space-4);
+    .metrics {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+      margin-top: var(--space-4);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       background: var(--surface);
-      box-shadow: var(--shadow);
     }
 
-    .filter-label {
-      flex: 0 0 auto;
-      padding-left: var(--space-2);
-      color: var(--muted);
+    .metric {
+      padding: var(--space-4) var(--space-5);
+      border-inline-start: 1px solid var(--border);
+    }
+
+    .metric:first-child {
+      border-inline-start: 0;
+    }
+
+    .metric-value {
+      margin: 0;
       font-family: var(--mono);
-      font-size: 0.8125rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-size: var(--text-4);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric--primary .metric-value {
+      color: var(--active-accent, var(--accent));
+      font-size: var(--text-5);
+    }
+
+    .metric-label {
+      margin: var(--space-2) 0 0;
+      font-size: var(--text-2);
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .metric-detail {
+      margin: var(--space-1) 0 0;
+      color: var(--muted);
+      font-size: var(--text-1);
+      line-height: 1.45;
+    }
+
+    .share-track {
+      height: 0.375rem;
+      margin-top: var(--space-3);
+      overflow: hidden;
+      border-radius: 0.125rem;
+      background: var(--grid-empty);
+    }
+
+    .share-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--active-accent, var(--accent));
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-3);
+      align-items: center;
+      margin-top: var(--space-4);
+    }
+
+    .toolbar-label {
+      color: var(--muted);
+      font-size: var(--text-1);
+      font-weight: 600;
     }
 
     .filters {
       display: flex;
-      flex: 1 1 auto;
+      flex-wrap: wrap;
       gap: var(--space-2);
-      overflow-x: auto;
-      scrollbar-width: thin;
     }
 
     .filter {
-      flex: 0 0 auto;
-      min-height: 2.75rem;
-      padding: 0 var(--space-4);
+      display: inline-flex;
+      gap: var(--space-2);
+      align-items: center;
+      min-height: 2.25rem;
+      padding: 0 var(--space-3);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       background: var(--surface);
-      color: var(--muted);
+      color: var(--text);
       cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 650;
-      transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+      font-size: var(--text-1);
+      font-weight: 600;
     }
 
     .filter:hover {
       border-color: var(--provider-accent, var(--accent));
-      color: var(--text);
     }
 
     .filter[aria-pressed="true"] {
-      border-color: color-mix(in srgb, var(--provider-accent, var(--accent)) 72%, var(--border));
-      background: color-mix(in srgb, var(--provider-accent, var(--accent)) 13%, var(--surface));
-      color: var(--text);
-      box-shadow:
-        inset 0 0 0 1px
-        color-mix(in srgb, var(--provider-accent, var(--accent)) 18%, transparent);
+      border-color: var(--provider-accent, var(--accent));
+      background: color-mix(in srgb, var(--provider-accent, var(--accent)) 12%, var(--surface));
+      box-shadow: inset 0 0 0 1px var(--provider-accent, var(--accent));
     }
 
     .provider-icon {
@@ -341,10 +363,6 @@ _HTML_PREFIX = """<!doctype html>
       vertical-align: -0.14rem;
     }
 
-    .filter .provider-icon {
-      margin-right: var(--space-2);
-    }
-
     .provider-icon--row {
       width: 1.25rem;
       height: 1.25rem;
@@ -354,178 +372,48 @@ _HTML_PREFIX = """<!doctype html>
       background: color-mix(in srgb, var(--provider-accent) 10%, var(--surface));
     }
 
-    .hero-grid {
+    .console-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1.7fr) minmax(17rem, 0.75fr);
-      gap: var(--space-6);
-      margin-bottom: var(--space-6);
+      grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.8fr);
+      gap: var(--space-4);
+      align-items: start;
+      margin-top: var(--space-4);
+    }
+
+    .sidebar {
+      display: grid;
+      gap: var(--space-4);
     }
 
     .panel {
+      padding: var(--space-5);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      background: var(--surface);
-    }
-
-    .hero-panel {
-      min-height: 22rem;
-      padding: clamp(2rem, 4vw, 3rem);
-      border-top: 0.25rem solid var(--active-accent, var(--accent));
-      background: var(--surface);
-    }
-
-    .hero-label {
-      margin: 0;
-      color: var(--muted);
-      font-size: 1rem;
-      font-weight: 650;
-      letter-spacing: 0.01em;
-    }
-
-    .hero-value {
-      margin: var(--space-4) 0 0;
-      color: var(--active-accent, var(--accent));
-      font-family: var(--display);
-      font-size: clamp(4.5rem, 11vw, 7.6rem);
-      font-stretch: condensed;
-      font-weight: 720;
-      letter-spacing: -0.055em;
-      line-height: 0.9;
-    }
-
-    .hero-context {
-      max-width: 34rem;
-      margin: var(--space-6) 0 0;
-      color: var(--muted);
-      font-size: 1rem;
-      line-height: 1.62;
-    }
-
-    .share-track {
-      width: min(100%, 34rem);
-      height: 0.55rem;
-      margin-top: var(--space-6);
-      overflow: hidden;
-      border-radius: 0.125rem;
-      background: var(--grid-empty);
-    }
-
-    .share-fill {
-      width: 0;
-      height: 100%;
-      border-radius: inherit;
-      background: var(--active-accent, var(--accent));
-      transition: width 420ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .hero-ratio {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      justify-content: space-between;
-      width: min(100%, 34rem);
-      margin-top: var(--space-2);
-      color: var(--faint);
-      font-family: var(--mono);
-      font-size: 0.8125rem;
-    }
-
-    .ledger {
-      display: grid;
-      grid-template-rows: repeat(3, 1fr);
-      overflow: hidden;
-    }
-
-    .ledger-item {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      min-height: 7rem;
-      padding: var(--space-5) var(--space-6);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .ledger-item:first-child {
-      background: color-mix(in srgb, var(--surface-blue) 44%, var(--surface));
-    }
-
-    .ledger-item:last-child {
-      border-inline-start: 0.25rem solid var(--warning);
-      background: var(--surface);
-    }
-
-    .ledger-item:last-child {
-      border-bottom: 0;
-    }
-
-    .ledger-value {
-      margin: 0;
-      font-family: var(--mono);
-      font-size: clamp(1.75rem, 4vw, 2.65rem);
-      font-weight: 720;
-      letter-spacing: -0.045em;
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .ledger-label {
-      margin: var(--space-2) 0 0;
-      color: var(--muted);
-      font-size: 0.875rem;
-      line-height: 1.5;
-    }
-
-    .ledger-detail {
-      margin: var(--space-1) 0 0;
-      color: var(--faint);
-      font-size: 0.8125rem;
-      line-height: 1.45;
-    }
-
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.55fr) minmax(19rem, 0.8fr);
-      gap: var(--space-6);
-      align-items: start;
-    }
-
-    .activity-panel,
-    .providers-panel,
-    .evidence-panel,
-    .notes-panel {
-      padding: clamp(1.5rem, 3vw, 2.25rem);
-    }
-
-    .activity-panel {
-      min-width: 0;
+      border-radius: var(--radius-md);
       background: var(--surface);
     }
 
     .panel-heading {
       display: flex;
-      gap: var(--space-4);
-      align-items: end;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-4);
+      align-items: baseline;
       justify-content: space-between;
-      margin-bottom: var(--space-6);
+      margin-bottom: var(--space-4);
     }
 
     .panel-title {
       margin: 0;
       font-family: var(--display);
-      font-size: clamp(1.65rem, 3vw, 2.25rem);
-      font-stretch: condensed;
-      font-weight: 680;
-      letter-spacing: -0.015em;
-      line-height: 1.08;
+      font-size: var(--text-3);
+      font-weight: 600;
+      line-height: 1.3;
     }
 
     .panel-meta {
       margin: 0;
       color: var(--muted);
-      font-family: var(--mono);
-      font-size: 0.8125rem;
+      font-size: var(--text-1);
       line-height: 1.5;
-      text-align: right;
     }
 
     .calendar-scroll {
@@ -533,7 +421,7 @@ _HTML_PREFIX = """<!doctype html>
       min-width: 0;
       max-width: 100%;
       overflow-x: auto;
-      padding: var(--space-2) var(--space-1) var(--space-4);
+      padding: var(--space-2) var(--space-1) var(--space-3);
       scrollbar-color: var(--border-strong) transparent;
     }
 
@@ -561,7 +449,7 @@ _HTML_PREFIX = """<!doctype html>
       border-radius: 0.19rem;
       background: var(--grid-empty);
       cursor: help;
-      transition: transform 120ms ease, border-color 120ms ease;
+      transition: transform 120ms ease;
     }
 
     .day-cell[data-active="true"] {
@@ -577,7 +465,7 @@ _HTML_PREFIX = """<!doctype html>
 
     .calendar-empty {
       display: grid;
-      min-height: 10rem;
+      min-height: 8rem;
       place-items: center;
       border: 1px dashed var(--border);
       border-radius: var(--radius-md);
@@ -588,12 +476,12 @@ _HTML_PREFIX = """<!doctype html>
     .legend {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--space-4);
+      gap: var(--space-3) var(--space-4);
       align-items: center;
       justify-content: space-between;
-      margin-top: var(--space-4);
+      margin-top: var(--space-3);
       color: var(--muted);
-      font-size: 0.8125rem;
+      font-size: var(--text-1);
       line-height: 1.45;
     }
 
@@ -617,21 +505,16 @@ _HTML_PREFIX = """<!doctype html>
 
     .provider-list {
       display: grid;
-      gap: var(--space-3);
-    }
-
-    .providers-panel .panel-title {
-      font-size: clamp(1.55rem, 2.5vw, 2rem);
+      gap: var(--space-2);
     }
 
     .provider-row {
       display: grid;
       gap: var(--space-2);
       width: 100%;
-      min-height: 4rem;
       padding: var(--space-3);
       border: 1px solid transparent;
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-sm);
       background: transparent;
       color: inherit;
       cursor: pointer;
@@ -659,18 +542,18 @@ _HTML_PREFIX = """<!doctype html>
       gap: var(--space-2);
       align-items: center;
       color: var(--text);
-      font-size: 0.9375rem;
-      font-weight: 700;
+      font-size: var(--text-2);
+      font-weight: 600;
     }
 
     .provider-count {
       font-family: var(--mono);
-      font-size: 0.875rem;
-      font-weight: 700;
+      font-size: var(--text-2);
+      font-weight: 600;
     }
 
     .provider-track {
-      height: 0.38rem;
+      height: 0.375rem;
       overflow: hidden;
       border-radius: 0.125rem;
       background: var(--grid-empty);
@@ -684,41 +567,29 @@ _HTML_PREFIX = """<!doctype html>
 
     .provider-detail {
       color: var(--muted);
-      font-family: var(--mono);
-      font-size: 0.8125rem;
+      font-size: var(--text-1);
       line-height: 1.5;
+    }
+
+    .evidence-panel .panel-title::before {
+      content: "";
+      display: inline-block;
+      width: 0.5rem;
+      height: 0.5rem;
+      margin-right: var(--space-2);
+      border: 1px solid var(--evidence);
+      border-radius: 0.125rem;
+      background: var(--evidence-surface);
+      vertical-align: 0.05em;
     }
 
     .evidence-track {
       display: flex;
-      height: 0.72rem;
-      margin: var(--space-5) 0;
+      height: 0.625rem;
+      margin: 0 0 var(--space-4);
       overflow: hidden;
       border-radius: 0.125rem;
       background: var(--grid-empty);
-    }
-
-    .evidence-panel {
-      display: grid;
-      grid-column: 1 / -1;
-      grid-template-columns: minmax(15rem, 0.62fr) minmax(0, 1.38fr);
-      gap: var(--space-4) var(--space-8);
-      align-items: center;
-      border-top: 0.25rem solid var(--warning);
-      background: var(--surface);
-    }
-
-    .evidence-panel .panel-heading {
-      display: grid;
-      grid-row: 1 / span 2;
-      align-self: center;
-      justify-content: stretch;
-      margin-bottom: 0;
-    }
-
-    .evidence-panel .panel-meta {
-      margin-top: var(--space-3);
-      text-align: left;
     }
 
     .evidence-segment {
@@ -729,7 +600,7 @@ _HTML_PREFIX = """<!doctype html>
     .evidence-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-3) var(--space-4);
+      gap: var(--space-2) var(--space-4);
     }
 
     .evidence-item {
@@ -739,7 +610,7 @@ _HTML_PREFIX = """<!doctype html>
       align-items: center;
       min-width: 0;
       color: var(--muted);
-      font-size: 0.8125rem;
+      font-size: var(--text-1);
     }
 
     .evidence-swatch {
@@ -752,32 +623,86 @@ _HTML_PREFIX = """<!doctype html>
     .evidence-count {
       color: var(--text);
       font-family: var(--mono);
-      font-weight: 700;
+      font-weight: 600;
     }
 
-    .notes-panel {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: var(--space-8);
+    .evidence-note {
+      margin: var(--space-4) 0 0;
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .definitions {
       margin-top: var(--space-4);
-      border-top: 0.1875rem solid var(--border-strong);
-      box-shadow: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+    }
+
+    .definitions-summary {
+      display: flex;
+      gap: var(--space-3);
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-5);
+      cursor: pointer;
+      font-size: var(--text-2);
+      font-weight: 600;
+      list-style: none;
+    }
+
+    .definitions-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .definitions-summary::after {
+      content: "";
+      flex: 0 0 auto;
+      width: 0.5rem;
+      height: 0.5rem;
+      margin-right: var(--space-1);
+      border-right: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
+      transform: rotate(45deg);
+      transition: transform 120ms ease;
+    }
+
+    .definitions[open] .definitions-summary::after {
+      transform: rotate(-135deg);
+    }
+
+    .definitions-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+      gap: var(--space-4) var(--space-6);
+      padding: 0 var(--space-5) var(--space-5);
     }
 
     .note-title {
-      margin: 0 0 var(--space-2);
-      font-family: var(--mono);
-      font-size: 0.8125rem;
-      font-weight: 750;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
+      margin: 0 0 var(--space-1);
+      font-size: var(--text-2);
+      font-weight: 600;
     }
 
     .note-copy {
       margin: 0;
       color: var(--muted);
-      font-size: 0.875rem;
-      line-height: 1.68;
+      font-size: var(--text-1);
+      line-height: 1.6;
+    }
+
+    .console-foot {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-4);
+      justify-content: space-between;
+      margin-top: var(--space-4);
+      color: var(--muted);
+      font-size: var(--text-1);
+      line-height: 1.5;
     }
 
     .tooltip {
@@ -785,13 +710,12 @@ _HTML_PREFIX = """<!doctype html>
       z-index: 30;
       width: max-content;
       max-width: min(18rem, calc(100vw - 2rem));
-      padding: var(--space-3) var(--space-4);
+      padding: var(--space-2) var(--space-3);
       border: 1px solid var(--border-strong);
       border-radius: var(--radius-sm);
       background: var(--surface-raised);
-      box-shadow: var(--shadow);
       color: var(--text);
-      font-size: 0.8125rem;
+      font-size: var(--text-1);
       line-height: 1.5;
       pointer-events: none;
       transform: translate(-50%, calc(-100% - 0.75rem));
@@ -805,7 +729,7 @@ _HTML_PREFIX = """<!doctype html>
       display: block;
       margin-bottom: var(--space-1);
       font-family: var(--mono);
-      font-weight: 750;
+      font-weight: 600;
     }
 
     .sr-only {
@@ -819,177 +743,118 @@ _HTML_PREFIX = """<!doctype html>
       border: 0;
     }
 
-    @media (min-width: 38.01rem) {
-      .provider-list {
+    @media (max-width: 54rem) {
+      .console-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
-    }
 
-    @media (max-width: 54rem) {
-      .masthead,
-      .hero-grid,
-      .dashboard-grid {
-        grid-template-columns: 1fr;
+      .metric:nth-child(odd) {
+        border-inline-start: 0;
       }
 
-      .utility {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .generated {
-        text-align: left;
-      }
-
-      .ledger {
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: 1fr;
-      }
-
-      .ledger-item {
-        min-height: 6.5rem;
-        border-right: 1px solid var(--border);
-        border-bottom: 0;
-      }
-
-      .ledger-item:last-child {
-        border-right: 0;
-      }
-
-      .activity-panel {
-        grid-row: auto;
-      }
-
-      .evidence-panel {
-        display: block;
-      }
-
-      .evidence-panel .panel-heading {
-        display: flex;
-        margin-bottom: var(--space-6);
-      }
-
-      .evidence-panel .panel-meta {
-        margin-top: 0;
-        text-align: right;
+      .metric:nth-child(n+3) {
+        border-top: 1px solid var(--border);
       }
     }
 
     @media (max-width: 38rem) {
-      .shell {
-        width: min(100% - 1rem, 74rem);
-        padding-top: var(--space-6);
+      .console {
+        width: min(100% - 1rem, 76rem);
       }
 
-      .masthead {
-        gap: var(--space-5);
-        margin-bottom: var(--space-8);
+      .statusbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+          "title controls"
+          "meta meta";
+        align-items: center;
       }
 
-      .title {
-        overflow-wrap: anywhere;
-        font-size: clamp(2.35rem, 11.5vw, 3.5rem);
+      .metric {
+        padding: var(--space-3) var(--space-4);
       }
 
-      .utility {
-        flex-direction: column;
-        align-items: flex-start;
+      .panel {
+        padding: var(--space-4);
       }
 
-      .generated {
-        max-width: 100%;
-        overflow-wrap: anywhere;
-      }
-
-      .control-deck {
-        position: static;
-        display: grid;
+      .evidence-grid {
         grid-template-columns: minmax(0, 1fr);
-        width: 100%;
-      }
-
-      .filter-label {
-        padding-left: 0;
-      }
-
-      .filters {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(5.25rem, 1fr));
-        overflow-x: visible;
-      }
-
-      .filter {
-        width: 100%;
-        padding-inline: var(--space-2);
-      }
-
-      .hero-panel {
-        min-height: 20rem;
-      }
-
-      .ledger {
-        grid-template-columns: 1fr;
-      }
-
-      .ledger-item {
-        min-height: 5.5rem;
-        border-right: 0;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .panel-heading {
-        display: grid;
-      }
-
-      .panel-meta {
-        text-align: left;
-      }
-
-      .evidence-grid,
-      .notes-panel {
-        grid-template-columns: 1fr;
       }
     }
 
     @media (max-width: 22rem) {
-      .filters {
+      .statusbar {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "title"
+          "meta"
+          "controls";
+      }
+
+      .statusbar-controls {
+        justify-content: flex-start;
+      }
+
+      .metrics {
         grid-template-columns: minmax(0, 1fr);
       }
 
-      .hero-panel,
-      .activity-panel,
-      .providers-panel,
-      .evidence-panel,
-      .notes-panel {
+      .metric {
+        border-inline-start: 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .metric:first-child {
+        border-top: 0;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .filter {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .panel,
+      .definitions-summary {
         padding: var(--space-4);
       }
 
+      .definitions-body {
+        padding: 0 var(--space-4) var(--space-4);
+      }
+
       .panel-heading > *,
-      .provider-row {
+      .provider-row,
+      .statusbar > * {
         min-width: 0;
         max-width: 100%;
       }
 
+      .statusbar-title,
+      .statusbar-meta,
       .panel-title,
       .panel-meta,
-      .section-kicker,
+      .metric-label,
+      .metric-detail,
       .provider-name,
       .provider-detail,
-      .evidence-item {
+      .evidence-item,
+      .console-foot {
         overflow-wrap: anywhere;
       }
 
-      .evidence-panel .panel-heading {
-        display: grid;
-      }
-
-      .evidence-panel .panel-meta {
-        text-align: left;
-      }
-
       .provider-row-head,
-      .legend-scale {
+      .legend-scale,
+      .status-item {
         flex-wrap: wrap;
       }
     }
@@ -1009,83 +874,72 @@ _HTML_PREFIX = """<!doctype html>
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
-        scroll-behavior: auto !important;
-        transition-duration: 0.01ms !important;
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
+      .day-cell,
+      .definitions-summary::after {
+        transition: none;
+      }
+
+      .day-cell:hover,
+      .day-cell:focus-visible {
+        transform: none;
       }
     }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <header class="masthead">
-      <div>
-        <p class="eyebrow">AI collaboration / evidence ledger</p>
-        <h1 class="title">Evidence-backed AI collaboration.</h1>
-        <p class="lede">
-          Explicit Git provenance, aggregated locally. Review the published
-          all-provider record or one participating AI provider without turning
-          unrecorded history into a guess.
-        </p>
-      </div>
-      <div class="utility">
+  <main class="console">
+    <header class="statusbar">
+      <h1 class="statusbar-title">AI Collaboration Record</h1>
+      <p class="statusbar-meta">
+        <span class="status-item"><span>Snapshot</span>
+          <time class="status-value" id="snapshotDate"></time> <span>UTC</span></span>
+        <span class="status-item" id="periodLabel"></span>
+        <span class="status-item" id="schemaLabel"></span>
+      </p>
+      <div class="statusbar-controls">
         <button class="theme-toggle" id="themeToggle" type="button"
                 aria-label="Theme: auto. Activate for light theme">Theme: auto</button>
-        <div class="generated" id="generatedMeta"></div>
       </div>
     </header>
 
-    <section class="control-deck" aria-label="Dashboard filters">
-      <span class="filter-label">Provider view</span>
+    <p class="sr-only" id="selectionStatus" role="status" aria-live="polite"></p>
+
+    <section class="metrics" aria-label="Core collaboration metrics">
+      <div class="metric metric--primary" id="primaryMetric">
+        <p class="metric-value" id="primaryValue">0</p>
+        <p class="metric-label" id="primaryLabel">AI-attributed commits</p>
+        <p class="metric-detail" id="primaryDetail"></p>
+        <div class="share-track" aria-hidden="true">
+          <div class="share-fill" id="shareFill"></div>
+        </div>
+      </div>
+      <div class="metric">
+        <p class="metric-value" id="presenceValue">0</p>
+        <p class="metric-label" id="presenceLabel">AI actor presences</p>
+        <p class="metric-detail">One per provider/tool in a commit.</p>
+      </div>
+      <div class="metric">
+        <p class="metric-value" id="daysValue">0</p>
+        <p class="metric-label">Active AI days</p>
+        <p class="metric-detail">Commit author dates with AI evidence.</p>
+      </div>
+      <div class="metric">
+        <p class="metric-value" id="unknownValue">0</p>
+        <p class="metric-label">Unattributed commits</p>
+        <p class="metric-detail">No explicit AI or human declaration recorded.</p>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Provider view">
+      <span class="toolbar-label" id="filterLabel">Provider view</span>
       <div class="filters" id="providerFilters" role="group"
            aria-label="Filter dashboard by AI provider"></div>
     </section>
 
-    <p class="sr-only" id="selectionStatus" role="status" aria-live="polite"></p>
-
-    <section class="hero-grid" aria-label="Selected collaboration summary">
-      <article class="panel hero-panel" id="heroPanel">
-        <p class="hero-label" id="heroLabel">AI-attributed commits</p>
-        <p class="hero-value" id="heroValue">0</p>
-        <p class="hero-context" id="heroContext"></p>
-        <div class="share-track" aria-hidden="true">
-          <div class="share-fill" id="shareFill"></div>
-        </div>
-        <div class="hero-ratio">
-          <span id="shareText">0% of commits scanned</span>
-          <span id="commitTotal">0 total</span>
-        </div>
-      </article>
-
-      <aside class="panel ledger"
-             aria-label="Collaboration metrics; unattributed commits remain all records">
-        <div class="ledger-item">
-          <p class="ledger-value" id="presenceValue">0</p>
-          <p class="ledger-label" id="presenceLabel">AI actor presences</p>
-        </div>
-        <div class="ledger-item">
-          <p class="ledger-value" id="daysValue">0</p>
-          <p class="ledger-label">Active AI days</p>
-        </div>
-        <div class="ledger-item">
-          <p class="ledger-value" id="unknownValue">0</p>
-          <p class="ledger-label">Unattributed commits</p>
-          <p class="ledger-detail">No explicit AI or human declaration recorded.</p>
-        </div>
-      </aside>
-    </section>
-
-    <section class="dashboard-grid">
-      <article class="panel activity-panel">
+    <div class="console-grid">
+      <section class="panel activity-panel" aria-labelledby="activityTitle">
         <div class="panel-heading">
-          <div>
-            <p class="section-kicker">Daily record</p>
-            <h2 class="panel-title">Collaboration rhythm</h2>
-          </div>
+          <h2 class="panel-title" id="activityTitle">Commit map</h2>
           <p class="panel-meta" id="activityMeta"></p>
         </div>
         <div class="calendar-scroll">
@@ -1109,52 +963,66 @@ _HTML_PREFIX = """<!doctype html>
             8+
           </span>
         </div>
-      </article>
+      </section>
 
-      <article class="panel providers-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">Provider ledger</p>
-            <h2 class="panel-title">Who participated</h2>
+      <aside class="sidebar" aria-label="Provider ledger and evidence">
+        <section class="panel providers-panel" aria-labelledby="providersTitle">
+          <div class="panel-heading">
+            <h2 class="panel-title" id="providersTitle">Providers</h2>
+            <p class="panel-meta">Attributed commits, not mutually exclusive</p>
           </div>
-          <p class="panel-meta">Attributed commits<br>not mutually exclusive</p>
-        </div>
-        <div class="provider-list" id="providerList"></div>
-      </article>
+          <div class="provider-list" id="providerList"></div>
+        </section>
 
-      <article class="panel evidence-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">All ACE records</p>
-            <h2 class="panel-title">Evidence quality</h2>
+        <section class="panel evidence-panel" aria-labelledby="evidenceTitle">
+          <div class="panel-heading">
+            <h2 class="panel-title" id="evidenceTitle">Evidence</h2>
+            <p class="panel-meta" id="evidenceTotal"></p>
           </div>
-          <p class="panel-meta" id="evidenceTotal"></p>
-        </div>
-        <div class="evidence-track" id="evidenceTrack" aria-hidden="true"></div>
-        <div class="evidence-grid" id="evidenceGrid"></div>
-      </article>
-    </section>
+          <div class="evidence-track" id="evidenceTrack" aria-hidden="true"></div>
+          <div class="evidence-grid" id="evidenceGrid"></div>
+          <p class="evidence-note">All ACE records, every actor type. Unknown evidence is
+            recorded as unknown; it is never recolored or inferred.</p>
+        </section>
+      </aside>
+    </div>
 
-    <section class="panel notes-panel" aria-label="Metric and privacy definitions">
-      <div>
-        <h2 class="note-title">Unique commits</h2>
-        <p class="note-copy">
-          The all-provider view counts a commit once when at least one explicit AI actor
-          is present. Provider totals may overlap when several actors share one commit.
-        </p>
+    <details class="definitions" id="definitions">
+      <summary class="definitions-summary">Definitions, attribution, and privacy boundary</summary>
+      <div class="definitions-body">
+        <div>
+          <h2 class="note-title">Unique commits</h2>
+          <p class="note-copy">
+            The all-provider view counts a commit once when at least one explicit AI actor
+            is present. Provider totals may overlap when several actors share one commit.
+          </p>
+        </div>
+        <div>
+          <h2 class="note-title">Unattributed is not human</h2>
+          <p class="note-copy">
+            Commits without an explicit AI or human declaration stay unattributed. They are
+            never inferred from source-code style and never counted as human work.
+          </p>
+        </div>
+        <div>
+          <h2 class="note-title">Improve future attribution</h2>
+          <p class="note-copy">
+            Add an <code>AI-*</code> trailer to future commits. Historical commits without
+            explicit evidence remain unattributed.
+          </p>
+        </div>
+        <div>
+          <h2 class="note-title">Privacy boundary</h2>
+          <p class="note-copy" id="privacyCopy"></p>
+        </div>
       </div>
-      <div>
-        <h2 class="note-title">Improve future attribution</h2>
-        <p class="note-copy">
-          Add an <code>AI-*</code> trailer to future commits. Historical commits without
-          explicit evidence remain unattributed; they are never inferred from source-code style.
-        </p>
-      </div>
-      <div>
-        <h2 class="note-title">Privacy boundary</h2>
-        <p class="note-copy" id="privacyCopy"></p>
-      </div>
-    </section>
+    </details>
+
+    <footer class="console-foot">
+      <span>Static snapshot rendered locally by aiprofile from explicit Git provenance;
+        numbers change only when the profile is regenerated.</span>
+      <span id="footSnapshot"></span>
+    </footer>
   </main>
 
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
@@ -1167,6 +1035,8 @@ _HTML_SUFFIX = """</script>
 
       const data = JSON.parse(document.getElementById("profileData").textContent);
       const providerGlyphs = __PROVIDER_GLYPHS__;
+      // The SVG namespace URI for createElementNS - an identifier, never a
+      // fetched network URL (the CSP forbids all connections anyway).
       const SVG_NS = "http:" + "//www.w3.org/2000/svg";
       const $ = (id) => document.getElementById(id);
       const number = new Intl.NumberFormat("en-US");
@@ -1339,7 +1209,7 @@ _HTML_SUFFIX = """</script>
         }));
       }
 
-      function renderHero() {
+      function renderMetrics() {
         const row = selectedRow();
         const commitCount = row ? row.attributed_commits : data.totals.ai_attributed_commits;
         const presenceCount = row ? row.actor_presences : data.totals.ai_actor_presences;
@@ -1348,19 +1218,15 @@ _HTML_SUFFIX = """</script>
         const share = denominator ? (commitCount / denominator) * 100 : 0;
         const accent = selectedAccent();
 
-        $("heroPanel").style.setProperty("--active-accent", accent);
-        $("heroLabel").textContent = row
+        $("primaryMetric").style.setProperty("--active-accent", accent);
+        $("primaryLabel").textContent = row
           ? `${row.display_name}-attributed commits`
           : "Unique AI-attributed commits";
-        $("heroValue").textContent = number.format(commitCount);
-        $("heroContext").textContent = row
-          ? `${row.display_name} appears in ${number.format(commitCount)} unique commits. ` +
-            "A commit may also include another AI provider."
-          : `${number.format(commitCount)} commits contain at least one explicit AI actor. ` +
-            "Each commit is counted once in this all-provider view.";
+        $("primaryValue").textContent = number.format(commitCount);
+        $("primaryDetail").textContent =
+          `${percent.format(share)}% of ${number.format(denominator)} commits scanned` +
+          (row ? " · may overlap other providers" : " · each commit counted once");
         $("shareFill").style.width = `${Math.min(100, share)}%`;
-        $("shareText").textContent = `${percent.format(share)}% of commits scanned`;
-        $("commitTotal").textContent = `${number.format(denominator)} total`;
         $("presenceValue").textContent = number.format(presenceCount);
         $("presenceLabel").textContent = row
           ? `${row.display_name} actor presences`
@@ -1627,6 +1493,12 @@ _HTML_SUFFIX = """</script>
           });
           return button;
         }));
+        if (!data.providers.length) {
+          const empty = document.createElement("p");
+          empty.className = "panel-meta";
+          empty.textContent = "No AI provider recorded yet.";
+          $("providerList").append(empty);
+        }
       }
 
       function renderEvidence() {
@@ -1682,7 +1554,7 @@ _HTML_SUFFIX = """</script>
       }
 
       function render() {
-        renderHero();
+        renderMetrics();
         renderCalendar();
         document.querySelectorAll(".filter").forEach((button) => {
           button.setAttribute("aria-pressed", String(button.dataset.provider === selected));
@@ -1728,8 +1600,12 @@ _HTML_SUFFIX = """</script>
         render();
       });
 
-      $("generatedMeta").textContent =
-        `${data.period.label} · generated ${data.generated_on} UTC · schema ${data.schema_version}`;
+      $("snapshotDate").textContent = data.generated_on;
+      $("snapshotDate").setAttribute("datetime", data.generated_on);
+      $("periodLabel").textContent = data.period.label;
+      $("schemaLabel").textContent = `schema ${data.schema_version}`;
+      $("footSnapshot").textContent =
+        `Snapshot ${data.generated_on} UTC · ${data.period.label} · aiprofile`;
       renderEvidence();
       renderPrivacy();
       setTheme("auto");

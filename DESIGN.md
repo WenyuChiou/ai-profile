@@ -1,15 +1,15 @@
 ---
 name: ai-profile visual system
-version: 0.1
+version: 0.2
 status: beta
 audience: maintainers, contributors, and design-aware agents
-source_of_truth: [docs/decisions/ADR-025-flat-evidence-ledger.md, docs/decisions/ADR-029-provider-ledger-only-rendering.md]
-themes: [github-light, github-dark]
+source_of_truth: [docs/decisions/ADR-031-signal-console.md, docs/decisions/ADR-025-flat-evidence-ledger.md, docs/decisions/ADR-029-provider-ledger-only-rendering.md]
+themes: [github-light, github-dark, system]
 fonts: local-fallback-only
 network_assets: forbidden
 ---
 
-# Flat Evidence Ledger
+# Signal Console (on the Flat Evidence Ledger)
 
 This file is the maintainable visual contract for ai-profile. It describes
 how validated aggregate facts are presented; it is not a second data model and
@@ -39,13 +39,15 @@ the active visual contract. See ADR-029.
 spacing:
   unit: 4px
   within_group: [8px, 12px]
-  between_groups: [20px, 24px]
+  between_groups: [16px, 20px, 24px]
   outer: 24px
 type:
-  sizes_px: [11, 12, 13, 16, 38]
+  svg_sizes_px: [12, 13, 18, 40]        # summary card; heatmap labels may use 11
+  dashboard_scale_px: [13, 15, 18, 28, 36]  # --text-1 .. --text-5
   labels: 400
   metrics: 600
   hero: 700
+  mono_is_for: numbers and dates only
   display: "IBM Plex Sans Condensed, Aptos Display, Segoe UI, DejaVu Sans Condensed, sans-serif"
   body: "IBM Plex Sans, Aptos, Segoe UI, Noto Sans, DejaVu Sans, sans-serif"
   numbers: "IBM Plex Mono, Cascadia Mono, SFMono-Regular, DejaVu Sans Mono, Consolas, monospace"
@@ -66,13 +68,28 @@ roles:
     border: "#34526f"
     evidence_surface: "#3b331e"
     unknown: "#8d9baa"
+  dashboard_light:
+    canvas: "#f3f7fb"
+    surface: "#fbfdff"
+    border_strong: "#7590aa"
+    grid_empty: "#e5eef7"
+    evidence_text: "#9a6700"
+  dashboard_dark:
+    canvas: "#0b1625"
+    surface: "#111923"
+    border_strong: "#6683a0"
+    grid_empty: "#111923"
+    evidence_text: "#eac54f"
 behavior:
   deterministic: true
   external_fonts: false
   gradients: false
-  animation: false
+  shadows: inset focus/selection ring only
+  uppercase_labels: false
+  motion: transform/opacity state changes only, <= 120ms, off under prefers-reduced-motion
   color_only_meaning: false
   renderer_input: VizStats
+  freshness_claim: none - generated_on is labelled "snapshot"
 ```
 
 The YAML block is intentionally small and reviewable. Runtime renderers keep
@@ -81,10 +98,16 @@ contract change and requires a focused test plus an ADR update.
 
 ## Composition grammar
 
-The order is stable across the static summary and dashboard:
+The order is stable across the static summary and dashboard (ADR-031):
 
-`scope / period → hero fact → supporting ledger → daily timeline → provider
-ledger → evidence / privacy → generated metadata`
+`status line (title · period · snapshot date) → metric console (hero fact +
+supporting cells) → provider controls (dashboard) → daily commit map →
+provider ledger → evidence / privacy → definitions → generated metadata`
+
+Dashboard layout: desktop = primary activity region + provider/evidence
+sidebar; below 54rem one column in the same DOM order; metrics 4-up → 2-up →
+1-up at 22rem. DOM order is reading order is tab order. Definitions live in a
+native `<details>` disclosure.
 
 The summary is a static profile artifact. The dashboard may add provider
 filters and keyboard affordances, but it must consume the same `VizStats` and
@@ -103,25 +126,32 @@ must not recalculate or infer attribution.
 - Unknown keeps a neutral mark and explicit label. It must never be recolored
   or renamed to imply Human.
 
-## Editorial Signal skin
+## Signal Console
 
-The v0.6 candidate keeps the flat ledger and adds a restrained editorial
-instrument rhythm: section headings use a short rule plus datum bar, and the
-12-week matrix uses sparse quarter-window alignment rails. These rails are
-structural guides only; they never encode a third statistic. The goal is a
-distinctive, recruiter-readable card without perspective, prisms, glass,
-gradients, neon, animation, or decorative background patterns. The full
-research record is `docs/reviews/design-research-2026-08-04.md`; the decision
-record is ADR-026.
+The v0.8.0 Signal Console (ADR-031) keeps the flat ledger and the restrained
+editorial instrument rhythm of v0.6 (short rule + datum bar section markers,
+sparse quarter-window rails on the 12-week matrix — structural guides only,
+never a third statistic) and recomposes every surface around a console
+reading: a compact status line that labels `generated_on` as a snapshot, a
+metric strip with hairline separators and a shared baseline, a left-aligned
+wider matrix, and on the dashboard a provider toolbar, primary commit map,
+and evidence/provider sidebar. Tech feeling comes from information
+architecture, status treatment, precision alignment, typography, and data
+interaction. Banned: neon, glassmorphism, gradients, gradient text, oversized
+hero/title, decorative thin border + large shadow, thick side accent stripes,
+uppercase tracked labels, monospace-as-tech, and width/layout-property
+animation. The earlier research record is
+`docs/reviews/design-research-2026-08-04.md` (ADR-026); the v0.8.0 browser
+evidence is `docs/reviews/v0.8.0-visual-qa.md`.
 
 ## Extension points
 
 The renderer is intentionally composable through private pure functions:
 
-- summary: hero, ledger, flat daily timeline, provider row, evidence rail,
-  footer, and Editorial Signal section/rail helpers;
-- dashboard: masthead, filter deck, hero, activity, providers, evidence,
-  definitions, and the matching section-marker grammar.
+- summary: status-line header, hero cell, metric console cells, flat daily
+  timeline, provider row, evidence rail, footer, and section/rail helpers;
+- dashboard: status line, metric strip, provider toolbar, commit map,
+  provider ledger, evidence panel, definitions disclosure, and footer.
 
 An extension may replace a visual primitive only if it preserves the same
 validated input, semantic units, privacy boundary, element/security allowlist,
@@ -130,8 +160,10 @@ loader, network registry, or new output file for visual experimentation.
 
 ## Review checklist
 
-- Does the change improve hierarchy or legibility at 320px and GitHub README
-  width, or is it merely decoration?
+- Does the change improve hierarchy or legibility at 320px (and the 195px
+  extreme-narrow case) and GitHub README width, or is it merely decoration?
+- Does `npx impeccable detect` on the rendered dashboard still return zero
+  findings, and does the page still say *snapshot* rather than live?
 - Are all numbers labelled with their unit and denominator?
 - Can a keyboard, screen reader, reduced-motion user, or no-hover reader
   understand the state?

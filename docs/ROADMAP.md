@@ -312,6 +312,29 @@ Final evidence is in `docs/reviews/v0.7.1-release-readiness.md` and
       immutable `published-sha`, Pages HTTP 200, and no extra second commit.
       Runs `31393816068` and `31394187257` closed this gate.
 
+## v0.8.0 — Signal Console visual redesign (candidate, 2026-08-23)
+
+Scope: ADR-031. Product feature version, not a schema version. Exit criteria:
+
+- [x] Dashboard, summary SVG, heatmap SVG, and badge redesigned together:
+      compact status line with the generation date labelled *snapshot*, core
+      metric strip, provider toolbar, primary commit map, provider/evidence
+      sidebar, accessible `<details>` definitions; one token system,
+      transform/opacity-only motion honouring `prefers-reduced-motion`, no
+      hero/eyebrow/uppercase/gradient/border-plus-shadow decoration.
+- [x] `npx impeccable detect` on the rendered dashboard returns zero findings
+      (the previous six families are absent); Playwright QA at 1440/1024/768/
+      390/320/195 in light, dark, and system themes records zero horizontal
+      overflow, the 390px first viewport containing metrics and commit map,
+      and working filter/theme/tooltip/keyboard/disclosure interactions.
+- [x] Summary and heatmap stay 830 wide, badge stays 24 high; SVG type floor
+      12px (summary) / 11px (heatmap); sanctioned snapshot regeneration only.
+- [x] VizStats, profile.json, ACE `0.3.0`, CLI, privacy policy, provider and
+      evidence semantics, eight filenames, CSP/zero-network, deterministic
+      bytes unchanged; no new dependency, font, API, or output.
+- [ ] Green CI on the candidate commit, independent Codex review, merge, tag,
+      PyPI publish, staging deploy, and maintainer Profile refresh.
+
 ## Future capability milestone — GitHub integration
 
 Public-API discovery must wrap the official REST/GraphQL API through a mature

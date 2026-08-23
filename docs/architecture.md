@@ -125,7 +125,8 @@ coordination uses a tool-owned lock scoped to the canonical
 `AIPROFILE_HOME`, not a renderer global.
 
 The presentation contract is documented in the repository-root `DESIGN.md`
-and governed by ADR-025 (Flat Evidence Ledger). This is a
+and governed by ADR-025 (Flat Evidence Ledger) and ADR-031 (Signal Console,
+v0.8.0: dashboard, summary, heatmap, and badge presentation). This is a
 maintainer-facing visual source of truth only; it is not runtime configuration
 and cannot carry event or repository identity data.
 
@@ -468,8 +469,8 @@ settings shapes authored, registered, disabled, or produced by the two
 versioned COM round trips. Registered principal normalization must match the
 current process-token SID. Any other value, setting, or principal is rejected.
 The same proof precedes native removal, so an unverifiable same-name task is
-never deleted. Scheduler-config readers accept the unchanged v0.7.0 and v0.7.1 schema for
-in-place migration and the current v0.7.2 form; successful installation always
+never deleted. Scheduler-config readers accept the unchanged v0.7.0, v0.7.1, and
+v0.7.2 schema for in-place migration and the current v0.8.0 form; successful installation always
 rewrites current metadata, while unrelated or future versions fail closed.
 Launchd accepts only the exact
 tool-owned four-key plist. Unverifiable native state blocks mutation.

@@ -332,7 +332,8 @@ def test_provider_totals_are_explicitly_non_exclusive():
 
 
 # ---------------------------------------------------------------------------
-# 6. Type system: fixed sizes 11/12/13/16/38 and the three local stacks.
+# 6. Type system: fixed sizes 12/13/18/40 (v0.8.0 Signal Console) and the
+#    three local stacks.
 # ---------------------------------------------------------------------------
 
 
@@ -341,7 +342,7 @@ def test_summary_type_scale_is_the_fixed_five_sizes():
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             sizes = {int(n) for n in re.findall(r'font-size="(\d+)"', svg)}
-            assert sizes <= {11, 12, 13, 16, 38}, sizes
+            assert sizes <= {12, 13, 18, 40}, sizes
 
 
 def test_hero_value_binds_to_mono_while_header_stays_display():
@@ -349,12 +350,12 @@ def test_hero_value_binds_to_mono_while_header_stays_display():
     the card title is display type. Bound to the actual elements, not
     just substring presence anywhere in the SVG."""
     svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
-    hero = re.search(r'<text[^>]*font-size="38"[^>]*>40</text>', svg)
-    assert hero is not None, "hero value element (38px, value 40) not found"
+    hero = re.search(r'<text[^>]*font-size="40"[^>]*>40</text>', svg)
+    assert hero is not None, "hero value element (40px, value 40) not found"
     assert FONT_STACK_MONO in hero.group(0)
     assert FONT_STACK_DISPLAY not in hero.group(0)
-    header = re.search(r'<text[^>]*font-size="16"[^>]*>AI Collaboration Record</text>', svg)
-    assert header is not None, "header title element (16px) not found"
+    header = re.search(r'<text[^>]*font-size="18"[^>]*>AI Collaboration Record</text>', svg)
+    assert header is not None, "header title element (18px) not found"
     assert FONT_STACK_DISPLAY in header.group(0)
     assert FONT_STACK_MONO not in header.group(0)
 
@@ -373,11 +374,12 @@ def test_summary_uses_display_and_mono_stacks_locally():
 # ---------------------------------------------------------------------------
 
 
-def test_dashboard_h1_is_evidence_backed_ai_collaboration():
+def test_dashboard_h1_matches_the_summary_card_title():
     html = render_dashboard(FIXTURE_TIMELINE)
-    assert '<h1 class="title">Evidence-backed AI collaboration.</h1>' in html
+    assert '<h1 class="statusbar-title">AI Collaboration Record</h1>' in html
+    assert "Evidence-backed AI collaboration." not in html
     assert "Show the work behind the numbers." not in html
 
 
-def test_runtime_version_is_0_7_2_candidate():
-    assert aiprofile.__version__ == "0.7.2"
+def test_runtime_version_is_0_8_0_candidate():
+    assert aiprofile.__version__ == "0.8.0"

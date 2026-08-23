@@ -95,7 +95,7 @@ def test_dashboard_keeps_model_rows_in_data_but_hides_model_visuals():
     )
     html = render_dashboard(stats)
     assert "Provider ledger" in html
-    assert "Who participated" in html
+    assert 'id="providersTitle">Providers</h2>' in html
     assert "Model contribution" not in html
     assert "models-panel" not in html
     assert "model-list" not in html
@@ -160,4 +160,4 @@ def test_dashboard_layout_has_provider_panel_but_no_model_panel():
     )
     assert html.count('class="panel providers-panel"') == 1
     assert 'class="panel models-panel"' not in html
-    assert html.index("Provider ledger") < html.index("Evidence quality")
+    assert html.index('id="providersTitle"') < html.index('id="evidenceTitle"')

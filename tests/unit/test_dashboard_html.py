@@ -137,8 +137,7 @@ def test_dashboard_exposes_provider_filter_without_mixing_metric_units():
     assert "Provider totals may overlap" in html
     assert "Unattributed commits" in html
     assert "No explicit AI or human declaration recorded." in html
-    assert "published\n          all-provider record" in html
-    assert "unattributed commits remain all records" in html
+    assert "Unattributed is not human" in html
     assert "All ACE records" in html
     assert "publishable activity only" in html
     assert "Headline aggregates combine publishable and aggregate-only activity" in html
@@ -215,14 +214,15 @@ def test_dashboard_has_accessible_theme_motion_and_responsive_contracts():
     assert "systemScheme.addListener(handleSystemSchemeChange)" in html
     assert "prefers-reduced-motion: reduce" in html
     assert "@media (max-width: 38rem)" in html
-    assert "font-size: clamp(" in html
     assert "color-mix(" in html
-    rem_sizes = [float(value) for value in re.findall(r"font-size: ([0-9.]+)rem", html)]
+    rem_sizes = [
+        float(value)
+        for value in re.findall(r"(?:font-size|--text-\d): ([0-9.]+)rem", html)
+    ]
     assert rem_sizes
     assert min(rem_sizes) >= 0.8125
     assert "min-width: 20rem" not in html
     assert "html {\n      min-width: 0;" in html
-    assert ".generated {\n      color: var(--muted);" in html
 
 
 def test_dashboard_stylesheet_has_balanced_rule_braces():
@@ -246,14 +246,7 @@ def test_dashboard_uses_a_distinctive_local_typography_system():
     assert "radial-gradient(" not in html
     assert "linear-gradient(" not in html
     assert "repeating-linear-gradient(" not in html
-    assert ".hero-panel::after" not in html
-    assert ".section-kicker::before" in html
-    assert ".section-kicker::after" in html
-    assert "background: var(--border-strong);" in html
-    assert "border-inline-start: 0.25rem solid var(--warning);" in html
     assert "background: var(--canvas);" in html
-    assert ".hero-panel {" in html
-    assert "border-top: 0.25rem solid var(--active-accent, var(--accent));" in html
     assert "font-src 'none'" in html
 
 
@@ -274,30 +267,30 @@ def test_mobile_provider_filters_wrap_without_horizontal_scrolling():
     html = render_dashboard(_stats())
     mobile_css = html.split("@media (max-width: 38rem)", 1)[1]
 
-    assert "grid-template-columns: repeat(auto-fit, minmax(5.25rem, 1fr))" in mobile_css
-    assert "grid-template-columns: minmax(0, 1fr)" in mobile_css
-    assert "overflow-x: visible" in mobile_css
-    assert "width: 100%" in mobile_css
-    assert "padding-inline: var(--space-2)" in mobile_css
+    # Filters wrap as a flex row at every width; no horizontal scroller.
+    assert "overflow-x: auto" not in html.split(".filters {", 1)[1].split("}", 1)[0]
+    assert "flex-wrap: wrap" in html.split(".filters {", 1)[1].split("}", 1)[0]
+    assert ".console {" in mobile_css
+    assert "width: min(100% - 1rem, 76rem)" in mobile_css
 
 
 def test_narrow_22rem_reflow_prevents_zoom_overflow():
     """200%-zoom blocker (v0.4.8 visual review): at effective widths of
     145-195 CSS px the body expanded to 209px. The 22rem narrow-reflow
-    rule must collapse the filters to one column, tighten panel padding,
-    contain/wrap every unbreakable text run, and keep ONLY the calendar's
-    intentional horizontal scroller."""
+    rule must collapse the metric strip and filters to one column, tighten
+    panel padding, contain/wrap every unbreakable text run, and keep ONLY
+    the calendar's intentional horizontal scroller."""
     html = render_dashboard(_stats())
     narrow = html.split("@media (max-width: 22rem)", 1)[1].split(
         "@media (pointer: coarse)", 1
     )[0]
-    # Filters collapse to a single column.
+    # Metrics and filters collapse to a single column.
+    assert ".metrics {" in narrow
     assert ".filters {" in narrow
-    assert "grid-template-columns: minmax(0, 1fr)" in narrow
+    assert narrow.count("grid-template-columns: minmax(0, 1fr)") >= 2
     assert "repeat(2, minmax(0, 1fr))" not in narrow
     # Panel padding tightens to the 1rem step.
-    assert ".hero-panel," in narrow
-    assert ".notes-panel {" in narrow
+    assert ".panel {" in narrow or ".panel," in narrow
     assert "padding: var(--space-4)" in narrow
     # Shrink containment and wrapping for unbreakable runs.
     assert "min-width: 0" in narrow
@@ -306,19 +299,15 @@ def test_narrow_22rem_reflow_prevents_zoom_overflow():
     for selector in (
         ".panel-title",
         ".panel-meta",
-        ".section-kicker",
+        ".statusbar-meta",
         ".provider-name",
         ".provider-detail",
         ".evidence-item",
+        ".metric-label",
     ):
         assert selector in narrow, selector
-    assert ".provider-row-head," in narrow
     assert ".legend-scale" in narrow
     assert "flex-wrap: wrap" in narrow
-    # Evidence heading stacks as a grid with left-aligned meta.
-    assert ".evidence-panel .panel-heading" in narrow
-    assert "display: grid" in narrow
-    assert "text-align: left" in narrow
     # The calendar's horizontal scroller is intentional and untouched.
     assert ".calendar-scroll" not in narrow
 

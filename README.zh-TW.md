@@ -324,9 +324,10 @@ Action，Pages source 請維持 **GitHub Actions**，並略過以下 branch-sour
 
 下方使用 synthetic data，展示完整輸出系列：
 
-summary card 與 dashboard 共用平面的 Editorial Signal 視覺系統：安靜的
-紙張與墨色表面、藍色協作訊號、暖黃色 evidence cue，以及只用來改善閱讀
-節奏的小型對齊線；活動不會被包裝成 3D 分數或裝飾場景。
+summary card、heatmap、badge 與 dashboard 共用同一套平面的 Signal Console
+視覺系統：安靜的紙張與墨色表面、藍色協作訊號、暖黃色 evidence cue、把產生
+日期標示為 snapshot 的狀態列，以及只用來改善閱讀節奏的精準對齊；活動不會被
+包裝成 3D 分數或裝飾場景。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">

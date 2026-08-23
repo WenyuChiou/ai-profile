@@ -422,3 +422,45 @@ corrected below; CI on the repinned commit is still pending.
 
 Disposition: **candidate only**. Release gates (PR CI on the bumped commit,
 independent review, merge, tag, publish, dogfood) remain open.
+
+---
+
+## v0.8.0 Signal Console candidate self-verification (2026-08-23; CANDIDATE — awaiting CI and independent review)
+
+Scope: the v0.8.0 candidate on `codex/v080-signal-console` from `63c108d`
+(ADR-031): coordinated dashboard / summary / heatmap / badge redesign,
+red-first `tests/unit/test_signal_console.py` plus updated renderer,
+release, staging, and scheduler contracts, sanctioned snapshot and README
+asset regeneration, `DESIGN.md`, `.impeccable.md`, docs, version bump to
+0.8.0, scheduler metadata read-set, candidate manifest and staging pins.
+Verified by the Fable implementer only; no Codex round has reviewed this
+range yet and no GitHub CI has run on it.
+
+| Check | Result |
+|---|---|
+| Red-first contract | `test_signal_console.py` 17 tests + updated dashboard/recruiter/summary/model/release/staging/scheduler tests failed against the v0.7.2 renderers (31 failures), pass after implementation |
+| Windows Python 3.14 full suite | 977 passed, 30 skipped |
+| WSL Ubuntu Python 3.12 full suite (clean git clone) | 1001 passed, 6 skipped |
+| Ruff (`src tests scripts`), README parity, `git diff --check` | clean (Windows and WSL) |
+| Sanctioned snapshot commands | summary and heatmap/badge families + 6 README sample assets regenerated; rerun in the WSL clone produces zero drift |
+| `npx impeccable detect --json` (impeccable 3.6.0) on the rendered dashboard | `[]`; the v0.7.2 dashboard from the same fixture reported 6 findings (layout-transition, hero-eyebrow-chip, all-caps-body, gpt-thin-border-wide-shadow ×2, flat-type-hierarchy) |
+| Browser QA (Playwright 1.58 / Chromium) | 1440×900, 1024×768, 768×1024, 390×844, 320×568, 195×600 in light + dark with `data-theme="auto"`: zero horizontal overflow, min rendered font 13px, zero network requests; 390 first viewport holds metrics + commit map; filter/theme/tooltip/keyboard/disclosure/reduced-motion/zero-state interactions pass — `docs/reviews/v0.8.0-visual-qa.md` |
+| Clean Ubuntu git-clone build, `SOURCE_DATE_EPOCH=1786320000`, hatchling 1.31.0, build 1.4.3 | two builds byte-identical: wheel `9cc06f2052a642bd198fa00d728c75b72fce061dad24c51b72feddf84b07c89e`, reproduced again from a clean clone of the final candidate commit. The sdist digest is deliberately not recorded here: this file ships inside the sdist, so any pre-recorded sdist digest self-invalidates; the wheel is the authorized artifact and the publish workflow checksums its own pair |
+| Twine, `check_release_artifacts.py --expected-wheel-sha256`, `release_smoke.py` | PASS on Ubuntu (build host) and on Windows consuming the same wheel bytes |
+| Frozen four-role dogfood against the exact wheel | newcomer, privacy (full / aggregate_only / excluded, 0 canary hits), multi-provider (1 unique commit, 2 presences, human and unknown separate), publisher (exact eight, byte-identical double refresh, faithful dry-run, CSP, snapshot label): 4/4 PASS — scripted by the implementer in isolated WSL venvs/homes/repos, not independent role agents |
+| Regression coverage | `test_signal_console.py`, `test_dashboard_html.py`, `test_recruiter_card.py`, `test_render_summary.py` (12px floor), `test_model_renderers.py`, `test_release_workflow_contract.py` (v0.8.0 notes, released-digest guard now covers 0.7.2), `test_staging_preview.py`, `test_schedule_cli.py` / `test_launcher.py` (v0.8.0 metadata) |
+
+Post-review note: the independent code-reviewer round returned APPROVE with
+two non-blocking suggestions (an SVG-namespace clarifying comment in the
+dashboard script; a progress.md phrasing fix). Both were applied as the
+reviewer's own explicit same-session suggestions; because the comment changes
+dashboard and wheel bytes, the dashboard digest
+(`b9c7208ee1bece4a0a6cd39ea1b569a55ed30a78d14d85cdb74ee52b89b4cc48`) and the
+wheel/sdist digests above were re-derived from a fresh clean-clone double
+build, and Twine, artifact, smoke, and the four-role dogfood were rerun
+against the final wheel — all PASS. The final committed tree was rebuilt from
+its own clean clone and reproduces the pinned wheel digest.
+
+Disposition: **candidate only**. Release gates (PR CI on the candidate
+commit, independent review, merge, tag, publish, staging deploy, Profile
+refresh) remain open.

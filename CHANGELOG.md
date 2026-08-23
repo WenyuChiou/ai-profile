@@ -25,6 +25,41 @@ below.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-23 (Public Beta)
+
+### Changed
+
+- Redesign the dashboard, summary card, heatmap card, and badge together as
+  the **Signal Console** (ADR-031). The dashboard opens with a compact status
+  line that labels `generated_on` as a *snapshot* (never live), a four-cell
+  core metric strip, the provider toolbar, and the commit map; the oversized
+  hero, eyebrow, lede, sticky filter deck, and duplicate number cards are
+  removed. Desktop pairs the activity region with a provider/evidence sidebar;
+  narrow screens stack metrics, commit map, providers, and evidence in one
+  column, and definitions move into an accessible `<details>` disclosure. One
+  token system drives system, light, and dark themes; motion is limited to
+  short transform/opacity changes and is disabled under
+  `prefers-reduced-motion`; no uppercase labels, gradients, or
+  border-plus-shadow cards. The summary card gains a status-line header, a
+  metric console strip, a left-aligned wider 12-week matrix, and a 12px type
+  floor; the heatmap shares the header and raises its label floor to 11px;
+  the badge adopts the console commit mark on a canvas plate. Summary,
+  heatmap, and badge snapshots and README sample assets are regenerated via
+  the sanctioned commands. `DESIGN.md` and the new repository-root
+  `.impeccable.md` record the system; `npx impeccable detect` on the
+  dashboard reports zero findings (was six).
+- Scheduler metadata: status and reinstall read v0.7.0–v0.8.0
+  `installed_version` values; each successful reinstall writes v0.8.0.
+
+### Unchanged
+
+- ACE schema `0.3.0`, `VizStats`, `profile.json`, the CLI, aggregation,
+  privacy policy, provider/evidence semantics (unknown is not human; provider
+  counts may overlap; the daily map shows publishable dates only), the
+  hosted workflow contract, CSP/zero-network dashboard, deterministic bytes,
+  and the eight generated filenames. v0.8.0 is a product feature version,
+  not a schema version.
+
 ## [0.7.2] - 2026-08-23 (Public Beta)
 
 ### Fixed
