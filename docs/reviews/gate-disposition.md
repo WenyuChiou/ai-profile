@@ -605,3 +605,32 @@ Scope: workflow maintenance on branch `codex/v081-download-artifact-v8` from
 | Candidate manifest parity | `promotion-candidate.json` digest `a6c64bc9...` untouched; `test_release_workflow_contract.py` PASS |
 
 Disposition: **staged for Codex independent review** (post-merge Profile and public-caller repin to the resulting immutable workflow commit remains outstanding).
+
+## v0.8.1 hosted pin commit E: immutable public caller repin to commit D (2026-08-23; CANDIDATE)
+
+Scope: the postrelease commit E on `codex/v081-public-caller-e` from
+`ba88890` (main, merged PR #42 commit D `18fb08e`):
+- PR #42 (commit D `18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3`) passed 8/8 checks and merged to `main` as `ba888908f695deb44f5166f3783be0043e1d2e2d`.
+- Public caller contract repinned from `9c246d95052264c24e7175cabd295951c5236efc` to immutable commit D
+  `18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3` with `ai-profile-cli==0.8.1`, `actions/upload-artifact` v7.0.1 (Node 24),
+  and `actions/download-artifact` v8.0.1 (Node 24): `docs/templates/profile-refresh-caller.yml`, `README.md`,
+  `README.zh-TW.md`, `scripts/check_readme_parity.py`, `tests/unit/test_readme_parity.py`,
+  `tests/unit/test_profile_refresh_workflow.py`, and `docs/decisions/ADR-030-automation-layer.md`.
+- Stale commit-B pin assertions removed from the live contract (`COMMIT_D = "18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3"`,
+  forbids `9c246d9` and `6a39ff4` in caller template) while historical evidence is retained.
+- Candidate manifest `docs/reviews/promotion-candidate.json` updated to the final rebuilt candidate wheel digest
+  `284779ed60cf1c57fcd55b15158ab16526e7c0b26174168bbc939c84569cdbe7` for unpublished `0.8.2` development candidate
+  (reproduced by Codex using the exact GitHub Actions runtime from official actions/python-versions release 3.12.14-31661455385:
+  Ubuntu 24.04 x64 CPython 3.12.14 toolcache, `build==1.4.3`, `hatchling==1.31.0` isolation, `SOURCE_DATE_EPOCH=1786320000`,
+  clean origin/main archive plus staged diff; `check_release_artifacts.py` PASS).
+- Maintainer Profile repin to commit D and execution remains outstanding.
+
+| Check | Result |
+|---|---|
+| Red-first contract tests & regressions | 6 tests proven failing red against baseline, green after implementation |
+| Focused test suite (workflow, parity, staging, release contract, scheduler CLI, launcher, recruiter card) | 171 passed, 16 skipped (Windows Python 3.14) |
+| Parity check | `python scripts/check_readme_parity.py` -> PASS |
+| Ruff & diff checks | `python -m ruff check src tests scripts` clean; `git diff --check` clean |
+| Canonical wheel reproduction | Codex reproduced from final staged source using exact GitHub Actions runtime from official actions/python-versions release 3.12.14-31661455385: Ubuntu 24.04 x64 CPython 3.12.14 toolcache, build==1.4.3, hatchling==1.31.0 isolation, SOURCE_DATE_EPOCH=1786320000, clean origin/main archive plus staged diff; wheel SHA256 `284779ed60cf1c57fcd55b15158ab16526e7c0b26174168bbc939c84569cdbe7`; check_release_artifacts PASS |
+
+Disposition: **staged for Codex independent review** (maintainer Profile repin/run to immutable commit D remains outstanding).

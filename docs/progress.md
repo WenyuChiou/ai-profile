@@ -4,6 +4,32 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## v0.8.1 final immutable public caller repin — commit E (codex/v081-public-caller-e)
+
+- PR #42 (commit D `18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3`) passed 8/8 checks and merged to
+  `main` as `ba888908f695deb44f5166f3783be0043e1d2e2d`, upgrading `actions/download-artifact`
+  to verified Node 24 v8.0.1 across all first-party workflows while keeping `ai-profile-cli==0.8.1`.
+- Commit E completes the final immutable caller contract repin: repins
+  `docs/templates/profile-refresh-caller.yml`, `README.md`, `README.zh-TW.md`,
+  and `docs/decisions/ADR-030-automation-layer.md` from `9c246d95052264c24e7175cabd295951c5236efc`
+  to immutable commit D `18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3` (`ai-profile-cli==0.8.1` +
+  `upload-artifact` v7.0.1 Node 24 + `download-artifact` v8.0.1 Node 24).
+- `scripts/check_readme_parity.py` and `tests/unit/test_readme_parity.py` assert the
+  commit D token and bilingual parity; `tests/unit/test_profile_refresh_workflow.py`
+  asserts `COMMIT_D` (`18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3`), verifies caller template
+  and published-sha validation, and forbids stale commit B (`9c246d9`), commit A (`6a39ff4`),
+  v0.8.0, and v0.7.0 pins.
+- Rebuilt the unpublished `0.8.2` development candidate wheel using the exact GitHub Actions runtime
+  from official actions/python-versions release 3.12.14-31661455385 (Ubuntu 24.04 x64 CPython 3.12.14
+  toolcache, `build==1.4.3`, `hatchling==1.31.0` isolation, `SOURCE_DATE_EPOCH=1786320000`, clean
+  `origin/main` archive plus staged diff), updating `docs/reviews/promotion-candidate.json` to the
+  final candidate digest `284779ed60cf1c57fcd55b15158ab16526e7c0b26174168bbc939c84569cdbe7`.
+- Maintainer Profile repin to commit D and profile-refresh execution remains outstanding.
+- Local evidence: focused test suites (workflow, parity, staging preview, release contract,
+  scheduler CLI, launcher, recruiter card) all PASS (171 passed, 16 skipped);
+  `check_readme_parity.py` PASS; `python -m ruff check src tests scripts` clean;
+  `git diff --check` clean; `check_release_artifacts.py` PASS.
+
 ## Node 24 workflow maintenance: download-artifact v8.0.1 upgrade (codex/v081-download-artifact-v8)
 
 - Post-merge `e6a2176c3815a03df40f7039f78feb1ff6b88400` (PR #41 commit C): GitHub Profile run

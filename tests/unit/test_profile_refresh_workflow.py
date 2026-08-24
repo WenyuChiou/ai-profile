@@ -1,8 +1,8 @@
 """Security and operational contract for public profile automation.
 
-Commit C of the v0.8.1 hosted pin: the reusable workflow installs exactly
+Commit E of the v0.8.1 hosted pin: the reusable workflow installs exactly
 ``ai-profile-cli==0.8.1`` and the public caller template pins the immutable
-v0.8.1 reusable workflow commit B (``9c246d9``).
+v0.8.1 reusable workflow commit D (``18fb08e``).
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "profile-refresh.yml"
 CALLER = ROOT / "docs" / "templates" / "profile-refresh-caller.yml"
-COMMIT_B = "9c246d95052264c24e7175cabd295951c5236efc"
+COMMIT_D = "18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3"
 
 ASSET_NAMES = (
     "badge-dark.svg",
@@ -734,7 +734,7 @@ def test_caller_template_passes_only_repositories_and_secret_identities():
 
 
 def test_caller_uses_exact_immutable_workflow_pin_and_v081_contract():
-    """The caller template pins the DEPLOYED v0.8.1 immutable commit B
+    """The caller template pins the DEPLOYED v0.8.1 immutable commit D
     and its 0.8.1 package note."""
     text = _text(CALLER)
     uses = re.search(
@@ -744,10 +744,11 @@ def test_caller_uses_exact_immutable_workflow_pin_and_v081_contract():
     )
 
     assert uses is not None
-    assert uses.group(1) == COMMIT_B
+    assert uses.group(1) == COMMIT_D
     assert "hardcodes ai-profile-cli==0.8.1" in text
     assert "ai-profile-cli==0.8.0" not in text
     assert "ai-profile-cli==0.7.0" not in text
+    assert "9c246d9" not in text
     assert "6a39ff4" not in text
     assert "d74a3ef" not in text
     assert "9c4f276" not in text
@@ -820,11 +821,11 @@ def test_caller_published_sha_validation_rejects_hostile_values(
         assert value not in captured.out + captured.err
 
 
-def test_caller_published_sha_validation_accepts_commit_b(monkeypatch, capsys):
+def test_caller_published_sha_validation_accepts_commit_d(monkeypatch, capsys):
     script = _heredoc_python(
         _step_script(_text(CALLER), "Validate immutable published revision")
     )
-    monkeypatch.setenv("PUBLISHED_SHA", COMMIT_B)
+    monkeypatch.setenv("PUBLISHED_SHA", COMMIT_D)
 
     exec(compile(script, "profile-refresh-published-sha", "exec"), {})
 
