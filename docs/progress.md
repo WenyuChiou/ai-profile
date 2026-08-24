@@ -19,10 +19,20 @@ which is authoritative).
   families byte-identical; `VizStats`, ACE `0.3.0`, CLI, privacy, and the
   eight outputs untouched. Presentation-only version bump to 0.8.1;
   scheduler metadata tracks the package (readers accept v0.7.0–v0.8.1).
-- Candidate wheel `ai_profile_cli-0.8.1-py3-none-any.whl` digest
-  `d525eef3…` (deterministic double-build byte-equal at
-  `SOURCE_DATE_EPOCH=1786320000`); `docs/reviews/promotion-candidate.json`
-  repinned, and the published v0.8.0 digest `9cc06f20…` joined
+- Candidate wheel `ai_profile_cli-0.8.1-py3-none-any.whl`: the canonical
+  digest is `1faceac31ac7d9c3a99e3e4678bdfb725f73341e89e5847dc6a578ed8a6bbff9`
+  — CI's clean Ubuntu/Python 3.12 build at commit `60a0701` and an
+  independent clean WSL Ubuntu clone of the same commit are byte-equal at
+  `SOURCE_DATE_EPOCH=1786320000`. The earlier `d525eef3…` pin was a
+  Windows-built diagnostic artifact and is REJECTED as release evidence:
+  it differs in platform ZIP metadata and carries Windows CRLF bytes for
+  the untouched `src/aiprofile/render/brand.py`, exactly the substitution
+  `docs/RELEASING.md` forbids ("the canonical release bundle is a clean
+  Ubuntu build"). PR #38 first CI run `32678706758`: Python 3.11–3.14 all
+  passed; the release-candidate build failed on the wrong-platform pin
+  (the artifact contract working as designed) and wheel onboarding was
+  skipped pending this repin. `docs/reviews/promotion-candidate.json` now
+  authorizes `1faceac3…`; the published v0.8.0 digest `9cc06f20…` joined
   `RELEASED_WHEEL_SHA256` (closing the documented post-release drift gap).
 - Local evidence (2026-08-23): red-first pulse contract tests in
   `tests/unit/test_calendar_band.py` / `test_recruiter_card.py` /

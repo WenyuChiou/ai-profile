@@ -482,7 +482,7 @@ parity). Dashboard, heatmap, and badge renderers untouched.
 | Ruff (`src tests scripts`), README parity, `git diff --check` | clean |
 | Sanctioned snapshot command | summary family + 2 README sample assets via `python tests/unit/test_render_summary.py`; rerun produces zero drift; heatmap/badge snapshots byte-identical; `summary_zero_*` byte-identical |
 | Visual QA | `docs/reviews/v0.8.1-visual-qa.md` — synthetic sparse and real maintainer aggregate, light/dark, 830/664px, 1x/2x, all clear |
-| Deterministic build, `SOURCE_DATE_EPOCH=1786320000` | temp-dir double builds byte-identical: wheel `d525eef3aa12018c90f92fa6b5d85733abd8470dcd1bf243b9d7f4717aa16fb5`, pinned in `docs/reviews/promotion-candidate.json`; the published v0.8.0 digest `9cc06f20…` now sits in `RELEASED_WHEEL_SHA256` |
+| Deterministic build, `SOURCE_DATE_EPOCH=1786320000` | canonical clean Ubuntu builds byte-identical at commit `60a0701`: CI run `32678706758` and an independent clean WSL Ubuntu clone both produce wheel `1faceac31ac7d9c3a99e3e4678bdfb725f73341e89e5847dc6a578ed8a6bbff9`, now pinned in `docs/reviews/promotion-candidate.json`. The earlier Windows-built `d525eef3…` was a diagnostic artifact only and is rejected per `docs/RELEASING.md` (platform ZIP metadata + CRLF bytes for untouched `brand.py` differ; never substitute a Windows-built wheel). PR #38 first run: Python 3.11–3.14 green, release-candidate build red on the wrong-platform pin (contract working as designed), wheel onboarding skipped pending the repin. The published v0.8.0 digest `9cc06f20…` sits in `RELEASED_WHEEL_SHA256` |
 
 Independent Codex staged-diff review, round 1 (fingerprint
 `eac245469b0a3240baffb640559fb65e29547cb8`): **REQUEST CHANGES**, three
