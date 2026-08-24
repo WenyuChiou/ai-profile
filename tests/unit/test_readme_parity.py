@@ -105,7 +105,7 @@ def test_parity_rejects_missing_privacy_contract(tmp_path):
             "claim",
         ),
         (
-            "6a39ff46e2716f2c30385c53419b6b25c2790ec5",
+            "9c246d95052264c24e7175cabd295951c5236efc",
             "v0.8.1",
             "missing",
         ),

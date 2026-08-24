@@ -4,6 +4,29 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## v0.8.1 final immutable public caller repin — commit C (codex/v081-public-caller-c)
+
+- Post-release commit B `9c246d95052264c24e7175cabd295951c5236efc` merged to `main`
+  as `da4c08eb52cf6ccdb57c21894e268cc856bd599f` (PR #40), maintaining `ai-profile-cli==0.8.1`
+  and upgrading `actions/upload-artifact` to verified Node 24 v7.0.1.
+- Commit C completes the final immutable caller contract repin: repins
+  `docs/templates/profile-refresh-caller.yml`, `README.md`, `README.zh-TW.md`,
+  and `docs/decisions/ADR-030-automation-layer.md` to immutable commit B
+  `9c246d95052264c24e7175cabd295951c5236efc` (`ai-profile-cli==0.8.1` + `upload-artifact` v7.0.1).
+- `scripts/check_readme_parity.py` and `tests/unit/test_readme_parity.py` assert the
+  commit B token and bilingual parity; `tests/unit/test_profile_refresh_workflow.py`
+  asserts `COMMIT_B` (`9c246d95052264c24e7175cabd295951c5236efc`), verifies caller template
+  and published-sha validation, and forbids stale commit A (`6a39ff4`), v0.8.0, and v0.7.0 pins.
+- Rebuilt the unpublished `0.8.2` development candidate wheel using the exact GitHub Actions runtime
+  from official actions/python-versions release 3.12.14-31661455385 (Ubuntu 24.04 x64 CPython 3.12.14
+  toolcache, `build==1.4.3`, `hatchling==1.31.0` isolation, `SOURCE_DATE_EPOCH=1786320000`, clean
+  `origin/main` archive plus staged diff), updating `docs/reviews/promotion-candidate.json` to the
+  final candidate digest `a6c64bc9d504518743e3811e9a1314310f25275db802f367e944799af1f9d81a`.
+- Local evidence: focused test suites (workflow, parity, staging preview, release contract,
+  scheduler CLI, launcher, recruiter card) all PASS (171 passed, 16 skipped);
+  `check_readme_parity.py` PASS; `python -m ruff check src tests scripts` clean;
+  `git diff --check` clean; `check_release_artifacts.py` PASS.
+
 ## v0.8.1 public caller contract & upload-artifact v7.0.1 upgrade — commit B (codex/v081-public-caller-b)
 
 - Post-release commit B completes the v0.8.1 hosted pin: repins the public
