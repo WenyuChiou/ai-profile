@@ -1,8 +1,12 @@
 """Security and operational contract for public profile automation.
 
-Commit B of the v0.8.0 hosted pin: the reusable workflow installs exactly
-``ai-profile-cli==0.8.0``, and the caller template pins the immutable
-commit A (``d74a3ef``) that carries that package contract.
+Commit A of the v0.8.1 hosted pin: the reusable workflow installs exactly
+``ai-profile-cli==0.8.1``. The caller template DELIBERATELY still pins the
+v0.8.0 immutable commit A (``d74a3ef``) with its ``ai-profile-cli==0.8.0``
+contract: that is the caller actually deployed today, and it rebinds to the
+new immutable commit only in commit B of this round. The split is honest,
+not an oversight — the reusable workflow and the caller pin move in two
+separately reviewable commits, same as the v0.8.0 round.
 """
 
 from __future__ import annotations
@@ -208,7 +212,8 @@ def test_repositories_is_the_only_input_and_version_dest_hardcoded():
         "repositories"
     ]
     assert text.count("ai-profile-cli==") == 1
-    assert 'python -m pip install "ai-profile-cli==0.8.0"' in text
+    assert 'python -m pip install "ai-profile-cli==0.8.1"' in text
+    assert "ai-profile-cli==0.8.0" not in text
     assert "ai-profile-cli==0.7.0" not in text
     assert "package-version" not in text
     assert "profile-dist-dir" not in text
@@ -733,6 +738,9 @@ def test_caller_template_passes_only_repositories_and_secret_identities():
 
 
 def test_caller_uses_exact_immutable_workflow_pin_and_v080_contract():
+    """The caller template still pins the DEPLOYED v0.8.0 immutable commit A
+    and its 0.8.0 package note — deliberately retained until commit B of the
+    v0.8.1 round rebinds it to the new immutable reusable-workflow commit."""
     text = _text(CALLER)
     uses = re.search(
         r"uses: WenyuChiou/ai-profile/\.github/workflows/"
