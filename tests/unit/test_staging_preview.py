@@ -1,6 +1,6 @@
 """Staging preview helper + manual-only Pages workflow guardrails.
 
-Pins the v0.8.0 candidate contract, inheriting the prior Gate S from
+Pins the v0.8.1 release contract, inheriting the prior Gate S from
 docs/reviews/promotion-eval-spec-v048.md: the helper is a
 deterministic pure function of the wheel bytes and the installed renderer,
 writes exactly two files with computed digests, and the staging workflow
@@ -29,13 +29,11 @@ assert SPEC is not None and SPEC.loader is not None
 staging = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(staging)
 
-#: The published v0.8.0 release wheel digest. The manual staging workflow
-#: pins this literal as historical release evidence, so it stays frozen even
-#: after the branch moves on: post-release commits that touch wheel METADATA
-#: (the README is `project.readme`) legitimately move the *current* candidate
-#: digest in docs/reviews/promotion-candidate.json away from it. The two are
-#: therefore asserted separately instead of for equality.
-PINNED_WHEEL_SHA256 = "9cc06f2052a642bd198fa00d728c75b72fce061dad24c51b72feddf84b07c89e"
+#: The published v0.8.1 release wheel digest (canonical clean Ubuntu build,
+#: served by PyPI and the GitHub Release). The manual staging workflow pins
+#: this literal; it moves only when a new release is published and the
+#: workflow is re-pinned together with it.
+PINNED_WHEEL_SHA256 = "1faceac31ac7d9c3a99e3e4678bdfb725f73341e89e5847dc6a578ed8a6bbff9"
 #: The staging dashboard digest. Unlike the wheel, this is renderer output,
 #: not packaging bytes: it must stay equal to the candidate manifest, because
 #: any renderer change has to re-pin the workflow and the manifest together.
@@ -267,21 +265,16 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
         )
     )
 
-    # The workflow's hardcoded wheel digest is the published v0.8.0 release,
-    # kept as historical evidence; the manifest tracks the current candidate
-    # build and may have moved past it. A shape check is enough here because
-    # the real backstop for `wheel_sha256` is the ci.yml candidate job, which
-    # rebuilds the wheel on every push and PR and fails on any mismatch with
-    # this same manifest. The dashboard digest is renderer output, so it must
-    # still agree with the manifest.
+    # v0.8.1 is released and the manifest already authorizes the same
+    # canonical digest, so manifest and workflow pin agree exactly again.
+    # The dashboard digest is renderer output and must also agree.
     assert re.fullmatch(r"[0-9a-f]{64}", manifest["wheel_sha256"])
+    assert manifest["wheel_sha256"] == PINNED_WHEEL_SHA256
     assert manifest["dashboard_sha256"] == PINNED_DASHBOARD_SHA256
-    # The manifest tracks the current candidate version; the workflow's own
-    # v0.8.0 literals below stay frozen as published-release evidence.
     assert manifest["version"] == "0.8.1"
     assert text.count(PINNED_WHEEL_SHA256) == 3  # artifact check + both job boundaries
-    assert "--expected-version 0.8.0" in text
-    assert 'manifest["package_version"] == "0.8.0"' in text
+    assert "--expected-version 0.8.1" in text
+    assert 'manifest["package_version"] == "0.8.1"' in text
 
     # Both digest verifications happen before anything is uploaded to Pages.
     upload_at = text.index("actions/upload-pages-artifact")
@@ -298,12 +291,12 @@ def test_workflow_renders_in_and_uploads_only_a_fresh_verified_staging_root():
     assert 'pip install "$WHEEL"' in text
     assert "pip install -e" not in text
     assert 'scripts/render_staging_dashboard.py' in text
-    assert '--out "$STAGING_ROOT/v0.8.0"' in text
+    assert '--out "$STAGING_ROOT/v0.8.1"' in text
     assert "path: ${{ runner.temp }}/aiprofile-staging\n" in text
     assert text.count("assert root.is_dir() and not root.is_symlink()") == 2
-    assert text.count('("v0.8.0", "dir")') == 2
-    assert text.count('("v0.8.0/dashboard.html", "file")') == 2
-    assert text.count('("v0.8.0/staging-manifest.json", "file")') == 2
+    assert text.count('("v0.8.1", "dir")') == 2
+    assert text.count('("v0.8.1/dashboard.html", "file")') == 2
+    assert text.count('("v0.8.1/staging-manifest.json", "file")') == 2
     assert "assert not any(path.is_symlink()" in text
     assert text.count("json.dumps(manifest, indent=2, sort_keys=True)") == 2
     assert staging.FIXTURE_ID == "synthetic-two-provider-fixture-v3-provider-ledger"

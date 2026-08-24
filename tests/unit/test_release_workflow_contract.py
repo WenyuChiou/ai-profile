@@ -56,6 +56,7 @@ RELEASED_WHEEL_SHA256 = {
     "0.7.1": "c941b547b41eccca7efdfc99bdf785c6d8c307da8bedace0a73a3d19036df005",
     "0.7.2": "4f65ef450b9637e066cc9acdfba9cb1e688007e500179cb99a41c2a62dc6708f",
     "0.8.0": "9cc06f2052a642bd198fa00d728c75b72fce061dad24c51b72feddf84b07c89e",
+    "0.8.1": "1faceac31ac7d9c3a99e3e4678bdfb725f73341e89e5847dc6a578ed8a6bbff9",
 }
 
 
@@ -79,7 +80,10 @@ def test_candidate_manifest_matches_project_version_and_is_a_sha256():
     assert manifest["source_date_epoch"] == 1786320000
 
 
-def test_candidate_manifest_is_the_v0_8_1_candidate_not_a_released_digest():
+def test_candidate_manifest_pins_the_released_v0_8_1_digest_exactly():
+    # v0.8.1 is published: the manifest must authorize exactly the released
+    # canonical Ubuntu wheel digest — the guard PR #34 introduced, now
+    # active for the current version (unlike the documented v0.8.0 gap).
     manifest = _candidate_manifest()
     import aiprofile
 
