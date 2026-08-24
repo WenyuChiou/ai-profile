@@ -509,3 +509,46 @@ review-disposition section itself.
 Disposition: **candidate only**. Awaiting targeted Codex recheck of the
 updated staged diff, then green CI on the candidate commit, merge, tag,
 publish, staging deploy, and Profile refresh.
+
+## v0.8.1 hosted pin commit B: public caller contract & upload-artifact v7.0.1 (2026-08-23; CANDIDATE)
+
+Scope: the postrelease commit B on `codex/v081-public-caller-b` from
+`8b8a543` (main, merged PR #39 commit A `6a39ff4`):
+- Public caller contract repinned to immutable commit A `6a39ff46e2716f2c30385c53419b6b25c2790ec5`
+  with `ai-profile-cli==0.8.1`: `docs/templates/profile-refresh-caller.yml`, `README.md`,
+  `README.zh-TW.md`, `scripts/check_readme_parity.py`, `tests/unit/test_readme_parity.py`,
+  `tests/unit/test_profile_refresh_workflow.py`, and `docs/decisions/ADR-030-automation-layer.md`.
+- `actions/upload-artifact` upgraded from v4.6.2 (`ea165f8d65b6e75b540449e92b4886f43607fa02`,
+  Node 20) to verified immutable v7.0.1 (`043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`,
+  Node 24) across all four first-party workflows (`ci.yml`, `profile-refresh.yml`,
+  `publish.yml`, `staging-preview.yml`), preserving inputs, permissions, and semantics.
+- Staging-preview checkout remediation: `.github/workflows/staging-preview.yml`
+  build job checkout pinned to immutable v0.8.1 release commit `49e574b0ce80eef14cf38a20b654d03e9a50538c`
+  on `main`, ensuring manual staging runs from `main` check out and verify the published v0.8.1
+  release rather than unreleased development bytes from moving `main` HEAD. Guarded by
+  `test_workflow_build_checks_out_the_immutable_v0_8_1_release_commit` in `tests/unit/test_staging_preview.py`.
+- Wheel-digest lifecycle resolved: released v0.8.1 wheel digest (`1faceac31ac7d9c3a99e3e4678bdfb725f73341e89e5847dc6a578ed8a6bbff9`)
+  remains permanently guarded in `RELEASED_WHEEL_SHA256["0.8.1"]`. Transitioned development
+  version to `0.8.2` in `pyproject.toml`, `src/aiprofile/__init__.py`, `SCHEDULER_VERSION`
+  (readers accept v0.7.0–v0.8.2, writers emit 0.8.2; ADR-030 and architecture.md updated),
+  and `docs/reviews/promotion-candidate.json` authorizes candidate wheel
+  `483ad35b14655d275a249c680a75f830f09b3d1920a59280350c7a0cf3128fb7` (development only).
+
+Codex staged-diff review blocker disposition:
+- Review blocker 1: Staging preview checkout on `main` was unpinned, which would build from moving
+  `main` HEAD and fail the v0.8.1 artifact verification once `0.8.2` development commits land.
+  FIXED: Staging checkout pinned to `49e574b0ce80eef14cf38a20b654d03e9a50538c` with regression test.
+- Review blocker 2: Candidate manifest wheel digest required updating for the final candidate bundle.
+  FIXED: `promotion-candidate.json` updated to `483ad35b14655d275a249c680a75f830f09b3d1920a59280350c7a0cf3128fb7`
+  (independently reproduced by Codex with exact CI tooling; second CI-exact WSL reproduction completed: Python 3.12.13, build==1.4.3, hatchling==1.31.0 isolation, SOURCE_DATE_EPOCH=1786320000; wheel SHA256 `483ad35b14655d275a249c680a75f830f09b3d1920a59280350c7a0cf3128fb7`; check_release_artifacts PASS).
+
+| Check | Result |
+|---|---|
+| Red-first contract tests & regressions | 10 tests proven failing red against baseline, green after implementation |
+| Windows Python 3.14 full suite | 983 passed, 30 skipped in 462.21s |
+| Focused test suite (workflow, parity, staging, release contract, scheduler CLI, launcher, recruiter card) | 171 passed, 16 skipped (Windows Python 3.14) |
+| Parity check | `python scripts/check_readme_parity.py` -> PASS |
+| Ruff & diff checks | `python -m ruff check src tests scripts` clean; `git diff --check` clean |
+| Canonical wheel reproduction | Codex completed second CI-exact WSL reproduction: Python 3.12.13, build==1.4.3, hatchling==1.31.0 isolation, SOURCE_DATE_EPOCH=1786320000; wheel SHA256 `483ad35b14655d275a249c680a75f830f09b3d1920a59280350c7a0cf3128fb7`; check_release_artifacts PASS |
+
+Disposition: **staged for Codex independent review**.

@@ -1,12 +1,8 @@
 """Security and operational contract for public profile automation.
 
-Commit A of the v0.8.1 hosted pin: the reusable workflow installs exactly
-``ai-profile-cli==0.8.1``. The caller template DELIBERATELY still pins the
-v0.8.0 immutable commit A (``d74a3ef``) with its ``ai-profile-cli==0.8.0``
-contract: that is the caller actually deployed today, and it rebinds to the
-new immutable commit only in commit B of this round. The split is honest,
-not an oversight — the reusable workflow and the caller pin move in two
-separately reviewable commits, same as the v0.8.0 round.
+Commit B of the v0.8.1 hosted pin: the reusable workflow installs exactly
+``ai-profile-cli==0.8.1`` and the public caller template pins the immutable
+v0.8.1 reusable workflow commit A (``6a39ff4``).
 """
 
 from __future__ import annotations
@@ -25,7 +21,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "profile-refresh.yml"
 CALLER = ROOT / "docs" / "templates" / "profile-refresh-caller.yml"
-COMMIT_A = "d74a3efdf27310162fc8c54b29b8e2782ea66b46"
+COMMIT_A = "6a39ff46e2716f2c30385c53419b6b25c2790ec5"
 
 ASSET_NAMES = (
     "badge-dark.svg",
@@ -44,7 +40,7 @@ SETUP_PYTHON_PIN = (
     "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"
 )
 UPLOAD_ARTIFACT_PIN = (
-    "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+    "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 )
 DOWNLOAD_ARTIFACT_PIN = (
     "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"
@@ -737,10 +733,9 @@ def test_caller_template_passes_only_repositories_and_secret_identities():
             assert line.strip() == "identities: ${{ secrets.AIPROFILE_IDENTITIES }}"
 
 
-def test_caller_uses_exact_immutable_workflow_pin_and_v080_contract():
-    """The caller template still pins the DEPLOYED v0.8.0 immutable commit A
-    and its 0.8.0 package note — deliberately retained until commit B of the
-    v0.8.1 round rebinds it to the new immutable reusable-workflow commit."""
+def test_caller_uses_exact_immutable_workflow_pin_and_v081_contract():
+    """The caller template pins the DEPLOYED v0.8.1 immutable commit A
+    and its 0.8.1 package note."""
     text = _text(CALLER)
     uses = re.search(
         r"uses: WenyuChiou/ai-profile/\.github/workflows/"
@@ -750,9 +745,12 @@ def test_caller_uses_exact_immutable_workflow_pin_and_v080_contract():
 
     assert uses is not None
     assert uses.group(1) == COMMIT_A
-    assert "hardcodes ai-profile-cli==0.8.0" in text
+    assert "hardcodes ai-profile-cli==0.8.1" in text
+    assert "ai-profile-cli==0.8.0" not in text
     assert "ai-profile-cli==0.7.0" not in text
+    assert "d74a3ef" not in text
     assert "9c4f276" not in text
+    assert "@v0.8.1" not in text
     assert "@v0.8.0" not in text
     assert "@main" not in text
     assert "<COMMIT" not in text

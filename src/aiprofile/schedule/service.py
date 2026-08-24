@@ -22,8 +22,10 @@ from ..errors import AiProfileError, ConfigError, path_free_diagnostics
 from ..lockfile import acquire_home_lock
 from .adapters import AdapterPlan, ScheduleStatus
 
-SCHEDULER_VERSION = "0.8.1"
-_READABLE_SCHEDULER_VERSIONS = frozenset({"0.7.0", "0.7.1", "0.7.2", "0.8.0", SCHEDULER_VERSION})
+SCHEDULER_VERSION = "0.8.2"
+_READABLE_SCHEDULER_VERSIONS = frozenset(
+    {"0.7.0", "0.7.1", "0.7.2", "0.8.0", "0.8.1", SCHEDULER_VERSION}
+)
 SCHEDULER_DIRNAME = "scheduler"
 CONFIG_NAME = "config.json"
 LAUNCHER_NAME = "launcher.py"

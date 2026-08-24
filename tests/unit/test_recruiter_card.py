@@ -394,5 +394,5 @@ def test_dashboard_h1_matches_the_summary_card_title():
     assert "Show the work behind the numbers." not in html
 
 
-def test_runtime_version_is_0_8_1():
-    assert aiprofile.__version__ == "0.8.1"
+def test_runtime_version_is_0_8_2():
+    assert aiprofile.__version__ == "0.8.2"

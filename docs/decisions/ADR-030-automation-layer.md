@@ -2,8 +2,8 @@
 
 - Status: Accepted for v0.7.0; Windows normalization amended in v0.7.1;
   clean remote-ahead fast-forward amended in v0.7.2; scheduler metadata
-  version tracks the current package (v0.8.1, 2026-08-23; previously
-  v0.8.0, 2026-08-10)
+  version tracks the current package (v0.8.2, 2026-08-23; previously
+  v0.8.1, 2026-08-23)
 - Deciders: maintainer
 - Supersedes: the assumption that multi-repository refresh and a reusable
   GitHub Action are future-only
@@ -78,11 +78,11 @@ Removal performs the same full XML ownership proof before deleting a
 same-name task; an absent task remains an idempotent no-op, while an
 unverifiable or altered task is retained for explicit operator resolution.
 
-The scheduler-config schema did not change in v0.7.1, v0.7.2, v0.8.0, or
-v0.8.1. Readers accept exactly v0.7.0, v0.7.1, v0.7.2, v0.8.0, and v0.8.1
-metadata so an existing installation can be inspected and reinstalled in
-place; writers always emit v0.8.1. Earlier, unrelated, and future versions
-fail closed.
+The scheduler-config schema did not change in v0.7.1, v0.7.2, v0.8.0,
+v0.8.1, or v0.8.2. Readers accept exactly v0.7.0, v0.7.1, v0.7.2, v0.8.0,
+v0.8.1, and v0.8.2 metadata so an existing installation can be inspected and
+reinstalled in place; writers always emit v0.8.2. Earlier, unrelated, and
+future versions fail closed.
 
 The launcher and scheduler state live below `AIPROFILE_HOME`, not inside the
 public Profile repository. On POSIX, a temporary Git index is confined inside
@@ -196,8 +196,8 @@ immutable published commit as `published-sha` on both changed and unchanged
 paths.
 
 The caller template pins the reusable workflow to the full commit
-`d74a3efdf27310162fc8c54b29b8e2782ea66b46`, whose package contract is exactly
-`ai-profile-cli==0.8.0`. Caller-level concurrency spans refresh through Pages
+`6a39ff46e2716f2c30385c53419b6b25c2790ec5`, whose package contract is exactly
+`ai-profile-cli==0.8.1`. Caller-level concurrency spans refresh through Pages
 deployment. Pages checks out the exact `published-sha` and uses separately
 pinned official Pages actions with `contents: read`, `pages: write`, and
 `id-token: write`. This explicit same-run deployment is required because a

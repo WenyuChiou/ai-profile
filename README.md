@@ -279,8 +279,8 @@ For a Profile sourced entirely from public repositories:
 
 The template runs daily at 05:37 UTC and also supports manual dispatch. It
 pins the reusable workflow to commit
-`d74a3efdf27310162fc8c54b29b8e2782ea66b46`, installs exactly
-`ai-profile-cli==0.8.0`, rejects non-public sources before scanning, and
+`6a39ff46e2716f2c30385c53419b6b25c2790ec5`, installs exactly
+`ai-profile-cli==0.8.1`, rejects non-public sources before scanning, and
 deploys Pages from the exact `published-sha` produced in that run. It uses
 only `GITHUB_TOKEN`; no PAT fallback is provided. GitHub-hosted automation is
 not local-first processing: it clones only the public repositories you list
