@@ -124,8 +124,8 @@ _POPULATED_MODELS = (
 #   - a 3-way stack mixing two branded providers + the reserved
 #     "unrecognized" bucket (exercises DayCell counts' slug-ascending
 #     order together with 3-segment cumulative-rounding)
-#   - a single-provider day whose total (10) EXCEEDS
-#     summary_svg.CAL_CAP_COMMITS (8) — cap behavior
+#   - a single-provider day whose total (10) EXCEEDS the shared
+#     _bins.VOLUME_CAP (8) — cap behavior
 #   - the newest day, exactly AT the cap boundary (8), split across a
 #     fallback-tile provider and a branded provider (amazon sorts before
 #     anthropic — DayCount slugs are ascending, not insertion/value order)

@@ -312,11 +312,13 @@ def test_summary_metric_console_has_four_secondary_cells_on_one_baseline():
     assert len(separators) == 4
 
 
-def test_summary_matrix_is_left_aligned_with_wider_cells():
-    assert summary_svg.CAL_CELL_W == 52
-    assert summary_svg.CAL_GRID_X == PADDING + 24
-    assert summary_svg.CAL_GRID_X + summary_svg.CAL_GRID_WIDTH <= summary_svg.WIDTH - PADDING
-    assert summary_svg.VOLUME_BAR_HEIGHTS == (3, 6, 9, 12)
+def test_summary_daily_block_is_the_left_aligned_collaboration_pulse():
+    # v0.8.1 (ADR-032) replaces the 52px-cell matrix with the pulse:
+    # 6px marks, 12 groups of 7, left-aligned on the card margin.
+    assert summary_svg.PULSE_MARK_W == 6
+    assert summary_svg.PULSE_X == PADDING
+    assert summary_svg.PULSE_X + summary_svg.PULSE_WIDTH <= summary_svg.WIDTH - PADDING
+    assert summary_svg.PULSE_HEIGHTS == (12, 24, 36, 48)
 
 
 # ---------------------------------------------------------------------------

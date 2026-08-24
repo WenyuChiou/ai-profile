@@ -1,4 +1,4 @@
-"""Unit tests for the flat collaboration timeline (ADR-025).
+"""Unit tests for the Collaboration Pulse (ADR-032; semantics from ADR-022).
 
 Fixtures here are built inline from `aiprofile.viz` dataclasses, same
 discipline as `test_render_summary.py` (never round-tripped through
@@ -7,11 +7,12 @@ validators (subset-of-provider-rows, window bound, slug-ascending unique
 counts, date-ascending unique cells): an invalid series fails at module
 import time, not just in a targeted assertion.
 
-The timeline's ENCODING contract (bar height = total-commit bins, fill =
-AI-share bins, provider independence) is pinned in
-tests/unit/test_recruiter_card.py; this module keeps the grid-mechanics
-regressions: window slicing, month labels, legend derivation, painter
-determinism, float hygiene, the SMIL ban, and the honest empty states.
+The pulse's ENCODING contract (mark height = total-commit bins, accent
+fill height = AI-share bins, provider independence) is pinned in
+tests/unit/test_recruiter_card.py; this module keeps the geometry
+regressions: the 84 chronological positions, 12x7 grouping rhythm, month
+labels, legend, painter determinism, integer hygiene, the SMIL ban, and
+the honest empty states.
 """
 
 from __future__ import annotations
@@ -25,30 +26,40 @@ import pytest
 
 from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.errors import RenderError
-from aiprofile.render._bins import _share_bin, _share_colors, _volume_bin
+from aiprofile.render._bins import _share_bin, _volume_bin
 from aiprofile.render.summary_svg import (
-    CAL_CAP_COMMITS,
     CAL_GAP_BELOW,
-    CAL_HEIGHT,
-    CAL_LABEL_TEXT,
-    CAL_LEGEND_CUE_TEXT,
     CAL_NOTICE_HEIGHT,
-    CAL_RAIL_COLUMNS,
+    CAL_TOP,
     CAL_UNPUBLISHED_TEXT,
     CAL_WINDOW_DAYS,
-    VOLUME_BAR_HEIGHTS,
-    _calendar_cell_position,
+    PADDING,
+    PULSE_BASELINE_Y,
+    PULSE_BLOCK_HEIGHT,
+    PULSE_GROUP_DAYS,
+    PULSE_GROUP_GAP,
+    PULSE_GROUP_PITCH,
+    PULSE_GROUP_W,
+    PULSE_GROUPS,
+    PULSE_HEIGHTS,
+    PULSE_LABEL_TEXT,
+    PULSE_LEGEND_TEXT,
+    PULSE_MARK_GAP,
+    PULSE_MARK_W,
+    PULSE_TICK_H,
+    PULSE_WIDTH,
+    PULSE_X,
+    WIDTH,
     _calendar_desc_suffix,
-    _calendar_grid_cells,
-    _calendar_legend_svg,
-    _calendar_month_labels_svg,
-    _calendar_weekday_labels_svg,
-    _day_cell_svg,
     _dedupe_colliding_month_labels,
-    _legend_bins,
     _month_boundaries,
     _month_label_columns,
     _panel_top,
+    _pulse_day_cells,
+    _pulse_legend_svg,
+    _pulse_mark_svg,
+    _pulse_mark_x,
+    _pulse_month_labels_svg,
     card_height,
     render_summary,
 )
@@ -78,9 +89,9 @@ def _period() -> Period:
 # (same dates/counts, deliberately duplicated rather than cross-imported —
 # each test module owns its fixtures, matching this repo's convention).
 # Newest date 2026-07-14, oldest 2026-04-22 (exactly the 84-day window's
-# own left edge). Offsets (see the module docstring of
-# `_calendar_grid_cells` for the oldest-to-newest indexing) are pinned
-# here so the geometry tests below can address specific cells directly.
+# own left edge). Offsets (see the module docstring of `_pulse_day_cells`
+# for the oldest-to-newest indexing) are pinned here so the geometry tests
+# below can address specific marks directly.
 # ---------------------------------------------------------------------------
 
 OFFSET_OLDEST = 0  # 2026-04-22 -- total 3, ai 2
@@ -210,119 +221,232 @@ def test_omitted_daily_equals_explicit_empty_tuple():
         ).encode("utf-8")
 
 
-def test_empty_daily_renders_notice_not_grid_and_shrinks_the_card():
+def test_empty_daily_renders_notice_not_pulse_and_shrinks_the_card():
     """An unpublished daily series renders the exact CAL_UNPUBLISHED_TEXT
-    notice in the timeline slot (no polygons, no legend, no month labels)
-    and the card shrinks by the grid-vs-notice height difference."""
+    notice in the pulse slot (no marks, no legend, no month labels) and
+    the card shrinks by the pulse-vs-notice height difference."""
     no_daily = dataclasses.replace(FIXTURE_MAIN, daily=())
-    assert card_height(FIXTURE_MAIN) - card_height(no_daily) == CAL_HEIGHT - CAL_NOTICE_HEIGHT
-    assert _panel_top(FIXTURE_MAIN) - _panel_top(no_daily) == CAL_HEIGHT - CAL_NOTICE_HEIGHT
+    assert card_height(FIXTURE_MAIN) - card_height(no_daily) == (
+        PULSE_BLOCK_HEIGHT - CAL_NOTICE_HEIGHT
+    )
+    assert _panel_top(FIXTURE_MAIN) - _panel_top(no_daily) == (
+        PULSE_BLOCK_HEIGHT - CAL_NOTICE_HEIGHT
+    )
     for theme in THEMES.values():
         svg = render_summary(no_daily, theme)
         assert CAL_UNPUBLISHED_TEXT in svg
-        assert CAL_LABEL_TEXT in svg  # the section label stays honest
+        assert PULSE_LABEL_TEXT in svg  # the section label stays honest
+        assert PULSE_LEGEND_TEXT not in svg
         assert "<polygon" not in svg
         assert "<animate" not in svg
-        assert CAL_LEGEND_CUE_TEXT not in svg
         assert "Jan" not in svg and "Feb" not in svg  # no stray month labels
         root = ET.fromstring(svg)  # still well-formed
         del root
 
 
 # ---------------------------------------------------------------------------
-# 2. Single-day series.
+# 2. The 84 chronological positions and the 12x7 grouping rhythm.
 # ---------------------------------------------------------------------------
 
 
-def test_single_day_series_populates_exactly_one_cell():
-    cells = _calendar_grid_cells(FIXTURE_SINGLE_DAY)
+def test_pulse_geometry_constants_are_the_approved_design():
+    assert PULSE_GROUPS == 12
+    assert PULSE_GROUP_DAYS == 7
+    assert CAL_WINDOW_DAYS == 84
+    assert PULSE_MARK_W == 6
+    assert PULSE_MARK_GAP == 2
+    assert PULSE_GROUP_GAP > PULSE_MARK_GAP  # structural 7-day rhythm
+    assert PULSE_HEIGHTS == (12, 24, 36, 48)
+    assert PULSE_TICK_H == 2
+    # Left-aligned on the card margin; fits inside the content width.
+    assert PULSE_X == PADDING
+    assert PULSE_X + PULSE_WIDTH <= WIDTH - PADDING
+
+
+def test_all_84_mark_positions_are_exact_integers_in_chronological_order():
+    xs = [_pulse_mark_x(offset) for offset in range(CAL_WINDOW_DAYS)]
+    assert len(xs) == 84
+    assert all(isinstance(x, int) for x in xs)
+    assert xs == sorted(xs)
+    assert len(set(xs)) == 84
+    for offset, x in enumerate(xs):
+        group, member = divmod(offset, PULSE_GROUP_DAYS)
+        assert x == PULSE_X + group * PULSE_GROUP_PITCH + member * (
+            PULSE_MARK_W + PULSE_MARK_GAP
+        )
+    assert xs[0] == PULSE_X
+    assert xs[-1] + PULSE_MARK_W == PULSE_X + PULSE_WIDTH
+
+
+def test_group_gap_is_wider_than_the_mark_gap():
+    """The 12 groups of seven read as a structural rhythm: consecutive
+    marks inside a group sit PULSE_MARK_GAP apart, while the seam between
+    group N's last mark and group N+1's first mark is PULSE_GROUP_GAP."""
+    for offset in range(CAL_WINDOW_DAYS - 1):
+        gap = _pulse_mark_x(offset + 1) - (_pulse_mark_x(offset) + PULSE_MARK_W)
+        if offset % PULSE_GROUP_DAYS == PULSE_GROUP_DAYS - 1:
+            assert gap == PULSE_GROUP_GAP
+        else:
+            assert gap == PULSE_MARK_GAP
+    assert PULSE_GROUP_W == PULSE_GROUP_DAYS * PULSE_MARK_W + (
+        PULSE_GROUP_DAYS - 1
+    ) * PULSE_MARK_GAP
+
+
+def test_pulse_renders_exactly_84_marks_and_no_background_cells():
+    """Every date renders exactly one mark anchored on the shared
+    baseline: a data pulse for an active day, a 2px tick otherwise —
+    and there is no 84-cell background heatmap grid behind them. All
+    mark rectangles (ticks, neutral pulses, accent fills) bottom-anchor
+    on the shared baseline."""
+    theme = THEMES["github-light"]
+    svg = render_summary(FIXTURE_MAIN, theme)
+    baseline = CAL_TOP + PULSE_BASELINE_Y
+    root = ET.fromstring(svg)
+    marks = [
+        node
+        for node in root
+        if node.tag == f"{SVG_NS}rect"
+        and node.attrib.get("width") == str(PULSE_MARK_W)
+        and int(node.attrib["y"]) + int(node.attrib["height"]) == baseline
+    ]
+    # 84 base marks + one accent overlay per active day with a nonzero
+    # AI-share fill (all 5 fixture days have ai_commits > 0).
+    assert len(marks) == CAL_WINDOW_DAYS + 5
+    ticks = [node for node in marks if node.attrib.get("height") == str(PULSE_TICK_H)]
+    assert len(ticks) == CAL_WINDOW_DAYS - 5
+    fills = {node.attrib["fill"] for node in marks}
+    assert fills == {theme.border, theme.muted, theme.accent}
+    assert theme.bar_track not in fills
+
+
+def test_chronology_oldest_first_newest_last():
+    cells = _pulse_day_cells(FIXTURE_MAIN)
+    assert len(cells) == CAL_WINDOW_DAYS
+    assert cells[OFFSET_OLDEST] is not None and cells[OFFSET_OLDEST].date == "2026-04-22"
+    assert cells[OFFSET_NEWEST] is not None and cells[OFFSET_NEWEST].date == "2026-07-14"
+    assert _pulse_mark_x(OFFSET_OLDEST) < _pulse_mark_x(OFFSET_NEWEST)
+
+
+def test_single_day_series_populates_exactly_one_mark():
+    cells = _pulse_day_cells(FIXTURE_SINGLE_DAY)
     assert len(cells) == CAL_WINDOW_DAYS
     populated = [c for c in cells if c is not None]
     assert len(populated) == 1
     assert populated[0].date == "2026-07-14"
     # Card height is IDENTICAL to any other non-empty daily series: the
-    # timeline's footprint is a fixed constant, independent of how sparse
+    # pulse's footprint is a fixed constant, independent of how sparse
     # the data is (only presence/absence of `daily` changes the layout).
     assert card_height(FIXTURE_SINGLE_DAY) - card_height(
         dataclasses.replace(FIXTURE_SINGLE_DAY, daily=())
-    ) == CAL_HEIGHT - CAL_NOTICE_HEIGHT
+    ) == PULSE_BLOCK_HEIGHT - CAL_NOTICE_HEIGHT
     svg = render_summary(FIXTURE_SINGLE_DAY, THEMES["github-light"])
-    assert '<rect' in svg
+    assert "<rect" in svg
     assert "<polygon" not in svg
     ET.fromstring(svg)  # well-formed
 
 
 # ---------------------------------------------------------------------------
-# 3. Volume-bin saturation and the flat no-data track.
+# 3. Height bins, fill levels, and the no-activity baseline tick.
 # ---------------------------------------------------------------------------
 
 
 def test_top_volume_bin_saturates_at_max_height():
     """A 12-commit day and an 8-commit day share the top volume bin, so
-    both bars render at exactly VOLUME_BAR_HEIGHTS[-1] — never a taller,
+    both pulses render at exactly PULSE_HEIGHTS[-1] — never a taller,
     proportionally-scaled column that would blow the fixed geometry
     budget."""
-    cells = _calendar_grid_cells(FIXTURE_MAIN)
+    cells = _pulse_day_cells(FIXTURE_MAIN)
     theme = THEMES["github-light"]
     for offset, total in ((OFFSET_BUSY, 12), (OFFSET_NEWEST, 8)):
         cell = cells[offset]
         assert cell is not None and cell.total_commits == total
-        _, _, cx, cy = _calendar_cell_position(offset)
-        svg = _day_cell_svg(cell, cx, cy, theme)
-        assert f'height="{VOLUME_BAR_HEIGHTS[-1]}"' in svg
+        svg = _pulse_mark_svg(cell, _pulse_mark_x(offset), 100, theme)
+        assert f'height="{PULSE_HEIGHTS[-1]}"' in svg
     # An under-cap day (3 commits -> bin 1) renders at its own fixed bin
     # height, strictly lower than the top bin.
     low_cell = cells[OFFSET_LOW]
     assert low_cell is not None
-    _, _, cx_low, cy_low = _calendar_cell_position(OFFSET_LOW)
-    svg_low = _day_cell_svg(low_cell, cx_low, cy_low, theme)
-    expected_h = VOLUME_BAR_HEIGHTS[_volume_bin(3)]
-    assert 0 < expected_h < VOLUME_BAR_HEIGHTS[-1]
+    svg_low = _pulse_mark_svg(low_cell, _pulse_mark_x(OFFSET_LOW), 100, theme)
+    expected_h = PULSE_HEIGHTS[_volume_bin(3)]
+    assert 0 < expected_h < PULSE_HEIGHTS[-1]
     assert f'height="{expected_h}"' in svg_low
 
 
-def test_zero_day_renders_neutral_track_cell():
-    """A date with no DayCell (whether it predates the series or is a
-    genuine zero-activity day inside the window — both are simply absent
-    from stats.daily) draws a single neutral track rectangle in
-    theme.bar_track, not a fabricated zero-height bar."""
-    for theme in THEMES.values():
-        empty_cell_svg = _day_cell_svg(None, 100, 100, theme)
-        assert empty_cell_svg.count("<rect") == 1
-        assert f'fill="{theme.bar_track}"' in empty_cell_svg
-        assert "fill-opacity" not in empty_cell_svg
-
-
-def test_rendered_card_uses_share_bin_hues_not_provider_colors():
-    """The timeline's fill axis is the AI-share ramp (ADR-022) — provider
-    brand colors never reach the grid. The mixed 2026-06-04 day (7 AI of
-    8) sits in share bin 4 despite spanning three providers."""
+def test_accent_fill_rises_from_the_baseline_in_exact_quarters():
+    """The accent fill spatially maps `_share_bin` levels to
+    0/25/50/75/100% of the pulse height, always growing up from the
+    shared baseline (its bottom edge equals the pulse's bottom edge)."""
     theme = THEMES["github-light"]
+    baseline = 100
+    for total, ai, bin_index in ((3, 0, 0), (8, 2, 1), (6, 3, 2), (3, 2, 3), (5, 5, 4)):
+        cell = DayCell(date="2026-07-14", counts=(), total_commits=total, ai_commits=ai) \
+            if ai == 0 else DayCell(
+                date="2026-07-14",
+                counts=(DayCount(provider="anthropic", attributed_commits=ai),),
+                total_commits=total, ai_commits=ai,
+            )
+        assert _share_bin(ai, total) == bin_index
+        height = PULSE_HEIGHTS[_volume_bin(total)]
+        expected_fill = height * bin_index // 4
+        svg = _pulse_mark_svg(cell, 100, baseline, theme)
+        rects = [
+            node.attrib
+            for node in ET.fromstring(
+                f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>'
+            )
+        ]
+        outer = rects[0]
+        assert outer["fill"] == theme.muted
+        assert int(outer["height"]) == height
+        assert int(outer["y"]) + int(outer["height"]) == baseline
+        if bin_index == 0:
+            # Zero AI attribution: neutral pulse only — never a Human claim.
+            assert len(rects) == 1
+            assert theme.accent not in svg
+        else:
+            fill = rects[1]
+            assert fill["fill"] == theme.accent
+            assert int(fill["height"]) == expected_fill
+            assert int(fill["y"]) + int(fill["height"]) == baseline
+            assert expected_fill * 4 == height * bin_index  # exact integer quarters
+
+
+def test_no_activity_date_renders_only_a_2px_baseline_tick():
+    for theme in THEMES.values():
+        tick_svg = _pulse_mark_svg(None, 100, 200, theme)
+        assert tick_svg.count("<rect") == 1
+        assert f'height="{PULSE_TICK_H}"' in tick_svg
+        assert f'y="{200 - PULSE_TICK_H}"' in tick_svg
+        assert f'width="{PULSE_MARK_W}"' in tick_svg
+        assert theme.accent not in tick_svg
+        assert "fill-opacity" not in tick_svg
+
+
+def test_zero_ai_day_differs_from_no_activity_and_never_reads_human():
+    """A 3-commit day with zero attributed AI commits (not provably
+    human — unattributed history sits in that bin too) is a full-height
+    neutral pulse, visibly different from both a no-activity tick and an
+    AI-share day, and never labelled human."""
+    theme = THEMES["github-light"]
+    zero_ai = DayCell("2026-07-14", (), 3, 0)
+    assert _pulse_mark_svg(zero_ai, 100, 200, theme) != _pulse_mark_svg(None, 100, 200, theme)
     svg = render_summary(FIXTURE_MAIN, theme)
-    colors = _share_colors(theme)
-    assert _share_bin(7, 8) == 4
-    cells = _calendar_grid_cells(FIXTURE_MAIN)
-    mixed_svg = _day_cell_svg(cells[OFFSET_MIXED], 100, 100, theme)
-    assert f'fill="{colors[4]}"' in mixed_svg
-    assert mixed_svg.count("<rect") == 2  # one cell track + one data bar
-    # The partial-share oldest day (2 AI of 3 -> bin 3) uses a mid-ramp hue.
-    oldest_svg = _day_cell_svg(cells[OFFSET_OLDEST], 100, 100, theme)
-    assert f'fill="{colors[_share_bin(2, 3)]}"' in oldest_svg
-    del svg
+    assert "Human commits" not in svg
 
 
 # ---------------------------------------------------------------------------
-# 4. Grid math determinism.
+# 4. Geometry determinism and integer hygiene.
 # ---------------------------------------------------------------------------
 
 
-def test_grid_cell_lookup_and_positions_are_deterministic():
-    assert _calendar_grid_cells(FIXTURE_MAIN) == _calendar_grid_cells(FIXTURE_MAIN)
+def test_pulse_lookup_and_positions_are_deterministic():
+    assert _pulse_day_cells(FIXTURE_MAIN) == _pulse_day_cells(FIXTURE_MAIN)
     for offset in range(CAL_WINDOW_DAYS):
-        assert _calendar_cell_position(offset) == _calendar_cell_position(offset)
+        assert _pulse_mark_x(offset) == _pulse_mark_x(offset)
 
 
-def test_same_input_renders_byte_identical_calendar_markup():
+def test_same_input_renders_byte_identical_pulse_markup():
     for theme in THEMES.values():
         first = render_summary(FIXTURE_MAIN, theme)
         second = render_summary(FIXTURE_MAIN, theme)
@@ -330,20 +454,41 @@ def test_same_input_renders_byte_identical_calendar_markup():
         assert first.encode("utf-8") == second.encode("utf-8")
 
 
-def test_cell_coordinates_carry_no_float_noise():
-    """The coordinate-hygiene regex in test_render_summary.py does not
-    reach the polygon "points" attribute (it only matches x/y/x1/y1/x2/
-    y2/width/height) — this test pins the same "no float noise" invariant
-    for it directly: every coordinate the timeline emits is an exact
-    integer, by construction (every geometry constant is int, and the
-    fixed bar-height bins remove the last division)."""
+def test_pulse_coordinates_carry_no_float_noise():
+    """Every coordinate the pulse emits is an exact integer, by
+    construction: every geometry constant is int and the quarter fills
+    divide exactly (all PULSE_HEIGHTS are multiples of 4)."""
+    assert all(height % 4 == 0 for height in PULSE_HEIGHTS)
     coord_attr_re = re.compile(r' (?:x|y|width|height)="(-?\d+)"')
     coord_re = re.compile(r"-?\d+")
     for theme in THEMES.values():
         svg = render_summary(FIXTURE_MAIN, theme)
         matches = coord_attr_re.findall(svg)
-        assert len(matches) > 80  # 84 cells plus card and legend rectangles
+        assert len(matches) > 80  # 84 marks plus card and section rectangles
         assert all(coord_re.fullmatch(value) for value in matches)
+
+
+def test_pulse_is_provider_independent_geometry():
+    """Provider rows and counts never reach mark geometry: a one-commit
+    multi-provider day renders byte-identically to a one-commit
+    single-provider day."""
+    single = DayCell(
+        date="2026-07-14",
+        counts=(DayCount(provider="anthropic", attributed_commits=1),),
+        total_commits=1, ai_commits=1,
+    )
+    multi = DayCell(
+        date="2026-07-14",
+        counts=(
+            DayCount(provider="anthropic", attributed_commits=1),
+            DayCount(provider="google", attributed_commits=1),
+        ),
+        total_commits=1, ai_commits=1,
+    )
+    for theme in THEMES.values():
+        assert _pulse_mark_svg(single, 100, 200, theme) == _pulse_mark_svg(
+            multi, 100, 200, theme
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -359,9 +504,9 @@ def test_desc_suffix_states_window_span_peak_and_encodings():
     peak = max(cell.total_commits for cell in _MAIN_DAILY)
     assert peak == 12  # the 2026-07-04 day
     assert f"peak day {peak} commits" in suffix
-    assert "bar height is total commits" in suffix
-    assert "fill is the day's AI share" in suffix
-    assert "publishable repositories only" in suffix
+    assert "pulse height encodes total commits" in suffix
+    assert "accent fill height encodes the day's AI-attributed share" in suffix
+    assert "publishable dates only" in suffix
 
 
 def test_desc_suffix_repeats_the_notice_when_no_daily_series():
@@ -369,8 +514,7 @@ def test_desc_suffix_repeats_the_notice_when_no_daily_series():
     assert suffix == f" {CAL_UNPUBLISHED_TEXT}."
 
 
-def test_calendar_label_and_desc_addition_are_ascii():
-    assert CAL_LABEL_TEXT.isascii()
+def test_notice_text_and_desc_addition_are_ascii():
     assert CAL_UNPUBLISHED_TEXT.isascii()
     svg = render_summary(FIXTURE_MAIN, THEMES["github-light"])
     root = ET.fromstring(svg)
@@ -380,19 +524,19 @@ def test_calendar_label_and_desc_addition_are_ascii():
 
 
 # ---------------------------------------------------------------------------
-# 6. Allowed-tags sweep still passes with the timeline elements present.
+# 6. Allowed-tags sweep still passes with the pulse elements present.
 # ---------------------------------------------------------------------------
 
 
-def test_new_svg_elements_are_allowlisted_and_carry_no_active_content():
+def test_pulse_svg_elements_are_allowlisted_and_carry_no_active_content():
     for theme in THEMES.values():
         svg = render_summary(FIXTURE_MAIN, theme)
         root = ET.fromstring(svg)
         tags = {el.tag for el in root.iter()}
         assert f"{SVG_NS}rect" in tags
         assert f"{SVG_NS}polygon" not in tags
-        # No <g>/<animate>: the timeline ships fully static (see
-        # test_calendar_band_is_fully_static_no_animation).
+        # No <g>/<animate>: the pulse ships fully static (see
+        # test_pulse_is_fully_static_no_animation).
         assert f"{SVG_NS}animate" not in tags
         for el in root.iter():
             for attr in el.attrib:
@@ -401,16 +545,17 @@ def test_new_svg_elements_are_allowlisted_and_carry_no_active_content():
         lowered = svg.lower()
         assert "<script" not in lowered
         assert "foreignobject" not in lowered
+        assert "gradient" not in lowered
 
 
-def test_calendar_band_is_fully_static_no_animation():
+def test_pulse_is_fully_static_no_animation():
     """No entrance animation, PERMANENTLY (two failed attempts, both
     caught only by visual PDF-print inspection): a from-nothing SMIL
     entrance leaves the band invisible in every static capture - either
     because the renderer ignores SMIL (static opacity 0 = empty) or
     because a SMIL-aware print pipeline snapshots the timeline at t=0
     where the animated value (0) overrides the static value (1). The
-    timeline ships static; this test fails if anyone reintroduces an
+    pulse ships static; this test fails if anyone reintroduces an
     animation without first proving a t=0-visible capture."""
     svg1 = render_summary(FIXTURE_MAIN, THEMES["github-light"])
     svg2 = render_summary(FIXTURE_MAIN, THEMES["github-light"])
@@ -440,71 +585,55 @@ def test_daily_exceeding_provider_row_total_is_rejected_by_vizstats():
 
 
 # ---------------------------------------------------------------------------
-# 8. Legend: volume bins + share ramp (ADR-022).
+# 8. Section label and the direct one-line legend.
 # ---------------------------------------------------------------------------
 
 
-def test_legend_bins_math_for_the_current_cap():
-    """Falsifiable: with CAL_CAP_COMMITS == 8 today, `_legend_bins` must
-    produce EXACTLY the four bins the bar heights encode
-    ("1", "2-4", "5-7", "8+") -- fails if the derivation drifts from
-    `_bins._volume_bin`'s worked thresholds."""
-    assert _legend_bins(8) == ((1, "1"), (4, "2-4"), (7, "5-7"), (8, "8+"))
-    # The derivation and the binning function agree bin-for-bin.
-    for representative, _label in _legend_bins(CAL_CAP_COMMITS):
-        assert 0 <= _volume_bin(representative) <= len(VOLUME_BAR_HEIGHTS) - 1
+def test_section_label_names_the_pulse_and_the_published_window():
+    assert PULSE_LABEL_TEXT == "Daily collaboration pulse · 12-week published window"
+    svg = render_summary(FIXTURE_MAIN, THEMES["github-light"])
+    assert PULSE_LABEL_TEXT in svg
+    # The groups are a structural 7-day rhythm, never falsely labelled
+    # as calendar weeks.
+    assert "calendar week" not in svg.lower()
 
 
-def test_legend_bins_resilient_to_a_cap_change():
-    """Falsifiable: recomputing bins for OTHER cap values must still
-    satisfy the general contract (first bin "1", last bin "{cap}+", every
-    label's own numbers ASCII, no bin with low > high ever emitted) --
-    proves the derivation is a real function of ``cap``, not a hand-typed
-    table that happens to match cap=8."""
-    for cap in (2, 3, 4, 6, 8, 12, 15):
-        bins = _legend_bins(cap)
-        assert bins[0] == (1, "1")
-        assert bins[-1] == (cap, f"{cap}+")
-        assert len(bins) <= 4
-        for _, label in bins:
-            assert label.isascii()
-            if "-" in label:
-                low, high = (int(n) for n in label.split("-"))
-                assert low <= high
+def test_legend_is_the_direct_one_line_statement_of_both_encodings():
+    assert PULSE_LEGEND_TEXT == (
+        "height = total commits · fill = AI-attributed share · publishable dates only"
+    )
+    for theme in THEMES.values():
+        svg = _pulse_legend_svg(theme, top=0)
+        assert PULSE_LEGEND_TEXT in svg
+        assert f'fill="{theme.muted}"' in svg
+        assert 'font-size="12"' in svg
+    full = render_summary(FIXTURE_MAIN, THEMES["github-light"])
+    assert PULSE_LEGEND_TEXT in full
 
 
 def test_legend_absent_when_daily_empty():
     no_daily = dataclasses.replace(FIXTURE_MAIN, daily=())
     for theme in THEMES.values():
         svg = render_summary(no_daily, theme)
-        assert CAL_LEGEND_CUE_TEXT not in svg
-        assert "8+" not in svg
+        assert PULSE_LEGEND_TEXT not in svg
 
 
-def test_legend_states_both_encodings_ascii():
-    for theme in THEMES.values():
-        svg = _calendar_legend_svg(theme, top=0)
-        assert svg.isascii()
-        assert CAL_LEGEND_CUE_TEXT in svg
-        assert "Volume" in svg
-        assert "AI share" in svg
-        assert "0%" in svg and "100%" in svg
-        # Every share-ramp hex appears exactly as a real day cell would
-        # use it (the ramp swatches carry the bin colors verbatim).
-        for color in _share_colors(theme):
-            assert f'fill="{color}"' in svg
-
-
-def test_legend_rectangles_carry_no_float_noise():
-    coord_re = re.compile(r"-?\d+")
-    coord_attr_re = re.compile(r' (?:x|y|width|height)="(-?\d+)"')
-    for theme in THEMES.values():
-        svg = _calendar_legend_svg(theme, top=0)
-        assert all(coord_re.fullmatch(value) for value in coord_attr_re.findall(svg))
+def test_weekday_labels_and_quarter_rails_are_gone():
+    """ADR-032 removes the weekday rail and the quarter-window rails:
+    no left-gutter single-letter weekday labels, no 0.35-opacity
+    structural rails — the wider group gaps carry the rhythm instead."""
+    svg = render_summary(FIXTURE_MAIN, THEMES["github-light"])
+    assert 'stroke-opacity="0.35"' not in svg
+    root = ET.fromstring(svg)
+    for node in root:
+        if node.tag != f"{SVG_NS}text":
+            continue
+        if node.attrib.get("text-anchor") == "end" and int(node.attrib["x"]) < PADDING + 24:
+            raise AssertionError(f"unexpected left-gutter label: {node.text!r}")
 
 
 # ---------------------------------------------------------------------------
-# 9. P2: month-boundary labels (round D3, unchanged mechanics).
+# 9. Month-boundary labels (derived only from stats.daily; mechanics kept).
 # ---------------------------------------------------------------------------
 
 
@@ -518,15 +647,14 @@ def test_month_boundaries_empty_for_a_single_month_window():
 
 
 def test_month_boundaries_span_three_to_four_months():
-    """FIXTURE_MAIN's own 84-day window (2026-04-22 to 2026-07-14, the D2
-    fixture's documented span) crosses 4 calendar months (Apr partial,
-    May, Jun, Jul partial) -- exactly 3 boundaries (May 1, Jun 1, Jul 1),
-    April itself unlabeled since it is the window's own first, partial
-    month."""
+    """FIXTURE_MAIN's own 84-day window (2026-04-22 to 2026-07-14)
+    crosses 4 calendar months (Apr partial, May, Jun, Jul partial) --
+    exactly 3 boundaries (May 1, Jun 1, Jul 1), April itself unlabeled
+    since it is the window's own first, partial month."""
     labels = _month_label_columns(FIXTURE_MAIN)
     assert [label for _, label in labels] == ["May", "Jun", "Jul"]
     # Columns strictly increase (each later month starts in a later
-    # column than the one before it).
+    # group than the one before it).
     cols = [col for col, _ in labels]
     assert cols == sorted(cols)
     assert len(set(cols)) == len(cols)
@@ -538,12 +666,10 @@ def test_month_labels_empty_when_daily_empty():
 
 def test_month_label_collision_rule_drops_same_column_boundaries():
     """Collision rule (documented in `_dedupe_colliding_month_labels`):
-    a later boundary in the SAME column as the immediately preceding KEPT
-    label is dropped outright. Exercised directly with synthetic input
-    since real calendar months (>= 28 days == >= 4 columns apart) never
-    actually trigger it on a real 84-day window."""
-    # Two boundaries collide with column 2 (a run of 3) then a genuinely
-    # later one in column 5.
+    a later boundary in the SAME group column as the immediately
+    preceding KEPT label is dropped outright. Exercised directly with
+    synthetic input since real calendar months (>= 28 days == >= 4
+    columns apart) never actually trigger it on a real 84-day window."""
     boundaries = ((2, "Jan"), (2, "Feb"), (2, "Mar"), (5, "Apr"))
     assert _dedupe_colliding_month_labels(boundaries) == ((2, "Jan"), (5, "Apr"))
 
@@ -553,32 +679,22 @@ def test_month_label_collision_rule_no_collision_passes_through():
     assert _dedupe_colliding_month_labels(boundaries) == boundaries
 
 
-def test_month_labels_render_ascii_and_muted():
+def test_month_labels_render_ascii_muted_and_group_aligned():
     for theme in THEMES.values():
-        svg = _calendar_month_labels_svg(FIXTURE_MAIN, theme, top=0)
+        svg = _pulse_month_labels_svg(FIXTURE_MAIN, theme, top=0)
         assert svg.isascii()
         assert f'fill="{theme.muted}"' in svg
         for label in ("May", "Jun", "Jul"):
             assert f">{label}<" in svg
-
-
-def test_timeline_uses_sparse_editorial_alignment_rails():
-    """Rails are structural guides, not an extra quantitative channel."""
-    svg = render_summary(FIXTURE_MAIN, THEMES["github-light"])
-    assert svg.count('stroke-opacity="0.35"') == len(CAL_RAIL_COLUMNS)
-    assert "fill-opacity" not in svg
-
-
-def test_weekday_labels_follow_the_oldest_window_date():
-    """The flat matrix starts at the series' own oldest date, not Monday.
-
-    FIXTURE_MAIN starts on Wednesday (2026-04-22), so the seven left-rail
-    labels must rotate to W/T/F/S/S/M/T rather than falsely claiming M first.
-    """
-    svg = _calendar_weekday_labels_svg(FIXTURE_MAIN, THEMES["github-light"], top=0)
-    root = ET.fromstring(f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>')
-    labels = [element.text for element in root]
-    assert labels == ["W", "T", "F", "S", "S", "M", "T"]
+    root = ET.fromstring(
+        f'<svg xmlns="http://www.w3.org/2000/svg">'
+        f'{_pulse_month_labels_svg(FIXTURE_MAIN, THEMES["github-light"], 0)}</svg>'
+    )
+    expected_cols = [col for col, _ in _month_label_columns(FIXTURE_MAIN)]
+    xs = [int(node.attrib["x"]) for node in root]
+    assert xs == [
+        PULSE_X + col * PULSE_GROUP_PITCH + PULSE_GROUP_W // 2 for col in expected_cols
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -586,26 +702,9 @@ def test_weekday_labels_follow_the_oldest_window_date():
 # ---------------------------------------------------------------------------
 
 
-def test_d4_zero_attributed_ai_day_renders_a_neutral_bar_not_a_flat_cell():
-    """ADR-022 supersedes the D4 rule that a zero-attributed-AI day
-    renders like a no-data day: the timeline charts the WHOLE rhythm, so a
-    3-commit day with zero attributed AI (not provably human — the day's
-    total includes unattributed commits) is a bin-1 bar in the neutral
-    share-0 hue — visibly different from both a no-data day (flat track
-    track) and an AI-share day (ramp hue)."""
-    theme = THEMES["github-light"]
-    zero_ai = DayCell("2026-07-14", (), 3, 0)
-    none_svg = _day_cell_svg(None, 100, 100, theme)
-    zero_ai_svg = _day_cell_svg(zero_ai, 100, 100, theme)
-    assert zero_ai_svg != none_svg
-    assert zero_ai_svg.count("<rect") == 2
-    assert f'fill="{_share_colors(theme)[0]}"' in zero_ai_svg
-    assert theme.bar_track in zero_ai_svg  # the neutral track remains visible
-
-
 def test_d4_wider_series_band_shows_only_its_own_84_day_slice():
     # A 300-day-old AI day is valid under the D4 365-day contract but
-    # must not surface anywhere in the timeline (grid, desc, months).
+    # must not surface anywhere in the pulse (marks, desc, months).
     old_date = "2025-09-17"  # 300 days before 2026-07-14
     daily = (
         DayCell(old_date, (DayCount(provider="anthropic", attributed_commits=5),), 5, 5),
@@ -629,17 +728,28 @@ def test_out_of_window_day_does_not_leak_into_the_peak_claim():
     assert "peak day 40 commits" not in suffix
 
 
-def test_timeline_moves_the_provider_table_not_the_other_way_round():
-    """Layout regression: the timeline block sits between the ledger and
+def test_pulse_moves_the_provider_table_not_the_other_way_round():
+    """Layout regression: the pulse block sits between the ledger and
     the provider table, so an unpublished series shifts the table UP by
-    the grid/notice difference while the table's internal geometry stays
-    fixed."""
+    the pulse/notice difference while the table's internal geometry
+    stays fixed."""
     with_daily = render_summary(FIXTURE_MAIN, THEMES["github-light"])
     without_daily = render_summary(
         dataclasses.replace(FIXTURE_MAIN, daily=()), THEMES["github-light"]
     )
-    assert with_daily.index(CAL_LABEL_TEXT) < with_daily.index("Attributed commits by provider")
+    assert with_daily.index(PULSE_LABEL_TEXT) < with_daily.index(
+        "Attributed commits by provider"
+    )
     assert without_daily.index(CAL_UNPUBLISHED_TEXT) < without_daily.index(
         "Attributed commits by provider"
     )
     assert CAL_GAP_BELOW > 0
+
+
+def test_marks_sit_between_month_labels_and_legend_without_dead_space():
+    """The band's internal layout is contiguous: month labels above the
+    marks, the shared baseline at PULSE_BASELINE_Y, the legend below,
+    and the block height derived from those constants — no dead band."""
+    assert PULSE_BASELINE_Y > 0
+    assert PULSE_BLOCK_HEIGHT > PULSE_BASELINE_Y
+    assert PULSE_BLOCK_HEIGHT < 200  # tighter than the old 84-cell grid (238)

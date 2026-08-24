@@ -17,10 +17,19 @@ v0.8.0 (ADR-031, Signal Console) recomposes the card for README-scale
 legibility: the header becomes a status line carrying the period and an
 explicit *snapshot* date, the hero + right-hand ledger become one metric
 console strip (hero cell plus four hairline-separated secondary cells on a
-shared baseline), the daily matrix is left-aligned on the card margin with
-wider cells, and the type floor rises from 11px to 12px on the fixed
-12/13/18/40 scale. Semantics, bins, provider/evidence meanings, the
-publishable-only rule, and the deterministic-height contract are unchanged.
+shared baseline), and the type floor rises from 11px to 12px on the fixed
+12/13/18/40 scale.
+
+v0.8.1 (ADR-032, Collaboration Pulse) replaces the daily 84-cell matrix
+with a static pulse signature: the 84 window dates run oldest to newest as
+baseline-anchored 6px marks in 12 groups of seven (wider structural group
+gap, not a calendar-week claim), neutral pulse height carries the fixed
+total-commit bins (12/24/36/48px), the accent fill rises from the baseline
+to 0/25/50/75/100% of the pulse height per AI-share bin, and a
+no-activity date is a 2px baseline tick. Weekday labels and quarter rails
+are gone; month-boundary labels stay. Semantics, bins, provider/evidence
+meanings, the publishable-only rule, and the deterministic-height contract
+are unchanged.
 
 Layout is dynamic-but-deterministic: the card height is a pure function of
 the data (number of provider rows, overflow line, published daily series,
@@ -41,7 +50,7 @@ import datetime
 from xml.sax.saxutils import escape
 
 from ..viz import DayCell, ProviderRow, Totals, VizStats
-from ._bins import VOLUME_CAP, _share_bin, _share_colors, _volume_bin
+from ._bins import _share_bin, _volume_bin
 from .brand import BRAND, BrandSpec
 from .themes import Theme
 
@@ -212,34 +221,42 @@ ZERO_HINT_Y = 144
 ZERO_BODY_BOTTOM = 164
 
 # ---------------------------------------------------------------------------
-# Flat collaboration timeline (ADR-025; semantics from ADR-022). Rendered
-# between the secondary ledger and the provider table. Each published day is
-# one compact 2D cell:
+# Collaboration Pulse (ADR-032; semantics from ADR-022/ADR-025). Rendered
+# between the metric console and the provider table. The 84 published-window
+# dates run OLDEST to NEWEST, left to right, as one baseline-anchored pulse
+# signature — visually grouped as 12 groups of seven marks with a wider
+# structural gap between groups (a 7-day rhythm, deliberately NOT labelled
+# as calendar weeks). There is no 84-cell background heatmap grid.
 #
-# - BAR HEIGHT encodes `DayCell.total_commits` through the fixed volume bins
-#   0 / 1 / 2-4 / 5-7 / 8+ (`_bins._volume_bin` -> VOLUME_BAR_HEIGHTS) — the
+# - PULSE HEIGHT encodes `DayCell.total_commits` through the fixed volume
+#   bins 1 / 2-4 / 5-7 / 8+ (`_bins._volume_bin` -> PULSE_HEIGHTS) — the
 #   owner's whole working rhythm, every commit regardless of attribution
 #   (unattributed and explicitly human-declared included);
-# - FILL HUE encodes the day's AI share (`ai_commits /
-#   total_commits`) through the heatmap card's own fixed share bins
-#   (`_bins._share_bin` -> `_bins._share_colors`).
+# - ACCENT FILL rises from the shared baseline and spatially maps the day's
+#   AI-share bin (`_bins._share_bin`, 0..4) to 0/25/50/75/100% of the pulse
+#   height. The fill uses the theme accent so the meaning is carried by
+#   both position and hue — never color alone. A zero-attributed-AI day is
+#   a pure neutral pulse: that is NOT a human claim (unattributed history
+#   sits in that bin too).
+# - A date with no publishable activity renders only a 2px baseline tick.
 #
-# Provider rows and counts NEVER contribute to matrix geometry: a
-# one-commit multi-provider day is exactly as tall as a one-commit
+# Provider rows and counts NEVER contribute to pulse geometry: a
+# one-commit multi-provider day renders byte-identically to a one-commit
 # single-provider day (pinned in tests/unit/test_recruiter_card.py).
 #
 # The daily series is publishable-only (ADR-018): an empty series with
 # nonzero headline totals renders the exact CAL_UNPUBLISHED_TEXT notice
-# instead of a fabricated grid.
+# instead of a fabricated signature.
 #
-# Geometry is precomputed INTEGER grid arithmetic on purpose so coordinates
-# and dimensions remain byte-stable and free of floating-point noise.
+# Geometry is precomputed INTEGER arithmetic on purpose so coordinates and
+# dimensions remain byte-stable and free of floating-point noise; every
+# PULSE_HEIGHTS entry is a multiple of 4 so the quarter fills divide
+# exactly.
 # ---------------------------------------------------------------------------
 
-CAL_GAP_BELOW = 20  # matrix bottom -> provider-table label block
-CAL_LABEL_SIZE = 12
+CAL_GAP_BELOW = 20  # pulse block bottom -> provider-table label block
 CAL_LABEL_BASELINE_Y = 14  # local y (band-relative) of the label's text baseline
-CAL_LABEL_TEXT = "Daily collaboration (last 12 weeks)"
+PULSE_LABEL_TEXT = "Daily collaboration pulse · 12-week published window"
 
 #: The exact honest message for a profile whose headline totals are
 #: nonzero but whose daily series is unpublished (ADR-022).
@@ -252,76 +269,66 @@ CAL_NOTICE_HEIGHT = 44  # total footprint of the unpublished-daily notice
 #: on the 4px scale.
 CAL_TOP = METRIC_STRIP_BOTTOM + 24
 
-# Round D3 P2: month-boundary labels sit in their own row between the band
-# header and the flat cell grid. CAL_GRID_TOP_Y (below) derives from these so
-# bumping either constant here re-flows the whole grid/legend/CAL_HEIGHT
-# automatically.
+# Month-boundary labels sit in their own row between the band header and
+# the pulse (mechanics retained from round D3 P2). PULSE_TOP_Y (below)
+# derives from these so bumping either constant re-flows the whole
+# band/legend/PULSE_BLOCK_HEIGHT automatically.
 CAL_MONTH_LABEL_SIZE = 12
 CAL_MONTH_LABEL_BASELINE_Y = 30  # local y of the month-label row's text baseline
-CAL_MONTH_LABEL_GRID_GAP = 10  # month-label baseline -> grid top
+CAL_MONTH_LABEL_GRID_GAP = 10  # month-label baseline -> pulse area top
 
-CAL_WEEKS = 12
-CAL_DAYS = 7
-CAL_WINDOW_DAYS = CAL_WEEKS * CAL_DAYS  # 84 -- the matrix's OWN newest-anchored
-# slice of the (D4: 365-day) viz.DAILY_WINDOW_DAYS series; gate-17 L-01
+PULSE_GROUPS = 12
+PULSE_GROUP_DAYS = 7
+CAL_WINDOW_DAYS = PULSE_GROUPS * PULSE_GROUP_DAYS  # 84 -- the pulse's OWN
+# newest-anchored slice of the (D4: 365-day) viz.DAILY_WINDOW_DAYS series;
+# gate-17 L-01
 
-CAL_CELL_W = 52  # v0.8.0: widened from 38 for README-scale legibility
-CAL_CELL_H = 20
-CAL_CELL_GAP = 6
-CAL_BAR_INSET = 4
-CAL_MAX_BAR_HEIGHT = 12
+PULSE_MARK_W = 6  # activity mark width
+PULSE_MARK_GAP = 2  # gap between marks inside a 7-day group
+PULSE_GROUP_GAP = 10  # wider structural gap between the 12 groups
+PULSE_GROUP_W = PULSE_GROUP_DAYS * PULSE_MARK_W + (PULSE_GROUP_DAYS - 1) * PULSE_MARK_GAP  # 54
+PULSE_GROUP_PITCH = PULSE_GROUP_W + PULSE_GROUP_GAP  # 64
+#: The pulse is left-aligned on the card margin (ADR-031 precision
+#: alignment; the v0.8.0 weekday gutter is gone with the weekday labels).
+PULSE_X = PADDING
+PULSE_WIDTH = PULSE_GROUPS * PULSE_GROUP_PITCH - PULSE_GROUP_GAP  # 758
 
-#: Fixed bar heights per volume bin (ADR-025): 1 -> 3px, 2-4 -> 6px,
-#: 5-7 -> 9px, 8+ -> CAL_MAX_BAR_HEIGHT. Indexed by `_bins._volume_bin`,
+#: Fixed neutral pulse heights per volume bin (ADR-032): 1 -> 12px,
+#: 2-4 -> 24px, 5-7 -> 36px, 8+ -> 48px. Indexed by `_bins._volume_bin`,
 #: which shares the exact thresholds with the heatmap card. A documented
 #: saturating top bin, not a silent clip: one outlier day cannot dwarf the
-#: window or blow the card's fixed geometry budget.
-VOLUME_BAR_HEIGHTS = (3, 6, 9, CAL_MAX_BAR_HEIGHT)
+#: window or blow the card's fixed geometry budget. Every entry is a
+#: multiple of PULSE_SHARE_LEVELS so quarter fills stay exact integers.
+PULSE_HEIGHTS = (12, 24, 36, 48)
+PULSE_MAX_HEIGHT = PULSE_HEIGHTS[-1]
 
-#: The volume cap used by the shared render/_bins contract (8).
-CAL_CAP_COMMITS = VOLUME_CAP
+#: `_bins._share_bin` levels (0..4) map to 0/25/50/75/100% of the pulse
+#: height: fill_height = pulse_height * share_bin // PULSE_SHARE_LEVELS.
+PULSE_SHARE_LEVELS = 4
 
-#: Local (band-relative) y where the matrix starts. Local y=0 is the very
-#: top of the whole band; the label and month row sit above the cells.
-CAL_GRID_TOP_Y = CAL_MONTH_LABEL_BASELINE_Y + CAL_MONTH_LABEL_GRID_GAP  # 40
-CAL_GRID_WIDTH = CAL_WEEKS * CAL_CELL_W + (CAL_WEEKS - 1) * CAL_CELL_GAP
-CAL_GRID_HEIGHT = CAL_DAYS * CAL_CELL_H + (CAL_DAYS - 1) * CAL_CELL_GAP
-#: The matrix is left-aligned on the card margin (ADR-031 precision
-#: alignment): a 24px weekday-label gutter after PADDING, never centered.
-CAL_GUTTER = 24
-CAL_GRID_X = PADDING + CAL_GUTTER
-CAL_GRID_BOTTOM_Y = CAL_GRID_TOP_Y + CAL_GRID_HEIGHT
+#: A no-activity date renders only this 2px baseline tick.
+PULSE_TICK_H = 2
 
-# A few quiet editorial rails give the matrix a visible reading rhythm without
-# turning the background into a decorative pattern.  They are structural
-# alignment guides, not a third data channel: all quantitative meaning still
-# comes from bar height and AI-share fill.
-CAL_RAIL_COLUMNS = (0, 3, 6, 9, CAL_WEEKS)
-CAL_RAIL_TOP_PAD = 6
-CAL_RAIL_BOTTOM_PAD = 4
-CAL_RAIL_OPACITY = 0.35
+#: Local (band-relative) y where the pulse area starts. Local y=0 is the
+#: very top of the whole band; the label and month row sit above the marks.
+PULSE_TOP_Y = CAL_MONTH_LABEL_BASELINE_Y + CAL_MONTH_LABEL_GRID_GAP  # 40
+#: The shared baseline every mark bottom-anchors on (band-relative).
+PULSE_BASELINE_Y = PULSE_TOP_Y + PULSE_MAX_HEIGHT  # 88
 
-# Flat legend: one compact line under the matrix stating both encodings:
-# volume-bar bins, the five-step neutral-to-accent AI-share ramp, and the
-# standing "publishable repos only" cue.
-CAL_LEGEND_SWATCH = 10
-CAL_LEGEND_LABEL_SIZE = 12
-CAL_LEGEND_LABEL_GAP = 4
-CAL_LEGEND_ITEM_GAP = 10
-CAL_LEGEND_TOP_GAP = 18  # grid bottom -> legend baseline
-CAL_LEGEND_BOTTOM_PAD = 4  # legend baseline -> band bottom (descender clearance)
-CAL_LEGEND_GROUP_GAP = 12  # gap between the height group and the share group
-CAL_LEGEND_RAMP_STEP = 4
-CAL_LEGEND_CUE_TEXT = "publishable repos only"
-CAL_LEGEND_HEIGHT_LABEL = "Volume"
-CAL_LEGEND_SHARE_LABEL = "AI share"
+# Direct one-line legend under the pulse: both encodings and the standing
+# publishable-only cue, stated in words instead of swatch rows.
+PULSE_LEGEND_TEXT = (
+    "height = total commits · fill = AI-attributed share · publishable dates only"
+)
+PULSE_LEGEND_TOP_GAP = 18  # baseline -> legend text baseline
+PULSE_LEGEND_BOTTOM_PAD = 4  # legend baseline -> band bottom (descender clearance)
 
 #: Local (band-relative) y of the legend row's text baseline.
-CAL_LEGEND_BASELINE_Y = CAL_GRID_BOTTOM_Y + CAL_LEGEND_TOP_GAP
+PULSE_LEGEND_BASELINE_Y = PULSE_BASELINE_Y + PULSE_LEGEND_TOP_GAP  # 106
 
-#: Total fixed footprint of the daily matrix (label + month-label row + grid +
-#: legend); the notice variant occupies CAL_NOTICE_HEIGHT instead.
-CAL_HEIGHT = CAL_LEGEND_BASELINE_Y + CAL_LEGEND_BOTTOM_PAD
+#: Total fixed footprint of the pulse block (label + month-label row +
+#: pulse + legend); the notice variant occupies CAL_NOTICE_HEIGHT instead.
+PULSE_BLOCK_HEIGHT = PULSE_LEGEND_BASELINE_Y + PULSE_LEGEND_BOTTOM_PAD  # 110
 
 #: NO entrance animation - a deliberate REMOVAL, twice-earned during D2
 #: visual verification (spec rule: honest > flashy):
@@ -535,10 +542,10 @@ def _calendar_top(stats: VizStats) -> int:
 
 
 def _timeline_block_height(stats: VizStats) -> int:
-    """The daily matrix footprint: the full grid when a publishable
+    """The daily pulse footprint: the full pulse block when a publishable
     daily series exists, the compact unpublished-daily notice otherwise
     (never zero — the zero state bypasses this layout entirely)."""
-    return CAL_HEIGHT if stats.daily else CAL_NOTICE_HEIGHT
+    return PULSE_BLOCK_HEIGHT if stats.daily else CAL_NOTICE_HEIGHT
 
 
 def _table_label_y(stats: VizStats) -> int:
@@ -590,9 +597,9 @@ def _calendar_desc_suffix(stats: VizStats) -> str:
         if cell.date >= window_start.isoformat()
     )
     return (
-        f" Daily collaboration {window_start.isoformat()} to {newest.isoformat()},"
-        f" peak day {peak_total} commits; bar height is total commits, fill is the day's"
-        " AI share; publishable repositories only."
+        f" Daily collaboration pulse {window_start.isoformat()} to {newest.isoformat()},"
+        f" peak day {peak_total} commits; pulse height encodes total commits, accent fill"
+        " height encodes the day's AI-attributed share; publishable dates only."
     )
 
 
@@ -942,7 +949,7 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Flat collaboration timeline builders (ADR-025; semantics from ADR-022).
+# Collaboration Pulse builders (ADR-032; semantics from ADR-022/ADR-025).
 # ---------------------------------------------------------------------------
 
 #: ASCII 3-letter English month abbreviations, index 0 = January (P2).
@@ -955,14 +962,14 @@ _MONTH_ABBR = (
 )
 
 
-def _calendar_grid_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
+def _pulse_day_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
     """84-length tuple in oldest-to-newest offset order (index 0 = the
     window's oldest day, CAL_WINDOW_DAYS-1 = the series' own newest date)
     — ``None`` wherever there is no publishable activity for that date.
     A day that predates the series and a genuine zero-commit day inside
     the series are the SAME case here (both simply absent from
     ``stats.daily``, since VizStats forbids storing a zero-count DayCell):
-    both render as the neutral track cell in ``_day_cell_svg``.
+    both render as the 2px baseline tick in ``_pulse_mark_svg``.
     """
     if not stats.daily:
         return (None,) * CAL_WINDOW_DAYS
@@ -974,73 +981,45 @@ def _calendar_grid_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
     )
 
 
-def _day_cell_svg(cell: DayCell | None, cx: int, cy: int, theme: Theme) -> str:
-    """One flat grid cell whose bottom bar carries the daily encodings:
+def _pulse_mark_x(offset: int) -> int:
+    """Left edge of the mark for a chronological window offset: 12 groups
+    of seven marks, PULSE_MARK_GAP inside a group, the wider
+    PULSE_GROUP_GAP between groups. Pure integer arithmetic."""
+    group, member = divmod(offset, PULSE_GROUP_DAYS)
+    return PULSE_X + group * PULSE_GROUP_PITCH + member * (PULSE_MARK_W + PULSE_MARK_GAP)
 
-    - BAR HEIGHT is the fixed volume bin of ``cell.total_commits``
-      (VOLUME_BAR_HEIGHTS via `_bins._volume_bin` — the heatmap's own
-      1 / 2-4 / 5-7 / 8+ buckets), and
-    - FILL HUE is the fixed AI-share bin of ``cell.ai_commits /
-      cell.total_commits`` (`_bins._share_bin` -> `_bins._share_colors`,
-      neutral for a day with zero attributed AI commits — never a human
-      claim, since unattributed history sits in that bin too — and accent
-      for a day whose commits are all AI-attributed).
+
+def _pulse_mark_svg(cell: DayCell | None, x: int, baseline_y: int, theme: Theme) -> str:
+    """One baseline-anchored pulse mark carrying the daily encodings:
+
+    - PULSE HEIGHT is the fixed volume bin of ``cell.total_commits``
+      (PULSE_HEIGHTS via `_bins._volume_bin` — the heatmap's own
+      1 / 2-4 / 5-7 / 8+ buckets), drawn as a neutral (muted) column;
+    - the ACCENT FILL rises from the baseline to ``pulse_height *
+      share_bin // PULSE_SHARE_LEVELS`` (`_bins._share_bin`, 0..4 ->
+      0/25/50/75/100% of the pulse height). A zero-attributed-AI day
+      keeps the pure neutral column — never a human claim, since
+      unattributed history sits in that bin too.
+    - ``None`` (no publishable activity) renders only a 2px baseline
+      tick in the border token.
 
     Provider counts never reach this geometry: a one-commit multi-provider
     day renders byte-identically to a one-commit single-provider day.
     """
-    cell_x = cx - CAL_CELL_W // 2
-    cell_y = cy - CAL_CELL_H // 2
-    parts = [_rect(cell_x, cell_y, CAL_CELL_W, CAL_CELL_H, fill=theme.bar_track, rx=4)]
-    if cell is not None:
-        height_px = VOLUME_BAR_HEIGHTS[_volume_bin(cell.total_commits)]
-        color = _share_colors(theme)[_share_bin(cell.ai_commits, cell.total_commits)]
-        bar_x = cell_x + CAL_BAR_INSET
-        bar_y = cell_y + CAL_CELL_H - CAL_BAR_INSET - height_px
-        bar_w = CAL_CELL_W - 2 * CAL_BAR_INSET
-        parts.append(_rect(bar_x, bar_y, bar_w, height_px, fill=color, rx=2))
+    if cell is None:
+        return _rect(x, baseline_y - PULSE_TICK_H, PULSE_MARK_W, PULSE_TICK_H, fill=theme.border)
+    height = PULSE_HEIGHTS[_volume_bin(cell.total_commits)]
+    fill_h = height * _share_bin(cell.ai_commits, cell.total_commits) // PULSE_SHARE_LEVELS
+    parts = [_rect(x, baseline_y - height, PULSE_MARK_W, height, fill=theme.muted)]
+    if fill_h > 0:
+        parts.append(_rect(x, baseline_y - fill_h, PULSE_MARK_W, fill_h, fill=theme.accent))
     return "\n".join(parts)
-
-
-def _calendar_cell_position(offset: int) -> tuple[int, int, int, int]:
-    """``(col, row, cx, cy)`` for a grid offset, cy relative to the band's
-    own local origin (add the band's absolute top separately)."""
-    col, row = offset // CAL_DAYS, offset % CAL_DAYS
-    cx = CAL_GRID_X + col * (CAL_CELL_W + CAL_CELL_GAP) + CAL_CELL_W // 2
-    cy = CAL_GRID_TOP_Y + row * (CAL_CELL_H + CAL_CELL_GAP) + CAL_CELL_H // 2
-    return col, row, cx, cy
-
-
-def _calendar_weekday_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """Render weekday labels aligned to the matrix's anchored window.
-
-    The matrix is oldest-to-newest in seven-row weekday order, but its
-    oldest date may begin on any weekday. Rotate the Monday-first vocabulary
-    from that actual window start so the left rail never claims the wrong day.
-    """
-    newest = datetime.date.fromisoformat(stats.daily[-1].date)
-    window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
-    monday_first = ("M", "T", "W", "T", "F", "S", "S")
-    labels = tuple(
-        monday_first[(window_start.weekday() + row) % CAL_DAYS] for row in range(CAL_DAYS)
-    )
-    return "\n".join(
-        _text(
-            CAL_GRID_X - 8,
-            top + CAL_GRID_TOP_Y + row * (CAL_CELL_H + CAL_CELL_GAP) + CAL_CELL_H // 2 + 4,
-            label,
-            size=12,
-            fill=theme.muted,
-            anchor="end",
-        )
-        for row, label in enumerate(labels)
-    )
 
 
 def _month_boundaries(dates: tuple[datetime.date, ...]) -> tuple[tuple[int, str], ...]:
     """Raw ``(col, 3-letter month label)`` pairs for every month BOUNDARY
     in an ordered, contiguous, oldest-to-newest date sequence (P2) -- col
-    = index // CAL_DAYS, matching `_calendar_cell_position`'s own column
+    = index // PULSE_GROUP_DAYS, matching `_pulse_mark_x`'s own group
     math. A "boundary" is a transition INTO a new month: the sequence's
     own first (possibly partial) month is never a boundary, so a
     single-month input yields an empty tuple (falsifiable directly, no
@@ -1054,7 +1033,7 @@ def _month_boundaries(dates: tuple[datetime.date, ...]) -> tuple[tuple[int, str]
     prev_month = dates[0].month
     for index, d in enumerate(dates):
         if d.month != prev_month:
-            boundaries.append((index // CAL_DAYS, _MONTH_ABBR[d.month - 1]))
+            boundaries.append((index // PULSE_GROUP_DAYS, _MONTH_ABBR[d.month - 1]))
             prev_month = d.month
     return tuple(boundaries)
 
@@ -1064,11 +1043,11 @@ def _dedupe_colliding_month_labels(
 ) -> tuple[tuple[int, str], ...]:
     """Collision rule (P2, documented not just implemented): a boundary is
     DROPPED outright -- never shifted, abbreviated further, or allowed to
-    overlap -- when it would land in the SAME grid column as the
+    overlap -- when it would land in the SAME group column as the
     immediately preceding KEPT label (not the raw previous boundary, so a
     run of 3+ same-column boundaries collapses to the first one rather
-    than alternating). Real calendar months are always >= 28 days == >=
-    4 CAL_DAYS-wide columns apart, so this never actually fires on a real
+    than alternating). Real calendar months are always >= 28 days == >= 4
+    seven-day groups apart, so this never actually fires on a real
     `stats.daily` window (see test_month_boundaries_span_three_to_four_months
     for the real-date case) -- it exists as a documented, independently
     falsifiable invariant, exercised directly with synthetic input.
@@ -1084,7 +1063,7 @@ def _dedupe_colliding_month_labels(
 def _month_label_columns(stats: VizStats) -> tuple[tuple[int, str], ...]:
     """``(col, label)`` pairs to actually render (P2): derives the
     window's own contiguous date sequence purely from `stats.daily`'s
-    newest date (never the clock -- same anchor `_calendar_grid_cells`
+    newest date (never the clock -- same anchor `_pulse_day_cells`
     uses), then applies the boundary + collision rules above. Empty when
     there is no daily series."""
     if not stats.daily:
@@ -1097,12 +1076,13 @@ def _month_label_columns(stats: VizStats) -> tuple[tuple[int, str], ...]:
     return _dedupe_colliding_month_labels(_month_boundaries(dates))
 
 
-def _calendar_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The month-boundary label row (P2), aligned to flat matrix columns."""
+def _pulse_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    """The month-boundary label row (P2), centered over the seven-day
+    group in which the boundary date falls."""
     baseline_y = top + CAL_MONTH_LABEL_BASELINE_Y
     parts = [
         _text(
-            CAL_GRID_X + col * (CAL_CELL_W + CAL_CELL_GAP) + CAL_CELL_W // 2,
+            PULSE_X + col * PULSE_GROUP_PITCH + PULSE_GROUP_W // 2,
             baseline_y,
             label,
             size=CAL_MONTH_LABEL_SIZE,
@@ -1114,115 +1094,27 @@ def _calendar_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
     return "\n".join(parts)
 
 
-def _calendar_column_guides_svg(theme: Theme, top: int) -> str:
-    """Render sparse alignment rails for the twelve-week matrix.
-
-    The rails are deliberately limited to quarter-window boundaries.  They
-    make the card read like an editorial instrument panel while preserving a
-    strict two-channel encoding: a rail carries no value and is never used as
-    a substitute for a day label, bar height, or share color.
-    """
-    top_y = top + CAL_GRID_TOP_Y - CAL_RAIL_TOP_PAD
-    bottom_y = top + CAL_GRID_BOTTOM_Y + CAL_RAIL_BOTTOM_PAD
-    return "\n".join(
-        _line(
-            CAL_GRID_X + column * (CAL_CELL_W + CAL_CELL_GAP),
-            top_y,
-            CAL_GRID_X + column * (CAL_CELL_W + CAL_CELL_GAP),
-            bottom_y,
-            stroke=theme.border,
-            stroke_opacity=CAL_RAIL_OPACITY,
-        )
-        for column in CAL_RAIL_COLUMNS
+def _pulse_legend_svg(theme: Theme, top: int) -> str:
+    """The direct one-line legend (ADR-032): both encodings and the
+    standing publishable-only cue stated in words, muted, on the 12px
+    floor — no swatch rows, no ramp."""
+    return _text(
+        PADDING,
+        top + PULSE_LEGEND_BASELINE_Y,
+        PULSE_LEGEND_TEXT,
+        size=12,
+        fill=theme.muted,
     )
-
-
-def _legend_bins(cap: int) -> tuple[tuple[int, str], ...]:
-    """Up to 4 ``(representative_count, ASCII label)`` volume bins
-    derived from ``cap`` (P1): "1", "2-{mid}", "{mid+1}-{cap-1}",
-    "{cap}+" where ``mid = cap // 2`` -- e.g. cap=8 (CAL_CAP_COMMITS
-    today) gives exactly "1", "2-4", "5-7", "8+", matching
-    `_bins._volume_bin`'s own thresholds. Recomputed from ``cap`` alone
-    (never a hand-typed literal): a smaller cap collapses degenerate
-    ranges (low > high, e.g. cap=3's would-be "2-1") down to 2-3 bins
-    automatically instead of emitting a bogus range."""
-    mid = cap // 2
-    candidates = ((1, 1), (2, mid), (mid + 1, cap - 1))
-    bins: list[tuple[int, str]] = []
-    for low, high in candidates:
-        if low > high:
-            continue
-        label = str(low) if low == high else f"{low}-{high}"
-        bins.append((high, label))
-    bins.append((cap, f"{cap}+"))
-    return tuple(bins)
-
-
-def _calendar_legend_svg(theme: Theme, top: int) -> str:
-    """The flat legend (ADR-025): volume swatches and a share ramp state the
-    height bins over total commits, the five-step neutral-to-accent ramp
-    stating the AI-share hue, and the standing "publishable repos only"
-    cue. Every color is a theme token or a `_bins._share_colors` step —
-    exactly the hexes real day bars use."""
-    baseline_y = top + CAL_LEGEND_BASELINE_Y
-    parts: list[str] = []
-    x = PADDING
-    parts.append(
-        _text(x, baseline_y, CAL_LEGEND_HEIGHT_LABEL, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
-    )
-    x += round(_text_width(CAL_LEGEND_HEIGHT_LABEL, CAL_LEGEND_LABEL_SIZE)) + 8
-    for height, (_, label) in zip(VOLUME_BAR_HEIGHTS, _legend_bins(CAL_CAP_COMMITS), strict=True):
-        swatch_y = baseline_y - height + 2
-        parts.append(
-            _rect(x, swatch_y, CAL_LEGEND_SWATCH, height, fill=theme.muted, rx=2)
-        )
-        label_x = x + CAL_LEGEND_SWATCH + CAL_LEGEND_LABEL_GAP
-        parts.append(
-            _text(label_x, baseline_y, label, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
-        )
-        x = label_x + round(_text_width(label, CAL_LEGEND_LABEL_SIZE)) + CAL_LEGEND_ITEM_GAP
-    x += CAL_LEGEND_GROUP_GAP
-    parts.append(
-        _text(x, baseline_y, CAL_LEGEND_SHARE_LABEL, size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted)
-    )
-    x += round(_text_width(CAL_LEGEND_SHARE_LABEL, CAL_LEGEND_LABEL_SIZE)) + 8
-    parts.append(_text(x, baseline_y, "0%", size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted))
-    x += round(_text_width("0%", CAL_LEGEND_LABEL_SIZE)) + 6
-    for color in _share_colors(theme):
-        parts.append(
-            _rect(
-                x,
-                baseline_y - CAL_LEGEND_SWATCH + 2,
-                CAL_LEGEND_SWATCH,
-                CAL_LEGEND_SWATCH,
-                fill=color,
-                rx=2,
-            )
-        )
-        x += CAL_LEGEND_SWATCH + CAL_LEGEND_RAMP_STEP
-    x += CAL_LEGEND_LABEL_GAP
-    parts.append(_text(x, baseline_y, "100%", size=CAL_LEGEND_LABEL_SIZE, fill=theme.muted))
-    parts.append(
-        _text(
-            WIDTH - PADDING,
-            baseline_y,
-            CAL_LEGEND_CUE_TEXT,
-            size=CAL_LEGEND_LABEL_SIZE,
-            fill=theme.muted,
-            anchor="end",
-        )
-    )
-    return "\n".join(parts)
 
 
 def _calendar_notice_svg(theme: Theme, top: int) -> str:
-    """The unpublished-daily notice (ADR-022): the matrix section's label
+    """The unpublished-daily notice (ADR-022): the pulse section's label
     plus the exact CAL_UNPUBLISHED_TEXT message — rendered whenever the
     headline totals are nonzero but no daily series is published. Never a
-    fabricated grid, never a warning panel."""
+    fabricated signature, never a warning panel."""
     return "\n".join(
         (
-            _section_label(CAL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
+            _section_label(PULSE_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
             _text(
                 WIDTH // 2,
                 top + CAL_NOTICE_MESSAGE_Y,
@@ -1235,21 +1127,21 @@ def _calendar_notice_svg(theme: Theme, top: int) -> str:
     )
 
 
-def _calendar_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The flat daily matrix and two-encoding legend."""
-    cells = _calendar_grid_cells(stats)
-    cells_svg = []
-    for offset in range(CAL_WINDOW_DAYS):
-        _, _, cx, cy = _calendar_cell_position(offset)
-        cells_svg.append(_day_cell_svg(cells[offset], cx, top + cy, theme))
+def _pulse_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    """The Collaboration Pulse: section label, month-boundary row, the 84
+    chronological baseline-anchored marks, and the direct legend."""
+    cells = _pulse_day_cells(stats)
+    baseline_y = top + PULSE_BASELINE_Y
+    marks_svg = "\n".join(
+        _pulse_mark_svg(cells[offset], _pulse_mark_x(offset), baseline_y, theme)
+        for offset in range(CAL_WINDOW_DAYS)
+    )
 
     sections = (
-        _section_label(CAL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
-        _calendar_month_labels_svg(stats, theme, top),
-        _calendar_weekday_labels_svg(stats, theme, top),
-        _calendar_column_guides_svg(theme, top),
-        "\n".join(cells_svg),
-        _calendar_legend_svg(theme, top),
+        _section_label(PULSE_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
+        _pulse_month_labels_svg(stats, theme, top),
+        marks_svg,
+        _pulse_legend_svg(theme, top),
     )
     return "\n".join(section for section in sections if section)
 
@@ -1327,12 +1219,12 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         parts.append(_hero_svg(stats, theme))
         parts.append(_ledger_svg(stats, theme))
 
-        # Flat daily collaboration matrix (ADR-025): the card's
-        # centerpiece, directly under the headline block. An unpublished
-        # daily series renders the exact honest notice instead.
+        # Collaboration Pulse (ADR-032): the card's centerpiece, directly
+        # under the headline block. An unpublished daily series renders
+        # the exact honest notice instead.
         timeline_top = _calendar_top(stats)
         if stats.daily:
-            parts.append(_calendar_svg(stats, theme, timeline_top))
+            parts.append(_pulse_svg(stats, theme, timeline_top))
         else:
             parts.append(_calendar_notice_svg(theme, timeline_top))
 

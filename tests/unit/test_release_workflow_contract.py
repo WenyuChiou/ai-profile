@@ -45,18 +45,17 @@ def _pypi_verifier_script(pypi_job: str) -> str:
 #: candidate build skipped onboarding — this pin makes that drift a test
 #: failure instead of a CI surprise).
 #:
-#: v0.8.0 is deliberately ABSENT even though it is published, and that gap is
-#: known, not an oversight. Commit B (`61b7995`) landed after the v0.8.0 tag
-#: and changed the README, which is `project.readme` and therefore wheel
-#: METADATA, so the branch now builds `e1f869a9...` while PyPI serves
-#: `9cc06f20...`. Listing "0.8.0" here would force the manifest back onto the
-#: published digest and permanently red the ci.yml candidate job, which
-#: rebuilds and compares against that same manifest. So for v0.8.0 this guard
-#: is not doing its job: close the gap at the next version bump, which is the
-#: real fix for post-release wheel-affecting drift.
+#: v0.8.0 was deliberately absent while the branch still carried version
+#: 0.8.0: commit B (`61b7995`) landed after the v0.8.0 tag and changed the
+#: README, which is `project.readme` and therefore wheel METADATA, so the
+#: branch built `e1f869a9...` while PyPI serves `9cc06f20...` — listing the
+#: published digest then would have permanently redded the ci.yml candidate
+#: job. The v0.8.1 bump closes that documented gap: the manifest now names a
+#: different version, so the published v0.8.0 digest pins here as history.
 RELEASED_WHEEL_SHA256 = {
     "0.7.1": "c941b547b41eccca7efdfc99bdf785c6d8c307da8bedace0a73a3d19036df005",
     "0.7.2": "4f65ef450b9637e066cc9acdfba9cb1e688007e500179cb99a41c2a62dc6708f",
+    "0.8.0": "9cc06f2052a642bd198fa00d728c75b72fce061dad24c51b72feddf84b07c89e",
 }
 
 
@@ -80,11 +79,11 @@ def test_candidate_manifest_matches_project_version_and_is_a_sha256():
     assert manifest["source_date_epoch"] == 1786320000
 
 
-def test_candidate_manifest_is_the_v0_8_0_candidate_not_a_released_digest():
+def test_candidate_manifest_is_the_v0_8_1_candidate_not_a_released_digest():
     manifest = _candidate_manifest()
     import aiprofile
 
-    assert manifest["version"] == aiprofile.__version__ == "0.8.0"
+    assert manifest["version"] == aiprofile.__version__ == "0.8.1"
     released = RELEASED_WHEEL_SHA256.get(manifest["version"])
     if released is not None:
         assert manifest["wheel_sha256"] == released
@@ -92,14 +91,19 @@ def test_candidate_manifest_is_the_v0_8_0_candidate_not_a_released_digest():
         assert manifest["wheel_sha256"] not in RELEASED_WHEEL_SHA256.values()
 
 
-def test_v0_8_0_release_notes_are_finalized_before_tagging():
+def test_v0_8_1_release_notes_are_finalized_before_tagging():
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     unreleased, released = changelog.split(
-        "## [0.8.0] - 2026-08-23 (Public Beta)", 1
+        "## [0.8.1] - 2026-08-23 (Public Beta)", 1
     )
 
     assert unreleased.rstrip().endswith("## [Unreleased]")
-    release_080, rest = released.split("## [0.7.2] - 2026-08-23 (Public Beta)", 1)
+    release_081, rest = released.split("## [0.8.0] - 2026-08-23 (Public Beta)", 1)
+    assert "Collaboration Pulse" in release_081
+    assert "ADR-032" in release_081
+    assert "ACE schema" in release_081
+    assert "summary card only" in release_081
+    release_080, rest = rest.split("## [0.7.2] - 2026-08-23 (Public Beta)", 1)
     assert "Signal Console" in release_080
     assert "ADR-031" in release_080
     assert "snapshot" in release_080

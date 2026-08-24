@@ -276,7 +276,9 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
     # still agree with the manifest.
     assert re.fullmatch(r"[0-9a-f]{64}", manifest["wheel_sha256"])
     assert manifest["dashboard_sha256"] == PINNED_DASHBOARD_SHA256
-    assert manifest["version"] == "0.8.0"
+    # The manifest tracks the current candidate version; the workflow's own
+    # v0.8.0 literals below stay frozen as published-release evidence.
+    assert manifest["version"] == "0.8.1"
     assert text.count(PINNED_WHEEL_SHA256) == 3  # artifact check + both job boundaries
     assert "--expected-version 0.8.0" in text
     assert 'manifest["package_version"] == "0.8.0"' in text

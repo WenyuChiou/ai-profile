@@ -312,7 +312,7 @@ Final evidence is in `docs/reviews/v0.7.1-release-readiness.md` and
       immutable `published-sha`, Pages HTTP 200, and no extra second commit.
       Runs `31393816068` and `31394187257` closed this gate.
 
-## v0.8.0 — Signal Console visual redesign (candidate, 2026-08-23)
+## v0.8.0 — Signal Console visual redesign (released 2026-08-23)
 
 Scope: ADR-031. Product feature version, not a schema version. Exit criteria:
 
@@ -332,6 +332,35 @@ Scope: ADR-031. Product feature version, not a schema version. Exit criteria:
 - [x] VizStats, profile.json, ACE `0.3.0`, CLI, privacy policy, provider and
       evidence semantics, eight filenames, CSP/zero-network, deterministic
       bytes unchanged; no new dependency, font, API, or output.
+- [x] Green CI on the candidate commit, independent Codex review, merge, tag,
+      and PyPI publish (PyPI serves wheel digest `9cc06f20…`; the
+      staging-preview workflow and release contract tests pin that digest as
+      published-release evidence).
+- [ ] Staging deploy and maintainer Profile refresh on the released v0.8.0
+      (not yet recorded in this repository).
+
+## v0.8.1 — Collaboration Pulse (candidate)
+
+Scope: ADR-032. Presentation-only patch, summary card only; no schema bump.
+Exit criteria:
+
+- [x] The summary card's 84-cell 12-week matrix becomes the static
+      Collaboration Pulse: 84 chronological oldest-to-newest 6px marks in 12
+      groups of seven with a wider structural group gap (no calendar-week
+      claim, no 84-cell background grid); neutral pulse height 12/24/36/48px
+      over the shared total-commit bins; accent fill rising from the baseline
+      to 0/25/50/75/100% of pulse height over the shared AI-share bins; 2px
+      baseline ticks for no-activity dates; month-boundary labels retained;
+      weekday labels and quarter rails removed; direct legend and `<desc>`
+      stating window, peak, both encodings, and the publishable-only scope.
+- [x] Dashboard, standalone heatmap, and badge behavior/rendering unchanged;
+      heatmap and badge snapshots byte-identical; `VizStats`, `profile.json`,
+      ACE `0.3.0`, CLI, eight filenames, and `render_summary(stats, theme)`
+      untouched; width 830, theme tokens, local fonts, 12px floor,
+      deterministic bytes, recomputed card height with no dead band.
+- [x] Red-first pulse contract tests; summary snapshot family regenerated
+      only via `python tests/unit/test_render_summary.py` with zero residual
+      drift; version/release/scheduler contracts updated to 0.8.1.
 - [ ] Green CI on the candidate commit, independent Codex review, merge, tag,
       PyPI publish, staging deploy, and maintainer Profile refresh.
 
