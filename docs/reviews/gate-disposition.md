@@ -578,3 +578,30 @@ Scope: the postrelease commit C on `codex/v081-public-caller-c` from
 | Canonical wheel reproduction | Codex reproduced from final staged source using exact GitHub Actions runtime from official actions/python-versions release 3.12.14-31661455385: Ubuntu 24.04 x64 CPython 3.12.14 toolcache, build==1.4.3, hatchling==1.31.0 isolation, SOURCE_DATE_EPOCH=1786320000, clean origin/main archive plus staged diff; wheel SHA256 `a6c64bc9d504518743e3811e9a1314310f25275db802f367e944799af1f9d81a`; check_release_artifacts PASS |
 
 Disposition: **staged for Codex independent review**.
+
+## Node 24 workflow maintenance: actions/download-artifact v8.0.1 upgrade (2026-08-23; CANDIDATE)
+
+Scope: workflow maintenance on branch `codex/v081-download-artifact-v8` from
+`e6a2176` (main, merged PR #41 commit C `cb967d9`):
+- GitHub Profile run `32686342501` passed, but emitted the remaining forced-Node24 warning
+  because all first-party workflows still pinned `actions/download-artifact` v4.3.0 (`d3f86a106a0bac45b974a628896c90dbdf5c8093`, Node 20).
+- Upgraded `actions/download-artifact` from v4.3.0 (`d3f86a106a0bac45b974a628896c90dbdf5c8093`) to official verified immutable
+  v8.0.1 (`3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c`, Node 24) across all four first-party workflows:
+  `.github/workflows/ci.yml`, `.github/workflows/profile-refresh.yml`, `.github/workflows/publish.yml`, and `.github/workflows/staging-preview.yml`.
+- Maintained exact workflow contracts without altering names, paths, merge behavior, permissions, inputs, secrets,
+  package versions, outputs, or artifact semantics.
+- Updated exact-pin tests red-first: `tests/unit/test_profile_refresh_workflow.py` (`DOWNLOAD_ARTIFACT_PIN`) and
+  `tests/unit/test_staging_preview.py` (`test_workflow_uses_only_the_pinned_action_shas`) failed against baseline, green after pin updates.
+- No changes made to `README.md`, `README.zh-TW.md`, schema, version, renderers, or candidate manifest;
+  the unpublished `0.8.2` development candidate wheel digest `a6c64bc9d504518743e3811e9a1314310f25275db802f367e944799af1f9d81a` remains unchanged.
+- Post-merge Profile and public-caller repin remains outstanding: the live Profile caller currently pins pre-D commit `9c246d9`, so the remaining Node 20 deprecation warning disappears only after this change is merged and the Profile caller is repinned to the resulting immutable workflow commit.
+
+| Check | Result |
+|---|---|
+| Red-first contract tests & regressions | 2 tests proven failing red against baseline, green after implementation |
+| Focused test suite (workflow, parity, staging, release contract, scheduler CLI, launcher, recruiter card) | 171 passed, 16 skipped (Windows Python 3.14) |
+| Parity check | `python scripts/check_readme_parity.py` -> PASS |
+| Ruff & diff checks | `python -m ruff check src tests scripts` clean; `git diff --check` clean |
+| Candidate manifest parity | `promotion-candidate.json` digest `a6c64bc9...` untouched; `test_release_workflow_contract.py` PASS |
+
+Disposition: **staged for Codex independent review** (post-merge Profile and public-caller repin to the resulting immutable workflow commit remains outstanding).

@@ -4,6 +4,27 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## Node 24 workflow maintenance: download-artifact v8.0.1 upgrade (codex/v081-download-artifact-v8)
+
+- Post-merge `e6a2176c3815a03df40f7039f78feb1ff6b88400` (PR #41 commit C): GitHub Profile run
+  `32686342501` passed, but emitted the remaining forced-Node24 warning because all first-party
+  workflows still pinned `actions/download-artifact` v4.3.0 (`d3f86a106a0bac45b974a628896c90dbdf5c8093`, Node 20).
+- Upgraded `actions/download-artifact` across all four first-party workflows (`ci.yml`, `profile-refresh.yml`,
+  `publish.yml`, and `staging-preview.yml`) to official latest verified immutable v8.0.1
+  (`3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c`, Node 24). The live Profile still pins pre-D commit
+  `9c246d9`, so the warning disappears only after this change is merged and the Profile caller is
+  repinned to the resulting immutable workflow commit.
+- Preserved all workflow inputs, permissions, step names, artifact paths, merge behavior, secrets, package versions,
+  outputs, and security/artifact semantics without drift.
+- Exact-pin workflow test suites updated red-first: `tests/unit/test_profile_refresh_workflow.py` and
+  `tests/unit/test_staging_preview.py` proved failing against the v4.3.0 baseline, green after upgrade.
+- No README, schema, version, manifest, or renderer changes; unpublished `0.8.2` development candidate wheel
+  digest `a6c64bc9d504518743e3811e9a1314310f25275db802f367e944799af1f9d81a` remains unchanged.
+- Local evidence: focused test suites (workflow, parity, staging preview, release contract,
+  scheduler CLI, launcher, recruiter card) all PASS (171 passed, 16 skipped);
+  `check_readme_parity.py` PASS; `python -m ruff check src tests scripts` clean;
+  `git diff --check` clean.
+
 ## v0.8.1 final immutable public caller repin — commit C (codex/v081-public-caller-c)
 
 - Post-release commit B `9c246d95052264c24e7175cabd295951c5236efc` merged to `main`
