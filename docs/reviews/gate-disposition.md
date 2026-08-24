@@ -552,3 +552,29 @@ Codex staged-diff review blocker disposition:
 | Canonical wheel reproduction | Codex completed second CI-exact WSL reproduction: Python 3.12.13, build==1.4.3, hatchling==1.31.0 isolation, SOURCE_DATE_EPOCH=1786320000; wheel SHA256 `483ad35b14655d275a249c680a75f830f09b3d1920a59280350c7a0cf3128fb7`; check_release_artifacts PASS |
 
 Disposition: **staged for Codex independent review**.
+
+## v0.8.1 hosted pin commit C: immutable public caller repin to commit B (2026-08-23; CANDIDATE)
+
+Scope: the postrelease commit C on `codex/v081-public-caller-c` from
+`da4c08e` (main, merged PR #40 commit B `9c246d9`):
+- Public caller contract repinned to immutable commit B `9c246d95052264c24e7175cabd295951c5236efc`
+  with `ai-profile-cli==0.8.1` and `actions/upload-artifact` v7.0.1 (Node 24): `docs/templates/profile-refresh-caller.yml`,
+  `README.md`, `README.zh-TW.md`, `scripts/check_readme_parity.py`, `tests/unit/test_readme_parity.py`,
+  `tests/unit/test_profile_refresh_workflow.py`, and `docs/decisions/ADR-030-automation-layer.md`.
+- Stale commit-A pin assertions removed from the live contract (`COMMIT_B = "9c246d95052264c24e7175cabd295951c5236efc"`,
+  forbids `6a39ff4` in caller template) while historical evidence is retained.
+- Candidate manifest `docs/reviews/promotion-candidate.json` updated to the final rebuilt candidate wheel digest
+  `a6c64bc9d504518743e3811e9a1314310f25275db802f367e944799af1f9d81a` for unpublished `0.8.2` development candidate
+  (reproduced by Codex using the exact GitHub Actions runtime from official actions/python-versions release 3.12.14-31661455385:
+  Ubuntu 24.04 x64 CPython 3.12.14 toolcache, `build==1.4.3`, `hatchling==1.31.0` isolation, `SOURCE_DATE_EPOCH=1786320000`,
+  clean origin/main archive plus staged diff; `check_release_artifacts.py` PASS).
+
+| Check | Result |
+|---|---|
+| Red-first contract tests & regressions | 6 tests proven failing red against baseline, green after implementation |
+| Focused test suite (workflow, parity, staging, release contract, scheduler CLI, launcher, recruiter card) | 171 passed, 16 skipped (Windows Python 3.14) |
+| Parity check | `python scripts/check_readme_parity.py` -> PASS |
+| Ruff & diff checks | `python -m ruff check src tests scripts` clean; `git diff --check` clean |
+| Canonical wheel reproduction | Codex reproduced from final staged source using exact GitHub Actions runtime from official actions/python-versions release 3.12.14-31661455385: Ubuntu 24.04 x64 CPython 3.12.14 toolcache, build==1.4.3, hatchling==1.31.0 isolation, SOURCE_DATE_EPOCH=1786320000, clean origin/main archive plus staged diff; wheel SHA256 `a6c64bc9d504518743e3811e9a1314310f25275db802f367e944799af1f9d81a`; check_release_artifacts PASS |
+
+Disposition: **staged for Codex independent review**.
