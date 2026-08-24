@@ -514,7 +514,7 @@ def test_install_twice_is_idempotent(tmp_path, monkeypatch, fake_adapter):
     assert [call[0] for call in fake_adapter.calls].count("install") == 2
 
 
-def test_v080_status_and_reinstall_migrate_v07x_scheduler_config(
+def test_v081_status_and_reinstall_migrate_prior_scheduler_config(
     tmp_path, monkeypatch, fake_adapter
 ):
     home = _initialized_home(tmp_path / "home")
@@ -523,7 +523,7 @@ def test_v080_status_and_reinstall_migrate_v07x_scheduler_config(
     assert service.install(home, repo, "07:30").time == "07:30"
     config_path = home / "scheduler" / "config.json"
 
-    for readable_version in ("0.7.0", "0.7.1", "0.7.2"):
+    for readable_version in ("0.7.0", "0.7.1", "0.7.2", "0.8.0"):
         payload = json.loads(config_path.read_text(encoding="utf-8"))
         payload["installed_version"] = readable_version
         config_path.write_text(
@@ -537,9 +537,9 @@ def test_v080_status_and_reinstall_migrate_v07x_scheduler_config(
             == readable_version
         )
         assert service.install(home, repo, "08:31").time == "08:31"
-        assert service.read_scheduler_config(home).installed_version == "0.8.0"
+        assert service.read_scheduler_config(home).installed_version == "0.8.1"
 
-    for unsupported_version in ("0.6.1", "0.7.3", "0.8.1"):
+    for unsupported_version in ("0.6.1", "0.7.3", "0.8.2"):
         payload = json.loads(config_path.read_text(encoding="utf-8"))
         payload["installed_version"] = unsupported_version
         config_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -551,12 +551,44 @@ def test_v080_status_and_reinstall_migrate_v07x_scheduler_config(
 
 def test_scheduler_metadata_version_tracks_the_package_version():
     """v0.7.0 and v0.7.1 each wrote their own package version as
-    ``installed_version``; a v0.8.0 wheel must not keep stamping v0.7.2
+    ``installed_version``; a v0.8.1 wheel must not keep stamping v0.8.0
     metadata (written red-first against the un-bumped constant)."""
     import aiprofile
 
     assert service.SCHEDULER_VERSION == aiprofile.__version__
-    assert service.SCHEDULER_VERSION == "0.8.0"
+    assert service.SCHEDULER_VERSION == "0.8.1"
+
+
+def test_scheduler_version_docs_state_the_current_contract():
+    """The normative duplicates of the scheduler metadata contract —
+    ADR-030's status/read-set paragraphs and architecture.md's scheduler
+    section — must track the CODE's own constants: every readable prior
+    version named, writers emitting exactly SCHEDULER_VERSION, and no
+    stale 'writers emit' claim for a superseded version (v0.8.1 review
+    finding: both docs still said writers emit v0.8.0 after the bump).
+    Derived from `service` constants so a future bump fails here until
+    both docs move with it. Historical release records are out of scope."""
+    root = Path(__file__).resolve().parents[2]
+    adr = " ".join(
+        (root / "docs" / "decisions" / "ADR-030-automation-layer.md")
+        .read_text(encoding="utf-8")
+        .split()
+    )
+    arch = " ".join(
+        (root / "docs" / "architecture.md").read_text(encoding="utf-8").split()
+    )
+    current = service.SCHEDULER_VERSION
+    prior = sorted(service._READABLE_SCHEDULER_VERSIONS - {current})
+
+    assert f"tracks the current package (v{current}" in adr
+    assert f"writers always emit v{current}." in adr
+    assert adr.count("writers always emit v") == 1
+    for version in prior:
+        assert f"v{version}" in adr
+    readable_list = ", ".join(f"v{version}" for version in prior[:-1])
+    assert f"readers accept the unchanged {readable_list}, and v{prior[-1]} schema" in arch
+    assert f"the current v{current} form" in arch
+    assert arch.count("the current v") == 1  # no second, stale "current" claim
 
 
 def test_failed_reinstall_restores_previous_files_and_native_registration(

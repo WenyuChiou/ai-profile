@@ -4,7 +4,45 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## v0.8.0 hosted workflow pin — commit A merged, commit B in review
+## v0.8.1 Collaboration Pulse candidate — built and verified locally
+
+- Branch `codex/v081-collaboration-pulse` from `6b5511d` (main, released
+  v0.8.0). Summary-card-only redesign (ADR-032): the 84-cell 12-week matrix
+  becomes a static pulse signature — 84 chronological oldest-to-newest 6px
+  marks in 12 groups of seven with a wider structural group gap, neutral
+  pulse height 12/24/36/48px over the shared total-commit bins, accent fill
+  rising from the baseline to 0/25/50/75/100% of pulse height over the
+  shared AI-share bins, 2px baseline ticks for no-activity dates,
+  month-boundary labels retained, weekday labels and quarter rails removed,
+  direct one-line legend, `<desc>` stating window/peak/encodings/scope.
+  Dashboard, heatmap card, and badge unchanged; heatmap and badge snapshot
+  families byte-identical; `VizStats`, ACE `0.3.0`, CLI, privacy, and the
+  eight outputs untouched. Presentation-only version bump to 0.8.1;
+  scheduler metadata tracks the package (readers accept v0.7.0–v0.8.1).
+- Candidate wheel `ai_profile_cli-0.8.1-py3-none-any.whl` digest
+  `d525eef3…` (deterministic double-build byte-equal at
+  `SOURCE_DATE_EPOCH=1786320000`); `docs/reviews/promotion-candidate.json`
+  repinned, and the published v0.8.0 digest `9cc06f20…` joined
+  `RELEASED_WHEEL_SHA256` (closing the documented post-release drift gap).
+- Local evidence (2026-08-23): red-first pulse contract tests in
+  `tests/unit/test_calendar_band.py` / `test_recruiter_card.py` /
+  `test_signal_console.py`; summary snapshot family and README sample
+  assets regenerated only via `python tests/unit/test_render_summary.py`
+  with zero residual drift on rerun; Windows Python 3.14 full suite
+  **981 passed, 30 skipped**; Ruff and bilingual README parity clean;
+  `git diff --check` clean. Visual QA (synthetic sparse + real maintainer
+  aggregate, light/dark, 830/664px, 1x/2x): `docs/reviews/v0.8.1-visual-qa.md`.
+- Independent Codex staged-diff review round 1 (fingerprint `eac24546…`):
+  REQUEST CHANGES — three findings (scheduler-version doc parity, stale
+  commit-B status, DESIGN.md wording), all dispositioned red-first where
+  testable; the visual-QA record and the review-disposition section were
+  added in the same round as additional completion evidence, not reviewer
+  findings; see the v0.8.1 section of
+  `docs/reviews/gate-disposition.md`. Still open:
+  targeted Codex recheck, green CI on the candidate commit, merge, tag,
+  PyPI, staging deploy, Profile refresh.
+
+## v0.8.0 hosted workflow pin — commits A and B merged
 
 - Commit A (`d74a3ef`, PR #36) upgraded the hosted package contract: the
   reusable `.github/workflows/profile-refresh.yml` installs exactly
@@ -17,8 +55,9 @@ which is authoritative).
   `docs/templates/profile-refresh-caller.yml`, the test-suite `COMMIT_A`
   constant, both README guides, and ADR-030 now state that SHA with
   `ai-profile-cli==0.8.0`. Historical v0.7.0 release records and plan
-  evidence are unchanged. The maintainer Profile repository moves only after
-  commit B passes CI; Codex owns that separate repository.
+  evidence are unchanged. Commit B merged as PR #37: main run `32667422511`
+  passed green at merge commit `6b5511d`, the v0.8.1 branch baseline. The
+  maintainer Profile repository is owned by Codex, separately.
 - Commit B moves the current candidate wheel digest, because the README is
   `project.readme` and therefore wheel `METADATA`. PR #37 run `32665735830`
   passed Python 3.11-3.14 but failed the release-candidate build: the build
@@ -49,13 +88,14 @@ which is authoritative).
   failure, and it deliberately does not list `0.8.0`. Listing the published
   digest there would force the manifest back onto it and permanently red the
   `ci.yml` candidate job, which rebuilds and compares against that same
-  manifest. For v0.8.0 that guard is therefore inactive, and the real fix is
-  the next version bump: a post-release commit that changes wheel-affecting
-  files (the README is `project.readme`) should carry a new version rather
-  than re-authorize the released one. That bump closes both this gap and the
-  staging-preview pin above.
+  manifest. For v0.8.0 that guard was therefore inactive, and the real fix
+  was the next version bump: a post-release commit that changes
+  wheel-affecting files (the README is `project.readme`) should carry a new
+  version rather than re-authorize the released one. The v0.8.1 bump above
+  closed this gap (`9cc06f20…` now sits in `RELEASED_WHEEL_SHA256`); the
+  staging-preview pin above remains a v0.8.0 published-release record.
 
-## v0.8.0 Signal Console candidate — built and verified locally, not released
+## v0.8.0 Signal Console — released 2026-08-23 (PyPI wheel digest `9cc06f20…`)
 
 - Branch `codex/v080-signal-console` from `63c108d` (released v0.7.2 main).
   Coordinated redesign of the dashboard, summary card, heatmap card, and
@@ -85,9 +125,11 @@ which is authoritative).
   `.ai/v080-preview/` (task keep root, expires 2026-08-24).
 - Candidate wheel digest, WSL suite counts, Twine/artifact/smoke/dogfood
   results: recorded in `docs/reviews/gate-disposition.md` once the clean
-  Ubuntu git-clone build completes. Still open: green CI on the candidate
-  commit, independent Codex review, merge, tag, PyPI, staging deploy,
-  Profile refresh.
+  Ubuntu git-clone build completed. Subsequently released: PyPI serves the
+  v0.8.0 wheel digest `9cc06f20…` (pinned as published-release evidence in
+  the staging-preview workflow and release contract tests). Staging deploy
+  and maintainer Profile refresh on v0.8.0 are not recorded here — see the
+  ROADMAP's remaining v0.8.0 checkbox.
 
 ## v0.7.2 scheduler remote-sync candidate — released 2026-08-23
 

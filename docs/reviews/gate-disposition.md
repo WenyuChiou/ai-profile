@@ -464,3 +464,48 @@ its own clean clone and reproduces the pinned wheel digest.
 Disposition: **candidate only**. Release gates (PR CI on the candidate
 commit, independent review, merge, tag, publish, staging deploy, Profile
 refresh) remain open.
+
+## v0.8.1 Collaboration Pulse candidate self-verification + Codex staged-diff review (2026-08-23; CANDIDATE)
+
+Scope: the v0.8.1 candidate on `codex/v081-collaboration-pulse` from
+`6b5511d` (ADR-032): summary-card-only Collaboration Pulse redesign,
+red-first pulse contract tests, version bump to 0.8.1, scheduler metadata
+read-set, candidate manifest repin, released-digest guard closure for
+0.8.0, docs (ADR-032, DESIGN.md, .impeccable.md, READMEs, CHANGELOG,
+ROADMAP, progress, schema status, ADR-030/architecture scheduler-version
+parity). Dashboard, heatmap, and badge renderers untouched.
+
+| Check | Result |
+|---|---|
+| Red-first contract | rewritten `test_calendar_band.py` + updated `test_recruiter_card.py` / `test_signal_console.py` written against the v0.8.0 renderer (import/geometry failures), pass after implementation; scheduler-docs parity test written red against the stale ADR-030/architecture statements, green after the doc fix |
+| Windows Python 3.14 full suite | 981 passed, 30 skipped |
+| Ruff (`src tests scripts`), README parity, `git diff --check` | clean |
+| Sanctioned snapshot command | summary family + 2 README sample assets via `python tests/unit/test_render_summary.py`; rerun produces zero drift; heatmap/badge snapshots byte-identical; `summary_zero_*` byte-identical |
+| Visual QA | `docs/reviews/v0.8.1-visual-qa.md` — synthetic sparse and real maintainer aggregate, light/dark, 830/664px, 1x/2x, all clear |
+| Deterministic build, `SOURCE_DATE_EPOCH=1786320000` | temp-dir double builds byte-identical: wheel `d525eef3aa12018c90f92fa6b5d85733abd8470dcd1bf243b9d7f4717aa16fb5`, pinned in `docs/reviews/promotion-candidate.json`; the published v0.8.0 digest `9cc06f20…` now sits in `RELEASED_WHEEL_SHA256` |
+
+Independent Codex staged-diff review, round 1 (fingerprint
+`eac245469b0a3240baffb640559fb65e29547cb8`): **REQUEST CHANGES**, three
+findings, dispositioned as follows:
+
+1. Version parity — ADR-030 and architecture.md still stated the v0.8.0
+   scheduler write contract. FIXED red-first:
+   `test_scheduler_version_docs_state_the_current_contract` (derived from
+   the `service` constants) failed on the stale docs, both docs updated
+   (read v0.7.0–v0.8.0 plus current, emit v0.8.1), test green. Hosted
+   `profile-refresh.yml` / staging-preview published-v0.8.0 pins untouched.
+2. progress.md stale "commit B in review" — FIXED: PR #37 recorded merged
+   at `6b5511d` with green main run `32667422511`; historical digest
+   explanation preserved; the "next version bump" consequence paragraphs
+   now note v0.8.1 closed the released-digest gap.
+3. DESIGN.md extension points still said "flat daily timeline" — FIXED:
+   now names the Collaboration Pulse helpers.
+
+Additional completion evidence recorded in the same round (not reviewer
+findings): `docs/reviews/v0.8.1-visual-qa.md` (synthetic + captured real
+local aggregate; screenshots kept out of the repository) and this
+review-disposition section itself.
+
+Disposition: **candidate only**. Awaiting targeted Codex recheck of the
+updated staged diff, then green CI on the candidate commit, merge, tag,
+publish, staging deploy, and Profile refresh.

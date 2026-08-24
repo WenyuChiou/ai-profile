@@ -25,6 +25,39 @@ below.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-08-23 (Public Beta)
+
+### Changed
+
+- Redesign the summary card's daily block as the **Collaboration Pulse**
+  (ADR-032) — summary card only; dashboard, heatmap card, and badge are
+  unchanged. The 84-cell 12-week matrix becomes a static pulse signature:
+  the 84 published-window dates run oldest to newest as 6px
+  baseline-anchored marks in 12 groups of seven with a wider structural
+  group gap (a 7-day rhythm, never labelled as calendar weeks, no 84-cell
+  background grid). Neutral pulse height maps the existing total-commit
+  bins 1 / 2-4 / 5-7 / 8+ to 12/24/36/48px; the accent fill rises from the
+  baseline to 0/25/50/75/100% of the pulse height per existing AI-share
+  bin, so the share is positional as well as hued; a no-activity date is a
+  2px baseline tick. Month-boundary labels stay (derived only from the
+  published series); weekday labels and the quarter-window rails are
+  removed. Section label: `Daily collaboration pulse · 12-week published
+  window`; legend: `height = total commits · fill = AI-attributed share ·
+  publishable dates only`; the `<desc>` states the exact date window, peak
+  daily total, both encodings, and the publishable-only scope. Zero
+  attributed AI keeps a pure neutral pulse and is never presented as
+  human. Card width 830, theme tokens, local fonts, the 12px floor, the
+  exact unpublished-daily notice, and deterministic bytes are unchanged;
+  the card height recomputes deterministically (the pulse block is
+  shorter, so the card shrinks with no dead band).
+- Presentation-only release: `VizStats`, `profile.json`, the ACE schema
+  (`0.3.0`), the CLI, privacy policy, and the eight output filenames are
+  unchanged. Scheduler metadata tracks the package version (readers accept
+  v0.7.0–v0.8.1 `installed_version`; reinstall writes v0.8.1); the
+  snapshot family regenerated only via the sanctioned
+  `python tests/unit/test_render_summary.py`, with heatmap and badge
+  snapshots byte-identical.
+
 ## [0.8.0] - 2026-08-23 (Public Beta)
 
 ### Changed

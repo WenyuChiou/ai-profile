@@ -3,7 +3,7 @@ name: ai-profile visual system
 version: 0.2
 status: beta
 audience: maintainers, contributors, and design-aware agents
-source_of_truth: [docs/decisions/ADR-031-signal-console.md, docs/decisions/ADR-025-flat-evidence-ledger.md, docs/decisions/ADR-029-provider-ledger-only-rendering.md]
+source_of_truth: [docs/decisions/ADR-032-collaboration-pulse.md, docs/decisions/ADR-031-signal-console.md, docs/decisions/ADR-025-flat-evidence-ledger.md, docs/decisions/ADR-029-provider-ledger-only-rendering.md]
 themes: [github-light, github-dark, system]
 fonts: local-fallback-only
 network_assets: forbidden
@@ -129,27 +129,43 @@ must not recalculate or infer attribution.
 ## Signal Console
 
 The v0.8.0 Signal Console (ADR-031) keeps the flat ledger and the restrained
-editorial instrument rhythm of v0.6 (short rule + datum bar section markers,
-sparse quarter-window rails on the 12-week matrix — structural guides only,
-never a third statistic) and recomposes every surface around a console
-reading: a compact status line that labels `generated_on` as a snapshot, a
-metric strip with hairline separators and a shared baseline, a left-aligned
-wider matrix, and on the dashboard a provider toolbar, primary commit map,
-and evidence/provider sidebar. Tech feeling comes from information
-architecture, status treatment, precision alignment, typography, and data
-interaction. Banned: neon, glassmorphism, gradients, gradient text, oversized
-hero/title, decorative thin border + large shadow, thick side accent stripes,
-uppercase tracked labels, monospace-as-tech, and width/layout-property
-animation. The earlier research record is
-`docs/reviews/design-research-2026-08-04.md` (ADR-026); the v0.8.0 browser
-evidence is `docs/reviews/v0.8.0-visual-qa.md`.
+editorial instrument rhythm of v0.6 (short rule + datum bar section markers —
+structural guides only, never a third statistic) and recomposes every surface
+around a console reading: a compact status line that labels `generated_on` as
+a snapshot, a metric strip with hairline separators and a shared baseline,
+and on the dashboard a provider toolbar, primary commit map, and
+evidence/provider sidebar. Tech feeling comes from information architecture,
+status treatment, precision alignment, typography, and data interaction.
+Banned: neon, glassmorphism, gradients, gradient text, oversized hero/title,
+decorative thin border + large shadow, thick side accent stripes, uppercase
+tracked labels, monospace-as-tech, and width/layout-property animation. The
+earlier research record is `docs/reviews/design-research-2026-08-04.md`
+(ADR-026); the v0.8.0 browser evidence is `docs/reviews/v0.8.0-visual-qa.md`.
+
+## Collaboration Pulse (summary card daily block)
+
+v0.8.1 (ADR-032) replaces the summary card's 84-cell daily matrix with a
+static pulse signature — summary card only; the heatmap card remains the
+sole calendar-grid surface. The 84 published-window dates run oldest to
+newest as 6px baseline-anchored marks in 12 groups of seven with a wider
+structural group gap (a 7-day rhythm, never labelled as calendar weeks).
+Neutral (muted) pulse height carries the fixed total-commit bins at
+12/24/36/48px; the accent fill rises from the baseline to 0/25/50/75/100%
+of the pulse height per shared AI-share bin, so the share is positional as
+well as hued; a no-activity date is a 2px border-token baseline tick.
+Month-boundary labels stay (derived only from `stats.daily`); weekday
+labels and the quarter-window rails are gone. Legend, direct and one line:
+`height = total commits · fill = AI-attributed share · publishable dates
+only`. Zero attributed AI keeps the neutral pulse and is never presented
+as human.
 
 ## Extension points
 
 The renderer is intentionally composable through private pure functions:
 
-- summary: status-line header, hero cell, metric console cells, flat daily
-  timeline, provider row, evidence rail, footer, and section/rail helpers;
+- summary: status-line header, hero cell, metric console cells, the
+  Collaboration Pulse (mark, month-label, and legend helpers), provider
+  row, evidence rail, footer, and section helpers;
 - dashboard: status line, metric strip, provider toolbar, commit map,
   provider ledger, evidence panel, definitions disclosure, and footer.
 

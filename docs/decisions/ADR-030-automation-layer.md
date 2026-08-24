@@ -2,7 +2,8 @@
 
 - Status: Accepted for v0.7.0; Windows normalization amended in v0.7.1;
   clean remote-ahead fast-forward amended in v0.7.2; scheduler metadata
-  version tracks the v0.8.0 package (2026-08-10)
+  version tracks the current package (v0.8.1, 2026-08-23; previously
+  v0.8.0, 2026-08-10)
 - Deciders: maintainer
 - Supersedes: the assumption that multi-repository refresh and a reusable
   GitHub Action are future-only
@@ -77,10 +78,11 @@ Removal performs the same full XML ownership proof before deleting a
 same-name task; an absent task remains an idempotent no-op, while an
 unverifiable or altered task is retained for explicit operator resolution.
 
-The scheduler-config schema did not change in v0.7.1, v0.7.2, or v0.8.0.
-Readers accept exactly v0.7.0, v0.7.1, v0.7.2, and v0.8.0 metadata so an
-existing installation can be inspected and reinstalled in place; writers
-always emit v0.8.0. Earlier, unrelated, and future versions fail closed.
+The scheduler-config schema did not change in v0.7.1, v0.7.2, v0.8.0, or
+v0.8.1. Readers accept exactly v0.7.0, v0.7.1, v0.7.2, v0.8.0, and v0.8.1
+metadata so an existing installation can be inspected and reinstalled in
+place; writers always emit v0.8.1. Earlier, unrelated, and future versions
+fail closed.
 
 The launcher and scheduler state live below `AIPROFILE_HOME`, not inside the
 public Profile repository. On POSIX, a temporary Git index is confined inside

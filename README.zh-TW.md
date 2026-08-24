@@ -48,9 +48,11 @@ ledger 的 dashboard；
   </picture>
 </a>
 
-這張卡片呈現持續的 AI 協作（active AI days 與 12 週扁平活動矩陣）、
-跨 AI providers 的廣度，以及每個數字背後的明確 evidence 總數。它是根據
-宣告 Git evidence 的紀錄，不是技能評分。
+這張卡片呈現持續的 AI 協作（active AI days 與 12 週 collaboration pulse
+協作脈動——標記高度是當日 commits 總數、由基線向上的 accent 填色是當日
+AI-attributed 佔比，僅含可公開日期）、跨 AI providers 的廣度，以及每個
+數字背後的明確 evidence 總數。它是根據宣告 Git evidence 的紀錄，不是
+技能評分。
 
 ## 為什麼使用 ai-profile？
 

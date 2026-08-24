@@ -51,9 +51,10 @@ participation and evidence totals when the Git history declares AI activity.
 </a>
 
 The card shows sustained AI collaboration (active AI days and a 12-week
-flat activity matrix), breadth across AI providers, and the explicit evidence
-totals behind every number. It is a record of declared Git evidence, not a
-skill score.
+collaboration pulse — mark height is the day's total commits, the accent
+fill rising from the baseline is its AI-attributed share, publishable dates
+only), breadth across AI providers, and the explicit evidence totals behind
+every number. It is a record of declared Git evidence, not a skill score.
 
 ## Why ai-profile?
 

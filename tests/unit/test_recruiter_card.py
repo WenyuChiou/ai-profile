@@ -1,11 +1,11 @@
-"""v0.4.9 flat evidence-ledger summary card contract (ADR-025).
+"""Recruiter-facing summary card contract (ADR-025; pulse per ADR-032).
 
-Focused RED-first contract tests for the `AI Collaboration Record`
-redesign: the recruiter-facing section order, the semantically honest
-12-week flat timeline (bar height = total-commit bins, fill = AI-share
-bins, provider rows never contribute to height), the exact
-unpublished-daily message, the explicit non-exclusive provider note,
-and the summary-card type system.
+Focused RED-first contract tests for the `AI Collaboration Record`:
+the recruiter-facing section order, the semantically honest 12-week
+Collaboration Pulse (pulse height = total-commit bins, accent fill
+height = AI-share bins, provider rows never contribute to geometry),
+the exact unpublished-daily message, the explicit non-exclusive
+provider note, and the summary-card type system.
 
 Fixtures are built inline from `aiprofile.viz` dataclasses (never
 round-tripped through storage/aggregate), matching this repo's test
@@ -22,21 +22,20 @@ import xml.etree.ElementTree as ET
 import aiprofile
 from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.render import summary_svg
-from aiprofile.render._bins import _share_bin, _share_colors, _volume_bin
+from aiprofile.render._bins import _share_bin, _volume_bin
 from aiprofile.render.dashboard_html import render_dashboard
 from aiprofile.render.summary_svg import (
-    CAL_CELL_H,
-    CAL_CELL_W,
-    CAL_LABEL_TEXT,
     CAL_UNPUBLISHED_TEXT,
     FONT_STACK_DISPLAY,
     FONT_STACK_MONO,
     PROVIDER_NOTE_TEXT,
+    PULSE_HEIGHTS,
+    PULSE_LABEL_TEXT,
+    PULSE_MARK_W,
     TITLE_TEXT,
-    VOLUME_BAR_HEIGHTS,
-    _calendar_cell_position,
-    _calendar_grid_cells,
-    _day_cell_svg,
+    _pulse_day_cells,
+    _pulse_mark_svg,
+    _pulse_mark_x,
     render_summary,
 )
 from aiprofile.render.themes import THEMES
@@ -150,9 +149,9 @@ def test_card_title_is_ai_collaboration_record():
     assert "AI Collaboration Summary" not in svg
 
 
-def test_timeline_section_precedes_the_provider_ledger():
+def test_pulse_section_precedes_the_provider_ledger():
     svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
-    assert svg.index(CAL_LABEL_TEXT) < svg.index("Attributed commits by provider")
+    assert svg.index(PULSE_LABEL_TEXT) < svg.index("Attributed commits by provider")
     # Section headings use the shared quiet marker primitive rather than an
     # accent block, keeping accent color reserved for data marks.
     root = ET.fromstring(svg)
@@ -172,37 +171,42 @@ def test_timeline_section_precedes_the_provider_ledger():
         for node in root
         if node.tag.rsplit("}", 1)[-1] == "line"
     )
-    # The timeline is deliberately flat: every one of the 84 dates has a
-    # neutral track rectangle and no perspective polygon.
-    tracks = [
+    # The pulse renders one baseline-anchored mark per window date (a
+    # pulse or a 2px tick) — no 84-cell background grid, no polygons.
+    baseline = summary_svg.CAL_TOP + summary_svg.PULSE_BASELINE_Y
+    base_marks = [
         node
         for node in root
         if node.tag.rsplit("}", 1)[-1] == "rect"
-        and node.attrib.get("width") == str(CAL_CELL_W)
-        and node.attrib.get("height") == str(CAL_CELL_H)
+        and node.attrib.get("width") == str(PULSE_MARK_W)
+        and int(node.attrib["y"]) + int(node.attrib["height"]) == baseline
+        and node.attrib.get("fill") != THEMES["github-light"].accent
     ]
-    assert len(tracks) == summary_svg.CAL_WINDOW_DAYS
+    assert len(base_marks) == summary_svg.CAL_WINDOW_DAYS
     assert "<polygon" not in svg
 
 
 # ---------------------------------------------------------------------------
-# 2. Timeline bar height: DayCell.total_commits, fixed bins 0 / 1 / 2-4 / 5-7 / 8+.
+# 2. Pulse height: DayCell.total_commits, fixed bins 1 / 2-4 / 5-7 / 8+.
 # ---------------------------------------------------------------------------
 
 
-def _bar_height(cell, offset: int) -> int:
-    """Return the flat cell's encoded volume-bar height."""
-    _, _, cx, cy = _calendar_cell_position(offset)
-    svg = _day_cell_svg(cell, cx, cy, THEMES["github-light"])
-    heights = [int(node.attrib["height"]) for node in ET.fromstring(
-        f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>'
-    ) if node.tag.rsplit("}", 1)[-1] == "rect" and node.attrib.get("width") != str(CAL_CELL_W)]
-    return heights[-1]
+def _mark_rects(cell, offset: int = 0, baseline: int = 300) -> list[dict]:
+    svg = _pulse_mark_svg(cell, _pulse_mark_x(offset), baseline, THEMES["github-light"])
+    return [
+        node.attrib
+        for node in ET.fromstring(f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>')
+        if node.tag.rsplit("}", 1)[-1] == "rect"
+    ]
 
 
-def test_timeline_bar_height_uses_fixed_total_commit_bins():
-    assert VOLUME_BAR_HEIGHTS == (3, 6, 9, 12)
-    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
+def _pulse_height(cell, offset: int) -> int:
+    return int(_mark_rects(cell, offset)[0]["height"])
+
+
+def test_pulse_height_uses_fixed_total_commit_bins():
+    assert PULSE_HEIGHTS == (12, 24, 36, 48)
+    cells = _pulse_day_cells(FIXTURE_TIMELINE)
     for offset, total in (
         (OFFSET_ONE_COMMIT_ONE_PROVIDER, 1),
         (OFFSET_ZERO_AI, 3),
@@ -212,81 +216,90 @@ def test_timeline_bar_height_uses_fixed_total_commit_bins():
     ):
         cell = cells[offset]
         assert cell is not None and cell.total_commits == total
-        expected_h = VOLUME_BAR_HEIGHTS[_volume_bin(total)]
-        assert _bar_height(cell, offset) == expected_h
+        expected_h = PULSE_HEIGHTS[_volume_bin(total)]
+        assert _pulse_height(cell, offset) == expected_h
 
 
-def test_timeline_top_bin_saturates_like_the_heatmap():
-    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
+def test_pulse_top_bin_saturates_like_the_heatmap():
+    cells = _pulse_day_cells(FIXTURE_TIMELINE)
     at_cap = cells[OFFSET_AT_TOP_BIN]
     over_cap = cells[OFFSET_OVER_TOP_BIN]
-    assert _bar_height(at_cap, OFFSET_AT_TOP_BIN) == VOLUME_BAR_HEIGHTS[-1]
-    assert _bar_height(over_cap, OFFSET_OVER_TOP_BIN) == VOLUME_BAR_HEIGHTS[-1]
+    assert _pulse_height(at_cap, OFFSET_AT_TOP_BIN) == PULSE_HEIGHTS[-1]
+    assert _pulse_height(over_cap, OFFSET_OVER_TOP_BIN) == PULSE_HEIGHTS[-1]
 
 
-def test_provider_rows_never_contribute_to_timeline_bar_height():
+def test_provider_rows_never_contribute_to_pulse_geometry():
     """A one-commit multi-provider day must render byte-identically to a
-    one-commit single-provider day at the same grid position: only
-    total_commits and the ai/total share may influence the bar."""
-    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
+    one-commit single-provider day at the same position: only
+    total_commits and the ai/total share may influence the mark."""
+    cells = _pulse_day_cells(FIXTURE_TIMELINE)
     single = cells[OFFSET_ONE_COMMIT_ONE_PROVIDER]
     multi = cells[OFFSET_ONE_COMMIT_TWO_PROVIDERS]
     assert len(single.counts) == 1 and len(multi.counts) == 2
     for theme in THEMES.values():
-        assert _day_cell_svg(single, 400, 300, theme) == _day_cell_svg(multi, 400, 300, theme)
+        assert _pulse_mark_svg(single, 400, 300, theme) == _pulse_mark_svg(
+            multi, 400, 300, theme
+        )
 
 
-def test_day_cell_is_flat_not_a_provider_stack():
-    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
-    for offset in (OFFSET_ONE_COMMIT_TWO_PROVIDERS, OFFSET_AT_TOP_BIN, OFFSET_ZERO_AI):
-        svg = _day_cell_svg(cells[offset], 400, 300, THEMES["github-light"])
-        # Exactly two rectangles: one neutral track and one data bar.
+def test_pulse_mark_is_flat_not_a_provider_stack():
+    cells = _pulse_day_cells(FIXTURE_TIMELINE)
+    # A partial-share day: exactly two rectangles (neutral pulse + accent
+    # fill). A zero-AI day: exactly one neutral rectangle, no fill.
+    for offset in (OFFSET_ONE_COMMIT_TWO_PROVIDERS, OFFSET_PARTIAL_SHARE):
+        svg = _pulse_mark_svg(cells[offset], 400, 300, THEMES["github-light"])
         assert svg.count("<rect") == 2
         assert "<polygon" not in svg
+    zero_svg = _pulse_mark_svg(cells[OFFSET_ZERO_AI], 400, 300, THEMES["github-light"])
+    assert zero_svg.count("<rect") == 1
 
 
 # ---------------------------------------------------------------------------
-# 3. Timeline fill hue: the heatmap's fixed AI-share bins, from ai/total.
+# 3. Accent fill height: the heatmap's fixed AI-share bins, from ai/total,
+#    spatially mapped to 0/25/50/75/100% of the pulse height.
 # ---------------------------------------------------------------------------
 
 
-def _cell_fill(cell) -> str:
-    svg = _day_cell_svg(cell, 400, 300, THEMES["github-light"])
-    fills = re.findall(r'fill="([^"]+)"', svg)
-    return fills[-1]  # the data bar is drawn after the neutral track
-
-
-def test_timeline_fill_hue_uses_the_heatmap_share_bins():
+def test_accent_fill_height_uses_the_heatmap_share_bins():
     theme = THEMES["github-light"]
-    colors = _share_colors(theme)
-    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
+    cells = _pulse_day_cells(FIXTURE_TIMELINE)
+
     zero_ai = cells[OFFSET_ZERO_AI]
     assert zero_ai.ai_commits == 0
-    assert _cell_fill(zero_ai) == colors[0]
-    assert colors[0].lower() == theme.muted.lower()
+    rects = _mark_rects(zero_ai, OFFSET_ZERO_AI)
+    assert len(rects) == 1 and rects[0]["fill"] == theme.muted  # no accent, never Human
 
     full_ai = cells[OFFSET_AT_TOP_BIN]
     assert full_ai.ai_commits == full_ai.total_commits
-    assert _cell_fill(full_ai) == colors[4]
-    assert colors[4].lower() == theme.accent.lower()
+    rects = _mark_rects(full_ai, OFFSET_AT_TOP_BIN)
+    assert rects[1]["fill"] == theme.accent
+    assert int(rects[1]["height"]) == int(rects[0]["height"])  # 100% of pulse height
 
-    partial = cells[OFFSET_PARTIAL_SHARE]
-    assert _cell_fill(partial) == colors[_share_bin(2, 6)] == colors[2]
+    partial = cells[OFFSET_PARTIAL_SHARE]  # 2 of 6 -> share bin 2 -> 50%
+    assert _share_bin(2, 6) == 2
+    rects = _mark_rects(partial, OFFSET_PARTIAL_SHARE)
+    assert int(rects[1]["height"]) * 2 == int(rects[0]["height"])
 
 
 def test_zero_attributed_ai_day_is_visible_but_never_called_human():
-    """The whole-rhythm timeline shows a day with zero attributed AI
-    commits as a neutral bar (ADR-022 supersedes the AI-only band).
+    """The whole-rhythm pulse shows a day with zero attributed AI
+    commits as a neutral pulse (ADR-022 supersedes the AI-only band).
     Such a day is NOT provably human — `compute_daily_commit_totals`
     counts unattributed (unknown) commits as well as explicit Human-Only
     declarations in total_commits — so the card must render it without
     labelling any of it human."""
     svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
-    cells = _calendar_grid_cells(FIXTURE_TIMELINE)
-    _, _, cx, cy = _calendar_cell_position(OFFSET_ZERO_AI)
+    cells = _pulse_day_cells(FIXTURE_TIMELINE)
     band_top = summary_svg._calendar_top(FIXTURE_TIMELINE)
+    baseline = band_top + summary_svg.PULSE_BASELINE_Y
     assert (
-        _day_cell_svg(cells[OFFSET_ZERO_AI], cx, band_top + cy, THEMES["github-light"]) in svg
+        _pulse_mark_svg(
+            cells[OFFSET_ZERO_AI],
+            _pulse_mark_x(OFFSET_ZERO_AI),
+            baseline,
+            THEMES["github-light"],
+        )
+        in svg
     )
     # Unknown/unattributed is never presented as human anywhere on the card.
     assert "Unattributed commits" in svg
@@ -381,5 +394,5 @@ def test_dashboard_h1_matches_the_summary_card_title():
     assert "Show the work behind the numbers." not in html
 
 
-def test_runtime_version_is_0_8_0_candidate():
-    assert aiprofile.__version__ == "0.8.0"
+def test_runtime_version_is_0_8_1():
+    assert aiprofile.__version__ == "0.8.1"
