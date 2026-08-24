@@ -227,7 +227,7 @@ def test_workflow_uses_only_the_pinned_action_shas():
             "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
             "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
             "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+            "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
             "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b",
             "actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa",
             "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
