@@ -470,7 +470,7 @@ versioned COM round trips. Registered principal normalization must match the
 current process-token SID. Any other value, setting, or principal is rejected.
 The same proof precedes native removal, so an unverifiable same-name task is
 never deleted. Scheduler-config readers accept the unchanged v0.7.0, v0.7.1,
-v0.7.2, and v0.8.0 schema for in-place migration and the current v0.8.1 form;
+v0.7.2, v0.8.0, and v0.8.1 schema for in-place migration and the current v0.8.2 form;
 successful installation always
 rewrites current metadata, while unrelated or future versions fail closed.
 Launchd accepts only the exact

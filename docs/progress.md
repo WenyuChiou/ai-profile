@@ -4,6 +4,47 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## v0.8.1 public caller contract & upload-artifact v7.0.1 upgrade — commit B (codex/v081-public-caller-b)
+
+- Post-release commit B completes the v0.8.1 hosted pin: repins the public
+  caller contract to immutable commit A `6a39ff46e2716f2c30385c53419b6b25c2790ec5`,
+  which merged to `main` as `8b8a543aa43281bb554daf4d0245ee63bfe8cd8c` (PR #39).
+  The maintainer Profile pinned to commit A, refreshed successfully, deployed
+  Pages, and a second no-change run verified idempotency at the same SHA.
+- `docs/templates/profile-refresh-caller.yml` now pins `uses:` to commit A
+  `6a39ff46e2716f2c30385c53419b6b25c2790ec5` and hardcodes `ai-profile-cli==0.8.1`.
+  `README.md` and `README.zh-TW.md` state the commit A SHA with `ai-profile-cli==0.8.1`;
+  `scripts/check_readme_parity.py` and `tests/unit/test_readme_parity.py` verify
+  bilingual contract parity; `tests/unit/test_profile_refresh_workflow.py` asserts
+  `COMMIT_A`, the `ai-profile-cli==0.8.1` contract, and forbids stale v0.8.0/v0.7.0
+  pins.
+- Upgraded `actions/upload-artifact` from v4.6.2 (`ea165f8d65b6e75b540449e92b4886f43607fa02`,
+  Node 20) to official verified immutable v7.0.1 (`043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`,
+  Node 24) across all four first-party workflows (`ci.yml`, `profile-refresh.yml`,
+  `publish.yml`, `staging-preview.yml`), resolving the Node 20 deprecation warning
+  surfaced in GitHub run 32681870707 while preserving all workflow inputs,
+  permissions, and security semantics. Workflow pin test suites updated.
+- Staging-preview checkout remediation: `.github/workflows/staging-preview.yml`
+  build job now pins `ref: 49e574b0ce80eef14cf38a20b654d03e9a50538c` (the immutable
+  v0.8.1 release commit on `main`), ensuring manual staging runs from `main` check
+  out and verify the published v0.8.1 release rather than unreleased development bytes
+  from moving `main` HEAD. Guarded by regression test in `tests/unit/test_staging_preview.py`.
+- Wheel-digest lifecycle resolution: editing `README.md` changes `project.readme`
+  and therefore wheel `METADATA`. Released v0.8.1 must stay pinned to its canonical
+  published digest (`1faceac31ac7d9c3a99e3e4678bdfb725f73341e89e5847dc6a578ed8a6bbff9`)
+  in `RELEASED_WHEEL_SHA256["0.8.1"]` without authorizing a second 0.8.1 wheel or
+  weakening the released-digest guard. The smallest sound coherent transition is to
+  advance the development version to `0.8.2` in `pyproject.toml`,
+  `src/aiprofile/__init__.py`, and `SCHEDULER_VERSION` (readers accept v0.7.0–v0.8.2,
+  writers emit 0.8.2; ADR-030 and architecture.md updated). `docs/reviews/promotion-candidate.json`
+  authorizes the candidate wheel digest
+  `483ad35b14655d275a249c680a75f830f09b3d1920a59280350c7a0cf3128fb7` for `0.8.2`
+  (unpublished development candidate; independently reproduced by Codex with exact CI tooling).
+- Local evidence: focused test suites (workflow, parity, staging preview, release
+  contract, scheduler CLI, launcher, recruiter card) all PASS (171 passed, 16 skipped);
+  `check_readme_parity.py` PASS; `python -m ruff check src tests scripts` clean;
+  `git diff --check` clean.
+
 ## v0.8.1 Collaboration Pulse candidate — built and verified locally
 
 - Branch `codex/v081-collaboration-pulse` from `6b5511d` (main, released

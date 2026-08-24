@@ -523,7 +523,7 @@ def test_v081_status_and_reinstall_migrate_prior_scheduler_config(
     assert service.install(home, repo, "07:30").time == "07:30"
     config_path = home / "scheduler" / "config.json"
 
-    for readable_version in ("0.7.0", "0.7.1", "0.7.2", "0.8.0"):
+    for readable_version in ("0.7.0", "0.7.1", "0.7.2", "0.8.0", "0.8.1"):
         payload = json.loads(config_path.read_text(encoding="utf-8"))
         payload["installed_version"] = readable_version
         config_path.write_text(
@@ -537,9 +537,9 @@ def test_v081_status_and_reinstall_migrate_prior_scheduler_config(
             == readable_version
         )
         assert service.install(home, repo, "08:31").time == "08:31"
-        assert service.read_scheduler_config(home).installed_version == "0.8.1"
+        assert service.read_scheduler_config(home).installed_version == "0.8.2"
 
-    for unsupported_version in ("0.6.1", "0.7.3", "0.8.2"):
+    for unsupported_version in ("0.6.1", "0.7.3", "0.8.3"):
         payload = json.loads(config_path.read_text(encoding="utf-8"))
         payload["installed_version"] = unsupported_version
         config_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -550,13 +550,13 @@ def test_v081_status_and_reinstall_migrate_prior_scheduler_config(
 
 
 def test_scheduler_metadata_version_tracks_the_package_version():
-    """v0.7.0 and v0.7.1 each wrote their own package version as
-    ``installed_version``; a v0.8.1 wheel must not keep stamping v0.8.0
-    metadata (written red-first against the un-bumped constant)."""
+    """v0.7.0, v0.7.1, and v0.8.1 each wrote their own package version as
+    ``installed_version``; a v0.8.2 development build must stamp v0.8.2
+    metadata."""
     import aiprofile
 
     assert service.SCHEDULER_VERSION == aiprofile.__version__
-    assert service.SCHEDULER_VERSION == "0.8.1"
+    assert service.SCHEDULER_VERSION == "0.8.2"
 
 
 def test_scheduler_version_docs_state_the_current_contract():

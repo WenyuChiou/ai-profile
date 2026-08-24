@@ -267,8 +267,8 @@ commitment，不保存 URL 本身。
    **Actions → Daily ai-profile refresh → Run workflow** 手動執行一次。
 
 Template 每天 05:37 UTC 執行，也支援手動 dispatch。
-它以 commit `d74a3efdf27310162fc8c54b29b8e2782ea66b46`
-固定 reusable workflow，安裝確切的 `ai-profile-cli==0.8.0`，
+它以 commit `6a39ff46e2716f2c30385c53419b6b25c2790ec5`
+固定 reusable workflow，安裝確切的 `ai-profile-cli==0.8.1`，
 並在 scan 前拒絕非公開來源。Pages 只部署該次執行產生的
 確切 `published-sha`。Template 只使用 `GITHUB_TOKEN`，不提供 PAT fallback。
 GitHub-hosted automation 不是本機優先處理：

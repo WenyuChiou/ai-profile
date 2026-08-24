@@ -80,14 +80,14 @@ def test_candidate_manifest_matches_project_version_and_is_a_sha256():
     assert manifest["source_date_epoch"] == 1786320000
 
 
-def test_candidate_manifest_pins_the_released_v0_8_1_digest_exactly():
-    # v0.8.1 is published: the manifest must authorize exactly the released
-    # canonical Ubuntu wheel digest — the guard PR #34 introduced, now
-    # active for the current version (unlike the documented v0.8.0 gap).
+def test_candidate_manifest_pins_released_digest_or_unreleased_lifecycle():
+    # When manifest names a released version, it must authorize exactly the released
+    # canonical Ubuntu wheel digest; when it names an unreleased development version
+    # (v0.8.2), it must NOT reuse any released digest.
     manifest = _candidate_manifest()
     import aiprofile
 
-    assert manifest["version"] == aiprofile.__version__ == "0.8.1"
+    assert manifest["version"] == aiprofile.__version__ == "0.8.2"
     released = RELEASED_WHEEL_SHA256.get(manifest["version"])
     if released is not None:
         assert manifest["wheel_sha256"] == released

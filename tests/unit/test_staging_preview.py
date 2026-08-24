@@ -38,6 +38,10 @@ PINNED_WHEEL_SHA256 = "1faceac31ac7d9c3a99e3e4678bdfb725f73341e89e5847dc6a578ed8
 #: not packaging bytes: it must stay equal to the candidate manifest, because
 #: any renderer change has to re-pin the workflow and the manifest together.
 PINNED_DASHBOARD_SHA256 = "b9c7208ee1bece4a0a6cd39ea1b569a55ed30a78d14d85cdb74ee52b89b4cc48"
+#: The immutable v0.8.1 release/tag commit on main. The manual staging preview
+#: builds from this commit rather than moving main HEAD so that manual runs from
+#: main continue to reproduce and verify the released v0.8.1 package.
+V081_RELEASE_COMMIT = "49e574b0ce80eef14cf38a20b654d03e9a50538c"
 
 _FAKE_WHEEL_BYTES = b"deterministic fake wheel bytes for staging preview tests\n"
 
@@ -222,7 +226,7 @@ def test_workflow_uses_only_the_pinned_action_shas():
         [
             "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
             "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
             "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
             "actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b",
             "actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa",
@@ -265,13 +269,16 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
         )
     )
 
-    # v0.8.1 is released and the manifest already authorizes the same
-    # canonical digest, so manifest and workflow pin agree exactly again.
-    # The dashboard digest is renderer output and must also agree.
+    # The workflow's hardcoded wheel digest is the published v0.8.1 release,
+    # kept as historical evidence; the manifest tracks the current candidate
+    # build and may move past it. A shape check is enough here because the real
+    # backstop for `wheel_sha256` is the ci.yml candidate job, which rebuilds the
+    # wheel on every push and PR and fails on any mismatch with this same manifest.
+    # The dashboard digest is renderer output, so it must still agree with the
+    # manifest.
     assert re.fullmatch(r"[0-9a-f]{64}", manifest["wheel_sha256"])
-    assert manifest["wheel_sha256"] == PINNED_WHEEL_SHA256
     assert manifest["dashboard_sha256"] == PINNED_DASHBOARD_SHA256
-    assert manifest["version"] == "0.8.1"
+    assert manifest["version"] == "0.8.2"
     assert text.count(PINNED_WHEEL_SHA256) == 3  # artifact check + both job boundaries
     assert "--expected-version 0.8.1" in text
     assert 'manifest["package_version"] == "0.8.1"' in text
@@ -312,3 +319,18 @@ def test_fixture_description_never_claims_human_only():
     text = SCRIPT.read_text(encoding="utf-8")
     assert "human-only" not in text.lower()
     assert "zero-attributed-AI day" in text
+
+
+def test_workflow_build_checks_out_the_immutable_v0_8_1_release_commit():
+    """The build job must checkout the immutable v0.8.1 release commit
+    so that manual staging runs from main consume the released v0.8.1 source
+    and package contract rather than unreleased development bytes from main."""
+    text = _workflow_text()
+    build = _job_block(text, "build")
+    match = re.search(
+        r"actions/checkout@[^\n]*\n\s+with:\s*\n\s+ref:\s*([0-9a-f]{40})",
+        build,
+    )
+    assert match is not None, "build checkout must specify an immutable 40-hex ref"
+    assert match.group(1) == V081_RELEASE_COMMIT
+    assert f"ref: {V081_RELEASE_COMMIT}" in build
