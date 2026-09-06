@@ -27,7 +27,7 @@ from .summary_svg import FONT_STACK, _pct_label, _text_width
 from .themes import Theme
 
 BADGE_HEIGHT = 24
-BADGE_RADIUS = 4
+BADGE_RADIUS = 2
 BADGE_FONT_SIZE = 11
 BADGE_PAD_X = 8
 BADGE_LABEL_TEXT = "AI-assisted"
@@ -90,6 +90,8 @@ def render_badge(stats: VizStats, theme: Theme) -> str:
             "</g>",
             f'<rect x="{mark_x}" y="{mark_y}" width="{BADGE_MARK_SIZE}"'
             f' height="{BADGE_MARK_SIZE}" rx="1" fill="{theme.accent}"/>',
+            f'<rect x="{mark_x + 1}" y="{mark_y + 1}" width="2"'
+            f' height="2" fill="#ffffff" opacity="0.6"/>',
             f'<rect x="0.5" y="0.5" width="{width - 1}" height="{BADGE_HEIGHT - 1}"'
             f' rx="{BADGE_RADIUS}" fill="none" stroke="{theme.border}" stroke-width="1"/>',
             f'<text x="{label_x}" y="{BADGE_TEXT_Y}" font-family="{FONT_STACK}"'

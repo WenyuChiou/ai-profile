@@ -8,12 +8,35 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "release_smoke.py"
 SPEC = importlib.util.spec_from_file_location("release_smoke", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 smoke = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(smoke)
+
+
+@pytest.mark.parametrize("missing", [None, 'id="workstationsSection"', "Mining Workstations"])
+def test_packaged_dashboard_contract_matches_current_renderer(tmp_path, missing):
+    from aiprofile.render.dashboard_html import render_dashboard
+
+    fixture_spec = importlib.util.spec_from_file_location(
+        "staging_fixture", ROOT / "scripts" / "render_staging_dashboard.py"
+    )
+    assert fixture_spec is not None and fixture_spec.loader is not None
+    fixture = importlib.util.module_from_spec(fixture_spec)
+    fixture_spec.loader.exec_module(fixture)
+    html = render_dashboard(fixture.build_fixture())
+    if missing:
+        html = html.replace(missing, "removed")
+    (tmp_path / "dashboard.html").write_text(html, encoding="utf-8")
+    if missing:
+        with pytest.raises(smoke.SmokeFailure, match="missing contract token"):
+            smoke._check_dashboard(tmp_path)
+    else:
+        smoke._check_dashboard(tmp_path)
 
 
 def _profile(directory: Path, generated_on: str) -> None:

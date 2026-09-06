@@ -172,14 +172,14 @@ def _cell_rects(daily: tuple[DayCell, ...], theme: Theme) -> str:
         y = HM_GRID_TOP + row * HM_STEP
         cell = by_date.get(day.isoformat())
         if cell is None:
-            parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=theme.bar_track, rx=3))
+            parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=theme.bar_track, rx=1))
         else:
             fill = _cell_fill(
                 theme,
                 _share_bin(cell.ai_commits, cell.total_commits),
                 _volume_bin(cell.total_commits),
             )
-            parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=fill, rx=3))
+            parts.append(_rect(x, y, HM_CELL, HM_CELL, fill=fill, rx=1))
         day += datetime.timedelta(days=1)
     return "\n".join(parts)
 
@@ -239,7 +239,7 @@ def _legend(theme: Theme) -> str:
     x += 50
     for volume_bin, label in enumerate(HM_VOLUME_LABELS):
         parts.append(
-            _rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=_cell_fill(theme, 0, volume_bin), rx=3)
+            _rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=_cell_fill(theme, 0, volume_bin), rx=1)
         )
         x += HM_CELL + 4
         parts.append(_text(x, y_text, label, size=HM_LABEL_SIZE, fill=theme.muted))
@@ -250,7 +250,7 @@ def _legend(theme: Theme) -> str:
     parts.append(_text(x, y_text, "0%", size=HM_LABEL_SIZE, fill=theme.muted))
     x += 20
     for color in colors:
-        parts.append(_rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=color, rx=3))
+        parts.append(_rect(x, HM_LEGEND_Y, HM_CELL, HM_CELL, fill=color, rx=1))
         x += HM_CELL + 3
     x += 5
     parts.append(_text(x, y_text, "100%", size=HM_LABEL_SIZE, fill=theme.muted))

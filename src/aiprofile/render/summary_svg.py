@@ -50,9 +50,9 @@ import datetime
 from xml.sax.saxutils import escape
 
 from ..viz import DayCell, ProviderRow, Totals, VizStats
-from ._bins import _share_bin, _volume_bin
 from .brand import BRAND, BrandSpec
-from .themes import Theme
+from .themes import THEMES, Theme
+from .voxel_art import actor_body
 
 # Mirrors aiprofile.schema.vocab.UNRECOGNIZED_PROVIDER verbatim. The
 # render-layer isolation boundary (architecture.md section 2) forbids
@@ -97,7 +97,7 @@ MAX_PROVIDER_ROWS = 6
 # label, never a freshness or live-data claim).
 HEADER_TEXT_Y = 36
 GLYPH_CX = 32
-GLYPH_CY = 32
+GLYPH_CY = 31
 TITLE_X = 48
 TITLE_FONT_SIZE = 18
 DIVIDER1_Y = 56
@@ -141,7 +141,7 @@ ROW_HEIGHT = 28
 # start; the name shifts right to make room.
 GLYPH_TILE_X = PADDING  # 24 - the old NAME_X
 GLYPH_TILE_SIZE = 20
-GLYPH_TILE_RADIUS = 4
+GLYPH_TILE_RADIUS = 2
 GLYPH_TILE_Y_INSET = (ROW_HEIGHT - GLYPH_TILE_SIZE) // 2  # 4 - centers the tile in the row
 GLYPH_RENDER_SIZE = 14  # glyph drawn at 14x14 inside the 20x20 tile
 GLYPH_VIEWBOX_SIZE = 24  # BrandSpec.path is authored in a 24x24 viewBox
@@ -195,7 +195,7 @@ PANEL_PAD_Y = 16
 PANEL_HEIGHT = 104
 EVIDENCE_CHIP_HEIGHT = 22
 EVIDENCE_CHIP_PAD_X = 8
-EVIDENCE_CHIP_RADIUS = 4
+EVIDENCE_CHIP_RADIUS = 2
 EVIDENCE_FONT_SIZE = 12
 EVIDENCE_LABEL_SIZE = 12
 FOOTER_FONT_SIZE = 12
@@ -254,9 +254,10 @@ ZERO_BODY_BOTTOM = 164
 # exactly.
 # ---------------------------------------------------------------------------
 
-CAL_GAP_BELOW = 20  # pulse block bottom -> provider-table label block
+CAL_GAP_BELOW = 20  # voxel block bottom -> provider-table label block
 CAL_LABEL_BASELINE_Y = 14  # local y (band-relative) of the label's text baseline
-PULSE_LABEL_TEXT = "Daily collaboration pulse · 12-week published window"
+VOXEL_LABEL_TEXT = "Voxel collaboration landscape · 84-day published window"
+PULSE_LABEL_TEXT = VOXEL_LABEL_TEXT
 
 #: The exact honest message for a profile whose headline totals are
 #: nonzero but whose daily series is unpublished (ADR-022).
@@ -269,66 +270,112 @@ CAL_NOTICE_HEIGHT = 44  # total footprint of the unpublished-daily notice
 #: on the 4px scale.
 CAL_TOP = METRIC_STRIP_BOTTOM + 24
 
-# Month-boundary labels sit in their own row between the band header and
-# the pulse (mechanics retained from round D3 P2). PULSE_TOP_Y (below)
-# derives from these so bumping either constant re-flows the whole
-# band/legend/PULSE_BLOCK_HEIGHT automatically.
-CAL_MONTH_LABEL_SIZE = 12
-CAL_MONTH_LABEL_BASELINE_Y = 30  # local y of the month-label row's text baseline
-CAL_MONTH_LABEL_GRID_GAP = 10  # month-label baseline -> pulse area top
+VOXEL_TERRACES = 3
+VOXEL_TERRACE_DAYS = 28
+CAL_WINDOW_DAYS = VOXEL_TERRACES * VOXEL_TERRACE_DAYS  # 84
+VOXEL_CHUNKS = VOXEL_TERRACES
+VOXEL_CHUNK_DAYS = VOXEL_TERRACE_DAYS
 
-PULSE_GROUPS = 12
-PULSE_GROUP_DAYS = 7
-CAL_WINDOW_DAYS = PULSE_GROUPS * PULSE_GROUP_DAYS  # 84 -- the pulse's OWN
-# newest-anchored slice of the (D4: 365-day) viz.DAILY_WINDOW_DAYS series;
-# gate-17 L-01
+VOXEL_TERRACE_H = 176
+VOXEL_TERRACE_ROW_GAP = 12
+VOXEL_HEADER_H = 56
 
-PULSE_MARK_W = 6  # activity mark width
-PULSE_MARK_GAP = 2  # gap between marks inside a 7-day group
-PULSE_GROUP_GAP = 10  # wider structural gap between the 12 groups
-PULSE_GROUP_W = PULSE_GROUP_DAYS * PULSE_MARK_W + (PULSE_GROUP_DAYS - 1) * PULSE_MARK_GAP  # 54
-PULSE_GROUP_PITCH = PULSE_GROUP_W + PULSE_GROUP_GAP  # 64
-#: The pulse is left-aligned on the card margin (ADR-031 precision
-#: alignment; the v0.8.0 weekday gutter is gone with the weekday labels).
+PULSE_GROUPS = VOXEL_TERRACES
+PULSE_GROUP_DAYS = VOXEL_TERRACE_DAYS
+
+PULSE_MARK_W = 8
+PULSE_MARK_GAP = 2
+PULSE_GROUP_GAP = 14
+PULSE_GROUP_W = 708
+PULSE_GROUP_PITCH = 722
 PULSE_X = PADDING
-PULSE_WIDTH = PULSE_GROUPS * PULSE_GROUP_PITCH - PULSE_GROUP_GAP  # 758
-
-#: Fixed neutral pulse heights per volume bin (ADR-032): 1 -> 12px,
-#: 2-4 -> 24px, 5-7 -> 36px, 8+ -> 48px. Indexed by `_bins._volume_bin`,
-#: which shares the exact thresholds with the heatmap card. A documented
-#: saturating top bin, not a silent clip: one outlier day cannot dwarf the
-#: window or blow the card's fixed geometry budget. Every entry is a
-#: multiple of PULSE_SHARE_LEVELS so quarter fills stay exact integers.
-PULSE_HEIGHTS = (12, 24, 36, 48)
-PULSE_MAX_HEIGHT = PULSE_HEIGHTS[-1]
-
-#: `_bins._share_bin` levels (0..4) map to 0/25/50/75/100% of the pulse
-#: height: fill_height = pulse_height * share_bin // PULSE_SHARE_LEVELS.
-PULSE_SHARE_LEVELS = 4
-
-#: A no-activity date renders only this 2px baseline tick.
+PULSE_WIDTH = 758
 PULSE_TICK_H = 2
+PULSE_BASELINE_Y = 108
+CAL_MONTH_LABEL_SIZE = 12
+CAL_MONTH_LABEL_BASELINE_Y = 30
+CAL_MONTH_LABEL_GRID_GAP = 10
 
-#: Local (band-relative) y where the pulse area starts. Local y=0 is the
-#: very top of the whole band; the label and month row sit above the marks.
-PULSE_TOP_Y = CAL_MONTH_LABEL_BASELINE_Y + CAL_MONTH_LABEL_GRID_GAP  # 40
-#: The shared baseline every mark bottom-anchors on (band-relative).
-PULSE_BASELINE_Y = PULSE_TOP_Y + PULSE_MAX_HEIGHT  # 88
+PULSE_HEIGHTS = (8, 20, 38, 55, 100)
+MAX_PILLAR_H = 76.0
+VOXEL_DX = 3
+VOXEL_DY = 2.5
 
-# Direct one-line legend under the pulse: both encodings and the standing
-# publishable-only cue, stated in words instead of swatch rows.
+VOXEL_BLOCK_HEIGHT = (
+    VOXEL_HEADER_H
+    + VOXEL_TERRACES * VOXEL_TERRACE_H
+    + (VOXEL_TERRACES - 1) * VOXEL_TERRACE_ROW_GAP
+)  # 342
+PULSE_BLOCK_HEIGHT = VOXEL_BLOCK_HEIGHT
+
 PULSE_LEGEND_TEXT = (
-    "height = total commits · fill = AI-attributed share · publishable dates only"
+    "AI-attributed (blue crystal) · Other records (stone) · publishable dates only"
 )
-PULSE_LEGEND_TOP_GAP = 18  # baseline -> legend text baseline
-PULSE_LEGEND_BOTTOM_PAD = 4  # legend baseline -> band bottom (descender clearance)
 
-#: Local (band-relative) y of the legend row's text baseline.
-PULSE_LEGEND_BASELINE_Y = PULSE_BASELINE_Y + PULSE_LEGEND_TOP_GAP  # 106
+_MONTH_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
-#: Total fixed footprint of the pulse block (label + month-label row +
-#: pulse + legend); the notice variant occupies CAL_NOTICE_HEIGHT instead.
-PULSE_BLOCK_HEIGHT = PULSE_LEGEND_BASELINE_Y + PULSE_LEGEND_BOTTOM_PAD  # 110
+
+def _month_boundaries(
+    dates: tuple[datetime.date, ...] | VizStats,
+) -> tuple[tuple[int, str], ...]:
+    if isinstance(dates, VizStats):
+        if not dates.daily:
+            return ()
+        newest = datetime.date.fromisoformat(dates.daily[-1].date)
+        window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
+        dates = tuple(
+            window_start + datetime.timedelta(days=offset) for offset in range(CAL_WINDOW_DAYS)
+        )
+    if not dates:
+        return ()
+    boundaries = []
+    prev_month = dates[0].month
+    for index, d in enumerate(dates):
+        if d.month != prev_month:
+            boundaries.append((index // PULSE_GROUP_DAYS, _MONTH_ABBR[d.month - 1]))
+            prev_month = d.month
+    return tuple(boundaries)
+
+
+def _dedupe_colliding_month_labels(
+    boundaries: tuple[tuple[int, str], ...],
+) -> tuple[tuple[int, str], ...]:
+    kept: list[tuple[int, str]] = []
+    for col, label in boundaries:
+        if kept and kept[-1][0] == col:
+            continue
+        kept.append((col, label))
+    return tuple(kept)
+
+
+def _month_label_columns(stats: VizStats) -> tuple[tuple[int, str], ...]:
+    return _dedupe_colliding_month_labels(_month_boundaries(stats))
+
+
+def _pulse_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    baseline_y = top + CAL_MONTH_LABEL_BASELINE_Y
+    parts = [
+        _text(
+            PULSE_X + col * PULSE_GROUP_PITCH + PULSE_GROUP_W // 2,
+            baseline_y,
+            label,
+            size=CAL_MONTH_LABEL_SIZE,
+            fill=theme.muted,
+            anchor="middle",
+        )
+        for col, label in _month_label_columns(stats)
+    ]
+    return "\n".join(parts)
+
+
+def _pulse_legend_svg(theme: Theme, top: int) -> str:
+    return _text(
+        PADDING,
+        top + 32,
+        PULSE_LEGEND_TEXT,
+        size=12,
+        fill=theme.muted,
+    )
 
 #: NO entrance animation - a deliberate REMOVAL, twice-earned during D2
 #: visual verification (spec rule: honest > flashy):
@@ -579,27 +626,17 @@ def card_height(stats: VizStats) -> int:
 
 
 def _calendar_desc_suffix(stats: VizStats) -> str:
-    """One-line ASCII matrix summary appended to <desc>: the window span
-    (anchored at the series' own newest date, never "today"), the peak
-    day's total commits, and both encodings stated. The unpublished-daily
-    state repeats the exact on-card notice so the accessible text and the
-    visual text cannot disagree."""
+    """One-line ASCII summary appended to <desc>: window span, peak day,
+    linear scale ceiling, and dual-pillar encodings."""
     if not stats.daily:
         return f" {CAL_UNPUBLISHED_TEXT}."
+    ceiling, peak_total, peak_date = _voxel_scale_info(stats)
     newest = datetime.date.fromisoformat(stats.daily[-1].date)
     window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
-    # Peak over the matrix's OWN 84-day slice only: since D4 widened the
-    # series to 365 days, an out-of-window day must not leak into this
-    # window-scoped claim.
-    peak_total = max(
-        cell.total_commits
-        for cell in stats.daily
-        if cell.date >= window_start.isoformat()
-    )
     return (
-        f" Daily collaboration pulse {window_start.isoformat()} to {newest.isoformat()},"
-        f" peak day {peak_total} commits; pulse height encodes total commits, accent fill"
-        " height encodes the day's AI-attributed share; publishable dates only."
+        f" Voxel collaboration landscape {window_start.isoformat()} to {newest.isoformat()},"
+        f" peak day {peak_total} commits ({peak_date}); linear scale 0 to {ceiling} commits/day;"
+        " dual pillars encode AI-attributed and Other commits; publishable dates only."
     )
 
 
@@ -796,16 +833,48 @@ def _provider_row_svg(
     tile_y = row_top + GLYPH_TILE_Y_INSET
 
     tile_svg, bar_fill = _glyph_tile_svg(row, theme, tile_y)
+    pal = _voxel_palette(theme)
 
     name = _truncate(row.display_name, NAME_WIDTH, NAME_FONT_SIZE)
     elements = [
+        # Workstation mineshaft wooden post and stone footing
+        _rect(PADDING - 2, row_top + 4, 3, ROW_HEIGHT - 6, fill="#78350f"),
+        _rect(PADDING - 4, row_top + ROW_HEIGHT - 4, 7, 3, fill=pal["stone_front"]),
         tile_svg,
+        # Small pixel tool silhouette mounted on bench
+        f'<path d="M {NAME_X - 10} {bar_y + 1} L {NAME_X - 6} {bar_y + 5} '
+        f'M {NAME_X - 8} {bar_y} L {NAME_X - 5} {bar_y + 3}" '
+        f'stroke="#94a3b8" stroke-width="1.5"/>',
         _text(NAME_X, text_y, name, size=NAME_FONT_SIZE, fill=theme.text),
-        _rect(BAR_X, bar_y, BAR_MAX_WIDTH, BAR_HEIGHT, fill=theme.bar_track, rx=2),
+        _rect(
+            BAR_X,
+            bar_y,
+            BAR_MAX_WIDTH,
+            BAR_HEIGHT,
+            fill=pal["slot_bg"],
+            rx=1,
+            stroke=pal["slot_border"],
+        ),
     ]
-    if max_attributed > 0 and row.attributed_commits > 0:
-        bar_w = round(BAR_MAX_WIDTH * row.attributed_commits / max_attributed)
-        elements.append(_rect(BAR_X, bar_y, bar_w, BAR_HEIGHT, fill=bar_fill, rx=2))
+    if denominator > 0 and row.attributed_commits > 0:
+        bar_w = BAR_MAX_WIDTH * row.attributed_commits / denominator
+        # 3D Mineral Trough top facet
+        elements.append(
+            f'<path d="M {BAR_X} {bar_y} L {BAR_X + 2} {bar_y - 2} '
+            f'L {BAR_X + bar_w + 2} {bar_y - 2} L {BAR_X + bar_w} {bar_y} Z" '
+            f'fill="{pal["ai_top"]}"/>'
+        )
+        elements.append(
+            f'<rect class="provider-quantity" x="{BAR_X}" y="{bar_y}" '
+            f'width="{_format_coord(bar_w)}" height="{BAR_HEIGHT}" fill="{bar_fill}"/>'
+        )
+        # 3D Mineral Trough side facet
+        elements.append(
+            f'<path d="M {BAR_X + bar_w} {bar_y} L {BAR_X + bar_w + 2} {bar_y - 2} '
+            f'L {BAR_X + bar_w + 2} {bar_y + BAR_HEIGHT - 2} '
+            f'L {BAR_X + bar_w} {bar_y + BAR_HEIGHT} Z" '
+            f'fill="{pal["ai_side"]}"/>'
+        )
 
     # Keep the count and percentage in independent right-aligned columns.
     # The old single text run made a three-digit count visually collide with
@@ -859,9 +928,13 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
     legend_y = top + EVIDENCE_LEGEND_Y_OFFSET
     prefix = EVIDENCE_PREFIX_TEMPLATE.format(n=e.total_records)
     chip_w = round(_text_width(prefix, EVIDENCE_LABEL_SIZE)) + 2 * EVIDENCE_CHIP_PAD_X
+    pal = _voxel_palette(theme)
     parts = [
+        # Modest amber archive-glyph seal
+        f'<rect x="{inner_x}" y="{top + 2}" width="10" height="10" fill="#f59e0b" rx="2"/>',
+        f'<rect x="{inner_x + 3}" y="{top + 5}" width="4" height="4" fill="#fef08a"/>',
         _rect(
-            inner_x,
+            inner_x + 16,
             top,
             chip_w,
             EVIDENCE_CHIP_HEIGHT,
@@ -869,7 +942,7 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
             rx=EVIDENCE_CHIP_RADIUS,
         ),
         _text(
-            inner_x + EVIDENCE_CHIP_PAD_X,
+            inner_x + 16 + EVIDENCE_CHIP_PAD_X,
             top + PANEL_PAD_Y,
             prefix,
             size=EVIDENCE_LABEL_SIZE,
@@ -882,31 +955,41 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
     segments = [(label, count, color) for label, count, color, _ in _evidence_items(stats, theme)]
     nonzero_segments = [(label, count, color) for label, count, color in segments if count > 0]
     if not (e.total_records > 0 and nonzero_segments):
-        # Empty composition: the track stands in for the bar. When segments
-        # exist they span the full width and the 2px gaps between them show
-        # the card surface (dataviz mark spec: surface gaps, not a track
-        # peeking through).
         parts.append(
             _rect(inner_x, bar_y, inner_w, EVIDENCE_BAR_HEIGHT, fill=theme.bar_track, rx=2)
         )
     if e.total_records > 0 and nonzero_segments:
+        # Stone foundation bed under rock stratum
+        parts.append(
+            f'<rect x="{inner_x}" y="{bar_y + EVIDENCE_BAR_HEIGHT}" width="{inner_w}" '
+            f'height="4" fill="{pal["stone_front"]}" opacity="0.75"/>'
+        )
         gap_total = 2 * (len(nonzero_segments) - 1)
         available_w = inner_w - gap_total
-        # Cumulative rounding (gate-6 visual round, reviewer finding):
-        # independently rounded widths drift, and remainder-sizing the
-        # last segment went NEGATIVE for 3+ lopsided categories
-        # (width="-1" reproduced). Rounding the cumulative prefix keeps
-        # every width >= 0 by monotonicity and the total exactly equal
-        # to available_w by construction.
         x = inner_x
         prefix_count = 0
         prev_end = 0
-        for _, count, color in nonzero_segments:
+        for idx, (_, count, color) in enumerate(nonzero_segments):
             prefix_count += count
             end = round(available_w * prefix_count / e.total_records)
             w = end - prev_end
             prev_end = end
+            # Top facet of geological stratum
+            parts.append(
+                f'<path d="M {x} {bar_y} L {x + 2} {bar_y - 2} '
+                f'L {x + w + 2} {bar_y - 2} L {x + w} {bar_y} Z" '
+                f'fill="{color}" opacity="0.6"/>'
+            )
+            # Front face
             parts.append(_rect(x, bar_y, w, EVIDENCE_BAR_HEIGHT, fill=color, rx=2))
+            # End facet on rightmost segment
+            if idx == len(nonzero_segments) - 1:
+                parts.append(
+                    f'<path d="M {x + w} {bar_y} L {x + w + 2} {bar_y - 2} '
+                    f'L {x + w + 2} {bar_y + EVIDENCE_BAR_HEIGHT - 2} '
+                    f'L {x + w} {bar_y + EVIDENCE_BAR_HEIGHT} Z" '
+                    f'fill="{color}" opacity="0.4"/>'
+                )
             x += w + 2
 
     legend_x = inner_x
@@ -949,28 +1032,26 @@ def _evidence_panel_svg(stats: VizStats, theme: Theme, top: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Collaboration Pulse builders (ADR-032; semantics from ADR-022/ADR-025).
+# Voxel Collaboration World builders (ADR-033; supersedes ADR-032).
+# 12 chronological seven-day landscape chunks (4 columns x 3 rows).
+# Dual pillars: AI-attributed (blue crystal) and Other records (stone).
+# Shared linear zero-based scale over all 84 dates.
 # ---------------------------------------------------------------------------
 
-#: ASCII 3-letter English month abbreviations, index 0 = January (P2).
-#: Never locale-dependent (ADR-010: fixed decimal/text formatting) and
-#: never derived from the clock -- only ever indexed by a real
-#: `datetime.date.month` computed from `stats.daily`.
-_MONTH_ABBR = (
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-)
 
-
-def _pulse_day_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
-    """84-length tuple in oldest-to-newest offset order (index 0 = the
-    window's oldest day, CAL_WINDOW_DAYS-1 = the series' own newest date)
-    — ``None`` wherever there is no publishable activity for that date.
-    A day that predates the series and a genuine zero-commit day inside
-    the series are the SAME case here (both simply absent from
-    ``stats.daily``, since VizStats forbids storing a zero-count DayCell):
-    both render as the 2px baseline tick in ``_pulse_mark_svg``.
+def _nice_ceiling(peak: int) -> int:
+    """Deterministic integer ceiling: leading single digit times 10^n.
+    55 -> 60, 38 -> 40, 100 -> 100, 101 -> 200, 0 -> 1.
     """
+    if peak <= 1:
+        return 1
+    power = 10 ** (len(str(peak)) - 1)
+    leading = (peak + power - 1) // power
+    return leading * power
+
+
+def _voxel_day_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
+    """84-length tuple in chronological (oldest to newest) order."""
     if not stats.daily:
         return (None,) * CAL_WINDOW_DAYS
     newest = datetime.date.fromisoformat(stats.daily[-1].date)
@@ -981,140 +1062,348 @@ def _pulse_day_cells(stats: VizStats) -> tuple[DayCell | None, ...]:
     )
 
 
+_pulse_day_cells = _voxel_day_cells
+
+
+def _voxel_scale_info(stats: VizStats) -> tuple[int, int, str]:
+    """Compute (scale_ceiling, peak_total, peak_date) over the 84-day window."""
+    if not stats.daily:
+        return 1, 0, "none"
+    cells = _voxel_day_cells(stats)
+    peak_total = 0
+    peak_date = stats.daily[-1].date
+    for cell in cells:
+        if cell is not None and cell.total_commits > peak_total:
+            peak_total = cell.total_commits
+            peak_date = cell.date
+    ceiling = _nice_ceiling(peak_total)
+    return ceiling, peak_total, peak_date
+
+
+def _voxel_palette(theme: Theme) -> dict[str, str]:
+    is_dark = theme.name == "github-dark" or theme.bg == THEMES["github-dark"].bg
+    if is_dark:
+        return {
+            "grass_top": "#3a6920",
+            "grass_fringe": "#4d822d",
+            "dirt_front": "#4d3726",
+            "dirt_side": "#332419",
+            "stone_front": "#3d444d",
+            "stone_side": "#282d33",
+            "ai_front": "#38bdf8",
+            "ai_side": "#0284c7",
+            "ai_top": "#bae6fd",
+            "other_front": "#64748b",
+            "other_side": "#475569",
+            "other_top": "#94a3b8",
+            "slot_border": "#34526f",
+            "slot_bg": "#1e293b",
+        }
+    return {
+        "grass_top": "#5b8c32",
+        "grass_fringe": "#6fa83e",
+        "dirt_front": "#866043",
+        "dirt_side": "#5a402d",
+        "stone_front": "#6e7681",
+        "stone_side": "#57606a",
+        "ai_front": "#0ea5e9",
+        "ai_side": "#0284c7",
+        "ai_top": "#7dd3fc",
+        "other_front": "#94a3b8",
+        "other_side": "#64748b",
+        "other_top": "#cbd5e1",
+        "slot_border": "#c2d3e5",
+        "slot_bg": "#e2e8f0",
+    }
+
+
 def _pulse_mark_x(offset: int) -> int:
-    """Left edge of the mark for a chronological window offset: 12 groups
-    of seven marks, PULSE_MARK_GAP inside a group, the wider
-    PULSE_GROUP_GAP between groups. Pure integer arithmetic."""
+    """Retained for test compatibility: returns x coordinate for offset in 1D band."""
     group, member = divmod(offset, PULSE_GROUP_DAYS)
     return PULSE_X + group * PULSE_GROUP_PITCH + member * (PULSE_MARK_W + PULSE_MARK_GAP)
 
 
-def _pulse_mark_svg(cell: DayCell | None, x: int, baseline_y: int, theme: Theme) -> str:
-    """One baseline-anchored pulse mark carrying the daily encodings:
-
-    - PULSE HEIGHT is the fixed volume bin of ``cell.total_commits``
-      (PULSE_HEIGHTS via `_bins._volume_bin` — the heatmap's own
-      1 / 2-4 / 5-7 / 8+ buckets), drawn as a neutral (muted) column;
-    - the ACCENT FILL rises from the baseline to ``pulse_height *
-      share_bin // PULSE_SHARE_LEVELS`` (`_bins._share_bin`, 0..4 ->
-      0/25/50/75/100% of the pulse height). A zero-attributed-AI day
-      keeps the pure neutral column — never a human claim, since
-      unattributed history sits in that bin too.
-    - ``None`` (no publishable activity) renders only a 2px baseline
-      tick in the border token.
-
-    Provider counts never reach this geometry: a one-commit multi-provider
-    day renders byte-identically to a one-commit single-provider day.
-    """
-    if cell is None:
-        return _rect(x, baseline_y - PULSE_TICK_H, PULSE_MARK_W, PULSE_TICK_H, fill=theme.border)
-    height = PULSE_HEIGHTS[_volume_bin(cell.total_commits)]
-    fill_h = height * _share_bin(cell.ai_commits, cell.total_commits) // PULSE_SHARE_LEVELS
-    parts = [_rect(x, baseline_y - height, PULSE_MARK_W, height, fill=theme.muted)]
-    if fill_h > 0:
-        parts.append(_rect(x, baseline_y - fill_h, PULSE_MARK_W, fill_h, fill=theme.accent))
-    return "\n".join(parts)
+def _pulse_mark_svg(
+    cell: DayCell | None,
+    x: int,
+    baseline_y: int,
+    theme: Theme,
+    ceiling: int = 100,
+) -> str:
+    """One day's dual pillar geometry on the shared front baseline.
+    AI pillar at x, Other pillar at x + 11.
+    Heights encode counts linearly with no 8+ saturation or quarter-bin quantization.
+    Zero pillars are not fake raised blocks."""
+def _format_coord(v: float) -> str:
+    s = f"{v:.6f}".rstrip("0").rstrip(".")
+    return "0" if s == "-0" or not s else s
 
 
-def _month_boundaries(dates: tuple[datetime.date, ...]) -> tuple[tuple[int, str], ...]:
-    """Raw ``(col, 3-letter month label)`` pairs for every month BOUNDARY
-    in an ordered, contiguous, oldest-to-newest date sequence (P2) -- col
-    = index // PULSE_GROUP_DAYS, matching `_pulse_mark_x`'s own group
-    math. A "boundary" is a transition INTO a new month: the sequence's
-    own first (possibly partial) month is never a boundary, so a
-    single-month input yields an empty tuple (falsifiable directly, no
-    need to construct a real 84-day window to prove it). Deterministic in
-    ``dates`` alone -- never `datetime.date.today()`; the caller is
-    responsible for deriving ``dates`` from `stats.daily` only.
-    """
-    if not dates:
-        return ()
-    boundaries: list[tuple[int, str]] = []
-    prev_month = dates[0].month
-    for index, d in enumerate(dates):
-        if d.month != prev_month:
-            boundaries.append((index // PULSE_GROUP_DAYS, _MONTH_ABBR[d.month - 1]))
-            prev_month = d.month
-    return tuple(boundaries)
+def _pulse_mark_svg(
+    cell: DayCell | None, x: int, baseline_y: int, theme: Theme, *, ceiling: int = 1
+) -> str:
+    """Render a single day's dual voxel pillars with strict linear scaling."""
+    pal = _voxel_palette(theme)
+    if cell is None or (cell.ai_commits == 0 and cell.total_commits == 0):
+        return _rect(x, baseline_y - 1, 19, 1, fill=pal["slot_border"])
+    parts = []
+    c_ai = cell.ai_commits
+    c_other = max(0, cell.total_commits - cell.ai_commits)
+    base_y_str = _format_coord(baseline_y)
+    base_top_y_str = _format_coord(baseline_y - VOXEL_DY)
 
+    if c_ai > 0:
+        h_ai = (MAX_PILLAR_H * c_ai) / ceiling
+        ai_x = x
+        ai_y = baseline_y - h_ai
+        y_str = _format_coord(ai_y)
+        h_str = _format_coord(h_ai)
+        top_y_str = _format_coord(ai_y - VOXEL_DY)
 
-def _dedupe_colliding_month_labels(
-    boundaries: tuple[tuple[int, str], ...],
-) -> tuple[tuple[int, str], ...]:
-    """Collision rule (P2, documented not just implemented): a boundary is
-    DROPPED outright -- never shifted, abbreviated further, or allowed to
-    overlap -- when it would land in the SAME group column as the
-    immediately preceding KEPT label (not the raw previous boundary, so a
-    run of 3+ same-column boundaries collapses to the first one rather
-    than alternating). Real calendar months are always >= 28 days == >= 4
-    seven-day groups apart, so this never actually fires on a real
-    `stats.daily` window (see test_month_boundaries_span_three_to_four_months
-    for the real-date case) -- it exists as a documented, independently
-    falsifiable invariant, exercised directly with synthetic input.
-    """
-    kept: list[tuple[int, str]] = []
-    for col, label in boundaries:
-        if kept and kept[-1][0] == col:
-            continue
-        kept.append((col, label))
-    return tuple(kept)
-
-
-def _month_label_columns(stats: VizStats) -> tuple[tuple[int, str], ...]:
-    """``(col, label)`` pairs to actually render (P2): derives the
-    window's own contiguous date sequence purely from `stats.daily`'s
-    newest date (never the clock -- same anchor `_pulse_day_cells`
-    uses), then applies the boundary + collision rules above. Empty when
-    there is no daily series."""
-    if not stats.daily:
-        return ()
-    newest = datetime.date.fromisoformat(stats.daily[-1].date)
-    window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
-    dates = tuple(
-        window_start + datetime.timedelta(days=offset) for offset in range(CAL_WINDOW_DAYS)
-    )
-    return _dedupe_colliding_month_labels(_month_boundaries(dates))
-
-
-def _pulse_month_labels_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The month-boundary label row (P2), centered over the seven-day
-    group in which the boundary date falls."""
-    baseline_y = top + CAL_MONTH_LABEL_BASELINE_Y
-    parts = [
-        _text(
-            PULSE_X + col * PULSE_GROUP_PITCH + PULSE_GROUP_W // 2,
-            baseline_y,
-            label,
-            size=CAL_MONTH_LABEL_SIZE,
-            fill=theme.muted,
-            anchor="middle",
+        parts.append(
+            f'<rect x="{ai_x}" y="{y_str}" width="8" height="{h_str}" fill="{pal["ai_front"]}"/>'
         )
-        for col, label in _month_label_columns(stats)
-    ]
+        parts.append(
+            f'<path d="M {ai_x} {y_str} '
+            f'L {ai_x + VOXEL_DX} {top_y_str} '
+            f'L {ai_x + 8 + VOXEL_DX} {top_y_str} '
+            f'L {ai_x + 8} {y_str} Z" fill="{pal["ai_top"]}"/>'
+        )
+        parts.append(
+            f'<path d="M {ai_x + 8} {base_y_str} '
+            f'L {ai_x + 8} {y_str} '
+            f'L {ai_x + 8 + VOXEL_DX} {top_y_str} '
+            f'L {ai_x + 8 + VOXEL_DX} {base_top_y_str} Z" fill="{pal["ai_side"]}"/>'
+        )
+    if c_other > 0:
+        h_other = (MAX_PILLAR_H * c_other) / ceiling
+        other_x = x + 11
+        other_y = baseline_y - h_other
+        y_str = _format_coord(other_y)
+        h_str = _format_coord(h_other)
+        top_y_str = _format_coord(other_y - VOXEL_DY)
+
+        parts.append(
+            f'<rect x="{other_x}" y="{y_str}" width="8" height="{h_str}" '
+            f'fill="{pal["other_front"]}"/>'
+        )
+        parts.append(
+            f'<path d="M {other_x} {y_str} '
+            f'L {other_x + VOXEL_DX} {top_y_str} '
+            f'L {other_x + 8 + VOXEL_DX} {top_y_str} '
+            f'L {other_x + 8} {y_str} Z" fill="{pal["other_top"]}"/>'
+        )
+        parts.append(
+            f'<path d="M {other_x + 8} {base_y_str} '
+            f'L {other_x + 8} {y_str} '
+            f'L {other_x + 8 + VOXEL_DX} {top_y_str} '
+            f'L {other_x + 8 + VOXEL_DX} {base_top_y_str} Z" fill="{pal["other_side"]}"/>'
+        )
     return "\n".join(parts)
 
 
-def _pulse_legend_svg(theme: Theme, top: int) -> str:
-    """The direct one-line legend (ADR-032): both encodings and the
-    standing publishable-only cue stated in words, muted, on the 12px
-    floor — no swatch rows, no ramp."""
-    return _text(
-        PADDING,
-        top + PULSE_LEGEND_BASELINE_Y,
-        PULSE_LEGEND_TEXT,
-        size=12,
-        fill=theme.muted,
+def _voxel_terrace_svg(
+    terrace_idx: int,
+    cells: tuple[DayCell | None, ...],
+    top: int,
+    ceiling: int,
+    window_start: datetime.date,
+    theme: Theme,
+    pal: dict[str, str],
+) -> str:
+    """An orthographic land slab, with a separate horizontal date band."""
+    y = top + VOXEL_HEADER_H + terrace_idx * (VOXEL_TERRACE_H + VOXEL_TERRACE_ROW_GAP)
+    offset_start = terrace_idx * VOXEL_TERRACE_DAYS
+    first = window_start + datetime.timedelta(days=offset_start)
+    last = first + datetime.timedelta(days=VOXEL_TERRACE_DAYS - 1)
+    range_text = (
+        f"{_MONTH_ABBR[first.month - 1]} {first.day:02d}, {first.year} — "
+        f"{_MONTH_ABBR[last.month - 1]} {last.day:02d}, {last.year}"
     )
+    elements = [_text(PADDING + 6, y + 14, range_text, size=14, weight=600, fill=theme.muted)]
+    x, width, baseline = PADDING + 6, 680, y + 108
+    dx, dy = 18, 12
+    # A broad grass top and a visibly thick side establish depth. Neither is quantitative.
+    elements.append(
+        f'<path class="terrain-top" d="M {x} {baseline} l {dx} {-dy} h {width} '
+        f'l {-dx} {dy} Z" fill="{pal["grass_top"]}"/>'
+    )
+    for col in range(28):
+        gx = x + col * 24
+        elements.append(
+            f'<path d="M {gx} {baseline} l {dx} {-dy}" '
+            f'stroke="{pal["grass_fringe"]}" stroke-width="1"/>'
+        )
+    elements.append(_rect(x, baseline, width, 14, fill=pal["dirt_front"]))
+    elements.append(_rect(x, baseline + 14, width, 22, fill=pal["stone_front"]))
+    elements.append(
+        f'<path d="M {x + width} {baseline} l {dx} {-dy} v 14 l {-dx} {dy} Z" '
+        f'fill="{pal["dirt_side"]}"/>'
+    )
+    elements.append(
+        f'<path d="M {x + width} {baseline + 14} l {dx} {-dy} v 22 l {-dx} {dy} Z" '
+        f'fill="{pal["stone_side"]}"/>'
+    )
+    # Staggered masonry cuts are decorative texture, never "one block = one commit".
+    for course in range(2):
+        for col in range(28):
+            bx = x + col * 24 + (12 if course else 0)
+            bw = min(23, x + width - bx)
+            if bw <= 0:
+                continue
+            by = baseline + 15 + course * 10
+            elements.append(_rect(bx, by, bw, 9, fill=(
+                pal["stone_side"] if (col + course + terrace_idx) % 5 == 0
+                else pal["stone_front"]
+            )))
+            elements.append(_line(bx, by + 9, bx + bw, by + 9, stroke=pal["stone_side"]))
+    for col in range(0, 28, 2):
+        gx = x + col * 24
+        elements.append(_rect(gx, baseline, 24, 3, fill=pal["grass_fringe"]))
+        elements.append(_rect(gx + 8, baseline + 3, 5, 3, fill=pal["grass_top"]))
+    for ore_x in (x + 84, x + 276, x + 516):
+        elements.append(_rect(ore_x, baseline + 23, 5, 4, fill=pal["ai_side"]))
+        elements.append(_rect(ore_x + 5, baseline + 20, 3, 3, fill=pal["ai_top"]))
+
+    for day_index in range(VOXEL_TERRACE_DAYS):
+        offset = offset_start + day_index
+        day_x = PADDING + 8 + day_index * 24
+        elements.append(_pulse_mark_svg(cells[offset], day_x, baseline, theme, ceiling=ceiling))
+        date = window_start + datetime.timedelta(days=offset)
+        elements.append(
+            f'<text class="voxel-date" x="{day_x + 9}" y="{baseline + 59}" '
+            f'font-family="{FONT_STACK_MONO}" font-size="14" text-anchor="middle" '
+            f'fill="{theme.muted}" aria-label="{date.isoformat()}">{date.day:02d}</text>'
+        )
+    return "\n".join(elements)
+
+
+def _voxel_mining_scaffolding_and_actors_svg(
+    top: int, theme: Theme, pal: dict[str, str]
+) -> str:
+    """Original cubic characters occupy the right-hand service shaft only."""
+    sx = 734
+    y0 = top + VOXEL_HEADER_H + 108
+    y2 = y0 + 2 * (VOXEL_TERRACE_H + VOXEL_TERRACE_ROW_GAP)
+    parts = []
+    for post_x in (sx, sx + 65):
+        parts.append(_rect(post_x, y0 - 55, 4, y2 - y0 + 91, fill="#765036"))
+        parts.append(_rect(post_x + 4, y0 - 55, 2, y2 - y0 + 91, fill="#a47d4d"))
+    for floor_y in (y0, y0 + VOXEL_TERRACE_H + VOXEL_TERRACE_ROW_GAP, y2):
+        parts.append(
+            f'<path d="M {sx} {floor_y} l 6 -4 h 66 l -6 4 Z" fill="#c09b61"/>'
+        )
+        parts.append(_rect(sx, floor_y, 66, 6, fill="#765036"))
+        parts.append(
+            f'<path d="M {sx + 6} {floor_y + 6} l 54 28 M {sx + 60} {floor_y + 6} '
+            f'l -54 28" stroke="#a47d4d" stroke-width="2"/>'
+        )
+    for lx in (sx + 3, sx + 15):
+        parts.append(_rect(lx, y0 - 40, 2, y2 - y0 + 76, fill="#c09b61"))
+    for ly in range(y0 - 36, y2 + 36, 9):
+        parts.append(_rect(sx + 3, ly, 14, 2, fill="#a47d4d"))
+
+    # A permanent decorative ore block: the miner never removes a data column.
+    ox, oy = sx + 43, y2 - 23
+    parts.extend([
+        _rect(ox, oy, 18, 23, fill=pal["stone_front"]),
+        f'<path d="M {ox} {oy} l 5 -4 h 18 l -5 4 Z" fill="{pal["other_top"]}"/>',
+        f'<path d="M {ox + 18} {oy} l 5 -4 v 23 l -5 4 Z" fill="{pal["stone_side"]}"/>',
+        _rect(ox + 3, oy + 6, 5, 5, fill=pal["ai_front"]),
+        _rect(ox + 10, oy + 12, 4, 6, fill=pal["ai_top"]),
+        f'<g transform="translate({sx + 19}, {y0 - 42})">'
+        '<g class="zombie zombie-actor">' + actor_body("zombie") + "</g></g>",
+        f'<g transform="translate({sx + 2}, {y2 - 42})">'
+        '<g class="miner miner-actor">' + actor_body("miner") + "</g></g>",
+    ])
+    return "\n".join(parts)
+
+
+def _voxel_legend_svg(
+    theme: Theme,
+    pal: dict[str, str],
+    top: int,
+    ceiling: int,
+    peak_total: int,
+    peak_date: str,
+) -> str:
+    mid = ceiling // 2 if ceiling % 2 == 0 else round(ceiling / 2, 1)
+    elements = [
+        _section_label(VOXEL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
+        _text(
+            PADDING,
+            top + 32,
+            f"Scale: 0–{ceiling} commits/day · Peak: {peak_total} commits ({peak_date})"
+            " · 3 continuous 28-day terraces",
+            size=12,
+            fill=theme.muted,
+            family=FONT_STACK_MONO,
+        ),
+    ]
+    # AI pillar item
+    x1 = PADDING
+    elements.append(_rect(x1, top + 42, 8, 8, fill=pal["ai_front"]))
+    elements.append(_text(x1 + 12, top + 49, "AI-attributed", size=12, fill=theme.muted))
+
+    # Other pillar item
+    x2 = x1 + 110
+    elements.append(_rect(x2, top + 42, 8, 8, fill=pal["other_front"]))
+    elements.append(
+        _text(x2 + 12, top + 49, "Other records (total - AI)", size=12, fill=theme.muted)
+    )
+
+    # Land base item
+    x3 = x2 + 190
+    elements.append(_rect(x3, top + 42, 8, 8, fill=pal["grass_top"]))
+    elements.append(_text(x3 + 12, top + 49, "Publishable dates only", size=12, fill=theme.muted))
+
+    # 0 / mid / max mini vertical axis scale key
+    key_x = WIDTH - PADDING - 60
+    elements.append(_line(key_x, top + 16, key_x, top + 48, stroke=theme.border))
+    elements.append(
+        _text(
+            key_x + 5,
+            top + 19,
+            f"{ceiling}",
+            size=12,
+            fill=theme.muted,
+            family=FONT_STACK_MONO,
+        )
+    )
+    elements.append(_line(key_x - 3, top + 32, key_x, top + 32, stroke=theme.border))
+    elements.append(
+        _text(
+            key_x + 5,
+            top + 35,
+            f"{mid:g}",
+            size=12,
+            fill=theme.muted,
+            family=FONT_STACK_MONO,
+        )
+    )
+    elements.append(_line(key_x - 3, top + 48, key_x, top + 48, stroke=theme.border))
+    elements.append(
+        _text(
+            key_x + 5,
+            top + 51,
+            "0",
+            size=12,
+            fill=theme.muted,
+            family=FONT_STACK_MONO,
+        )
+    )
+
+    return "\n".join(elements)
 
 
 def _calendar_notice_svg(theme: Theme, top: int) -> str:
-    """The unpublished-daily notice (ADR-022): the pulse section's label
+    """The unpublished-daily notice (ADR-022): the voxel section's label
     plus the exact CAL_UNPUBLISHED_TEXT message — rendered whenever the
     headline totals are nonzero but no daily series is published. Never a
     fabricated signature, never a warning panel."""
     return "\n".join(
         (
-            _section_label(PULSE_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
+            _section_label(VOXEL_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
             _text(
                 WIDTH // 2,
                 top + CAL_NOTICE_MESSAGE_Y,
@@ -1127,23 +1416,92 @@ def _calendar_notice_svg(theme: Theme, top: int) -> str:
     )
 
 
-def _pulse_svg(stats: VizStats, theme: Theme, top: int) -> str:
-    """The Collaboration Pulse: section label, month-boundary row, the 84
-    chronological baseline-anchored marks, and the direct legend."""
-    cells = _pulse_day_cells(stats)
-    baseline_y = top + PULSE_BASELINE_Y
-    marks_svg = "\n".join(
-        _pulse_mark_svg(cells[offset], _pulse_mark_x(offset), baseline_y, theme)
-        for offset in range(CAL_WINDOW_DAYS)
+def _voxel_world_svg(stats: VizStats, theme: Theme, top: int) -> str:
+    """The Voxel Collaboration Mine: section label, common scale & peak,
+    legend with voxel swatches, 3 continuous 28-day landscape terraces,
+    and mining scaffolding with animated miner and friendly zombie."""
+    cells = _voxel_day_cells(stats)
+    ceiling, peak_total, peak_date = _voxel_scale_info(stats)
+    pal = _voxel_palette(theme)
+    newest = datetime.date.fromisoformat(stats.daily[-1].date)
+    window_start = newest - datetime.timedelta(days=CAL_WINDOW_DAYS - 1)
+
+    parts = [_voxel_legend_svg(theme, pal, top, ceiling, peak_total, peak_date)]
+    for terrace_idx in range(VOXEL_TERRACES):
+        parts.append(
+            _voxel_terrace_svg(
+                terrace_idx, cells, top, ceiling, window_start, theme, pal
+            )
+        )
+    parts.append(_voxel_mining_scaffolding_and_actors_svg(top, theme, pal))
+    return "\n".join(parts)
+
+
+def _summary_animation_style(stats: VizStats) -> str:
+    """CSS keyframes for original miner and friendly zombie actors.
+
+    Continuous 18-second loop, explicitly requested by the user.
+    Print and prefers-reduced-motion disable animation completely.
+    Empty series (no commits in window) leaves actors idle.
+    """
+    has_activity = any(c is not None and c.total_commits > 0 for c in _voxel_day_cells(stats))
+    miner_anim = "minerMine 18s ease-in-out infinite" if has_activity else "none"
+    pickaxe_anim = "pickaxeSwing 18s ease-in-out infinite" if has_activity else "none"
+    zombie_anim = "zombieClimb 18s ease-in-out infinite" if has_activity else "none"
+    leg_anim = "legWalk 1.2s ease-in-out infinite" if has_activity else "none"
+    return (
+        "<style>\n"
+        "  @keyframes minerMine {\n"
+        "    0% { transform: translate(0px, 0px); }\n"
+        "    22% { transform: translate(8px, 0px); }\n"
+        "    78% { transform: translate(8px, 0px); }\n"
+        "    100% { transform: translate(0px, 0px); }\n"
+        "  }\n"
+        "  @keyframes pickaxeSwing {\n"
+        "    0%, 22% { transform: rotate(0deg); transform-origin: 23px 23px; }\n"
+        "    30% { transform: rotate(-30deg); transform-origin: 23px 23px; }\n"
+        "    38% { transform: rotate(38deg); transform-origin: 23px 23px; }\n"
+        "    46% { transform: rotate(-28deg); transform-origin: 23px 23px; }\n"
+        "    54% { transform: rotate(38deg); transform-origin: 23px 23px; }\n"
+        "    62% { transform: rotate(-28deg); transform-origin: 23px 23px; }\n"
+        "    70% { transform: rotate(38deg); transform-origin: 23px 23px; }\n"
+        "    78%, 100% { transform: rotate(0deg); transform-origin: 23px 23px; }\n"
+        "  }\n"
+        "  @keyframes zombieClimb {\n"
+        "    0% { transform: translate(0px, 0px); }\n"
+        "    18% { transform: translate(-8px, 0px); }\n"
+        "    40% { transform: translate(-8px, 20px); }\n"
+        "    60% { transform: translate(-8px, 20px); }\n"
+        "    80% { transform: translate(-8px, 0px); }\n"
+        "    100% { transform: translate(0px, 0px); }\n"
+        "  }\n"
+        "  @keyframes legWalk {\n"
+        "    0%, 100% { transform: translateY(0px); }\n"
+        "    10%, 30%, 50%, 70%, 90% { transform: translateY(-2px); }\n"
+        "    20%, 40%, 60%, 80% { transform: translateY(1px); }\n"
+        "  }\n"
+        f"  .miner-actor {{\n"
+        f"    animation: {miner_anim};\n"
+        "  }\n"
+        f"  .pickaxe-arm {{\n"
+        f"    animation: {pickaxe_anim};\n"
+        "  }\n"
+        f"  .zombie-actor {{\n"
+        f"    animation: {zombie_anim};\n"
+        "  }\n"
+        f"  .miner-leg-l, .zombie-leg-l {{\n"
+        f"    animation: {leg_anim};\n"
+        "  }\n"
+        "  @media (prefers-reduced-motion: reduce), print {\n"
+        "    .miner-actor, .pickaxe-arm, .zombie-actor, .miner-leg-l, .zombie-leg-l {\n"
+        "      animation: none !important;\n"
+        "    }\n"
+        "  }\n"
+        "</style>"
     )
 
-    sections = (
-        _section_label(PULSE_LABEL_TEXT, top + CAL_LABEL_BASELINE_Y, theme),
-        _pulse_month_labels_svg(stats, theme, top),
-        marks_svg,
-        _pulse_legend_svg(theme, top),
-    )
-    return "\n".join(section for section in sections if section)
+
+_pulse_svg = _voxel_world_svg
 
 
 def render_summary(stats: VizStats, theme: Theme) -> str:
@@ -1165,9 +1523,13 @@ def render_summary(stats: VizStats, theme: Theme) -> str:
         f'aria-labelledby="aiprofileSummaryTitle aiprofileSummaryDesc">',
         f'<title id="aiprofileSummaryTitle">{title}</title>',
         f'<desc id="aiprofileSummaryDesc">{desc}</desc>',
-        f'<rect x="0.5" y="0.5" width="{WIDTH - 1}" height="{height - 1}" rx="{RADIUS}" '
-        f'fill="{theme.bg}" stroke="{theme.border}" stroke-width="1"/>',
     ]
+    if stats.daily:
+        parts.append(_summary_animation_style(stats))
+    parts.append(
+        f'<rect x="0.5" y="0.5" width="{WIDTH - 1}" height="{height - 1}" rx="{RADIUS}" '
+        f'fill="{theme.bg}" stroke="{theme.border}" stroke-width="1"/>'
+    )
 
     # Header: commit-node glyph + title + period label.
     parts.append(_commit_mark(GLYPH_CX, GLYPH_CY, theme))

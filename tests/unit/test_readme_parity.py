@@ -21,19 +21,14 @@ def test_public_readmes_have_structural_and_contract_parity():
     parity.validate_readme_parity()
 
 
-def test_profile_cards_use_compact_mobile_sources_in_both_readmes():
+def test_profile_cards_retain_theme_switching_without_mobile_badge_substitution():
     for path in (parity.ENGLISH, parity.TRADITIONAL_CHINESE):
         text = path.read_text(encoding="utf-8")
 
-        assert (
-            text.count(
-                'media="(max-width: 600px) and (prefers-color-scheme: dark)"'
-            )
-            == 2
-        )
-        assert text.count('media="(max-width: 600px)"') == 2
-        assert text.count("dist/badge-dark.svg") >= 2
-        assert text.count("dist/badge-light.svg") >= 2
+        assert 'media="(max-width: 600px)' not in text
+        assert text.count('media="(prefers-color-scheme: dark)"') >= 2
+        assert "summary-dark.svg" in text
+        assert "summary-light.svg" in text
 
 
 def test_candidate_v048_link_evidence_matches_current_readmes():
@@ -59,7 +54,8 @@ def test_candidate_v048_link_evidence_matches_current_readmes():
     assert evidence["candidate_version"] == "0.4.8"
     assert "Pre-release candidate link evidence" in evidence["scope"]
     assert "v0.4.7" in evidence["scope"]  # honest current-release pointer
-    assert set(evidence["urls"]) == urls
+    # Removing the mobile badge fallback must not rewrite an August HTTP receipt.
+    assert urls <= set(evidence["urls"])
     assert set(evidence["urls"].values()) == {200}
     assert evidence["github_markdown"] == {
         "README.md": {"status": 200, "h2": 13, "code_blocks": 10},
@@ -105,8 +101,8 @@ def test_parity_rejects_missing_privacy_contract(tmp_path):
             "claim",
         ),
         (
-            "18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3",
-            "v0.8.1",
+            "8b145e49e2805030c0e4473c1d2c821e1397389a",
+            "v0.9.0",
             "missing",
         ),
         ("AIPROFILE_IDENTITIES", "IDENTITIES", "missing"),

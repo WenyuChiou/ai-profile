@@ -4,6 +4,58 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
+## v0.9.0 Voxel Collaboration World (release candidate)
+
+The user explicitly authorized Codex to take over implementation on 2026-09-06.
+This supersedes the earlier Fable-only execution requirement for this task.
+The user accepted the mine preview, then requested a chart-first dashboard.
+Independent final review and release gates remain in force.
+
+- Hosted workflow C1 is committed as `8b145e49e2805030c0e4473c1d2c821e1397389a`;
+  it installs exactly 0.9.0. C2 repins the caller/docs and preserves C1 through
+  a merge commit. Profile activation waits for public package availability.
+- Independent review found and closed two P2 accessibility defects: vertical
+  navigation now follows rendered 28/14/7-date rows; sorting exposes the active
+  header state while date-cell buttons preserve native table semantics.
+  Both new tests failed before the fix; 54 browser regressions pass.
+- Exact Linux R2 wheel and four README-only role receipts are recorded in
+  `docs/reviews/v0.9.0-release-readiness.md`. All four roles completed; the root
+  independently recomputed all four totals and 848 privacy comparisons (zero
+  hits). Local/CI/publication evidence is kept distinct.
+- Final corrected Windows Python 3.14 suite: **1009 passed, 30 skipped in
+  312.58s**; Ruff, bilingual parity/preset and Impeccable pass. The preceding
+  stale-runbook-pin failure is retained in the release-readiness record.
+
+- Chart-first refinement: 32px provider controls and 40px workstation glyphs,
+  short visible names, an AI/Other composition chart for the selected date,
+  and native disclosures for custom dates, the daily table and definitions.
+  Counts, denominators, publication scope and overlap warnings remain visible.
+- Refinement verification: 75 focused tests, 98 chart-first browser checks,
+  32 render checks, 91 behavior checks, 14 touch/sort checks, 74 date/motion
+  checks and 12 viewport/theme variants pass. Ruff/parity pass; Impeccable 0.
+  Final Windows Python 3.14 suite: 1004 passed, 30 skipped in 242.30s.
+  The earlier 1003-test result below records the previous accepted mine preview.
+
+- Summary: three continuous 28-day terraces, thick orthographic soil/masonry,
+  original shared cubic actors, continuously looping SVG, and 14px horizontal
+  date bands separate from terrain. No Blender runtime or game assets.
+- Dashboard: all selected dates, common projection scale across full/partial
+  rows, 28/84/365/all/custom, provider-invariant pillars, exact daily details,
+  keyboard/touch controls and pause/play. Extreme-narrow actors move below dates.
+- Corrected summary provider denominator to all-period unique AI-attributed
+  commits, removing integer rounding. Preserved the historical v0.4.8 link receipt.
+- Replaced obsolete flat-chart/carousel/type assertions with current geometry
+  checks; retained privacy, SVG safety, deterministic bytes and motion restrictions.
+- Verified 144 focused renderer tests, then 110 calendar/recruiter/voxel/dashboard
+  tests; 32 render checks, 91 interaction checks, 74 date/multicycle/cross-year/
+  empty-range checks and 12 viewport/theme variants. Final full suite on Windows
+  Python 3.14: 1003 passed, 30 skipped in 304.48s; Ruff and README parity pass;
+  Impeccable reports zero findings. GitHub CI and release gates remain pending.
+- Preview evidence is under the existing marked scratch root's mine-codex-qa
+  directory. That preview checkpoint preceded C1; it created no local schedule.
+  The actual Profile cloud workflow is active and no matching Windows task was
+  present during the release preparation check.
+
 ## v0.8.1 final immutable public caller repin — commit E (codex/v081-public-caller-e)
 
 - PR #42 (commit D `18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3`) passed 8/8 checks and merged to

@@ -2,8 +2,8 @@
 
 - Status: Accepted for v0.7.0; Windows normalization amended in v0.7.1;
   clean remote-ahead fast-forward amended in v0.7.2; scheduler metadata
-  version tracks the current package (v0.8.2, 2026-08-23; previously
-  v0.8.1, 2026-08-23)
+  version tracks the current package (v0.9.0, 2026-09-06; previously
+  v0.8.2, 2026-08-23)
 - Deciders: maintainer
 - Supersedes: the assumption that multi-repository refresh and a reusable
   GitHub Action are future-only
@@ -79,9 +79,9 @@ same-name task; an absent task remains an idempotent no-op, while an
 unverifiable or altered task is retained for explicit operator resolution.
 
 The scheduler-config schema did not change in v0.7.1, v0.7.2, v0.8.0,
-v0.8.1, or v0.8.2. Readers accept exactly v0.7.0, v0.7.1, v0.7.2, v0.8.0,
-v0.8.1, and v0.8.2 metadata so an existing installation can be inspected and
-reinstalled in place; writers always emit v0.8.2. Earlier, unrelated, and
+v0.8.1, v0.8.2, or v0.9.0. Readers accept exactly v0.7.0, v0.7.1, v0.7.2, v0.8.0,
+v0.8.1, v0.8.2, and v0.9.0 metadata so an existing installation can be inspected and
+reinstalled in place; writers always emit v0.9.0. Earlier, unrelated, and
 future versions fail closed.
 
 The launcher and scheduler state live below `AIPROFILE_HOME`, not inside the
@@ -196,8 +196,8 @@ immutable published commit as `published-sha` on both changed and unchanged
 paths.
 
 The caller template pins the reusable workflow to the full commit
-`18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3`, whose package contract is exactly
-`ai-profile-cli==0.8.1`. Caller-level concurrency spans refresh through Pages
+`8b145e49e2805030c0e4473c1d2c821e1397389a`, whose package contract is exactly
+`ai-profile-cli==0.9.0`. Caller-level concurrency spans refresh through Pages
 deployment. Pages checks out the exact `published-sha` and uses separately
 pinned official Pages actions with `contents: read`, `pages: write`, and
 `id-token: write`. This explicit same-run deployment is required because a

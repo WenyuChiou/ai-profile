@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from aiprofile import __version__
 from aiprofile.render.dashboard_html import render_dashboard
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,9 +35,8 @@ SPEC.loader.exec_module(staging)
 #: this literal; it moves only when a new release is published and the
 #: workflow is re-pinned together with it.
 PINNED_WHEEL_SHA256 = "1faceac31ac7d9c3a99e3e4678bdfb725f73341e89e5847dc6a578ed8a6bbff9"
-#: The staging dashboard digest. Unlike the wheel, this is renderer output,
-#: not packaging bytes: it must stay equal to the candidate manifest, because
-#: any renderer change has to re-pin the workflow and the manifest together.
+#: Historical v0.8.1 staging output. The current candidate manifest is checked
+#: against its own renderer below, not against this immutable release receipt.
 PINNED_DASHBOARD_SHA256 = "b9c7208ee1bece4a0a6cd39ea1b569a55ed30a78d14d85cdb74ee52b89b4cc48"
 #: The immutable v0.8.1 release/tag commit on main. The manual staging preview
 #: builds from this commit rather than moving main HEAD so that manual runs from
@@ -128,7 +128,7 @@ def test_output_is_the_exact_unmodified_candidate_render(tmp_path):
     assert "connect-src 'none'" in html
     assert 'id="profileData"' in html
     assert 'aria-label="Filter dashboard by AI provider"' in html
-    assert "Provider ledger" in html
+    assert 'class="provider-list" id="providerList"' in html
     assert "Model contribution" not in html
     assert "model-list" not in html
     for token in ("https://", "http://", "fetch(", "XMLHttpRequest", "WebSocket"):
@@ -274,11 +274,12 @@ def test_workflow_verifies_the_exact_candidate_digest_before_pages_upload():
     # build and may move past it. A shape check is enough here because the real
     # backstop for `wheel_sha256` is the ci.yml candidate job, which rebuilds the
     # wheel on every push and PR and fails on any mismatch with this same manifest.
-    # The dashboard digest is renderer output, so it must still agree with the
-    # manifest.
+    # Historical staging remains pinned; the candidate must match its own
+    # current renderer, rather than silently retaining an obsolete digest.
     assert re.fullmatch(r"[0-9a-f]{64}", manifest["wheel_sha256"])
-    assert manifest["dashboard_sha256"] == PINNED_DASHBOARD_SHA256
-    assert manifest["version"] == "0.8.2"
+    candidate_html = render_dashboard(staging.build_fixture()).encode("utf-8")
+    assert manifest["dashboard_sha256"] == hashlib.sha256(candidate_html).hexdigest()
+    assert manifest["version"] == __version__
     assert text.count(PINNED_WHEEL_SHA256) == 3  # artifact check + both job boundaries
     assert "--expected-version 0.8.1" in text
     assert 'manifest["package_version"] == "0.8.1"' in text

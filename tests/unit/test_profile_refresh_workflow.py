@@ -1,8 +1,7 @@
 """Security and operational contract for public profile automation.
 
-Commit E of the v0.8.1 hosted pin: the reusable workflow installs exactly
-``ai-profile-cli==0.8.1`` and the public caller template pins the immutable
-v0.8.1 reusable workflow commit D (``18fb08e``).
+v0.9.0 hosted upgrade: the reusable workflow installs exactly 0.9.0.
+The caller pins the reviewed immutable revision with that same binding.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "profile-refresh.yml"
 CALLER = ROOT / "docs" / "templates" / "profile-refresh-caller.yml"
-COMMIT_D = "18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3"
+COMMIT_D = "8b145e49e2805030c0e4473c1d2c821e1397389a"
 
 ASSET_NAMES = (
     "badge-dark.svg",
@@ -208,7 +207,7 @@ def test_repositories_is_the_only_input_and_version_dest_hardcoded():
         "repositories"
     ]
     assert text.count("ai-profile-cli==") == 1
-    assert 'python -m pip install "ai-profile-cli==0.8.1"' in text
+    assert 'python -m pip install "ai-profile-cli==0.9.0"' in text
     assert "ai-profile-cli==0.8.0" not in text
     assert "ai-profile-cli==0.7.0" not in text
     assert "package-version" not in text
@@ -733,9 +732,9 @@ def test_caller_template_passes_only_repositories_and_secret_identities():
             assert line.strip() == "identities: ${{ secrets.AIPROFILE_IDENTITIES }}"
 
 
-def test_caller_uses_exact_immutable_workflow_pin_and_v081_contract():
-    """The caller template pins the DEPLOYED v0.8.1 immutable commit D
-    and its 0.8.1 package note."""
+def test_caller_uses_exact_immutable_workflow_pin_and_v090_contract():
+    """The caller template pins the reviewed v0.9.0 immutable workflow
+    and its exact package note."""
     text = _text(CALLER)
     uses = re.search(
         r"uses: WenyuChiou/ai-profile/\.github/workflows/"
@@ -745,13 +744,15 @@ def test_caller_uses_exact_immutable_workflow_pin_and_v081_contract():
 
     assert uses is not None
     assert uses.group(1) == COMMIT_D
-    assert "hardcodes ai-profile-cli==0.8.1" in text
+    assert "hardcodes ai-profile-cli==0.9.0" in text
+    assert "ai-profile-cli==0.8.1" not in text
     assert "ai-profile-cli==0.8.0" not in text
     assert "ai-profile-cli==0.7.0" not in text
     assert "9c246d9" not in text
     assert "6a39ff4" not in text
     assert "d74a3ef" not in text
     assert "9c4f276" not in text
+    assert "@v0.9.0" not in text
     assert "@v0.8.1" not in text
     assert "@v0.8.0" not in text
     assert "@main" not in text
