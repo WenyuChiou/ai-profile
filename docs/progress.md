@@ -4,7 +4,18 @@ Concise state of the project (G2-20: history lives in
 `docs/reviews/v0.1-run-log.md`; future scope lives in `docs/ROADMAP.md`,
 which is authoritative).
 
-## v0.9.0 Voxel Collaboration World (release candidate)
+## v0.9.0 Voxel Collaboration World (released)
+
+Released 2026-09-06 through PR #44 and publish run 34061326050. Eight required
+CI jobs passed; Linux Python 3.11–3.14 each observed 1033 passed, 6 skipped.
+PyPI and GitHub serve the frozen R2 wheel. Profile PR #28 activated the cloud
+pin after publication; runs 34061530929 and 34061614315 verified changed and
+unchanged refreshes with successful Pages deployments. Live browser checks:
+103 passed, including six widths and light/dark. Daily GitHub-hosted schedule
+remains active at 05:37 UTC; no local scheduler. See the release-readiness
+record for immutable commits, hashes, public links and retained limitations.
+
+### Implementation and candidate history
 
 The user explicitly authorized Codex to take over implementation on 2026-09-06.
 This supersedes the earlier Fable-only execution requirement for this task.
