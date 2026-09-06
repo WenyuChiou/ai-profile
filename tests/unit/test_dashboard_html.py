@@ -63,6 +63,25 @@ def _stats() -> VizStats:
     )
 
 
+def test_calendar_vertical_navigation_uses_rendered_row_capacity():
+    html = render_dashboard(_stats())
+    assert "calendar.dataset.daysPerRow = String(daysPerRow)" in html
+    assert 'Number($("activityCalendar").dataset.daysPerRow)' in html
+    assert "target = index + rowStep" in html
+    assert "target = index - rowStep" in html
+
+
+def test_daily_table_preserves_native_semantics_and_announces_sort():
+    html = render_dashboard(_stats())
+    assert '<th scope="col" aria-sort="descending">' in html
+    assert 'data-sort="date" aria-sort=' not in html
+    assert 'header.setAttribute("aria-sort", sortDir === "asc"' in html
+    assert 'header.removeAttribute("aria-sort")' in html
+    assert 'tr.setAttribute("role", "button")' not in html
+    assert 'class="date-select"' in html
+    assert 'dateButton.setAttribute("aria-pressed"' in html
+
+
 def _zero_stats() -> VizStats:
     return VizStats(
         schema_version=ACE_SCHEMA_VERSION,
@@ -131,10 +150,9 @@ def test_dashboard_exposes_provider_filter_without_mixing_metric_units():
 
     assert 'aria-label="Filter dashboard by AI provider"' in html
     assert 'selected === "all" ? data.totals.ai_attributed_commits' not in html
-    assert "row ? row.attributed_commits : data.totals.ai_attributed_commits" in html
-    assert "row ? row.actor_presences : data.totals.ai_actor_presences" in html
-    assert "row ? row.active_days : data.totals.active_ai_days" in html
-    assert "Provider totals may overlap" in html
+    assert "data.totals.ai_attributed_commits" in html
+    assert "data.totals.ai_actor_presences" in html
+    assert "data.totals.active_ai_days" in html
     assert "Unattributed commits" in html
     assert "No explicit AI or human declaration recorded." in html
     assert "Unattributed is not human" in html
@@ -163,7 +181,6 @@ def test_calendar_uses_roving_keyboard_and_touch_accessible_days():
     html = render_dashboard(_stats())
 
     assert 'id="activityCalendar" role="group"' in html
-    assert 'document.createElement("button")' in html
     assert "let calendarFocusIndex = null" in html
     assert "? series.length - 1" in html
     assert "cell.tabIndex = index === rovingIndex ? 0 : -1" in html
@@ -172,10 +189,12 @@ def test_calendar_uses_roving_keyboard_and_touch_accessible_days():
     assert re.search(r'cell\.addEventListener\(\s*"focus"', html)
     assert 'cell.addEventListener("click"' in html
     assert 'cell.addEventListener("keydown", handleCalendarKeydown)' in html
-    assert 'ArrowRight: 7' in html
-    assert 'ArrowDown: 1' in html
+    assert 'event.key === "ArrowRight"' in html
+    assert 'event.key === "ArrowLeft"' in html
+    assert 'event.key === "ArrowDown"' in html
+    assert 'event.key === "ArrowUp"' in html
     assert 'event.key === "Escape"' in html
-    assert "tooltipSuppressed = event.currentTarget" in html
+    assert "tooltipSuppressed = cell" in html
     assert "tooltipHoverPaused = true" in html
     assert "event.movementX || event.movementY" in html
     assert "tooltipSuppressed !== cell" in html
@@ -183,11 +202,7 @@ def test_calendar_uses_roving_keyboard_and_touch_accessible_days():
     assert "tooltip.getBoundingClientRect().width / 2" in html
     assert "innerWidth - halfWidth - margin" in html
     assert "% share" in html
-    assert "const binOpacity = [0.42, 0.62, 0.81, 1]" in html
-    assert "Math.log1p" not in html
-    assert "cell.dataset.level = String(level)" in html
     assert "scroller.scrollLeft = followNewest" in html
-    assert "Fixed bins: 1 / 2-4 / 5-7 / 8+ selected commits." in html
 
 
 def test_selected_provider_keeps_normal_text_color():
@@ -267,9 +282,9 @@ def test_mobile_provider_filters_wrap_without_horizontal_scrolling():
     html = render_dashboard(_stats())
     mobile_css = html.split("@media (max-width: 38rem)", 1)[1]
 
-    # Filters wrap as a flex row at every width; no horizontal scroller.
+    # Icon-led controls wrap into an adaptive grid; no horizontal scroller.
     assert "overflow-x: auto" not in html.split(".filters {", 1)[1].split("}", 1)[0]
-    assert "flex-wrap: wrap" in html.split(".filters {", 1)[1].split("}", 1)[0]
+    assert "repeat(auto-fit" in html.split(".filters {", 1)[1].split("}", 1)[0]
     assert ".console {" in mobile_css
     assert "width: min(100% - 1rem, 76rem)" in mobile_css
 
@@ -456,3 +471,106 @@ def test_dashboard_rejects_fully_shaped_duck_type_with_private_canary():
 
     with pytest.raises(TypeError, match="exact VizStats"):
         render_dashboard(fake)
+
+
+def test_provider_bars_have_block_display_and_fill_geometry():
+    """Provider fill must be block display with 100% height and positive width."""
+    html = render_dashboard(_stats())
+    assert ".provider-track {\n      display: block;" in html
+    assert ".provider-fill {\n      display: block;\n      height: 100%;" in html
+    assert 'fill.className = "provider-fill"' in html
+    assert "totalAi" in html
+    assert "fill.style.width = `${rawPct}%`" in html
+
+
+def test_provider_selection_preserves_hud_and_pillar_geometry():
+    """Provider selection highlights participation without mutating core HUD or pillar geometry."""
+    html = render_dashboard(_stats())
+    render_metrics = (
+        html.split("function renderMetrics() {", 1)[1]
+        .split("function getPalette", 1)[0]
+    )
+    assert "data.totals.ai_attributed_commits" in render_metrics
+    assert "data.totals.ai_actor_presences" in render_metrics
+    assert "data.totals.active_ai_days" in render_metrics
+    assert "data.totals.unknown_commits" in render_metrics
+    # HUD does not swap to provider-only counts
+    assert "row ? row.attributed_commits" not in render_metrics
+
+    # Pillar heights in voxel chunks always reflect total/ai commits, not provider selection
+    assert "const cAi = day.ai_commits;" in html
+    assert "const cOther = Math.max(0, day.total_commits - day.ai_commits);" in html
+    # Highlight is set via data-highlighted attribute
+    assert 'cell.setAttribute("data-highlighted", "true")' in html
+
+
+def test_dashboard_presets_and_date_range_controls():
+    """Approved revision: presets 28d/84d/365d/all, custom inputs, inline error."""
+    html = render_dashboard(_stats())
+    assert 'id="preset28"' in html
+    assert 'id="preset84"' in html
+    assert 'id="preset365"' in html
+    assert 'id="presetAll"' in html
+    assert 'id="customStartDate"' in html
+    assert 'id="customEndDate"' in html
+    assert 'id="dateRangeError"' in html
+    assert "computePresetRange" in html
+    assert "Invalid range: start date must precede or equal end date." in html
+
+
+def test_dashboard_continuous_terraces_without_carousel():
+    """Approved revision: continuous terraces, no carousel or 12 weekly cards."""
+    html = render_dashboard(_stats())
+    assert "carousel-mode" not in html
+    assert "voxel-terraces" in html
+    assert "voxel-terrace-row" in html
+    assert "renderTerraceSvg" in html
+
+
+def test_dashboard_linear_pillars_without_cap():
+    """Approved revision: linear pillar heights from niceCeiling, no 8+ cap."""
+    html = render_dashboard(_stats())
+    assert "niceCeiling" in html
+    assert "hAi = (maxH * cAi) / ceiling" in html
+    assert "hOther = (maxH * cOther) / ceiling" in html
+
+
+def test_dashboard_actor_animation_controls_and_safety():
+    """Approved revision: 18s loop, play/pause button, visibilitychange, reduced-motion static."""
+    html = render_dashboard(_stats())
+    assert "minerMine18s 18s ease-in-out infinite" in html
+    assert "pickaxeSwing18s 18s ease-in-out infinite" in html
+    assert "zombiePatrol18s 18s ease-in-out infinite" in html
+    assert 'id="animToggleBtn"' in html
+    assert "document.addEventListener(\"visibilitychange\"" in html
+    assert ".actors-paused .miner-actor" in html
+    assert "prefers-reduced-motion: reduce" in html
+    assert "animation: none !important;" in html
+
+
+def test_dashboard_archive_rock_stratum():
+    """Approved revision: Archive Rock Stratum with 3D geological facets."""
+    html = render_dashboard(_stats())
+    assert "Archive Rock Stratum" in html
+    assert "rock-stratum-svg" in html
+    assert "rockStratumContainer" in html
+    assert "Mining Workstations" in html
+    assert "workstations-overlap-note" in html
+
+
+def test_dashboard_is_chart_first_without_hiding_meaning():
+    html = render_dashboard(_stats())
+    assert '<details class="custom-range" id="customRangeDisclosure">' in html
+    assert '<details class="ledger-disclosure" id="dailyLedger">' in html
+    assert '<summary>Daily table</summary>' in html
+    assert 'id="dayComposition"' in html
+    assert 'id="providerFacts"' in html
+    assert 'id="workstationsDenominator"' in html
+    assert 'class="toolbar-label sr-only"' in html
+    assert 'class="metric-detail sr-only"' in html
+    assert '.provider-icon--filter {\n      width: 2rem;' in html
+    assert 'button.setAttribute("aria-label", `Highlight ${row.display_name}`)' in html
+    normalized = " ".join(html.split())
+    assert "Provider identity does not identify a specific editor or tool." in normalized
+    assert "Provider counts overlap" in html
+    assert "Human-Only" in html

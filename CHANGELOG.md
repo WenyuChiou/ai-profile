@@ -25,6 +25,26 @@ below.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-06 (Public Beta)
+
+### Added
+
+- **Voxel Collaboration World** (ADR-033): A rich, tangible Minecraft/voxel-inspired visualization across both the summary SVG card and interactive dashboard HTML:
+  - Three continuous 28-day terraces on the summary SVG, with thick orthographic soil/masonry, original cubic characters, and separate nonoverlapping horizontal date bands.
+  - Zero-based linear scale bounded by the next leading-decimal integer step (38→40, 55→60), replacing 8+ saturation and quarter-bin quantization.
+  - Dual isometric pillars per active day: faceted blue crystal voxel pillar for AI-attributed commits and adjacent stone voxel pillar for Other records (`max(0, total_commits - ai_commits)`). Zero-activity days render flat baseline slots.
+  - Interactive Minecraft-style hotbar toolbar on the dashboard for provider filtering; filtering highlights matching dates without mutating totals or pillar geometry.
+  - Selected-date detail panel (`#selectedDatePanel`) and accessible sortable daily table (`#dailyTable`) with ascending/descending column toggles.
+  - All selected dates remain expanded: 28/84/365 days, all, or custom, with responsive 28/14/7-day rows and a fixed projection scale even for partial rows.
+  - Continuously looping SVG characters, dashboard pause/play, reduced-motion and print fallbacks; data and dates never animate.
+  - Keyboard controls, strict CSP (`default-src 'none'`), and transform/opacity-only motion.
+
+### Changed
+
+- The public-only GitHub Actions caller installs exactly 0.9.0 through reviewed
+  immutable workflow commit `8b145e49e2805030c0e4473c1d2c821e1397389a`.
+  Daily cloud snapshots require no running local computer.
+
 ## [0.8.1] - 2026-08-23 (Public Beta)
 
 ### Changed

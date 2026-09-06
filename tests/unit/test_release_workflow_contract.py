@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_release_runbook_uses_get_for_immutable_workflow_probe():
     text = (ROOT / "docs" / "RELEASING.md").read_text(encoding="utf-8")
     assert "gh api --method GET repos/WenyuChiou/ai-profile/contents/" in text
-    assert "-f ref=9c4f276cb437f1866a2c1b407efe54d3790ce811" in text
+    assert "-f ref=8b145e49e2805030c0e4473c1d2c821e1397389a" in text
     assert "scheduler-only patch" in text
     assert "must not silently rebind the immutable public caller" in text
 
@@ -87,7 +87,7 @@ def test_candidate_manifest_pins_released_digest_or_unreleased_lifecycle():
     manifest = _candidate_manifest()
     import aiprofile
 
-    assert manifest["version"] == aiprofile.__version__ == "0.8.2"
+    assert manifest["version"] == aiprofile.__version__ == "0.9.0"
     released = RELEASED_WHEEL_SHA256.get(manifest["version"])
     if released is not None:
         assert manifest["wheel_sha256"] == released
@@ -101,7 +101,8 @@ def test_v0_8_1_release_notes_are_finalized_before_tagging():
         "## [0.8.1] - 2026-08-23 (Public Beta)", 1
     )
 
-    assert unreleased.rstrip().endswith("## [Unreleased]")
+    # Later releases may precede this retained historical block.
+    assert "## [Unreleased]" in unreleased
     release_081, rest = released.split("## [0.8.0] - 2026-08-23 (Public Beta)", 1)
     assert "Collaboration Pulse" in release_081
     assert "ADR-032" in release_081

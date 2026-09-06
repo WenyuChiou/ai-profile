@@ -634,3 +634,63 @@ Scope: the postrelease commit E on `codex/v081-public-caller-e` from
 | Canonical wheel reproduction | Codex reproduced from final staged source using exact GitHub Actions runtime from official actions/python-versions release 3.12.14-31661455385: Ubuntu 24.04 x64 CPython 3.12.14 toolcache, build==1.4.3, hatchling==1.31.0 isolation, SOURCE_DATE_EPOCH=1786320000, clean origin/main archive plus staged diff; wheel SHA256 `284779ed60cf1c57fcd55b15158ab16526e7c0b26174168bbc939c84569cdbe7`; check_release_artifacts PASS |
 
 Disposition: **staged for Codex independent review** (maintainer Profile repin/run to immutable commit D remains outstanding).
+
+## v0.9.0 Voxel Collaboration World (accepted preview; release review)
+
+The user explicitly authorized Codex to take over implementation on 2026-09-06.
+This supersedes the earlier Fable-only execution requirement for this task.
+The user accepted the mine preview, then requested a chart-first dashboard.
+Independent final review and release gates remain in force.
+
+- Chart-first refinement: 32px provider controls and 40px workstation glyphs,
+  short visible names, an AI/Other composition chart for the selected date,
+  and native disclosures for custom dates, the daily table and definitions.
+  Counts, denominators, publication scope and overlap warnings remain visible.
+- Refinement verification: 75 focused tests, 98 chart-first browser checks,
+  32 render checks, 91 behavior checks, 14 touch/sort checks, 74 date/motion
+  checks and 12 viewport/theme variants pass. Ruff/parity pass; Impeccable 0.
+  Final Windows Python 3.14 suite: 1004 passed, 30 skipped in 242.30s.
+  The earlier 1003-test result below records the previous accepted mine preview.
+
+- Summary: three continuous 28-day terraces, thick orthographic soil/masonry,
+  original shared cubic actors, continuously looping SVG, and 14px horizontal
+  date bands separate from terrain. No Blender runtime or game assets.
+- Dashboard: all selected dates, common projection scale across full/partial
+  rows, 28/84/365/all/custom, provider-invariant pillars, exact daily details,
+  keyboard/touch controls and pause/play. Extreme-narrow actors move below dates.
+- Corrected summary provider denominator to all-period unique AI-attributed
+  commits, removing integer rounding. Preserved the historical v0.4.8 link receipt.
+- Replaced obsolete flat-chart/carousel/type assertions with current geometry
+  checks; retained privacy, SVG safety, deterministic bytes and motion restrictions.
+- Verified 144 focused renderer tests, then 110 calendar/recruiter/voxel/dashboard
+  tests; 32 render checks, 91 interaction checks, 74 date/multicycle/cross-year/
+  empty-range checks and 12 viewport/theme variants. Final full suite on Windows
+  Python 3.14: 1003 passed, 30 skipped in 304.48s; Ruff and README parity pass;
+  Impeccable reports zero findings. GitHub CI and release gates remain pending.
+- Preview evidence is under the existing marked scratch root's mine-codex-qa
+  directory. That preview checkpoint preceded the release commits and created
+  no local schedule.
+
+### Independent final review dispositions (2026-09-06)
+
+- C1 reusable workflow fingerprint `76bd339de0f5df4ac6e07f442ffd7104910d1a1a`:
+  independent code-reviewer PASS; committed as `8b145e49e2805030c0e4473c1d2c821e1397389a`.
+- C2 fingerprint `217d300dcafd5dbe0516be5692c51938f78a345c`: two P2 findings,
+  no Critical/security/parity issue. Fixed vertical arrow strides for 28/14/7
+  rows and corrected table header/row/button semantics. Both regressions proved
+  failing before remediation. Targeted browser verification: 54/54 checks.
+- C2 corrected fingerprint `8458378ba1abbb29b7bf2e1482cdf929f21a087b`:
+  independent targeted recheck PASS, including rebuilt wheel and dashboard
+  bindings. No unresolved Critical, High or Medium review findings.
+- Release smoke's obsolete Provider ledger token now checks workstation IDs
+  and heading, with positive/negative regressions. The smoke passed from the
+  installed R2 wheel. A full-suite failure in the historical v0.7.0 runbook-pin
+  assertion was corrected to the reviewed v0.9.0 C1; the GET guard is retained.
+- README-only multi-provider role reported Low documentation friction:
+  evidence counts records (including actor presences and Human-Only), not
+  unique commits. The CLI and charts label the denominator and exact counts
+  passed. Accepted for this Beta by the release owner; maintainer follow-up:
+  clarify the README glossary in the next documentation patch. No product hint
+  was supplied to the role and no configuration dead end occurred.
+- Live CI, publication and cloud-refresh completion are separate release gates;
+  see `v0.9.0-release-readiness.md` for their current evidence state.

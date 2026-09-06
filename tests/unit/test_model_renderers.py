@@ -94,8 +94,8 @@ def test_dashboard_keeps_model_rows_in_data_but_hides_model_visuals():
         )
     )
     html = render_dashboard(stats)
-    assert "Provider ledger" in html
-    assert 'id="providersTitle">Providers</h2>' in html
+    assert 'class="provider-list" id="providerList"' in html
+    assert 'id="workstationsTitle">Mining Workstations</h2>' in html
     assert "Model contribution" not in html
     assert "models-panel" not in html
     assert "model-list" not in html
@@ -130,7 +130,7 @@ def test_dashboard_keeps_model_rows_in_data_but_hides_model_visuals():
 def test_dashboard_zero_model_state_has_no_model_visual_or_copy():
     stats = _stats(models=())
     html = render_dashboard(stats)
-    assert "Provider ledger" in html
+    assert 'class="provider-list" id="providerList"' in html
     assert "Model contribution" not in html
     assert "model-list" not in html
     assert "renderModels" not in html
@@ -158,6 +158,7 @@ def test_dashboard_layout_has_provider_panel_but_no_model_panel():
     html = render_dashboard(
         _stats(models=(ModelRow("claude", "Claude", 2, 2, 1),))
     )
-    assert html.count('class="panel providers-panel"') == 1
+    assert html.count('id="workstationsTitle"') == 1
+    assert 'workstations-panel' in html
     assert 'class="panel models-panel"' not in html
-    assert html.index('id="providersTitle"') < html.index('id="evidenceTitle"')
+    assert html.index('id="workstationsTitle"') < html.index('id="evidenceTitle"')

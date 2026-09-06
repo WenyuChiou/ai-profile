@@ -97,15 +97,15 @@ Merge only after all pull-request checks are green, including:
 - `Wheel onboarding (windows-latest / Python 3.12)`
 - `Wheel onboarding (macos-latest / Python 3.12)`
 
-For v0.7.0, merge the release PR with a merge commit; squash/rebase would make
+For a hosted-workflow upgrade, merge the release PR with a merge commit; squash/rebase would make
 the copyable caller's immutable C1 pin depend on temporary PR-object retention.
 Before deleting the feature branch, require both:
 
 ```bash
 git fetch origin main
-git merge-base --is-ancestor 9c4f276cb437f1866a2c1b407efe54d3790ce811 origin/main
+git merge-base --is-ancestor 8b145e49e2805030c0e4473c1d2c821e1397389a origin/main
 gh api --method GET repos/WenyuChiou/ai-profile/contents/.github/workflows/profile-refresh.yml \
-  -f ref=9c4f276cb437f1866a2c1b407efe54d3790ce811 > /dev/null
+  -f ref=8b145e49e2805030c0e4473c1d2c821e1397389a > /dev/null
 ```
 
 Either failure blocks tagging and branch deletion.
@@ -167,6 +167,27 @@ document the defect, and prepare a new patch version.
 
 ## 5. Refresh the maintainer Profile
 
+Choose the already-authorized automation route from the actual source policy.
+Never create a local schedule for a GitHub-hosted-only deployment.
+
+### Public-only GitHub-hosted route
+
+The maintainer selected this route in September 2026. After package publication:
+
+1. Confirm every caller source is public; do not broaden its allowlist or expose
+   identity secrets. Keep the caller's reviewed full-SHA pin and exact package
+   version together.
+2. Update the Profile caller to that pin, preserving its daily schedule,
+   least-privilege permissions, concurrency and immutable Pages checkout.
+3. Dispatch the cloud workflow. Verify a generated commit changes exactly the
+   eight output paths, then verify Pages serves that published SHA and HTTP 200.
+4. Dispatch again with unchanged inputs on the same UTC date; require no new
+   generated commit. Inspect live light/dark/mobile assets and snapshot date.
+5. Confirm the workflow is enabled on the default branch. GitHub scheduling can
+   be delayed; no exact-time guarantee is implied. Do not install a native task.
+
+### Private or mixed-source local route
+
 Only after the package gates pass:
 
 1. Install the released PyPI version in a clean environment.
@@ -187,9 +208,9 @@ Only after the package gates pass:
    last-run outcome, and reached green Pages deployment. Then confirm the next
    no-change run creates no commit.
 5. Review `aggregate`, run the privacy canary sweep, inspect the exact-eight
-   diff, and confirm publication policies are unchanged. The maintainer home
-   contains an `aggregate_only` source, so do not migrate it to the public-only
-   Action.
+   diff, and confirm publication policies are unchanged. A home containing an
+   `aggregate_only` or private source must not be migrated to the public-only
+   Action; historical maintainer-home contents do not describe the cloud caller.
 6. Verify the live dashboard and all eight Profile assets. If an isolated
    fixture was necessary in step 2, record that limitation and do not claim a
    maintainer-Profile scheduler E2E until a legitimate source change exercises

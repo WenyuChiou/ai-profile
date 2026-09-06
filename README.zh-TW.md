@@ -41,18 +41,15 @@ ledger 的 dashboard；
 
 <a href="https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html">
   <picture>
-    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/badge-dark.svg">
-    <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/badge-light.svg">
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-dark.svg">
     <img alt="開啟 Wenyu Chiou 的互動式 AI 協作 dashboard" src="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-light.svg">
   </picture>
 </a>
 
-這張卡片呈現持續的 AI 協作（active AI days 與 12 週 collaboration pulse
-協作脈動——標記高度是當日 commits 總數、由基線向上的 accent 填色是當日
-AI-attributed 佔比，僅含可公開日期）、跨 AI providers 的廣度，以及每個
-數字背後的明確 evidence 總數。它是根據宣告 Git evidence 的紀錄，不是
-技能評分。
+這張卡片呈現持續的 AI 協作（active AI days 與 84 天體素協作礦山——
+連續 28 天景觀梯田，以線性雙柱展示 AI-attributed 與 Other commits，
+僅含可公開日期）、跨 AI providers 的廣度，以及每個數字背後的明確
+evidence 總數。它是根據宣告 Git evidence 的紀錄，不是技能評分。
 
 ## 為什麼使用 ai-profile？
 
@@ -267,8 +264,8 @@ commitment，不保存 URL 本身。
    **Actions → Daily ai-profile refresh → Run workflow** 手動執行一次。
 
 Template 每天 05:37 UTC 執行，也支援手動 dispatch。
-它以 commit `18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3`
-固定 reusable workflow，安裝確切的 `ai-profile-cli==0.8.1`，
+它以 commit `8b145e49e2805030c0e4473c1d2c821e1397389a`
+固定 reusable workflow，安裝確切的 `ai-profile-cli==0.9.0`，
 並在 scan 前拒絕非公開來源。Pages 只部署該次執行產生的
 確切 `published-sha`。Template 只使用 `GITHUB_TOKEN`，不提供 PAT fallback。
 GitHub-hosted automation 不是本機優先處理：
@@ -293,8 +290,6 @@ README：
 ```html
 <a href="https://USERNAME.github.io/USERNAME/dist/dashboard.html">
   <picture>
-    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="dist/badge-dark.svg">
-    <source media="(max-width: 600px)" srcset="dist/badge-light.svg">
     <source media="(prefers-color-scheme: dark)" srcset="dist/summary-dark.svg">
     <img alt="開啟我的互動式 AI 協作 dashboard"
          src="dist/summary-light.svg">
@@ -326,10 +321,10 @@ Action，Pages source 請維持 **GitHub Actions**，並略過以下 branch-sour
 
 下方使用 synthetic data，展示完整輸出系列：
 
-summary card、heatmap、badge 與 dashboard 共用同一套平面的 Signal Console
-視覺系統：安靜的紙張與墨色表面、藍色協作訊號、暖黃色 evidence cue、把產生
-日期標示為 snapshot 的狀態列，以及只用來改善閱讀節奏的精準對齊；活動不會被
-包裝成 3D 分數或裝飾場景。
+summary 與 dashboard 構成原創方塊協作礦場：厚實的正交投影地形、並列的藍色
+AI-attributed 礦柱與石色其他紀錄柱、立體角色、provider 工作站及證據檔案層。
+柱體正面使用共同線性刻度，裝飾不改變數量。水平日期帶與地形及移動角色分開，
+產生日期始終標示為 snapshot，不宣稱即時資料。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
@@ -346,9 +341,10 @@ summary card、heatmap、badge 與 dashboard 共用同一套平面的 Signal Con
   <img alt="使用 synthetic data、由 Git provenance 驗證的 AI-assisted 比例 badge" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-light.svg">
 </picture>
 
-六個 SVG 都是靜態且可直接放入 GitHub。`dashboard.html` 是 self-contained
-的 provider-filterable view，包含 provider ledger，支援 light、dark 與 system
-themes，不會載入
+兩個 summary SVG 包含持續循環的原創角色；heatmap 與 badge SVG 保持靜態。
+Reduced motion 與列印會停止動畫。`dashboard.html` 是 self-contained 的
+provider-filterable view，完整展開所選區間日期，提供暫停／播放，支援 light、dark
+與 system themes，不會載入
 外部 script、font、tracker 或 API。`profile.json` 與所有 renderer 使用
 相同、已驗證的公開 aggregate contract。
 

@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from aiprofile import __version__
 from aiprofile.errors import LockError, RefreshError, RefreshFailureState
 from aiprofile.export import PUBLIC_ASSET_NAMES
 from aiprofile.lockfile import acquire_home_lock
@@ -115,7 +116,7 @@ def test_write_scheduler_files_creates_launcher_and_config(tmp_path):
         "push": True,
         "branch": "main",
         "remote": "origin",
-        "installed_version": "0.8.2",
+        "installed_version": __version__,
     }
     assert service.read_scheduler_config(home).profile_repo == profile.resolve()
 

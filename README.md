@@ -43,18 +43,16 @@ participation and evidence totals when the Git history declares AI activity.
 
 <a href="https://wenyuchiou.github.io/WenyuChiou/dist/dashboard.html">
   <picture>
-    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/badge-dark.svg">
-    <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/badge-light.svg">
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-dark.svg">
     <img alt="Open Wenyu Chiou's interactive AI collaboration dashboard" src="https://raw.githubusercontent.com/WenyuChiou/WenyuChiou/main/dist/summary-light.svg">
   </picture>
 </a>
 
-The card shows sustained AI collaboration (active AI days and a 12-week
-collaboration pulse — mark height is the day's total commits, the accent
-fill rising from the baseline is its AI-attributed share, publishable dates
-only), breadth across AI providers, and the explicit evidence totals behind
-every number. It is a record of declared Git evidence, not a skill score.
+The card shows sustained AI collaboration (active AI days and an 84-day
+voxel collaboration mine — continuous 28-day landscape terraces with linear
+dual pillars for AI-attributed and Other commits, publishable dates only),
+breadth across AI providers, and the explicit evidence totals behind every
+number. It is a record of declared Git evidence, not a skill score.
 
 ## Why ai-profile?
 
@@ -279,8 +277,8 @@ For a Profile sourced entirely from public repositories:
 
 The template runs daily at 05:37 UTC and also supports manual dispatch. It
 pins the reusable workflow to commit
-`18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3`, installs exactly
-`ai-profile-cli==0.8.1`, rejects non-public sources before scanning, and
+`8b145e49e2805030c0e4473c1d2c821e1397389a`, installs exactly
+`ai-profile-cli==0.9.0`, rejects non-public sources before scanning, and
 deploys Pages from the exact `published-sha` produced in that run. It uses
 only `GITHUB_TOKEN`; no PAT fallback is provided. GitHub-hosted automation is
 not local-first processing: it clones only the public repositories you list
@@ -303,8 +301,6 @@ repository, commit `dist/`, and place this clickable card in its README:
 ```html
 <a href="https://USERNAME.github.io/USERNAME/dist/dashboard.html">
   <picture>
-    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="dist/badge-dark.svg">
-    <source media="(max-width: 600px)" srcset="dist/badge-light.svg">
     <source media="(prefers-color-scheme: dark)" srcset="dist/summary-dark.svg">
     <img alt="Open my interactive AI collaboration dashboard"
          src="dist/summary-light.svg">
@@ -334,13 +330,14 @@ returns 404, confirm that Pages uses `main` and `/ (root)` and that
 
 ## What gets generated
 
-The static, synthetic previews below demonstrate the complete output family:
+The synthetic previews below demonstrate the complete output family:
 
-The summary card, heatmap, badge, and dashboard share one flat Signal
-Console system: calm paper-and-ink surfaces, a blue collaboration signal, a
-warm evidence cue, a status line that labels the generation date as a
-snapshot, and precise alignment that improves reading without turning
-activity into a 3D score or decorative scene.
+The summary and dashboard form an original voxel collaboration mine: thick
+orthographic terrain, blue AI-attributed pillars beside stone Other-record
+pillars, cubic explorers, provider workstations and an evidence archive.
+Pillar fronts use a shared linear scale; decoration never changes counts.
+Horizontal date bands remain separate from terrain and moving characters.
+The generation date is always a snapshot, never a real-time claim.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/summary-sample-dark.svg">
@@ -357,9 +354,10 @@ activity into a 3D score or decorative scene.
   <img alt="Synthetic AI-assisted share badge verified from Git provenance" src="https://raw.githubusercontent.com/WenyuChiou/ai-profile/main/docs/assets/badge-sample-light.svg">
 </picture>
 
-The six SVGs are static and GitHub-ready. `dashboard.html` is a self-contained
-provider-filterable view with the provider ledger, plus light, dark, and system
-themes. It loads no
+The two summary SVGs include continuously looping original characters; heatmap
+and badge SVGs stay static. Reduced motion and print stop the animation.
+`dashboard.html` is a self-contained provider-filterable view with all dates
+in the selected range, pause/play, and light, dark, and system themes. It loads no
 external script, font, tracker, or API. `profile.json` contains the same
 validated public aggregate contract used by every renderer.
 

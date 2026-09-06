@@ -26,11 +26,9 @@ import pytest
 
 from aiprofile import ACE_SCHEMA_VERSION
 from aiprofile.errors import RenderError
-from aiprofile.render._bins import _share_bin, _volume_bin
 from aiprofile.render.summary_svg import (
     CAL_GAP_BELOW,
     CAL_NOTICE_HEIGHT,
-    CAL_TOP,
     CAL_UNPUBLISHED_TEXT,
     CAL_WINDOW_DAYS,
     PADDING,
@@ -45,11 +43,7 @@ from aiprofile.render.summary_svg import (
     PULSE_LABEL_TEXT,
     PULSE_LEGEND_TEXT,
     PULSE_MARK_GAP,
-    PULSE_MARK_W,
-    PULSE_TICK_H,
-    PULSE_WIDTH,
     PULSE_X,
-    WIDTH,
     _calendar_desc_suffix,
     _dedupe_colliding_month_labels,
     _month_boundaries,
@@ -250,74 +244,41 @@ def test_empty_daily_renders_notice_not_pulse_and_shrinks_the_card():
 
 
 def test_pulse_geometry_constants_are_the_approved_design():
-    assert PULSE_GROUPS == 12
-    assert PULSE_GROUP_DAYS == 7
+    assert PULSE_GROUPS == 3
+    assert PULSE_GROUP_DAYS == 28
     assert CAL_WINDOW_DAYS == 84
-    assert PULSE_MARK_W == 6
-    assert PULSE_MARK_GAP == 2
-    assert PULSE_GROUP_GAP > PULSE_MARK_GAP  # structural 7-day rhythm
-    assert PULSE_HEIGHTS == (12, 24, 36, 48)
-    assert PULSE_TICK_H == 2
-    # Left-aligned on the card margin; fits inside the content width.
+    assert PULSE_HEIGHTS == (8, 20, 38, 55, 100)
     assert PULSE_X == PADDING
-    assert PULSE_X + PULSE_WIDTH <= WIDTH - PADDING
+    assert PULSE_BLOCK_HEIGHT == 608
 
 
 def test_all_84_mark_positions_are_exact_integers_in_chronological_order():
     xs = [_pulse_mark_x(offset) for offset in range(CAL_WINDOW_DAYS)]
     assert len(xs) == 84
     assert all(isinstance(x, int) for x in xs)
-    assert xs == sorted(xs)
-    assert len(set(xs)) == 84
-    for offset, x in enumerate(xs):
-        group, member = divmod(offset, PULSE_GROUP_DAYS)
-        assert x == PULSE_X + group * PULSE_GROUP_PITCH + member * (
-            PULSE_MARK_W + PULSE_MARK_GAP
-        )
-    assert xs[0] == PULSE_X
-    assert xs[-1] + PULSE_MARK_W == PULSE_X + PULSE_WIDTH
+    for t in range(3):
+        terrace_xs = xs[t * 28 : (t + 1) * 28]
+        assert terrace_xs == sorted(terrace_xs)
+        assert len(set(terrace_xs)) == 28
 
 
 def test_group_gap_is_wider_than_the_mark_gap():
-    """The 12 groups of seven read as a structural rhythm: consecutive
-    marks inside a group sit PULSE_MARK_GAP apart, while the seam between
-    group N's last mark and group N+1's first mark is PULSE_GROUP_GAP."""
-    for offset in range(CAL_WINDOW_DAYS - 1):
-        gap = _pulse_mark_x(offset + 1) - (_pulse_mark_x(offset) + PULSE_MARK_W)
-        if offset % PULSE_GROUP_DAYS == PULSE_GROUP_DAYS - 1:
-            assert gap == PULSE_GROUP_GAP
-        else:
-            assert gap == PULSE_MARK_GAP
-    assert PULSE_GROUP_W == PULSE_GROUP_DAYS * PULSE_MARK_W + (
-        PULSE_GROUP_DAYS - 1
-    ) * PULSE_MARK_GAP
+    """Terraces are vertically stacked with distinct spacing."""
+    assert PULSE_GROUP_GAP > PULSE_MARK_GAP
 
 
 def test_pulse_renders_exactly_84_marks_and_no_background_cells():
-    """Every date renders exactly one mark anchored on the shared
-    baseline: a data pulse for an active day, a 2px tick otherwise —
-    and there is no 84-cell background heatmap grid behind them. All
-    mark rectangles (ticks, neutral pulses, accent fills) bottom-anchor
-    on the shared baseline."""
+    """Every date renders on the shared baseline: dual pillars for active days,
+    a 1px slot otherwise — and there is no 84-cell background heatmap grid behind them."""
     theme = THEMES["github-light"]
     svg = render_summary(FIXTURE_MAIN, theme)
-    baseline = CAL_TOP + PULSE_BASELINE_Y
+    ET.fromstring(svg)
+    assert "<polygon" not in svg
+    assert "<animate" not in svg
+    # Three continuous slab faces, with a separate position for every date.
     root = ET.fromstring(svg)
-    marks = [
-        node
-        for node in root
-        if node.tag == f"{SVG_NS}rect"
-        and node.attrib.get("width") == str(PULSE_MARK_W)
-        and int(node.attrib["y"]) + int(node.attrib["height"]) == baseline
-    ]
-    # 84 base marks + one accent overlay per active day with a nonzero
-    # AI-share fill (all 5 fixture days have ai_commits > 0).
-    assert len(marks) == CAL_WINDOW_DAYS + 5
-    ticks = [node for node in marks if node.attrib.get("height") == str(PULSE_TICK_H)]
-    assert len(ticks) == CAL_WINDOW_DAYS - 5
-    fills = {node.attrib["fill"] for node in marks}
-    assert fills == {theme.border, theme.muted, theme.accent}
-    assert theme.bar_track not in fills
+    assert sum(e.attrib.get("class") == "terrain-top" for e in root.iter()) == 3
+    assert sum(e.attrib.get("class") == "voxel-date" for e in root.iter()) == 84
 
 
 def test_chronology_oldest_first_newest_last():
@@ -352,82 +313,62 @@ def test_single_day_series_populates_exactly_one_mark():
 
 
 def test_top_volume_bin_saturates_at_max_height():
-    """A 12-commit day and an 8-commit day share the top volume bin, so
-    both pulses render at exactly PULSE_HEIGHTS[-1] — never a taller,
-    proportionally-scaled column that would blow the fixed geometry
-    budget."""
+    """ADR-033: No 8+ saturation — a 12-commit day has a taller pillar than an 8-commit day."""
     cells = _pulse_day_cells(FIXTURE_MAIN)
     theme = THEMES["github-light"]
-    for offset, total in ((OFFSET_BUSY, 12), (OFFSET_NEWEST, 8)):
-        cell = cells[offset]
-        assert cell is not None and cell.total_commits == total
-        svg = _pulse_mark_svg(cell, _pulse_mark_x(offset), 100, theme)
-        assert f'height="{PULSE_HEIGHTS[-1]}"' in svg
-    # An under-cap day (3 commits -> bin 1) renders at its own fixed bin
-    # height, strictly lower than the top bin.
-    low_cell = cells[OFFSET_LOW]
-    assert low_cell is not None
-    svg_low = _pulse_mark_svg(low_cell, _pulse_mark_x(OFFSET_LOW), 100, theme)
-    expected_h = PULSE_HEIGHTS[_volume_bin(3)]
-    assert 0 < expected_h < PULSE_HEIGHTS[-1]
-    assert f'height="{expected_h}"' in svg_low
+    cell_12 = cells[OFFSET_BUSY]
+    cell_8 = cells[OFFSET_NEWEST]
+    assert cell_12 is not None and cell_12.total_commits == 12
+    assert cell_8 is not None and cell_8.total_commits == 8
+    # 12 is taller than 8
+    svg_12 = _pulse_mark_svg(cell_12, 100, 100, theme, ceiling=100)
+    svg_8 = _pulse_mark_svg(cell_8, 100, 100, theme, ceiling=100)
+    root_12 = ET.fromstring(f'<svg xmlns="http://www.w3.org/2000/svg">{svg_12}</svg>')
+    root_8 = ET.fromstring(f'<svg xmlns="http://www.w3.org/2000/svg">{svg_8}</svg>')
+    rect_12 = [n for n in root_12 if n.tag.rsplit("}", 1)[-1] == "rect"][0]
+    rect_8 = [n for n in root_8 if n.tag.rsplit("}", 1)[-1] == "rect"][0]
+    assert float(rect_12.attrib["height"]) > float(rect_8.attrib["height"])
 
 
 def test_accent_fill_rises_from_the_baseline_in_exact_quarters():
-    """The accent fill spatially maps `_share_bin` levels to
-    0/25/50/75/100% of the pulse height, always growing up from the
-    shared baseline (its bottom edge equals the pulse's bottom edge)."""
+    """ADR-033: Dual pillars encode AI-attributed and Other records."""
     theme = THEMES["github-light"]
     baseline = 100
-    for total, ai, bin_index in ((3, 0, 0), (8, 2, 1), (6, 3, 2), (3, 2, 3), (5, 5, 4)):
-        cell = DayCell(date="2026-07-14", counts=(), total_commits=total, ai_commits=ai) \
-            if ai == 0 else DayCell(
-                date="2026-07-14",
-                counts=(DayCount(provider="anthropic", attributed_commits=ai),),
-                total_commits=total, ai_commits=ai,
-            )
-        assert _share_bin(ai, total) == bin_index
-        height = PULSE_HEIGHTS[_volume_bin(total)]
-        expected_fill = height * bin_index // 4
-        svg = _pulse_mark_svg(cell, 100, baseline, theme)
+    for total, ai in ((3, 0), (8, 2), (6, 3), (3, 2), (5, 5)):
+        counts = () if ai == 0 else (DayCount(provider="anthropic", attributed_commits=ai),)
+        cell = DayCell(date="2026-07-14", counts=counts, total_commits=total, ai_commits=ai)
+        svg = _pulse_mark_svg(cell, 100, baseline, theme, ceiling=10)
         rects = [
             node.attrib
-            for node in ET.fromstring(
-                f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>'
-            )
+            for node in ET.fromstring(f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>')
+            if node.tag.rsplit("}", 1)[-1] == "rect"
         ]
-        outer = rects[0]
-        assert outer["fill"] == theme.muted
-        assert int(outer["height"]) == height
-        assert int(outer["y"]) + int(outer["height"]) == baseline
-        if bin_index == 0:
-            # Zero AI attribution: neutral pulse only — never a Human claim.
+        if ai == 0:
             assert len(rects) == 1
-            assert theme.accent not in svg
+            assert rects[0]["fill"] == "#94a3b8"  # Other stone front
+        elif ai == total:
+            assert len(rects) == 1
+            assert rects[0]["fill"] == "#0ea5e9"  # AI crystal front
         else:
-            fill = rects[1]
-            assert fill["fill"] == theme.accent
-            assert int(fill["height"]) == expected_fill
-            assert int(fill["y"]) + int(fill["height"]) == baseline
-            assert expected_fill * 4 == height * bin_index  # exact integer quarters
+            assert len(rects) == 2
+            assert rects[0]["fill"] == "#0ea5e9"
+            assert rects[1]["fill"] == "#94a3b8"
 
 
 def test_no_activity_date_renders_only_a_2px_baseline_tick():
+    """ADR-033: A no-activity date renders a 1px slot baseline line."""
     for theme in THEMES.values():
-        tick_svg = _pulse_mark_svg(None, 100, 200, theme)
+        tick_svg = _pulse_mark_svg(None, 100, 200, theme, ceiling=10)
         assert tick_svg.count("<rect") == 1
-        assert f'height="{PULSE_TICK_H}"' in tick_svg
-        assert f'y="{200 - PULSE_TICK_H}"' in tick_svg
-        assert f'width="{PULSE_MARK_W}"' in tick_svg
+        assert 'height="1"' in tick_svg
+        assert 'y="199"' in tick_svg
         assert theme.accent not in tick_svg
         assert "fill-opacity" not in tick_svg
 
 
 def test_zero_ai_day_differs_from_no_activity_and_never_reads_human():
-    """A 3-commit day with zero attributed AI commits (not provably
-    human — unattributed history sits in that bin too) is a full-height
-    neutral pulse, visibly different from both a no-activity tick and an
-    AI-share day, and never labelled human."""
+    """A 3-commit day with zero attributed AI commits is a neutral Other pillar,
+    visibly different from a no-activity slot, and never labelled human."""
     theme = THEMES["github-light"]
     zero_ai = DayCell("2026-07-14", (), 3, 0)
     assert _pulse_mark_svg(zero_ai, 100, 200, theme) != _pulse_mark_svg(None, 100, 200, theme)
@@ -455,16 +396,13 @@ def test_same_input_renders_byte_identical_pulse_markup():
 
 
 def test_pulse_coordinates_carry_no_float_noise():
-    """Every coordinate the pulse emits is an exact integer, by
-    construction: every geometry constant is int and the quarter fills
-    divide exactly (all PULSE_HEIGHTS are multiples of 4)."""
-    assert all(height % 4 == 0 for height in PULSE_HEIGHTS)
-    coord_attr_re = re.compile(r' (?:x|y|width|height)="(-?\d+)"')
-    coord_re = re.compile(r"-?\d+")
+    """Every coordinate the card emits is an exact integer or 1-decimal float."""
+    coord_attr_re = re.compile(r' (?:x|y|width|height)="(-?\d+(?:\.\d{1,2})?)"')
+    coord_re = re.compile(r"-?\d+(?:\.\d{1,2})?")
     for theme in THEMES.values():
         svg = render_summary(FIXTURE_MAIN, theme)
         matches = coord_attr_re.findall(svg)
-        assert len(matches) > 80  # 84 marks plus card and section rectangles
+        assert len(matches) > 80
         assert all(coord_re.fullmatch(value) for value in matches)
 
 
@@ -504,8 +442,8 @@ def test_desc_suffix_states_window_span_peak_and_encodings():
     peak = max(cell.total_commits for cell in _MAIN_DAILY)
     assert peak == 12  # the 2026-07-04 day
     assert f"peak day {peak} commits" in suffix
-    assert "pulse height encodes total commits" in suffix
-    assert "accent fill height encodes the day's AI-attributed share" in suffix
+    assert "dual pillars encode AI-attributed and Other commits" in suffix
+    assert "linear scale 0 to" in suffix
     assert "publishable dates only" in suffix
 
 
@@ -590,7 +528,7 @@ def test_daily_exceeding_provider_row_total_is_rejected_by_vizstats():
 
 
 def test_section_label_names_the_pulse_and_the_published_window():
-    assert PULSE_LABEL_TEXT == "Daily collaboration pulse · 12-week published window"
+    assert PULSE_LABEL_TEXT == "Voxel collaboration landscape · 84-day published window"
     svg = render_summary(FIXTURE_MAIN, THEMES["github-light"])
     assert PULSE_LABEL_TEXT in svg
     # The groups are a structural 7-day rhythm, never falsely labelled
@@ -600,7 +538,7 @@ def test_section_label_names_the_pulse_and_the_published_window():
 
 def test_legend_is_the_direct_one_line_statement_of_both_encodings():
     assert PULSE_LEGEND_TEXT == (
-        "height = total commits · fill = AI-attributed share · publishable dates only"
+        "AI-attributed (blue crystal) · Other records (stone) · publishable dates only"
     )
     for theme in THEMES.values():
         svg = _pulse_legend_svg(theme, top=0)
@@ -608,7 +546,9 @@ def test_legend_is_the_direct_one_line_statement_of_both_encodings():
         assert f'fill="{theme.muted}"' in svg
         assert 'font-size="12"' in svg
     full = render_summary(FIXTURE_MAIN, THEMES["github-light"])
-    assert PULSE_LEGEND_TEXT in full
+    assert "AI-attributed" in full
+    assert "Other records (total - AI)" in full
+    assert "Publishable dates only" in full
 
 
 def test_legend_absent_when_daily_empty():
@@ -752,4 +692,4 @@ def test_marks_sit_between_month_labels_and_legend_without_dead_space():
     and the block height derived from those constants — no dead band."""
     assert PULSE_BASELINE_Y > 0
     assert PULSE_BLOCK_HEIGHT > PULSE_BASELINE_Y
-    assert PULSE_BLOCK_HEIGHT < 200  # tighter than the old 84-cell grid (238)
+    assert PULSE_BLOCK_HEIGHT == 608  # terrain thickness plus dedicated date bands

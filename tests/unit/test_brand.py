@@ -157,10 +157,12 @@ def test_branded_slugs_render_a_path_element_unbranded_slugs_do_not():
     for slug in sorted(CANONICAL_PROVIDERS):
         stats = _single_provider_stats(slug, PROVIDER_DISPLAY[slug])
         svg = render_summary(stats, THEMES["github-light"])
+        from aiprofile.render.summary_svg import _glyph_tile_svg
+        glyph, _ = _glyph_tile_svg(stats.providers[0], THEMES["github-light"], 0)
         if slug in BRAND:
-            assert "<path " in svg, f"{slug}: expected a glyph <path>, found none"
+            assert "<path " in glyph, f"{slug}: expected a glyph <path>, found none"
         else:
-            assert "<path " not in svg, f"{slug}: unexpected glyph <path> (no BRAND entry)"
+            assert "<path " not in glyph, f"{slug}: unexpected glyph <path> (no BRAND entry)"
             # Fallback letter tile: first letter of the display name, uppercase.
             expected_letter = PROVIDER_DISPLAY[slug][0].upper()
             assert f">{expected_letter}<" in svg

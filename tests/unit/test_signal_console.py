@@ -130,7 +130,8 @@ def test_dashboard_metric_strip_replaces_hero_and_duplicate_cards():
     # The share bar survives as a small track inside the primary metric.
     assert 'id="shareFill"' in body
     # Exactly one element carries each number: no second "ledger" copy.
-    assert body.count("AI actor presences") == 1
+    assert body.count('id="presenceValue"') == 1
+    assert body.count('id="presenceLabel"') == 1
     assert body.count("Active AI days") == 1
 
 
@@ -167,14 +168,13 @@ def test_dashboard_layout_is_activity_region_plus_sidebar_then_one_column():
     css = _stylesheet(render_dashboard(FIXTURE))
     assert ".console-grid {" in css
     grid_rule = css.split(".console-grid {", 1)[1].split("}", 1)[0]
-    assert "grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.8fr)" in grid_rule
+    assert "grid-template-columns: minmax(0, 1fr) 22rem" in grid_rule
     tablet = css.split("@media (max-width: 54rem)", 1)[1].split("@media (max-width: 38rem)", 1)[0]
     assert ".console-grid {" in tablet
     assert "grid-template-columns: minmax(0, 1fr)" in tablet
-    # Metrics: 4-up on desktop, 2-up on tablet/mobile, 1-up at 22rem.
+    # Compact four-up metrics leave the first mobile terrace above the fold.
     metrics_rule = css.split(".metrics {", 1)[1].split("}", 1)[0]
-    assert "grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr))" in metrics_rule
-    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in tablet
+    assert "grid-template-columns: repeat(4, minmax(0, 1fr))" in metrics_rule
     narrow = css.split("@media (max-width: 22rem)", 1)[1]
     assert ".metrics {" in narrow
 
@@ -213,9 +213,10 @@ def test_dashboard_bans_the_generic_saas_shortcuts():
     assert "backdrop-filter" not in css
     assert "--shadow" not in css
     # No hairline-border + wide-shadow pairing: every box-shadow is an
-    # inset focus ring or none.
+    # inset focus ring, solid inset bevel, or none.
     for value in re.findall(r"box-shadow:\s*([^;]+);", css):
-        assert value.strip().startswith("inset 0 0 0") or value.strip() == "none", value
+        assert (value.strip().startswith("inset ") or value.strip() == "none"
+                or re.fullmatch(r"2px 2px 0 var\(--voxel-bevel-dark\)", value.strip())), value
     # No thick side accent stripes, no oversized display.
     assert "border-inline-start: 0.25rem" not in css
     assert "border-top: 0.25rem" not in css
@@ -229,7 +230,7 @@ def test_dashboard_bans_the_generic_saas_shortcuts():
 def test_dashboard_motion_is_transform_or_opacity_only_and_reduced_motion_wins():
     css = _stylesheet(render_dashboard(FIXTURE))
     for value in re.findall(r"transition:\s*([^;]+);", css):
-        if value.strip() == "none":
+        if value.strip().removesuffix(" !important") == "none":
             continue
         for part in value.split(","):
             prop = part.strip().split()[0]
@@ -239,7 +240,8 @@ def test_dashboard_motion_is_transform_or_opacity_only_and_reduced_motion_wins()
     reduced = css.split("@media (prefers-reduced-motion: reduce)", 1)[1]
     assert "transition: none" in reduced
     assert "transform: none" in reduced
-    assert "animation" not in css.split("@media (prefers-reduced-motion: reduce)", 1)[0]
+    assert "18s ease-in-out infinite" in css
+    assert "animation: none !important" in reduced
 
 
 def test_dashboard_keeps_visible_focus_and_status_region():
@@ -271,7 +273,7 @@ def test_summary_keeps_830_width_and_raises_the_type_floor_to_12px():
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             sizes = {int(n) for n in re.findall(r'font-size="(\d+)"', svg)}
-            assert sizes <= {12, 13, 18, 40}, sizes
+            assert sizes <= {12, 13, 14, 18, 40}, sizes
             assert min(sizes) >= 12
 
 
@@ -313,12 +315,10 @@ def test_summary_metric_console_has_four_secondary_cells_on_one_baseline():
 
 
 def test_summary_daily_block_is_the_left_aligned_collaboration_pulse():
-    # v0.8.1 (ADR-032) replaces the 52px-cell matrix with the pulse:
-    # 6px marks, 12 groups of 7, left-aligned on the card margin.
-    assert summary_svg.PULSE_MARK_W == 6
+    assert summary_svg.PULSE_MARK_W == 8
     assert summary_svg.PULSE_X == PADDING
     assert summary_svg.PULSE_X + summary_svg.PULSE_WIDTH <= summary_svg.WIDTH - PADDING
-    assert summary_svg.PULSE_HEIGHTS == (12, 24, 36, 48)
+    assert summary_svg.PULSE_HEIGHTS == (8, 20, 38, 55, 100)
 
 
 # ---------------------------------------------------------------------------

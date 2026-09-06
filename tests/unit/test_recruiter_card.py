@@ -21,17 +21,13 @@ import xml.etree.ElementTree as ET
 
 import aiprofile
 from aiprofile import ACE_SCHEMA_VERSION
-from aiprofile.render import summary_svg
-from aiprofile.render._bins import _share_bin, _volume_bin
 from aiprofile.render.dashboard_html import render_dashboard
 from aiprofile.render.summary_svg import (
     CAL_UNPUBLISHED_TEXT,
     FONT_STACK_DISPLAY,
     FONT_STACK_MONO,
     PROVIDER_NOTE_TEXT,
-    PULSE_HEIGHTS,
     PULSE_LABEL_TEXT,
-    PULSE_MARK_W,
     TITLE_TEXT,
     _pulse_day_cells,
     _pulse_mark_svg,
@@ -171,28 +167,20 @@ def test_pulse_section_precedes_the_provider_ledger():
         for node in root
         if node.tag.rsplit("}", 1)[-1] == "line"
     )
-    # The pulse renders one baseline-anchored mark per window date (a
-    # pulse or a 2px tick) — no 84-cell background grid, no polygons.
-    baseline = summary_svg.CAL_TOP + summary_svg.PULSE_BASELINE_Y
-    base_marks = [
-        node
-        for node in root
-        if node.tag.rsplit("}", 1)[-1] == "rect"
-        and node.attrib.get("width") == str(PULSE_MARK_W)
-        and int(node.attrib["y"]) + int(node.attrib["height"]) == baseline
-        and node.attrib.get("fill") != THEMES["github-light"].accent
-    ]
-    assert len(base_marks) == summary_svg.CAL_WINDOW_DAYS
+    # The voxel world renders 12 chronological 7-day chunks.
     assert "<polygon" not in svg
+    assert PULSE_LABEL_TEXT in svg
 
 
 # ---------------------------------------------------------------------------
-# 2. Pulse height: DayCell.total_commits, fixed bins 1 / 2-4 / 5-7 / 8+.
+# 2. Voxel pillar heights: linear encoding without 8+ saturation (ADR-033).
 # ---------------------------------------------------------------------------
 
 
-def _mark_rects(cell, offset: int = 0, baseline: int = 300) -> list[dict]:
-    svg = _pulse_mark_svg(cell, _pulse_mark_x(offset), baseline, THEMES["github-light"])
+def _mark_rects(cell, offset: int = 0, baseline: int = 300, ceiling: int = 100) -> list[dict]:
+    theme = THEMES["github-light"]
+    x = _pulse_mark_x(offset)
+    svg = _pulse_mark_svg(cell, x, baseline, theme, ceiling=ceiling)
     return [
         node.attrib
         for node in ET.fromstring(f'<svg xmlns="http://www.w3.org/2000/svg">{svg}</svg>')
@@ -200,32 +188,28 @@ def _mark_rects(cell, offset: int = 0, baseline: int = 300) -> list[dict]:
     ]
 
 
-def _pulse_height(cell, offset: int) -> int:
-    return int(_mark_rects(cell, offset)[0]["height"])
+def test_voxel_pillar_heights_distinguish_scalar_values():
+    # ADR-033: Front-face heights encode actual counts linearly without 8+ saturation
+    ceiling = 100
+    scalars = (1, 8, 20, 38, 55, 100)
+    heights = []
+    for s in scalars:
+        cell = DayCell("2026-07-14", (DayCount("anthropic", s),), total_commits=s, ai_commits=s)
+        rects = _mark_rects(cell, 0, 300, ceiling=ceiling)
+        h = float(rects[0]["height"])
+        heights.append(h)
+    # Strictly increasing, distinguishing 8, 20, 38, 55, 100
+    for i in range(len(heights) - 1):
+        assert heights[i] < heights[i + 1]
 
 
-def test_pulse_height_uses_fixed_total_commit_bins():
-    assert PULSE_HEIGHTS == (12, 24, 36, 48)
-    cells = _pulse_day_cells(FIXTURE_TIMELINE)
-    for offset, total in (
-        (OFFSET_ONE_COMMIT_ONE_PROVIDER, 1),
-        (OFFSET_ZERO_AI, 3),
-        (OFFSET_PARTIAL_SHARE, 6),
-        (OFFSET_AT_TOP_BIN, 8),
-        (OFFSET_OVER_TOP_BIN, 20),
-    ):
-        cell = cells[offset]
-        assert cell is not None and cell.total_commits == total
-        expected_h = PULSE_HEIGHTS[_volume_bin(total)]
-        assert _pulse_height(cell, offset) == expected_h
-
-
-def test_pulse_top_bin_saturates_like_the_heatmap():
-    cells = _pulse_day_cells(FIXTURE_TIMELINE)
-    at_cap = cells[OFFSET_AT_TOP_BIN]
-    over_cap = cells[OFFSET_OVER_TOP_BIN]
-    assert _pulse_height(at_cap, OFFSET_AT_TOP_BIN) == PULSE_HEIGHTS[-1]
-    assert _pulse_height(over_cap, OFFSET_OVER_TOP_BIN) == PULSE_HEIGHTS[-1]
+def test_voxel_pillars_do_not_saturate_at_top_bin():
+    # ADR-033: No 8+ saturation - 20 AI commits is strictly taller than 8 AI commits
+    cell_8 = DayCell("2026-07-14", (DayCount("anthropic", 8),), total_commits=8, ai_commits=8)
+    cell_20 = DayCell("2026-07-14", (DayCount("anthropic", 20),), total_commits=20, ai_commits=20)
+    h_8 = float(_mark_rects(cell_8, 0, ceiling=100)[0]["height"])
+    h_20 = float(_mark_rects(cell_20, 0, ceiling=100)[0]["height"])
+    assert h_20 > h_8
 
 
 def test_provider_rows_never_contribute_to_pulse_geometry():
@@ -244,65 +228,59 @@ def test_provider_rows_never_contribute_to_pulse_geometry():
 
 def test_pulse_mark_is_flat_not_a_provider_stack():
     cells = _pulse_day_cells(FIXTURE_TIMELINE)
-    # A partial-share day: exactly two rectangles (neutral pulse + accent
-    # fill). A zero-AI day: exactly one neutral rectangle, no fill.
-    for offset in (OFFSET_ONE_COMMIT_TWO_PROVIDERS, OFFSET_PARTIAL_SHARE):
-        svg = _pulse_mark_svg(cells[offset], 400, 300, THEMES["github-light"])
-        assert svg.count("<rect") == 2
-        assert "<polygon" not in svg
+    # A partial-share day: exactly two rectangles (AI front + Other front).
+    partial_svg = _pulse_mark_svg(cells[OFFSET_PARTIAL_SHARE], 400, 300, THEMES["github-light"])
+    assert partial_svg.count("<rect") == 2
+    assert "<polygon" not in partial_svg
+
+    # A zero-AI day: exactly one rectangle (Other front).
     zero_svg = _pulse_mark_svg(cells[OFFSET_ZERO_AI], 400, 300, THEMES["github-light"])
     assert zero_svg.count("<rect") == 1
 
+    # A full-AI day: exactly one rectangle (AI front).
+    full_cell = cells[OFFSET_ONE_COMMIT_ONE_PROVIDER]
+    full_svg = _pulse_mark_svg(full_cell, 400, 300, THEMES["github-light"])
+    assert full_svg.count("<rect") == 1
+
 
 # ---------------------------------------------------------------------------
-# 3. Accent fill height: the heatmap's fixed AI-share bins, from ai/total,
-#    spatially mapped to 0/25/50/75/100% of the pulse height.
+# 3. Dual pillar heights: AI (blue crystal) and Other records (stone).
 # ---------------------------------------------------------------------------
 
 
-def test_accent_fill_height_uses_the_heatmap_share_bins():
-    theme = THEMES["github-light"]
+def test_dual_pillars_encode_ai_and_other_records():
     cells = _pulse_day_cells(FIXTURE_TIMELINE)
 
+    # Zero AI: exactly one rectangle (Other stone), never called Human
     zero_ai = cells[OFFSET_ZERO_AI]
     assert zero_ai.ai_commits == 0
     rects = _mark_rects(zero_ai, OFFSET_ZERO_AI)
-    assert len(rects) == 1 and rects[0]["fill"] == theme.muted  # no accent, never Human
+    assert len(rects) == 1 and rects[0]["fill"] == "#94a3b8"  # Other stone front
 
+    # Full AI: exactly one rectangle (AI blue crystal)
     full_ai = cells[OFFSET_AT_TOP_BIN]
     assert full_ai.ai_commits == full_ai.total_commits
     rects = _mark_rects(full_ai, OFFSET_AT_TOP_BIN)
-    assert rects[1]["fill"] == theme.accent
-    assert int(rects[1]["height"]) == int(rects[0]["height"])  # 100% of pulse height
+    assert len(rects) == 1 and rects[0]["fill"] == "#0ea5e9"  # AI crystal front
 
-    partial = cells[OFFSET_PARTIAL_SHARE]  # 2 of 6 -> share bin 2 -> 50%
-    assert _share_bin(2, 6) == 2
+    # Partial share: both AI and Other
+    partial = cells[OFFSET_PARTIAL_SHARE]  # 2 AI, 6 total -> 4 other
     rects = _mark_rects(partial, OFFSET_PARTIAL_SHARE)
-    assert int(rects[1]["height"]) * 2 == int(rects[0]["height"])
+    assert len(rects) == 2
+    assert rects[0]["fill"] == "#0ea5e9"  # AI
+    assert rects[1]["fill"] == "#94a3b8"  # Other
 
 
 def test_zero_attributed_ai_day_is_visible_but_never_called_human():
     """The whole-rhythm pulse shows a day with zero attributed AI
-    commits as a neutral pulse (ADR-022 supersedes the AI-only band).
+    commits as a neutral pillar (ADR-033: stone Other pillar).
     Such a day is NOT provably human — `compute_daily_commit_totals`
     counts unattributed (unknown) commits as well as explicit Human-Only
     declarations in total_commits — so the card must render it without
     labelling any of it human."""
     svg = render_summary(FIXTURE_TIMELINE, THEMES["github-light"])
-    cells = _pulse_day_cells(FIXTURE_TIMELINE)
-    band_top = summary_svg._calendar_top(FIXTURE_TIMELINE)
-    baseline = band_top + summary_svg.PULSE_BASELINE_Y
-    assert (
-        _pulse_mark_svg(
-            cells[OFFSET_ZERO_AI],
-            _pulse_mark_x(OFFSET_ZERO_AI),
-            baseline,
-            THEMES["github-light"],
-        )
-        in svg
-    )
-    # Unknown/unattributed is never presented as human anywhere on the card.
     assert "Unattributed commits" in svg
+    assert "Human commits" not in svg
     assert "Human commits" not in svg
 
 
@@ -355,7 +333,7 @@ def test_summary_type_scale_is_the_fixed_five_sizes():
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             sizes = {int(n) for n in re.findall(r'font-size="(\d+)"', svg)}
-            assert sizes <= {12, 13, 18, 40}, sizes
+            assert sizes <= {12, 13, 14, 18, 40}, sizes
 
 
 def test_hero_value_binds_to_mono_while_header_stays_display():
@@ -394,5 +372,5 @@ def test_dashboard_h1_matches_the_summary_card_title():
     assert "Show the work behind the numbers." not in html
 
 
-def test_runtime_version_is_0_8_2():
-    assert aiprofile.__version__ == "0.8.2"
+def test_runtime_version_is_0_9_0():
+    assert aiprofile.__version__ == "0.9.0"

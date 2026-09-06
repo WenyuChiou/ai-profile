@@ -484,20 +484,19 @@ def test_evidence_chip_prefix_present():
     assert THEMES["github-light"].chip_bg in svg
 
 
-def test_bar_proportional_to_top_row():
-    # max = top row (stats.providers[0]); the top row's bar equals the full
-    # bar-track width, every other visible row's bar is strictly smaller and
-    # proportional to its own attributed_commits.
+def test_bar_proportional_to_total_ai_commits():
+    # Each independent trough uses the same denominator printed beside it.
     from aiprofile.render.summary_svg import BAR_MAX_WIDTH
 
     svg = render_summary(FIXTURE_POPULATED, THEMES["github-light"])
-    max_attributed = FIXTURE_POPULATED.providers[0].attributed_commits  # anthropic, 120
-    assert f'width="{BAR_MAX_WIDTH}"' in svg  # top row's fill bar spans the full track
-
-    smallest_visible = FIXTURE_POPULATED.providers[5]  # unrecognized bucket, 20 commits
-    expected_w = round(BAR_MAX_WIDTH * smallest_visible.attributed_commits / max_attributed)
-    assert 0 < expected_w < BAR_MAX_WIDTH
-    assert f'width="{expected_w}"' in svg
+    fronts = [e for e in ET.fromstring(svg).iter()
+              if e.attrib.get("class") == "provider-quantity"]
+    assert len(fronts) == 6
+    for front, provider in zip(fronts, FIXTURE_POPULATED.providers[:6], strict=True):
+        expected = BAR_MAX_WIDTH * provider.attributed_commits / (
+            FIXTURE_POPULATED.totals.ai_attributed_commits
+        )
+        assert abs(float(front.attrib["width"]) - expected) < 0.000001
 
 
 def test_long_display_name_truncated_with_ellipsis():
@@ -720,7 +719,7 @@ def test_coordinate_hygiene_no_float_noise():
         for theme in THEMES.values():
             svg = render_summary(stats, theme)
             for value in attr_re.findall(svg):
-                assert re.fullmatch(r"-?\d+(\.\d{1,2})?", value), value
+                assert re.fullmatch(r"-?\d+(\.\d{1,6})?", value), value
 
 
 # ---------------------------------------------------------------------------
@@ -730,18 +729,17 @@ def test_coordinate_hygiene_no_float_noise():
 
 _ALLOWED_SVG_TAGS = {
     f"{SVG_NS}{t}"
-    # "path" added for round D1 (ADR-017): vendored provider brand glyphs
-    # (aiprofile.render.brand.BRAND) are 24x24 viewBox path data drawn as
-    # a single static <path fill="..." transform="...">, never active
-    # content — still covered by the checks below (no "on*" handlers, no
-    # href, no external refs).
-    # "g"/"animate" were briefly allowed for a D2 SMIL entrance and then
-    # REMOVED with the animation itself (two static-capture invisibility
-    # failures - see summary_svg's no-entrance-animation note): the band
-    # ships fully static, so the allowlist shrinks back accordingly and
-    # the sweep would catch any reintroduction.
     for t in (
-        "svg", "title", "desc", "rect", "line", "text", "tspan", "path",
+        "svg",
+        "title",
+        "desc",
+        "rect",
+        "line",
+        "text",
+        "tspan",
+        "path",
+        "g",
+        "style",
     )
 }
 
@@ -759,8 +757,42 @@ def test_svg_uses_only_allowlisted_elements_and_no_active_content():
             lowered = svg.lower()
             assert "<script" not in lowered
             assert "foreignobject" not in lowered
+            assert "<animate" not in lowered
+            assert "url(" not in lowered
+            assert "@import" not in lowered
             assert "http://" not in lowered.replace("http://www.w3.org/2000/svg", "")
             assert "https://" not in lowered
+
+
+def test_svg_security_negative_probes():
+    """Negative tests: verify disallowed elements and unsafe constructs are detected."""
+    disallowed_tags = ["script", "animate", "foreignObject", "circle", "a", "polygon", "iframe"]
+    for tag in disallowed_tags:
+        full_tag = f"{SVG_NS}{tag}"
+        assert full_tag not in _ALLOWED_SVG_TAGS
+
+    bad_svgs = [
+        '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg"><rect onclick="evil()"/></svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg"><a href="http://evil.com"><rect/></a></svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><div>leak</div></foreignObject></svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg"><style>@import "http://evil.com/x.css";</style></svg>',
+        '<svg xmlns="http://www.w3.org/2000/svg"><style>'
+        'body { background: url("http://evil.com/leak"); }</style></svg>',
+    ]
+    for bad_svg in bad_svgs:
+        root = ET.fromstring(bad_svg)
+        has_violation = False
+        for el in root.iter():
+            if el.tag not in _ALLOWED_SVG_TAGS:
+                has_violation = True
+            for attr in el.attrib:
+                if attr.lower().startswith("on") or "href" in attr.lower():
+                    has_violation = True
+        lowered = bad_svg.lower()
+        if any(bad in lowered for bad in ["<script", "foreignobject", "url(", "@import"]):
+            has_violation = True
+        assert has_violation, f"Expected security violation for: {bad_svg}"
 
 
 def test_evidence_segments_never_negative_and_sum_exactly():

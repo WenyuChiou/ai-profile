@@ -25,7 +25,7 @@ REQUIRED_CONTRACT_TOKENS = (
     "--no-push",
     "AIPROFILE_IDENTITIES",
     "profile-refresh-caller.yml",
-    "18fb08eb6bca4fac6cb4cd1058cc7641452e7bf3",
+    "8b145e49e2805030c0e4473c1d2c821e1397389a",
     "published-sha",
     "aggregate_only",
     "full",
