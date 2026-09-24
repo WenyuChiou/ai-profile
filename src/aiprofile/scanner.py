@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import gitio
+from . import attestations, gitio
 from .adapters.trailers import ParseWarning, ParticipationSpec, parse_commit_trailers
 from .config import Config, effective_level, save_config, upsert_repository
 from .errors import AiProfileError, ConfigError, GitError
@@ -91,6 +91,12 @@ def scan_repository(
     records = gitio.enumerate_commits(path)
     summary.commits_seen = len(records)
     identities = {i.strip().lower() for i in cfg.identities}
+    repo_key = attestations.repository_key(path)
+    ledger = {
+        str(entry["sha"]): entry
+        for entry in attestations.load(home)
+        if entry["repo"] == repo_key
+    }
 
     scanned: list[CommitEvents] = []
     for ordinal, rec in enumerate(records, start=1):
@@ -99,6 +105,8 @@ def scan_repository(
             continue
 
         specs, warns = parse_commit_trailers(rec.trailer_lines)
+        if rec.sha in ledger:
+            specs.append(attestations.spec_for(ledger[rec.sha]))
         summary.warnings.extend((ordinal, rec.sha, w) for w in warns)
 
         # Collect ALL leaf productions per identity first, then reduce each

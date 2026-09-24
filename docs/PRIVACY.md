@@ -35,6 +35,7 @@ GitHub, and "aggregate-only" is not a claim that it is private.
 | prompts, transcripts, diffs, message bodies | **not collected at all** | — |
 | explicit public `owner/repo` inputs | checked-in public Action caller | already public; visible configuration, never copied into generated assets |
 | Action identity emails | GitHub Actions secret + ephemeral runner home | delivered to the runner for author matching; suppressed from default logs and public assets |
+| individually confirmed commit ledger and pending one-commit marks | private `AIPROFILE_HOME` files | optional full ledger syncs only to a Profile Actions secret through `gh` stdin; never to eight assets |
 
 ## Threat surfaces and mitigations
 
@@ -56,6 +57,12 @@ GitHub, and "aggregate-only" is not a claim that it is private.
   identifiers are necessarily visible in the checked-in caller configuration,
   but generated assets and default workflow-owned command logs do not repeat
   them.
+- **Private attribution secret** — the optional complete ledger is checked
+  for shape, 48 KB maximum size, and explicit public source allowlist in an
+  ephemeral runner home. Neither secret contents nor repo/SHA values appear
+  in workflow-owned logs, step summaries, or the exact-eight artifact. An
+  invalid secret fails the refresh rather than silently truncating or
+  partially applying declarations.
 - **Local storage** — `AIPROFILE_HOME` holds private data by design:
   don't sync it into published dotfiles; deleting it deletes config+DB
   (generated `dist/` copies are yours to remove). Implemented hardening:

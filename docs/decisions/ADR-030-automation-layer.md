@@ -2,7 +2,7 @@
 
 - Status: Accepted for v0.7.0; Windows normalization amended in v0.7.1;
   clean remote-ahead fast-forward amended in v0.7.2; scheduler metadata
-  version tracks the current package (v0.9.0, 2026-09-06; previously
+  version tracks the current package (v0.10.0, 2026-09-24; previously
   v0.8.2, 2026-08-23)
 - Deciders: maintainer
 - Supersedes: the assumption that multi-repository refresh and a reusable
@@ -79,9 +79,9 @@ same-name task; an absent task remains an idempotent no-op, while an
 unverifiable or altered task is retained for explicit operator resolution.
 
 The scheduler-config schema did not change in v0.7.1, v0.7.2, v0.8.0,
-v0.8.1, v0.8.2, or v0.9.0. Readers accept exactly v0.7.0, v0.7.1, v0.7.2, v0.8.0,
-v0.8.1, v0.8.2, and v0.9.0 metadata so an existing installation can be inspected and
-reinstalled in place; writers always emit v0.9.0. Earlier, unrelated, and
+v0.8.1, v0.8.2, v0.9.0, or v0.10.0. Readers accept exactly v0.7.0, v0.7.1, v0.7.2, v0.8.0,
+v0.8.1, v0.8.2, v0.9.0, and v0.10.0 metadata so an existing installation can be inspected and
+reinstalled in place; writers always emit v0.10.0. Earlier, unrelated, and
 future versions fail closed.
 
 The launcher and scheduler state live below `AIPROFILE_HOME`, not inside the

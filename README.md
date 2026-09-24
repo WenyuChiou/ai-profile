@@ -293,6 +293,14 @@ with `GITHUB_TOKEN` does not trigger ordinary push workflows or a Pages build,
 so the caller performs an explicit, same-run Pages deployment. Use one caller,
 not a matrix of overlapping refresh jobs.
 
+After personally confirming older commits, `aiprofile reconcile sync-github
+--profile-repo OWNER/PROFILE --confirm-sync` sends the complete private
+ledger to the optional `AIPROFILE_ATTESTATIONS` Actions secret through `gh`
+standard input. Sync again after every add/remove; missing or invalid secrets
+never make the workflow infer AI. The cloud caller must explicitly pass that
+secret to the reusable workflow. `aiprofile sources suggest OWNER/REPO` is a
+read-only comparison against configured sources; it never enrolls a repo.
+
 ## Publish to your GitHub Profile
 
 Run `aiprofile render --out dist` inside your `USERNAME/USERNAME` Profile
@@ -395,6 +403,33 @@ commit counts remain intentionally non-exclusive, while actor presences and
 active days remain separate measures. Missing model declarations stay
 **Unknown**; raw model strings never enter public assets.
 
+v0.10 also accepts `Assisted-By: LLM (Claude Code)` and
+`Generated-By: Codex CLI` when they explicitly identify AI or a registered
+AI tool; a bare organization name is insufficient. Ambiguous values remain
+Unattributed. For a single staged
+commit, opt in with `aiprofile provenance mark --provider OpenAI --tool
+"Codex CLI" --confirm-ai`, then install optional, non-overwriting hooks with
+`aiprofile provenance hook install`. A mark is bound to the current HEAD and
+staged tree, is consumed only when the final commit retains the confirmed AI
+trailers, and can be removed with
+`aiprofile provenance clear`. `aiprofile provenance doctor` reports hook,
+pending-mark, and recent explicit-evidence status. Existing hooks require
+manual integration; opening an AI tool never creates a mark.
+If existing AI trailers cannot be kept in distinct actor groups, the hook
+stops the commit and leaves the mark for manual message correction.
+
+For an older, individually confirmed reachable commit, use `aiprofile
+reconcile add --repo PATH --sha FULL_SHA --provider OpenAI --confirm-ai`, then
+`aiprofile refresh`. `reconcile list` and `reconcile remove --repo PATH --sha
+FULL_SHA --confirm-remove` manage the private ledger without rewriting Git
+history. Do not backfill a commit you have not personally verified. A
+proposed squash message can be checked with `aiprofile provenance pr-check
+--base BASE --head HEAD --message-file MESSAGE`; GitHub may replace source
+messages during squash, so confirm the final reachable commit as well.
+Optional [`PR check`](docs/templates/provenance-pr-check.yml) and
+[`squash-message`](docs/templates/squash-message.txt) templates are provided;
+neither automatically merges or asserts that AI participated.
+
 ## Privacy
 
 - Scanning, aggregation, refresh, and rendering make no network calls and
@@ -403,7 +438,9 @@ active days remain separate measures. Missing model declarations stay
   or log credentials.
 - The optional public Action runs on a GitHub-hosted runner and clones only
   explicit public repositories. Identity emails are passed as a secret and
-  are not written to public assets or default workflow logs.
+  are not written to public assets or default workflow logs. An optional
+  `attestations` secret holds the complete private reconciliation ledger;
+  malformed, out-of-allowlist, or over-48 KB values are rejected.
 - Public assets contain the UTC generation date. They may also contain
   aggregate counts, public provider names, and evidence totals; repository
   activity dates appear only for `full` repositories.

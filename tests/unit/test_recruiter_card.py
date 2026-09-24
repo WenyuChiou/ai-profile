@@ -373,4 +373,4 @@ def test_dashboard_h1_matches_the_summary_card_title():
 
 
 def test_runtime_version_is_0_9_0():
-    assert aiprofile.__version__ == "0.9.0"
+    assert aiprofile.__version__ == "0.10.0"

@@ -44,7 +44,7 @@ from .schema.vocab import normalize_model_category
 
 #: major.minor ACE schema versions this aggregator knows how to read
 #: (ADR-012). Bump alongside a real migration, never to silence this guard.
-_SUPPORTED_SCHEMA_VERSIONS = {"0.1", "0.2", "0.3"}
+_SUPPORTED_SCHEMA_VERSIONS = {"0.1", "0.2", "0.3", "0.4"}
 
 
 @dataclass

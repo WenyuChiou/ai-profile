@@ -1,6 +1,6 @@
 """Security and operational contract for public profile automation.
 
-v0.9.0 hosted upgrade: the reusable workflow installs exactly 0.9.0.
+v0.10.0 hosted upgrade: the reusable workflow installs exactly 0.10.0.
 The caller pins the reviewed immutable revision with that same binding.
 """
 
@@ -35,24 +35,12 @@ ASSET_NAMES = (
 ASSET_PATHS = tuple(f"dist/{name}" for name in ASSET_NAMES)
 
 CHECKOUT_PIN = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
-SETUP_PYTHON_PIN = (
-    "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"
-)
-UPLOAD_ARTIFACT_PIN = (
-    "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-)
-DOWNLOAD_ARTIFACT_PIN = (
-    "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
-)
-CONFIGURE_PAGES_PIN = (
-    "actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d"
-)
-UPLOAD_PAGES_PIN = (
-    "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9"
-)
-DEPLOY_PAGES_PIN = (
-    "actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128"
-)
+SETUP_PYTHON_PIN = "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"
+UPLOAD_ARTIFACT_PIN = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+DOWNLOAD_ARTIFACT_PIN = "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
+CONFIGURE_PAGES_PIN = "actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d"
+UPLOAD_PAGES_PIN = "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9"
+DEPLOY_PAGES_PIN = "actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128"
 
 
 def _text(path: Path) -> str:
@@ -70,15 +58,9 @@ def _job_block(text: str, name: str) -> str:
 
 def _step_script(text: str, name: str) -> str:
     lines = text.splitlines()
-    start = next(
-        index
-        for index, line in enumerate(lines)
-        if line.strip() == f"- name: {name}"
-    )
+    start = next(index for index, line in enumerate(lines) if line.strip() == f"- name: {name}")
     run = next(
-        index
-        for index in range(start + 1, len(lines))
-        if lines[index].startswith("        run: |")
+        index for index in range(start + 1, len(lines)) if lines[index].startswith("        run: |")
     )
     body: list[str] = []
     for line in lines[run + 1 :]:
@@ -89,9 +71,7 @@ def _step_script(text: str, name: str) -> str:
 
 
 def _heredoc_python(script: str) -> str:
-    return textwrap.dedent(
-        script.split("python - <<'PY'\n", 1)[1].split("\nPY", 1)[0]
-    )
+    return textwrap.dedent(script.split("python - <<'PY'\n", 1)[1].split("\nPY", 1)[0])
 
 
 def _permissions(block: str) -> dict[str, str]:
@@ -100,9 +80,7 @@ def _permissions(block: str) -> dict[str, str]:
         block,
     )
     assert match is not None
-    return dict(
-        line.strip().split(": ", 1) for line in match.group("body").splitlines()
-    )
+    return dict(line.strip().split(": ", 1) for line in match.group("body").splitlines())
 
 
 def _git(directory: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -191,8 +169,8 @@ def test_public_only_enforcement_present_before_clone():
     assert "GIT_ASKPASS=/bin/false" in clone
     assert "git -c credential.helper= clone --filter=blob:none --no-checkout" in clone
     assert "GH_TOKEN" not in clone
-    assert '2>/dev/null' in visibility
-    assert '>/dev/null 2>&1' in clone
+    assert "2>/dev/null" in visibility
+    assert ">/dev/null 2>&1" in clone
     assert "Unable to verify public visibility for source repository $index." in visibility
     assert "Unable to clone source repository $index." in clone
 
@@ -203,11 +181,9 @@ def test_repositories_is_the_only_input_and_version_dest_hardcoded():
     on_block = text.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
     inputs = on_block.split("    inputs:\n", 1)[1].split("    secrets:\n", 1)[0]
 
-    assert re.findall(r"(?m)^      ([a-z][a-z0-9_-]*):\s*$", inputs) == [
-        "repositories"
-    ]
+    assert re.findall(r"(?m)^      ([a-z][a-z0-9_-]*):\s*$", inputs) == ["repositories"]
     assert text.count("ai-profile-cli==") == 1
-    assert 'python -m pip install "ai-profile-cli==0.9.0"' in text
+    assert 'python -m pip install "ai-profile-cli==0.10.0"' in text
     assert "ai-profile-cli==0.8.0" not in text
     assert "ai-profile-cli==0.7.0" not in text
     assert "package-version" not in text
@@ -232,8 +208,8 @@ def test_commit_job_stages_exactly_eight_paths_no_git_add_dot():
     assert "git add ." not in text
     assert "git add -A" not in text
     assert "git add --all" not in text
-    assert 'git commit -q' in commit
-    assert 'git push -q' in commit
+    assert "git commit -q" in commit
+    assert "git push -q" in commit
     assert "Unable to commit refreshed ai-profile assets." in commit
     assert "Unable to push refreshed ai-profile assets." in commit
     assert commit.count(">/dev/null 2>&1") >= 2
@@ -311,9 +287,7 @@ def test_validation_script_rejects_hostile_values_without_leaking_secret(
     repositories,
     identities,
 ):
-    script = _heredoc_python(
-        _step_script(_text(WORKFLOW), "Validate repositories and identities")
-    )
+    script = _heredoc_python(_step_script(_text(WORKFLOW), "Validate repositories and identities"))
     monkeypatch.setenv("REPOSITORIES_INPUT", repositories)
     monkeypatch.setenv("AIPROFILE_IDENTITIES", identities)
     monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
@@ -333,9 +307,7 @@ def test_validation_and_config_scripts_accept_json_or_lines_without_echo(
     capsys,
 ):
     workflow = _text(WORKFLOW)
-    validate = _heredoc_python(
-        _step_script(workflow, "Validate repositories and identities")
-    )
+    validate = _heredoc_python(_step_script(workflow, "Validate repositories and identities"))
     configure = _heredoc_python(
         _step_script(workflow, "Initialize private ephemeral configuration")
     )
@@ -350,6 +322,7 @@ def test_validation_and_config_scripts_accept_json_or_lines_without_echo(
     monkeypatch.setenv("AIPROFILE_IDENTITIES", secret)
     monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
     monkeypatch.setenv("AIPROFILE_HOME", str(home))
+    monkeypatch.delenv("AIPROFILE_ATTESTATIONS", raising=False)
 
     exec(compile(validate, "profile-refresh-validation", "exec"), {})
     exec(compile(configure, "profile-refresh-config", "exec"), {})
@@ -362,17 +335,146 @@ def test_validation_and_config_scripts_accept_json_or_lines_without_echo(
     assert secret not in capsys.readouterr().out
 
 
+@pytest.mark.parametrize(
+    "secret", ["not json", "x" * (48 * 1024 + 1)], ids=["malformed", "over-limit"]
+)
+def test_optional_attestations_secret_fails_closed_without_echo(
+    tmp_path, monkeypatch, capsys, secret
+):
+    if os.name == "nt" and len(secret) > 32767:
+        pytest.skip("Windows environment variables cannot hold a 48 KB secret")
+    configure = _heredoc_python(
+        _step_script(_text(WORKFLOW), "Initialize private ephemeral configuration")
+    )
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / "config.json").write_text(
+        json.dumps({"identities": [], "repositories": [], "salt": "s" * 64}),
+        encoding="utf-8",
+    )
+    (tmp_path / "repositories.txt").write_text("owner/repo\n", encoding="utf-8")
+    monkeypatch.setenv("AIPROFILE_HOME", str(home))
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
+    monkeypatch.setenv("AIPROFILE_IDENTITIES", "a@example.com")
+    monkeypatch.setenv("AIPROFILE_ATTESTATIONS", secret)
+    with pytest.raises(SystemExit):
+        exec(compile(configure, "profile-refresh-config", "exec"), {})
+    assert secret not in capsys.readouterr().out
+
+
+def test_optional_attestations_secret_rejects_out_of_scope_source(tmp_path, monkeypatch):
+    configure = _heredoc_python(
+        _step_script(_text(WORKFLOW), "Initialize private ephemeral configuration")
+    )
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / "config.json").write_text(
+        json.dumps({"identities": [], "repositories": [], "salt": "s" * 64}),
+        encoding="utf-8",
+    )
+    (tmp_path / "repositories.txt").write_text("owner/repo\n", encoding="utf-8")
+    secret = json.dumps(
+        {
+            "version": 1,
+            "entries": [
+                {
+                    "repo": "github.com/other/repo",
+                    "sha": "a" * 40,
+                    "provider": "OpenAI",
+                    "tool": None,
+                    "mode": "ai_assisted",
+                }
+            ],
+        }
+    )
+    monkeypatch.setenv("AIPROFILE_HOME", str(home))
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
+    monkeypatch.setenv("AIPROFILE_IDENTITIES", "a@example.com")
+    monkeypatch.setenv("AIPROFILE_ATTESTATIONS", secret)
+    with pytest.raises(SystemExit, match="outside the allowlist"):
+        exec(compile(configure, "profile-refresh-config", "exec"), {})
+
+
+def test_optional_attestations_secret_accepts_matching_public_source(tmp_path, monkeypatch, capsys):
+    configure = _heredoc_python(
+        _step_script(_text(WORKFLOW), "Initialize private ephemeral configuration")
+    )
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / "config.json").write_text(
+        json.dumps({"identities": [], "repositories": [], "salt": "s" * 64}),
+        encoding="utf-8",
+    )
+    (tmp_path / "repositories.txt").write_text("Owner/Repo\n", encoding="utf-8")
+    secret = json.dumps(
+        {
+            "version": 1,
+            "entries": [
+                {
+                    "repo": "github.com/owner/repo",
+                    "sha": "a" * 40,
+                    "provider": "OpenAI",
+                    "tool": None,
+                    "mode": "ai_assisted",
+                }
+            ],
+        }
+    )
+    monkeypatch.setenv("AIPROFILE_HOME", str(home))
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
+    monkeypatch.setenv("AIPROFILE_IDENTITIES", "a@example.com")
+    monkeypatch.setenv("AIPROFILE_ATTESTATIONS", secret)
+    exec(compile(configure, "profile-refresh-config", "exec"), {})
+    assert (
+        json.loads((home / "attestations.json").read_text(encoding="utf-8"))["entries"][0]["sha"]
+        == "a" * 40
+    )
+    assert secret not in capsys.readouterr().out
+
+
+def test_step_summary_separates_snapshot_and_count_deltas(tmp_path, monkeypatch):
+    script = _heredoc_python(
+        _step_script(_text(WORKFLOW), "Summarize snapshot and attribution deltas")
+    )
+    (tmp_path / "dist").mkdir()
+    (tmp_path / "generated").mkdir()
+    old = {
+        "totals": {
+            "commits_scanned": 10,
+            "ai_attributed_commits": 4,
+            "unknown_commits": 6,
+        }
+    }
+    new = {
+        "totals": {
+            "commits_scanned": 12,
+            "ai_attributed_commits": 4,
+            "unknown_commits": 8,
+        }
+    }
+    (tmp_path / "dist" / "profile.json").write_text(json.dumps(old), encoding="utf-8")
+    (tmp_path / "generated" / "profile.json").write_text(json.dumps(new), encoding="utf-8")
+    summary = tmp_path / "step-summary"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    exec(compile(script, "profile-refresh-summary", "exec"), {})
+    content = summary.read_text(encoding="utf-8")
+    assert "Snapshot updated: yes" in content
+    assert "Scanned commits delta: +2" in content
+    assert "AI-attributed commits delta: +0" in content
+    assert "Unattributed commits delta: +2" in content
+
+
 @pytest.mark.skipif(os.name == "nt", reason="extracted Bash probe runs on POSIX CI")
 def test_clone_script_keeps_hostile_repository_text_in_one_argv(tmp_path):
-    script = _step_script(
-        _text(WORKFLOW), "Clone public repositories without credentials"
-    )
+    script = _step_script(_text(WORKFLOW), "Clone public repositories without credentials")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     args_file = tmp_path / "git-args"
     fake_git = bin_dir / "git"
     fake_git.write_text(
-        "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$FAKE_GIT_ARGS\"\n",
+        '#!/bin/sh\nprintf \'%s\\n\' "$@" > "$FAKE_GIT_ARGS"\n',
         encoding="utf-8",
     )
     fake_git.chmod(0o700)
@@ -442,9 +544,7 @@ def test_commit_script_preserves_unrelated_index_and_skips_unchanged(tmp_path):
     assert first.returncode == 0, first.stderr
     committed = set(_git(repo, "show", "--format=", "--name-only", "HEAD").stdout.split())
     assert committed == set(ASSET_PATHS)
-    assert _git(repo, "diff", "--cached", "--name-only").stdout.strip() == (
-        "unrelated.txt"
-    )
+    assert _git(repo, "diff", "--cached", "--name-only").stdout.strip() == ("unrelated.txt")
     output_lines = output_file.read_text(encoding="utf-8").splitlines()
     assert len(output_lines) == 1
     assert re.fullmatch(r"published-sha=[0-9a-f]{40}", output_lines[0])
@@ -461,9 +561,7 @@ def test_commit_script_preserves_unrelated_index_and_skips_unchanged(tmp_path):
     )
     assert second.returncode == 0, second.stderr
     assert _git(repo, "rev-list", "--count", "HEAD").stdout.strip() == count
-    assert _git(repo, "diff", "--cached", "--name-only").stdout.strip() == (
-        "unrelated.txt"
-    )
+    assert _git(repo, "diff", "--cached", "--name-only").stdout.strip() == ("unrelated.txt")
     output_lines = output_file.read_text(encoding="utf-8").splitlines()
     assert len(output_lines) == 2
     assert output_lines[0] == output_lines[1]
@@ -514,9 +612,7 @@ def test_source_command_success_hides_raw_command_output(
 
     assert result.returncode == 0, result.stderr
     assert "source-success-private-canary" not in result.stdout + result.stderr
-    assert "https://github.com/owner/private-canary.git" not in (
-        result.stdout + result.stderr
-    )
+    assert "https://github.com/owner/private-canary.git" not in (result.stdout + result.stderr)
 
 
 @pytest.mark.skipif(os.name == "nt", reason="symlink probe runs on POSIX CI")
@@ -563,9 +659,7 @@ def test_publish_script_rejects_destination_symlink_without_touching_canary(
     assert result.stderr.strip() == "destination asset bundle is invalid"
     assert readme.read_bytes() == b"private-canary\n"
     assert _git(repo, "rev-parse", "HEAD").stdout == before_head
-    assert _git(repo, "diff", "--cached", "--name-only").stdout.strip() == (
-        "unrelated.txt"
-    )
+    assert _git(repo, "diff", "--cached", "--name-only").stdout.strip() == ("unrelated.txt")
 
 
 @pytest.mark.skipif(os.name == "nt", reason="extracted Bash probe runs on POSIX CI")
@@ -600,9 +694,7 @@ def test_source_command_failures_hide_repository_canaries(
         encoding="utf-8",
     )
     fake.chmod(0o700)
-    (tmp_path / "repositories.txt").write_text(
-        "owner/private-canary\n", encoding="utf-8"
-    )
+    (tmp_path / "repositories.txt").write_text("owner/private-canary\n", encoding="utf-8")
     env = {
         **os.environ,
         "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
@@ -664,13 +756,13 @@ def test_publication_command_failures_hide_git_canaries(
     fake = bin_dir / "git"
     fake.write_text(
         "#!/bin/sh\n"
-        f"if [ \"$1\" = \"{fail_command}\" ] || "
-        f"[ \"$2\" = \"{fail_command}\" ]; then\n"
+        f'if [ "$1" = "{fail_command}" ] || '
+        f'[ "$2" = "{fail_command}" ]; then\n'
         "  echo 'profile-private-canary https://example.invalid/private "
         "deadbeef /private/runner/path' >&2\n"
         "  exit 24\n"
         "fi\n"
-        f"exec {shlex.quote(real_git)} \"$@\"\n",
+        f'exec {shlex.quote(real_git)} "$@"\n',
         encoding="utf-8",
     )
     fake.chmod(0o700)
@@ -719,9 +811,7 @@ def test_caller_template_passes_only_repositories_and_secret_identities():
     refresh = _job_block(text, "refresh-profile")
     with_block = refresh.split("    with:\n", 1)[1].split("    secrets:\n", 1)[0]
 
-    assert re.findall(r"(?m)^      ([a-z][a-z0-9_-]*):", with_block) == [
-        "repositories"
-    ]
+    assert re.findall(r"(?m)^      ([a-z][a-z0-9_-]*):", with_block) == ["repositories"]
     assert "public repositories only" in text
     assert "OWNER/REPOSITORY" in with_block
     assert "identities: ${{ secrets.AIPROFILE_IDENTITIES }}" in refresh
@@ -810,9 +900,7 @@ def test_caller_published_sha_validation_rejects_hostile_values(
     monkeypatch,
     capsys,
 ):
-    script = _heredoc_python(
-        _step_script(_text(CALLER), "Validate immutable published revision")
-    )
+    script = _heredoc_python(_step_script(_text(CALLER), "Validate immutable published revision"))
     monkeypatch.setenv("PUBLISHED_SHA", value)
 
     with pytest.raises(SystemExit, match="published revision is invalid"):
@@ -823,9 +911,7 @@ def test_caller_published_sha_validation_rejects_hostile_values(
 
 
 def test_caller_published_sha_validation_accepts_commit_d(monkeypatch, capsys):
-    script = _heredoc_python(
-        _step_script(_text(CALLER), "Validate immutable published revision")
-    )
+    script = _heredoc_python(_step_script(_text(CALLER), "Validate immutable published revision"))
     monkeypatch.setenv("PUBLISHED_SHA", COMMIT_D)
 
     exec(compile(script, "profile-refresh-published-sha", "exec"), {})

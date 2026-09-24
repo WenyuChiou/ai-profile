@@ -73,7 +73,7 @@ def _make_stats(daily: tuple[DayCell, ...], peak_commits: int = 100) -> VizStats
 
 
 def test_version_is_0_9_0():
-    assert __version__ == "0.9.0"
+    assert __version__ == "0.10.0"
 
 
 def test_summary_continuous_animation_and_dedicated_date_band():

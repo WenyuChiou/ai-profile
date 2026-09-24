@@ -25,6 +25,21 @@ below.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-24 (Release candidate)
+
+### Added
+
+- Explicit `Assisted-By` / `Generated-By` AI disclosures, with a new
+  `git_disclosure` source and ACE 0.4.0 (ADR-034). Ambiguous values remain
+  Unattributed; no code-style AI detector was introduced.
+- Per-commit `provenance mark`, `clear`, `doctor`, optional non-overwriting
+  hooks, and `pr-check` for proposed squash messages.
+- Private, individually confirmed `reconcile add/remove/list` ledger that
+  survives full rescans, plus optional stdin-only `sync-github` secret upload.
+- Hosted refresh validates the optional complete private ledger against its
+  explicit public source allowlist and reports snapshot, scanned, attributed,
+  and Unattributed deltas independently. `sources suggest` is read-only.
+
 ## [0.9.0] - 2026-09-06 (Public Beta)
 
 ### Added

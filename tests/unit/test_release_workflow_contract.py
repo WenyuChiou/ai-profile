@@ -87,7 +87,7 @@ def test_candidate_manifest_pins_released_digest_or_unreleased_lifecycle():
     manifest = _candidate_manifest()
     import aiprofile
 
-    assert manifest["version"] == aiprofile.__version__ == "0.9.0"
+    assert manifest["version"] == aiprofile.__version__ == "0.10.0"
     released = RELEASED_WHEEL_SHA256.get(manifest["version"])
     if released is not None:
         assert manifest["wheel_sha256"] == released

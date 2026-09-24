@@ -537,7 +537,7 @@ def test_v081_status_and_reinstall_migrate_prior_scheduler_config(
             == readable_version
         )
         assert service.install(home, repo, "08:31").time == "08:31"
-        assert service.read_scheduler_config(home).installed_version == "0.9.0"
+        assert service.read_scheduler_config(home).installed_version == "0.10.0"
 
     for unsupported_version in ("0.6.1", "0.7.3", "0.8.3", "0.9.1"):
         payload = json.loads(config_path.read_text(encoding="utf-8"))
@@ -556,7 +556,7 @@ def test_scheduler_metadata_version_tracks_the_package_version():
     import aiprofile
 
     assert service.SCHEDULER_VERSION == aiprofile.__version__
-    assert service.SCHEDULER_VERSION == "0.9.0"
+    assert service.SCHEDULER_VERSION == "0.10.0"
 
 
 def test_scheduler_version_docs_state_the_current_contract():

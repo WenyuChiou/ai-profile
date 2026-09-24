@@ -12,7 +12,11 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from ..registry import match_coauthor, normalize_provider, resolve_tool
+from ..registry import (
+    match_coauthor,
+    normalize_provider,
+    resolve_tool,
+)
 from ..schema.event import ProvenanceSource
 from ..schema.vocab import ActorType, ContributionMode, EvidenceLevel, Role, SourceType
 
@@ -21,6 +25,7 @@ AI_TRAILER_KEYS = frozenset(
     {"ai-provider", "ai-model", "ai-tool", "ai-role", "ai-mode", "ai-reviewed-by", "ai-schema"}
 )
 COAUTHOR_KEY = "co-authored-by"
+DISCLOSURE_KEYS = frozenset({"assisted-by", "generated-by"})
 
 
 @dataclass(frozen=True)
@@ -117,6 +122,12 @@ def parse_commit_trailers(
                 coauthor_spec = _parse_coauthor(value)
                 if coauthor_spec is not None:
                     pending.append(coauthor_spec)
+            continue
+
+        if key in DISCLOSURE_KEYS:
+            disclosure = _parse_disclosure(key, value)
+            if disclosure is not None:
+                pending.append(disclosure)
             continue
 
         if key not in AI_TRAILER_KEYS:
@@ -377,5 +388,75 @@ def _parse_coauthor(value: str) -> ParticipationSpec | None:
             source_type=SourceType.GIT_TRAILER_COAUTHOR,
             evidence_level=EvidenceLevel.DECLARED,
             source_reference=COAUTHOR_KEY,
+        ),
+    )
+
+
+def _parse_disclosure(key: str, value: str) -> ParticipationSpec | None:
+    """Accept only a clearly AI-labelled disclosure or a registered identity.
+
+    Generic human names, organizations, and prose do not become AI evidence.
+    Product aliases must form the entire value or precede a parenthesized
+    detail; substring matches would misclassify ordinary prose.
+    """
+    raw = value.strip()
+    if not raw:
+        return None
+    label = re.sub(r"\s*\([^)]*\)\s*$", "", raw).strip()
+    normalized = label.lower()
+    explicit = bool(
+        re.match(
+            r"^(?:ai|llm)(?:$|\s*[:(\-]|\s+(?:tool|assistant|model)\b)",
+            normalized,
+        )
+    )
+    if re.match(r"^(?:ai|llm)\s*[:\-]\s*(?:none|no|not\b|false|unused|n/a|0)(?:\b|$)", normalized):
+        return None
+    tool_resolved = resolve_tool(label)
+    # A registered vendor can also be an ordinary organization. Only the
+    # explicit marker or an unambiguous AI tool is evidence in this field.
+    provider = normalize_provider(label) if explicit else None
+    if not explicit and tool_resolved is None:
+        return None
+    provider_raw = label if provider is not None else None
+    tool_raw = label if tool_resolved is not None else None
+    if tool_resolved is not None:
+        tool, tool_provider = tool_resolved
+        provider = provider or tool_provider
+    else:
+        tool = None
+    # A generic AI/LLM marker establishes participation, but not a vendor.
+    # Try a parenthesized registered tool/provider only when the outer label
+    # itself explicitly says AI/LLM; never search arbitrary prose for brands.
+    if explicit and provider is None:
+        detail = raw[len(label):].strip()
+        if detail.startswith("(") and detail.endswith(")"):
+            candidate = detail[1:-1].strip()
+            resolved = resolve_tool(candidate)
+            if resolved is not None:
+                tool, provider = resolved
+                tool_raw = candidate
+            else:
+                provider = normalize_provider(candidate)
+                if provider is not None:
+                    provider_raw = candidate
+    return ParticipationSpec(
+        actor_type=ActorType.AI,
+        provider=provider,
+        provider_raw=provider_raw,
+        model=None,
+        model_raw=None,
+        tool=tool,
+        tool_raw=tool_raw,
+        roles=(),
+        contribution_mode=(
+            ContributionMode.AI_GENERATED if key == "generated-by"
+            else ContributionMode.AI_ASSISTED
+        ),
+        human_reviewed=None,
+        source=ProvenanceSource(
+            source_type=SourceType.GIT_DISCLOSURE,
+            evidence_level=EvidenceLevel.DECLARED,
+            source_reference=key,
         ),
     )
