@@ -14,7 +14,7 @@ import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import __version__, refresh
+from . import __version__, attestations, provenance, refresh
 from .aggregate import (
     compute_daily_commit_totals,
     compute_daily_provider_counts,
@@ -23,6 +23,7 @@ from .aggregate import (
 from .config import aiprofile_home, db_path, init_home, load_config
 from .errors import AiProfileError
 from .export import write_outputs
+from .lockfile import acquire_home_lock
 from .privacy import build_viz_stats, local_only_details
 from .scanner import scan_repository
 from .schedule import service as schedule_service
@@ -117,9 +118,7 @@ def _build_parser() -> argparse.ArgumentParser:
             " can publish a mixed generation."
         ),
     )
-    p_render.add_argument(
-        "--out", default="dist", help="output directory (default: ./dist)"
-    )
+    p_render.add_argument("--out", default="dist", help="output directory (default: ./dist)")
     p_render.set_defaults(func=_cmd_render)
 
     p_refresh = sub.add_parser(
@@ -134,9 +133,7 @@ def _build_parser() -> argparse.ArgumentParser:
             " network."
         ),
     )
-    p_refresh.add_argument(
-        "--out", default="dist", help="output directory (default: ./dist)"
-    )
+    p_refresh.add_argument("--out", default="dist", help="output directory (default: ./dist)")
     p_refresh.add_argument(
         "--dry-run",
         action="store_true",
@@ -148,9 +145,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_refresh.set_defaults(func=_cmd_refresh)
 
-    p_schedule = sub.add_parser(
-        "schedule", help="manage automatic daily local profile refresh"
-    )
+    p_schedule = sub.add_parser("schedule", help="manage automatic daily local profile refresh")
     schedule_sub = p_schedule.add_subparsers(dest="schedule_command", required=True)
     p_schedule_install = schedule_sub.add_parser(
         "install", help="install or update the native user schedule"
@@ -181,6 +176,76 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_schedule_remove.add_argument("--dry-run", action="store_true")
     p_schedule_remove.set_defaults(func=_cmd_schedule_remove)
+
+    p_reconcile = sub.add_parser("reconcile", help="manage private, per-commit AI declarations")
+    reconcile_sub = p_reconcile.add_subparsers(dest="reconcile_command", required=True)
+    p_add = reconcile_sub.add_parser("add", help="confirm AI participation in one reachable commit")
+    p_add.add_argument("--repo", required=True)
+    p_add.add_argument("--sha", required=True)
+    p_add.add_argument("--provider")
+    p_add.add_argument("--tool")
+    p_add.add_argument(
+        "--mode", choices=("ai_assisted", "ai_generated", "ai_reviewed"), default="ai_assisted"
+    )
+    p_add.add_argument("--confirm-ai", action="store_true", required=True)
+    p_add.set_defaults(func=_cmd_reconcile_add)
+    p_remove = reconcile_sub.add_parser("remove", help="remove one private declaration")
+    p_remove.add_argument("--repo", required=True)
+    p_remove.add_argument("--sha", required=True)
+    p_remove.add_argument("--confirm-remove", action="store_true", required=True)
+    p_remove.set_defaults(func=_cmd_reconcile_remove)
+    p_list = reconcile_sub.add_parser("list", help="count private declarations")
+    p_list.set_defaults(func=_cmd_reconcile_list)
+    p_sync = reconcile_sub.add_parser(
+        "sync-github", help="sync complete private ledger to a Profile Actions secret"
+    )
+    p_sync.add_argument("--profile-repo", required=True)
+    p_sync.add_argument("--confirm-sync", action="store_true", required=True)
+    p_sync.set_defaults(func=_cmd_reconcile_sync)
+
+    p_prov = sub.add_parser("provenance", help="opt-in commit-time AI provenance")
+    prov_sub = p_prov.add_subparsers(dest="provenance_command", required=True)
+    p_mark = prov_sub.add_parser("mark", help="bind one AI declaration to HEAD and staged tree")
+    p_mark.add_argument("--repo", default=".")
+    p_mark.add_argument("--provider")
+    p_mark.add_argument("--tool")
+    p_mark.add_argument(
+        "--mode", choices=("AI-Assisted", "AI-Generated", "AI-Reviewed"), default="AI-Assisted"
+    )
+    p_mark.add_argument("--confirm-ai", action="store_true", required=True)
+    p_mark.set_defaults(func=_cmd_provenance_mark)
+    p_clear = prov_sub.add_parser("clear", help="discard a pending one-commit mark")
+    p_clear.add_argument("--repo", default=".")
+    p_clear.set_defaults(func=_cmd_provenance_clear)
+    p_doctor = prov_sub.add_parser("doctor", help="inspect hook and recent evidence status")
+    p_doctor.add_argument("--repo", default=".")
+    p_doctor.add_argument("--recent", type=int, default=30)
+    p_doctor.set_defaults(func=_cmd_provenance_doctor)
+    p_hooks = prov_sub.add_parser("hook", help="install optional non-overwriting Git hooks")
+    hooks_sub = p_hooks.add_subparsers(dest="hook_command", required=True)
+    p_hook_install = hooks_sub.add_parser("install")
+    p_hook_install.add_argument("--repo", default=".")
+    p_hook_install.set_defaults(func=_cmd_provenance_hook_install)
+    p_hook_run = prov_sub.add_parser("hook-run", help=argparse.SUPPRESS)
+    p_hook_run.add_argument("phase", choices=("prepare", "post"))
+    p_hook_run.add_argument("message", nargs="?")
+    p_hook_run.add_argument("source", nargs="?")
+    p_hook_run.set_defaults(func=_cmd_provenance_hook_run)
+    p_pr_check = prov_sub.add_parser(
+        "pr-check", help="check proposed squash message against source trailers"
+    )
+    p_pr_check.add_argument("--repo", default=".")
+    p_pr_check.add_argument("--base", required=True)
+    p_pr_check.add_argument("--head", required=True)
+    p_pr_check.add_argument("--message-file", required=True)
+    p_pr_check.set_defaults(func=_cmd_provenance_pr_check)
+    p_sources = sub.add_parser("sources", help="read-only source scope diagnostics")
+    sources_sub = p_sources.add_subparsers(dest="sources_command", required=True)
+    p_suggest = sources_sub.add_parser(
+        "suggest", help="compare candidate public repos to configured sources"
+    )
+    p_suggest.add_argument("candidates", nargs="+")
+    p_suggest.set_defaults(func=_cmd_sources_suggest)
     return parser
 
 
@@ -241,6 +306,180 @@ def _cmd_schedule_remove(args: argparse.Namespace) -> int:
         )
         return 0
     print("schedule removed" if result.removed else "schedule not installed")
+    return 0
+
+
+def _cmd_reconcile_add(args: argparse.Namespace) -> int:
+    from . import gitio
+    from .adapters.trailers import parse_commit_trailers
+    from .schema.vocab import ActorType
+
+    home = aiprofile_home()
+    cfg = load_config(home)
+    repo = Path(args.repo)
+    sha = args.sha.lower()
+    with acquire_home_lock(home):
+        attestations.confirm_reachable(repo, sha, cfg.identities)
+        record = next((r for r in gitio.enumerate_commits(repo) if r.sha == sha), None)
+        if record is None:
+            raise AiProfileError("confirmed commit is no longer reachable")
+        existing_specs, _ = parse_commit_trailers(record.trailer_lines)
+        if any(spec.actor_type is ActorType.HUMAN for spec in existing_specs):
+            raise AiProfileError(
+                "commit already declares Human-Only; resolve that contradiction first"
+            )
+        entry = {
+            "repo": attestations.repository_key(repo),
+            "sha": sha,
+            "provider": args.provider,
+            "tool": args.tool,
+            "mode": args.mode,
+        }
+        entries = attestations.load(home)
+        entries = [e for e in entries if (e["repo"], e["sha"]) != (entry["repo"], sha)]
+        entries.append(entry)
+        attestations.save(home, entries)
+    print("private AI declaration saved for one confirmed commit; run refresh to apply")
+    return 0
+
+
+def _cmd_reconcile_remove(args: argparse.Namespace) -> int:
+    home = aiprofile_home()
+    repo = Path(args.repo)
+    with acquire_home_lock(home):
+        # Rewritten history can orphan a declaration. Removal must still be
+        # possible even when the old commit is no longer reachable.
+        attestations.validate_commit_id(args.sha.lower())
+        repo_key = attestations.repository_key(repo)
+        original = attestations.load(home)
+        remaining = [e for e in original if (e["repo"], e["sha"]) != (repo_key, args.sha.lower())]
+        if len(remaining) == len(original):
+            raise AiProfileError("private declaration not found")
+        attestations.save(home, remaining)
+    print("private declaration removed; run refresh to update the snapshot")
+    return 0
+
+
+def _cmd_reconcile_list(args: argparse.Namespace) -> int:
+    entries = attestations.load(aiprofile_home())
+    print(f"private declarations: {len(entries)}")
+    if args.verbose:
+        print("-- local-only commit IDs --")
+        for entry in entries:
+            print(f"{entry['repo']} {entry['sha']} {entry['provider'] or entry['tool']}")
+    return 0
+
+
+def _cmd_reconcile_sync(args: argparse.Namespace) -> int:
+    home = aiprofile_home()
+    with acquire_home_lock(home):
+        count = attestations.sync_github(home, args.profile_repo)
+    print(f"private cloud ledger synced: {count} individually confirmed commits")
+    return 0
+
+
+def _cmd_provenance_mark(args: argparse.Namespace) -> int:
+    provenance.mark(aiprofile_home(), Path(args.repo), args.provider, args.tool, args.mode)
+    print("one-commit AI mark saved for current HEAD and staged tree")
+    return 0
+
+
+def _cmd_provenance_clear(args: argparse.Namespace) -> int:
+    removed = provenance.clear(aiprofile_home(), Path(args.repo))
+    print("pending mark cleared" if removed else "no pending mark")
+    return 0
+
+
+def _cmd_provenance_doctor(args: argparse.Namespace) -> int:
+    from . import gitio
+    from .adapters.trailers import parse_commit_trailers
+    from .schema.vocab import ActorType
+
+    if not 1 <= args.recent <= 10000:
+        raise AiProfileError("--recent must be between 1 and 10000")
+    repo = Path(args.repo)
+    status = provenance.hook_status(repo)
+    marks = provenance._read(aiprofile_home())
+    root = repo.resolve()
+    pending = marks.get(provenance._repo_id(root))
+    print(f"commit hooks: {status}")
+    if pending:
+        print(
+            "pending mark: matches staged state"
+            if provenance._head_and_tree(root) == (pending["head"], pending["tree"])
+            else "pending mark: stale; clear and mark again"
+        )
+    else:
+        print("pending mark: none")
+    records = gitio.enumerate_commits(repo)[: args.recent]
+    unattributed = 0
+    attributed = 0
+    for record in records:
+        specs, _ = parse_commit_trailers(record.trailer_lines)
+        if any(spec.actor_type is ActorType.AI for spec in specs):
+            attributed += 1
+        elif not specs:
+            unattributed += 1
+    print(
+        f"recent {len(records)} commits: {attributed} with explicit AI evidence,"
+        f" {unattributed} without attribution"
+    )
+    ledger = [
+        entry
+        for entry in attestations.load(aiprofile_home())
+        if entry["repo"] == attestations.repository_key(repo)
+    ]
+    reachable = {record.sha for record in gitio.enumerate_commits(repo)}
+    orphaned = sum(entry["sha"] not in reachable for entry in ledger)
+    print(f"private reconciliations: {len(ledger)}; unreachable after history changes: {orphaned}")
+    print("squash merge may replace source commits; inspect the final reachable commit message")
+    return 0
+
+
+def _cmd_provenance_hook_install(args: argparse.Namespace) -> int:
+    provenance.install_hooks(aiprofile_home(), Path(args.repo))
+    print("optional hooks installed; existing hooks were not changed")
+    return 0
+
+
+def _cmd_provenance_hook_run(args: argparse.Namespace) -> int:
+    provenance.hook_run(
+        aiprofile_home(),
+        Path.cwd(),
+        args.phase,
+        Path(args.message) if args.message else None,
+        args.source,
+    )
+    return 0
+
+
+def _cmd_provenance_pr_check(args: argparse.Namespace) -> int:
+    source, final = provenance.check_squash_message(
+        Path(args.repo), args.base, args.head, Path(args.message_file)
+    )
+    print(f"proposed squash message checked: {source} source AI identities, {final} final")
+    return 0
+
+
+def _cmd_sources_suggest(args: argparse.Namespace) -> int:
+    import re
+
+    from . import gitio
+
+    cfg = load_config(aiprofile_home())
+    configured = {
+        attestations.repository_key(Path(entry.path))
+        for entry in cfg.repositories
+        if Path(entry.path).exists()
+    }
+    pattern = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9._-]{1,100}$")
+    for candidate in args.candidates:
+        if pattern.fullmatch(candidate) is None:
+            raise AiProfileError("candidate must be a GitHub OWNER/REPO identifier")
+        key = gitio.canonicalize_remote(f"https://github.com/{candidate}.git")
+        state = "configured" if key in configured else "not configured"
+        print(f"{candidate}: {state}; no repository was added")
+    print("Verify public visibility and identity scope before changing the explicit allowlist")
     return 0
 
 

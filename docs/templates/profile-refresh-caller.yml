@@ -3,6 +3,8 @@
 # Operational facts:
 # - Add AIPROFILE_IDENTITIES as a repository secret (JSON array or one email
 #   per line). Identity emails never belong in the plain `with:` block.
+# - Optionally add AIPROFILE_ATTESTATIONS as the complete private, validated
+#   reconciliation ledger. Never put per-commit declarations in this file.
 # - A protected default branch can reject the GITHUB_TOKEN push. Either allow
 #   the Actions bot to push the eight generated paths or use a PR flow manually.
 # - GitHub disables scheduled workflows in public repositories after 60 days
@@ -31,9 +33,9 @@ jobs:
   refresh-profile:
     permissions:
       contents: write
-    # Immutable commit 8b145e4 hardcodes ai-profile-cli==0.9.0 in the reusable
+    # Immutable commit 62284cc hardcodes ai-profile-cli==0.10.0 in the reusable
     # workflow; do not replace this full pin with a tag or branch.
-    uses: WenyuChiou/ai-profile/.github/workflows/profile-refresh.yml@8b145e49e2805030c0e4473c1d2c821e1397389a
+    uses: WenyuChiou/ai-profile/.github/workflows/profile-refresh.yml@62284cc9ffb6b1a05af677e8f20c73d33e4bc4c6
     with:
       # public repositories only - the reusable workflow rejects anything else.
       repositories: |
@@ -41,6 +43,7 @@ jobs:
         OWNER/ANOTHER-PUBLIC-REPOSITORY
     secrets:
       identities: ${{ secrets.AIPROFILE_IDENTITIES }}
+      attestations: ${{ secrets.AIPROFILE_ATTESTATIONS }}
 
   # This same-run deployment is required because commits pushed with GITHUB_TOKEN do not trigger
   # push-based workflow or Pages builds. The immutable published-sha output binds Pages to the

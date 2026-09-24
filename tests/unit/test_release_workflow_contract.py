@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_release_runbook_uses_get_for_immutable_workflow_probe():
     text = (ROOT / "docs" / "RELEASING.md").read_text(encoding="utf-8")
     assert "gh api --method GET repos/WenyuChiou/ai-profile/contents/" in text
-    assert "-f ref=8b145e49e2805030c0e4473c1d2c821e1397389a" in text
+    assert "-f ref=62284cc9ffb6b1a05af677e8f20c73d33e4bc4c6" in text
     assert "scheduler-only patch" in text
     assert "must not silently rebind the immutable public caller" in text
 
@@ -87,7 +87,7 @@ def test_candidate_manifest_pins_released_digest_or_unreleased_lifecycle():
     manifest = _candidate_manifest()
     import aiprofile
 
-    assert manifest["version"] == aiprofile.__version__ == "0.9.0"
+    assert manifest["version"] == aiprofile.__version__ == "0.10.0"
     released = RELEASED_WHEEL_SHA256.get(manifest["version"])
     if released is not None:
         assert manifest["wheel_sha256"] == released

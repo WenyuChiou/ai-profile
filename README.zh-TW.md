@@ -260,12 +260,14 @@ commitment，不保存 URL 本身。
    複製到 Profile repository 的 `.github/workflows/profile-refresh.yml`。
 2. 編輯明確的 public `owner/repo` 清單。把 identity email payload 設為
    repository secret `AIPROFILE_IDENTITIES`；絕對不要放在 `with:`。
+   若有逐筆確認的舊 commit，可選擇將完整私密清單同步為
+   `AIPROFILE_ATTESTATIONS`。
 3. 在 **Settings → Pages** 將來源設為 **GitHub Actions**，再到
    **Actions → Daily ai-profile refresh → Run workflow** 手動執行一次。
 
 Template 每天 05:37 UTC 執行，也支援手動 dispatch。
-它以 commit `8b145e49e2805030c0e4473c1d2c821e1397389a`
-固定 reusable workflow，安裝確切的 `ai-profile-cli==0.9.0`，
+它以 commit `62284cc9ffb6b1a05af677e8f20c73d33e4bc4c6`
+固定 reusable workflow，安裝確切的 `ai-profile-cli==0.10.0`，
 並在 scan 前拒絕非公開來源。Pages 只部署該次執行產生的
 確切 `published-sha`。Template 只使用 `GITHUB_TOKEN`，不提供 PAT fallback。
 GitHub-hosted automation 不是本機優先處理：
@@ -280,6 +282,13 @@ Organization Actions allowlist 也必須允許固定版本的 actions
 不會觸發一般 push workflows 或 Pages build，
 因此 caller 會在同一次 run 明確部署 Pages。
 請只使用一個 caller，不要建立會重疊執行的 matrix。
+
+逐筆確認舊 commit 後，`aiprofile reconcile sync-github --profile-repo
+OWNER/PROFILE --confirm-sync` 會透過 `gh` 標準輸入，將完整私密清單傳給
+選用的 `AIPROFILE_ATTESTATIONS` Actions secret。每次新增或移除後都要重同步；
+缺少或無效的 secret 不會讓 workflow 猜測 AI。Cloud caller 必須明確傳入此
+secret 給 reusable workflow。`aiprofile sources suggest OWNER/REPO` 只讀比對
+已設定來源，絕不自動加入 repo。
 
 ## 發布到 GitHub Profile
 
@@ -380,6 +389,28 @@ evidence 保留在 `profile.json`。Family commit counts 刻意採 non-exclusive
 actor presences 與 active days 仍是分開的指標。沒有 model 宣告會維持
 **Unknown**；raw model strings 不會進入公開資產。
 
+v0.10 也辨識明確指向 AI 或已登錄 AI 工具的 `Assisted-By: LLM
+(Claude Code)` 與 `Generated-By: Codex CLI`；單獨的組織名稱不足以證明 AI
+參與，模糊值仍為 Unattributed。對單筆
+已暫存提交，可執行 `aiprofile provenance mark --provider OpenAI --tool
+"Codex CLI" --confirm-ai`，再選擇安裝不覆寫既有 hook 的 `aiprofile
+provenance hook install`。標記綁定當下 HEAD 和暫存樹，只有最終 commit 保留
+確認的 AI trailers 才會清除；可用 `aiprofile provenance clear` 清除。`aiprofile provenance
+doctor` 會回報 hook、待提交標記與近期明確證據狀態。既有 hook 需手動整合；
+開啟 AI 工具本身不會建立標記。
+若既有 AI trailers 無法與新標記安全分組，hook 會中止提交並保留標記，供手動修正訊息。
+
+對已逐筆確認且可達的舊 commit，可用 `aiprofile reconcile add --repo PATH
+--sha FULL_SHA --provider OpenAI --confirm-ai`，接著執行 `aiprofile refresh`。
+`reconcile list` 與 `reconcile remove --repo PATH --sha FULL_SHA
+--confirm-remove` 管理私密清單，不改寫 Git 歷史。未親自確認的提交不可補記。
+可用 `aiprofile provenance pr-check --base BASE --head HEAD --message-file
+MESSAGE` 檢查預定 squash 訊息；GitHub squash 可能替換來源訊息，合併後仍須
+確認最終可達 commit。
+另有選用的 [`PR 檢查`](docs/templates/provenance-pr-check.yml) 與
+[`squash 訊息`](docs/templates/squash-message.txt) 範本；兩者不會自動合併，
+也不會替使用者斷定 AI 曾參與。
+
 ## 隱私
 
 - Scan、aggregate、refresh 與 render 不會進行網路呼叫，也不傳送 telemetry。
@@ -387,7 +418,8 @@ actor presences 與 active days 仍是分開的指標。沒有 model 宣告會�
   執行 `git push`；`ai-profile` 不會持久保存或記錄 credentials。
 - 選用的 public Action 在 GitHub-hosted runner 執行，只 clone 明確列出的
   public repositories。Identity emails 透過 secret 傳入，不會寫入公開資產或
-  default workflow logs。
+  default workflow logs。選用的 `attestations` secret 存放完整私密補記清單；
+  格式錯誤、超出白名單或超過 48 KB 都會拒絕。
 - 公開資產會包含 UTC generation date，也可能包含 aggregate counts、
   公開 provider names 與 evidence totals；repository activity dates
   只會來自 `full` repositories。

@@ -371,6 +371,12 @@ def _run_dry(home: Path, out_dir: Path, generated: str, recorded: str) -> Refres
         shadow = Path(tmp) / "home"
         shadow.mkdir()
         shutil.copyfile(config_path(home), config_path(shadow))
+        from .attestations import LEDGER_NAME
+        from .attestations import load as load_attestations
+
+        if (home / LEDGER_NAME).exists():
+            load_attestations(home)  # reject malformed/private oversized input before scanning
+            shutil.copyfile(home / LEDGER_NAME, shadow / LEDGER_NAME)
         cfg = load_config(shadow)
         plan = plan_refresh(cfg)
         real_db = db_path(home)

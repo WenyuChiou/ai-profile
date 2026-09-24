@@ -60,6 +60,7 @@ EVIDENCE_PRECEDENCE: dict[EvidenceLevel, int] = {
 class SourceType(StrEnum):
     GIT_TRAILER = "git_trailer"
     GIT_TRAILER_COAUTHOR = "git_trailer_coauthor"
+    GIT_DISCLOSURE = "git_disclosure"
     MANUAL_DECLARATION = "manual_declaration"  # reserved, post-v0.1 (schema.md section 14)
     NONE = "none"  # the no-evidence marker used by unknown events
 
@@ -67,8 +68,9 @@ class SourceType(StrEnum):
 #: Merge tie-break priority (ADR-008 canonical rule, G2-06): higher wins
 #: after evidence precedence; then lexicographic locator, then value.
 SOURCE_TYPE_PRIORITY: dict[SourceType, int] = {
-    SourceType.GIT_TRAILER: 3,
-    SourceType.GIT_TRAILER_COAUTHOR: 2,
+    SourceType.GIT_TRAILER: 4,
+    SourceType.GIT_TRAILER_COAUTHOR: 3,
+    SourceType.GIT_DISCLOSURE: 2,
     SourceType.MANUAL_DECLARATION: 1,
     SourceType.NONE: 0,
 }
@@ -79,6 +81,7 @@ SOURCE_TYPE_PRIORITY: dict[SourceType, int] = {
 ALLOWED_SOURCE_REFERENCES: dict[SourceType, frozenset[str | None]] = {
     SourceType.GIT_TRAILER: frozenset({"ai-provider", "ai-tool", "ai-mode"}),
     SourceType.GIT_TRAILER_COAUTHOR: frozenset({"co-authored-by"}),
+    SourceType.GIT_DISCLOSURE: frozenset({"assisted-by", "generated-by"}),
     SourceType.MANUAL_DECLARATION: frozenset({None}),  # reserved
     SourceType.NONE: frozenset({None}),
 }

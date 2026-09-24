@@ -24,6 +24,55 @@ def test_no_trailer_input_returns_empty():
     assert parse_commit_trailers([]) == ([], [])
 
 
+def test_explicit_openinfra_disclosures_are_ai_evidence():
+    specs, warnings = parse_commit_trailers(
+        ["Assisted-by: LLM (Claude Code)", "Generated-by: Codex CLI"]
+    )
+    assert warnings == []
+    assert [(s.provider, s.tool, s.contribution_mode) for s in specs] == [
+        ("anthropic", "claude-code", ContributionMode.AI_ASSISTED),
+        ("openai", "codex-cli", ContributionMode.AI_GENERATED),
+    ]
+    assert all(s.source.source_type is SourceType.GIT_DISCLOSURE for s in specs)
+    assert [s.source.source_reference for s in specs] == ["assisted-by", "generated-by"]
+
+
+def test_generic_and_ambiguous_disclosures_do_not_infer_ai():
+    specs, warnings = parse_commit_trailers(
+        [
+            "Assisted-by: Alice Smith",
+            "Generated-by: release script",
+            "Assisted-by: team using an AI tool",
+            "Assisted-by: AI Research Team",
+            "Generated-by: GitHub Actions",
+            "Assisted-by: GitHub",
+            "Assisted-by: Google",
+            "Generated-by: Meta",
+            "Assisted-by: AI - none",
+        ]
+    )
+    assert specs == []
+    assert warnings == []
+
+
+def test_recent_public_review_prose_without_ai_trailers_remains_unattributed():
+    # A real September 2026 public commit ended in a Review: code-reviewer
+    # trailer but had no AI-* declaration. Prose about a reviewer is not an
+    # attestation of this commit's AI participation.
+    specs, warnings = parse_commit_trailers(
+        ["Review: code-reviewer trigger (2 files; skill governance) - APPROVE."]
+    )
+    assert specs == []
+    assert warnings == []
+
+
+def test_generic_llm_declaration_has_no_invented_provider():
+    specs, _ = parse_commit_trailers(["Assisted-by: LLM"])
+    assert len(specs) == 1
+    assert specs[0].provider is None
+    assert specs[0].actor_type is ActorType.AI
+
+
 def test_unrelated_trailers_return_empty():
     lines = ["Signed-off-by: Someone <someone@example.com>", "Fixes: #123"]
     assert parse_commit_trailers(lines) == ([], [])

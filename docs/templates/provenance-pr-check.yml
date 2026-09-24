@@ -1,0 +1,52 @@
+# Optional advisory: copy to .github/workflows/provenance-pr-check.yml.
+# This examines explicit source-commit trailers against the proposed default
+# squash text (PR title/body). Maintainers must still inspect the actual final
+# merge message: GitHub repository squash settings can choose different text.
+name: Check AI provenance before squash
+
+on:
+  pull_request:
+    types: [opened, synchronize, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install reviewed attribution checker
+        run: python -m pip install "ai-profile-cli==0.10.0"
+      - name: Check proposed squash message
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          if any(re.fullmatch(r"[0-9a-f]{40}", os.environ[name]) is None
+                 for name in ("BASE_SHA", "HEAD_SHA")):
+              raise SystemExit("PR revision is invalid")
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+          pr = event["pull_request"]
+          message = (pr["title"] or "") + "\n\n" + (pr["body"] or "") + "\n"
+          Path(os.environ["RUNNER_TEMP"], "proposed-squash.txt").write_text(
+              message, encoding="utf-8"
+          )
+          PY
+          aiprofile provenance pr-check --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --message-file "$RUNNER_TEMP/proposed-squash.txt"

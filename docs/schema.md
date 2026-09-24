@@ -4,7 +4,7 @@ Status: **current for the v0.8.1 Public Beta candidate** (2026-08-23; unchanged
 through the released v0.8.0 from the released v0.6.1 schema; the v0.1 event
 field semantics remain the historical input contract, while ADR-027 adds the
 public model-family aggregate).
-Schema version string: `"0.3.0"`.
+Schema version string: `"0.4.0"`.
 
 An ACE event records one attributable participation (by an AI tool, a human,
 or an unknown actor) in one software-development artifact. The only supported
@@ -204,19 +204,22 @@ All sources are retained for audit even when superseded (§8.3).
 
 ### 6.2 Provenance source types
 
-v0.1 vocabulary:
+Current vocabulary:
 
 ```text
 git_trailer            # AI-* trailer group in the commit message
 git_trailer_coauthor   # Co-authored-by trailer matching a known AI identity
-manual_declaration     # reserved: `aiprofile reconcile` (post-v0.1)
+git_disclosure         # explicit Assisted-By / Generated-By AI statement
+manual_declaration     # individually confirmed private reconciliation
 none                   # the no-evidence marker used by unknown events
 ```
 
 `source_reference` is an enum-constrained locator, validated per source
 type (G2-07 — a prose prohibition is not a control): `git_trailer` allows
 exactly `ai-provider` / `ai-tool` / `ai-mode`; `git_trailer_coauthor`
-allows exactly `co-authored-by`; `none` requires null. Future source
+allows exactly `co-authored-by`; `git_disclosure` allows exactly
+`assisted-by` / `generated-by`;
+`manual_declaration` requires null. `none` requires null. Future source
 types must define their closed locator sets before shipping. Duplicate
 `(source_type, source_reference)` keys within one construction dedupe to
 the HIGHEST evidence level at the schema boundary (gate H-03 — otherwise
@@ -322,7 +325,7 @@ group plus a matching co-author line), and to future multi-source imports
   are resolved by the canonical, ingestion-order-free rule of ADR-008
   (G2-06): higher
   evidence precedence wins; ties break by source-type priority
-  (`git_trailer > git_trailer_coauthor > manual_declaration > none`),
+  (`git_trailer > git_trailer_coauthor > git_disclosure > manual_declaration > none`),
   then lexicographic source locator, then lexicographic value. The rule
   is applied as one N-ary reduction over all leaf productions of the
   identity (never an incremental pairwise fold — pooled ranks are
@@ -527,25 +530,26 @@ Adding any of these later is a minor-version schema change (§13).
 - The database migration sequence (integers, ADR-004) is independent of the
   ACE version.
 - The v0.5 model-family aggregate is the `0.3.0` minor revision (ADR-027).
-  Readers in this release accept stored `0.1.x`, `0.2.x`, and `0.3.x` events;
-  new scans write `0.3.0`.  The additive `VizStats.models` contract reuses
+  Readers in this release accept stored `0.1.x`, `0.2.x`, `0.3.x`, and `0.4.x` events;
+  new scans write `0.4.0` (ADR-034). The additive `VizStats.models` contract reuses
   this `schema_version` because event and public-contract revisions move
   together.  A future independently versioned visualization contract must
   add an explicit `viz_schema_version` through a new ADR rather than silently
   relabeling the ACE version.
 
-## 14. Manual reconciliation (forward contract only)
+## 14. Manual reconciliation
 
-`aiprofile reconcile` is post-v0.1. Its contract is fixed now so the schema
-does not shift later: manual assignments produce events with
+`aiprofile reconcile` is available in v0.10.0. Manual assignments produce events with
 `source_type: manual_declaration`, `evidence_level: declared`, and the
 standard identity rules (§8) — reconciling a commit already holding an
 unknown event *adds* the declared event; the unknown event is removed only
 when the reconciliation explicitly resolves the whole commit. Because
 v0.1's scan mechanism replaces scan-derived rows per scan (ADR-014), the
-version that introduces manual events MUST also change the scan to
-preserve `manual_declaration` events across rescans — recorded here so it
-cannot be forgotten.
+scanner reapplies the private attestation ledger before every atomic scan
+replacement. The ledger is strictly local, or injected into an ephemeral
+hosted home through an optional GitHub Actions secret; it is never an output
+asset. An entry is tied to canonical repository identity and full reachable
+commit SHA and requires explicit whole-commit confirmation.
 
 ## 15. Aggregation semantics bound to this schema
 

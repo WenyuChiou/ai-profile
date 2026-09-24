@@ -1,0 +1,12 @@
+<Concise PR title>
+
+<Why and what changed; check this is the actual final squash message.>
+
+AI-Provider: <provider actually involved>
+AI-Tool: <tool actually involved, if known>
+AI-Mode: AI-Assisted
+
+Remove the AI-* block when no AI participated. For multiple actors, repeat
+AI-Provider without a blank line inside the trailer block. Preserve one blank
+line before the first trailer. This file is a human-edited template, not an
+automatic assertion about AI usage.

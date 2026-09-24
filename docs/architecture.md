@@ -226,6 +226,8 @@ One adapter: the Git trailer adapter (`adapters/trailers.py`), covering:
 - `Co-authored-by:` values matching the known-AI registry (exact email
   match, plus a display-name-prefix condition where the entry requires
   one — ADR-013).
+- Explicit `Assisted-By:` / `Generated-By:` AI or registered-tool disclosure
+  values (ADR-034); ambiguous prose is ignored.
 
 Adapters return `ParticipationSpec` values (plain data: actor fields, roles,
 mode, human_reviewed, provenance source) plus parse warnings. They never
@@ -406,12 +408,15 @@ link those cards to the HTML file on a static host.
 
 ## 11. Incremental scanning strategy
 
-v0.1 re-enumerates the full history on every scan and atomically replaces
+Scanning re-enumerates the full history on every scan and atomically replaces
 the repository's scan-derived rows (correct, simple, idempotent,
-rewrite-safe). `repositories.last_scanned_at` exists for display only.
+rewrite-safe). v0.10 loads the separate private attestation ledger before
+replacement and reapplies only matching canonical-origin/local-root + SHA
+declarations to reachable, identity-filtered commits. A full rescan therefore
+preserves individually confirmed history without preserving stale cache rows.
+`repositories.last_scanned_at` exists for display only.
 An incremental walk is a post-v0.1 optimization that must preserve the
-same observable semantics (and must land together with the
-manual-event-preservation change noted in schema.md §14); measured
+same observable semantics; measured
 performance, not speculation, will decide when.
 
 ## 12. Automation and future GitHub integration
@@ -470,7 +475,7 @@ versioned COM round trips. Registered principal normalization must match the
 current process-token SID. Any other value, setting, or principal is rejected.
 The same proof precedes native removal, so an unverifiable same-name task is
 never deleted. Scheduler-config readers accept the unchanged v0.7.0, v0.7.1,
-v0.7.2, v0.8.0, v0.8.1, and v0.8.2 schema for in-place migration and the current v0.9.0 form;
+v0.7.2, v0.8.0, v0.8.1, v0.8.2, and v0.9.0 schema for in-place migration and the current v0.10.0 form;
 successful installation always
 rewrites current metadata, while unrelated or future versions fail closed.
 Launchd accepts only the exact
