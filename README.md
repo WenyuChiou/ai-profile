@@ -272,13 +272,15 @@ For a Profile sourced entirely from public repositories:
    to `.github/workflows/profile-refresh.yml` in the Profile repository.
 2. Edit the explicit public `owner/repo` list. Add the identity-email payload
    as the repository secret `AIPROFILE_IDENTITIES`; never put it in `with:`.
+   If you have individually confirmed old commits, optionally sync the
+   complete private ledger as `AIPROFILE_ATTESTATIONS`.
 3. In **Settings → Pages**, choose **GitHub Actions** as the source, then run
    the workflow once with **Actions → Daily ai-profile refresh → Run workflow**.
 
 The template runs daily at 05:37 UTC and also supports manual dispatch. It
 pins the reusable workflow to commit
-`8b145e49e2805030c0e4473c1d2c821e1397389a`, installs exactly
-`ai-profile-cli==0.9.0`, rejects non-public sources before scanning, and
+`62284cc9ffb6b1a05af677e8f20c73d33e4bc4c6`, installs exactly
+`ai-profile-cli==0.10.0`, rejects non-public sources before scanning, and
 deploys Pages from the exact `published-sha` produced in that run. It uses
 only `GITHUB_TOKEN`; no PAT fallback is provided. GitHub-hosted automation is
 not local-first processing: it clones only the public repositories you list

@@ -103,9 +103,9 @@ Before deleting the feature branch, require both:
 
 ```bash
 git fetch origin main
-git merge-base --is-ancestor 8b145e49e2805030c0e4473c1d2c821e1397389a origin/main
+git merge-base --is-ancestor 62284cc9ffb6b1a05af677e8f20c73d33e4bc4c6 origin/main
 gh api --method GET repos/WenyuChiou/ai-profile/contents/.github/workflows/profile-refresh.yml \
-  -f ref=8b145e49e2805030c0e4473c1d2c821e1397389a > /dev/null
+  -f ref=62284cc9ffb6b1a05af677e8f20c73d33e4bc4c6 > /dev/null
 ```
 
 Either failure blocks tagging and branch deletion.

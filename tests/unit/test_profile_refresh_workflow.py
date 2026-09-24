@@ -20,7 +20,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "profile-refresh.yml"
 CALLER = ROOT / "docs" / "templates" / "profile-refresh-caller.yml"
-COMMIT_D = "8b145e49e2805030c0e4473c1d2c821e1397389a"
+COMMIT_D = "62284cc9ffb6b1a05af677e8f20c73d33e4bc4c6"
 
 ASSET_NAMES = (
     "badge-dark.svg",
@@ -806,7 +806,7 @@ def test_caller_template_schedule_is_not_top_of_hour_and_has_dispatch():
     assert "top-of-hour" in text
 
 
-def test_caller_template_passes_only_repositories_and_secret_identities():
+def test_caller_template_passes_only_repositories_and_private_secrets():
     text = _text(CALLER)
     refresh = _job_block(text, "refresh-profile")
     with_block = refresh.split("    with:\n", 1)[1].split("    secrets:\n", 1)[0]
@@ -815,6 +815,7 @@ def test_caller_template_passes_only_repositories_and_secret_identities():
     assert "public repositories only" in text
     assert "OWNER/REPOSITORY" in with_block
     assert "identities: ${{ secrets.AIPROFILE_IDENTITIES }}" in refresh
+    assert "attestations: ${{ secrets.AIPROFILE_ATTESTATIONS }}" in refresh
     assert "package-version" not in text
     assert "profile-dist-dir" not in text
     for line in text.splitlines():
@@ -822,8 +823,8 @@ def test_caller_template_passes_only_repositories_and_secret_identities():
             assert line.strip() == "identities: ${{ secrets.AIPROFILE_IDENTITIES }}"
 
 
-def test_caller_uses_exact_immutable_workflow_pin_and_v090_contract():
-    """The caller template pins the reviewed v0.9.0 immutable workflow
+def test_caller_uses_exact_immutable_workflow_pin_and_v010_contract():
+    """The caller template pins the reviewed v0.10.0 immutable workflow
     and its exact package note."""
     text = _text(CALLER)
     uses = re.search(
@@ -834,7 +835,7 @@ def test_caller_uses_exact_immutable_workflow_pin_and_v090_contract():
 
     assert uses is not None
     assert uses.group(1) == COMMIT_D
-    assert "hardcodes ai-profile-cli==0.9.0" in text
+    assert "hardcodes ai-profile-cli==0.10.0" in text
     assert "ai-profile-cli==0.8.1" not in text
     assert "ai-profile-cli==0.8.0" not in text
     assert "ai-profile-cli==0.7.0" not in text

@@ -129,6 +129,7 @@ def test_later_message_hook_cannot_consume_lost_evidence(tmp_path, monkeypatch):
     # An independent hook can edit the message after prepare-commit-msg.
     message_hook = repo / ".git" / "hooks" / "commit-msg"
     message_hook.write_text("#!/bin/sh\nprintf 'change\\n' > \"$1\"\n", encoding="utf-8")
+    message_hook.chmod(0o755)
     provenance.mark(home, repo, "OpenAI", "Codex CLI", "AI-Assisted")
     result = subprocess.run(
         ["git", "commit", "-m", "change"], cwd=repo, capture_output=True, text=True, check=False

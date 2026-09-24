@@ -260,12 +260,14 @@ commitment，不保存 URL 本身。
    複製到 Profile repository 的 `.github/workflows/profile-refresh.yml`。
 2. 編輯明確的 public `owner/repo` 清單。把 identity email payload 設為
    repository secret `AIPROFILE_IDENTITIES`；絕對不要放在 `with:`。
+   若有逐筆確認的舊 commit，可選擇將完整私密清單同步為
+   `AIPROFILE_ATTESTATIONS`。
 3. 在 **Settings → Pages** 將來源設為 **GitHub Actions**，再到
    **Actions → Daily ai-profile refresh → Run workflow** 手動執行一次。
 
 Template 每天 05:37 UTC 執行，也支援手動 dispatch。
-它以 commit `8b145e49e2805030c0e4473c1d2c821e1397389a`
-固定 reusable workflow，安裝確切的 `ai-profile-cli==0.9.0`，
+它以 commit `62284cc9ffb6b1a05af677e8f20c73d33e4bc4c6`
+固定 reusable workflow，安裝確切的 `ai-profile-cli==0.10.0`，
 並在 scan 前拒絕非公開來源。Pages 只部署該次執行產生的
 確切 `published-sha`。Template 只使用 `GITHUB_TOKEN`，不提供 PAT fallback。
 GitHub-hosted automation 不是本機優先處理：

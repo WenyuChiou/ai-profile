@@ -55,6 +55,17 @@ def test_generic_and_ambiguous_disclosures_do_not_infer_ai():
     assert warnings == []
 
 
+def test_recent_public_review_prose_without_ai_trailers_remains_unattributed():
+    # A real September 2026 public commit ended in a Review: code-reviewer
+    # trailer but had no AI-* declaration. Prose about a reviewer is not an
+    # attestation of this commit's AI participation.
+    specs, warnings = parse_commit_trailers(
+        ["Review: code-reviewer trigger (2 files; skill governance) - APPROVE."]
+    )
+    assert specs == []
+    assert warnings == []
+
+
 def test_generic_llm_declaration_has_no_invented_provider():
     specs, _ = parse_commit_trailers(["Assisted-by: LLM"])
     assert len(specs) == 1
